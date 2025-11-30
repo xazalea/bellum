@@ -42,7 +42,7 @@ export class AppManager implements AppLauncher {
     // Create app metadata
     const app: AppMetadata = {
       id: appId,
-      name: metadata.name || appFile instanceof File ? appFile.name : 'Unknown App',
+      name: metadata.name || (appFile instanceof File ? appFile.name : 'Unknown App'),
       description: metadata.description,
       type: metadata.type || AppType.APPLICATION,
       platform: platform,
@@ -176,7 +176,7 @@ export class AppManager implements AppLauncher {
             const metadataPath = `${dir.path}/metadata.json`;
             const metadataJson = await puterClient.readFileAsText(metadataPath);
             const app: AppMetadata = JSON.parse(metadataJson);
-            
+
             // Filter by VM if specified
             if (!vmId || this.isAppCompatibleWithVM(app, vmId)) {
               apps.push(app);

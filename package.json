@@ -13,7 +13,7 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "js-dos": "^7.0.0",
-    "@js-dos/browser": "^7.0.0"
+    "fengari": "^0.1.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -24,4 +24,3 @@
     "eslint-config-next": "^14.2.0"
   }
 }
-

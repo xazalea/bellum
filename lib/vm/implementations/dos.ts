@@ -176,7 +176,7 @@ export class DOSVM extends BaseVM {
     try {
       const state = await JSDOSLoader.saveState(this.emulator);
       const statePath = `${this.state.storagePath}/dos_state.bin`;
-      await puterClient.writeFile(statePath, new Blob([state]), {
+      await puterClient.writeFile(statePath, new Blob([state as any]), {
         createMissingParents: true,
       });
     } catch (error) {

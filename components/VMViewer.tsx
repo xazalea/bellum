@@ -13,6 +13,7 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [vm, setVM] = useState<VMInstance | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [isLowSpec, setIsLowSpec] = useState(false);
 
   useEffect(() => {
     if (!vmId) {
@@ -86,6 +87,15 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
     }
   };
 
+  // Handle Low Spec Mode toggle
+  const toggleLowSpec = () => {
+    setIsLowSpec(!isLowSpec);
+    // In a real implementation, this would reconfigure the VM
+    // e.g., vm.setConfig({ lowSpec: !isLowSpec });
+    // For now, it's a visual toggle that we can hook into later
+    console.log(`Low Spec Mode for ${vmId}: ${!isLowSpec}`);
+  };
+
   if (!vmId || !vm) {
     return (
       <div style={{
@@ -103,38 +113,49 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      background: '#0a0a0a',
-      ...style
-    }}>
-      {/* Toolbar */}
-      <div style={{
-        padding: '12px 20px',
-        borderBottom: '1px solid #333',
-        background: '#111',
+    <div 
+      className="glass gpu-accelerated"
+      style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        flexWrap: 'wrap'
-      }}>
+        flexDirection: 'column',
+        height: '100%',
+        background: 'rgba(17, 17, 17, 0.95)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        ...style
+      }}
+    >
+      {/* Toolbar */}
+      <div 
+        className="glass-strong"
+        style={{
+          padding: '12px 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          background: 'rgba(26, 26, 26, 0.8)',
+          backdropFilter: 'blur(20px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}
+      >
         <div style={{
           flex: 1,
           minWidth: '200px'
         }}>
           <h2 style={{
             fontSize: '18px',
-            fontWeight: '500',
-            color: '#fff',
+            fontWeight: '600',
+            color: '#ffffff',
             marginBottom: '4px'
           }}>
             {vm.config.name}
           </h2>
           <div style={{
             fontSize: '12px',
-            color: '#888'
+            color: '#b0b0b0'
           }}>
             {vm.config.type.toUpperCase()} • {vm.config.memory}MB RAM
           </div>
@@ -145,19 +166,49 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
           gap: '8px',
           flexWrap: 'wrap'
         }}>
+          {/* Low Spec Mode Toggle */}
+          <label 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              color: '#b0b0b0', 
+              fontSize: '13px', 
+              cursor: 'pointer',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              background: isLowSpec ? 'rgba(0, 255, 136, 0.1)' : 'transparent',
+              border: `1px solid ${isLowSpec ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`,
+              transition: 'all 250ms ease'
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={isLowSpec}
+              onChange={toggleLowSpec}
+              style={{ 
+                transform: 'scale(1.2)',
+                accentColor: '#00ff88'
+              }}
+            />
+            Low Spec
+          </label>
+
           {!vm.state.isRunning ? (
             <button
               onClick={handleStart}
               disabled={isStarting}
               style={{
                 padding: '8px 16px',
-                background: '#0f0',
+                background: isStarting ? 'rgba(0, 255, 136, 0.3)' : '#00ff88',
                 color: '#000',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 fontSize: '14px',
-                fontWeight: '500',
+                fontWeight: '600',
                 cursor: isStarting ? 'not-allowed' : 'pointer',
-                opacity: isStarting ? 0.6 : 1
+                opacity: isStarting ? 0.6 : 1,
+                transition: 'all 250ms ease',
+                boxShadow: isStarting ? 'none' : '0 0 20px rgba(0, 255, 136, 0.3)'
               }}
             >
               {isStarting ? 'Starting...' : '▶ Start'}
@@ -168,11 +219,15 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
                 onClick={handlePause}
                 style={{
                   padding: '8px 16px',
-                  background: vm.state.isPaused ? '#0f0' : '#ffaa00',
+                  background: vm.state.isPaused ? '#00ff88' : '#ffaa00',
                   color: '#000',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   fontSize: '14px',
-                  fontWeight: '500'
+                  fontWeight: '600',
+                  transition: 'all 250ms ease',
+                  boxShadow: vm.state.isPaused 
+                    ? '0 0 20px rgba(0, 255, 136, 0.3)' 
+                    : '0 0 20px rgba(255, 170, 0, 0.3)'
                 }}
               >
                 {vm.state.isPaused ? '▶ Resume' : '⏸ Pause'}
@@ -181,11 +236,13 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
                 onClick={handleReset}
                 style={{
                   padding: '8px 16px',
-                  background: '#ffaa00',
-                  color: '#000',
-                  borderRadius: '6px',
+                  background: 'rgba(255, 170, 0, 0.2)',
+                  color: '#ffaa00',
+                  border: '1px solid rgba(255, 170, 0, 0.3)',
+                  borderRadius: '8px',
                   fontSize: '14px',
-                  fontWeight: '500'
+                  fontWeight: '600',
+                  transition: 'all 250ms ease'
                 }}
               >
                 ↻ Reset
@@ -194,11 +251,13 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
                 onClick={handleStop}
                 style={{
                   padding: '8px 16px',
-                  background: '#ff4444',
-                  color: '#fff',
-                  borderRadius: '6px',
+                  background: 'rgba(255, 68, 68, 0.2)',
+                  color: '#ff4444',
+                  border: '1px solid rgba(255, 68, 68, 0.3)',
+                  borderRadius: '8px',
                   fontSize: '14px',
-                  fontWeight: '500'
+                  fontWeight: '600',
+                  transition: 'all 250ms ease'
                 }}
               >
                 ⏹ Stop
@@ -211,6 +270,7 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
       {/* VM Display */}
       <div
         ref={containerRef}
+        className="gpu-accelerated"
         style={{
           flex: 1,
           display: 'flex',
@@ -222,33 +282,43 @@ export function VMViewer({ vmId, style }: VMViewerProps) {
         }}
       >
         {!vm.state.isRunning && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            textAlign: 'center',
-            color: '#666',
-            zIndex: 10
-          }}>
+          <div 
+            className="glass"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              color: '#b0b0b0',
+              zIndex: 10,
+              padding: '32px',
+              borderRadius: '16px',
+              background: 'rgba(17, 17, 17, 0.9)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          >
             <div style={{
               fontSize: '48px',
-              marginBottom: '16px'
+              marginBottom: '16px',
+              filter: 'drop-shadow(0 0 20px rgba(0, 255, 136, 0.3))'
             }}>
               💻
             </div>
             <div style={{
               fontSize: '18px',
               marginBottom: '8px',
-              color: '#888'
+              color: '#ffffff',
+              fontWeight: '600'
             }}>
               VM is stopped
             </div>
             <div style={{
               fontSize: '14px',
-              color: '#555'
+              color: '#808080'
             }}>
-              Click "Start" to boot the virtual machine
+              Click &quot;Start&quot; to boot the virtual machine
             </div>
           </div>
         )}

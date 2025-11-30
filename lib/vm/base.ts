@@ -57,11 +57,36 @@ export abstract class BaseVM implements VMInstance {
   }
 
   /**
-   * Optimize state using backend service
+   * Optimize state using backend service and compiled optimizers
    */
   protected async optimizeStateWithBackend(stateData: ArrayBuffer): Promise<ArrayBuffer> {
     try {
-      // Check if backend is available
+      // First try Rust optimizer (fastest)
+      const { stateOptimizer } = await import('../performance/optimizers');
+      const rustOptimized = await stateOptimizer.optimizeStateRust(stateData);
+      
+      if (rustOptimized.success && rustOptimized.optimized) {
+        // Further optimize with backend if available
+        try {
+          const backendAvailable = await backendClient.checkHealth();
+          if (backendAvailable) {
+            return await backendClient.optimizeState({
+              stateData: rustOptimized.optimized,
+              compressionLevel: 6,
+            });
+          }
+        } catch (error) {
+          console.warn('Backend not available, using Rust-optimized state:', error);
+        }
+        
+        return rustOptimized.optimized;
+      }
+    } catch (error) {
+      console.warn('Rust optimizer not available, trying backend:', error);
+    }
+
+    // Fallback to backend only
+    try {
       const backendAvailable = await backendClient.checkHealth();
       if (backendAvailable) {
         return await backendClient.optimizeState({
@@ -72,7 +97,8 @@ export abstract class BaseVM implements VMInstance {
     } catch (error) {
       console.warn('Backend not available, using local state saving:', error);
     }
-    // Fallback to local if backend unavailable
+    
+    // Final fallback to raw state
     return stateData;
   }
 

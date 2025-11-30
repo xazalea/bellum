@@ -28,6 +28,7 @@ builder.Services.AddSingleton<EmulatorService>();
 builder.Services.AddSingleton<FileProcessingService>();
 builder.Services.AddSingleton<StreamingService>();
 builder.Services.AddScoped<VMStateService>();
+builder.Services.AddSingleton<CodeCompilationService>();
 
 var app = builder.Build();
 

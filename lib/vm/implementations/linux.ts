@@ -6,6 +6,7 @@ import { VMConfig, VMType } from '../types';
 import { BaseVM } from '../base';
 import { puterClient } from '../../puter/client';
 import { V86Loader, V86Config } from '../../emulators/v86-loader';
+import { OptimizedV86 } from '../../emulators/optimized-v86';
 
 export class LinuxVM extends BaseVM {
   private emulator: any = null;
@@ -92,8 +93,16 @@ export class LinuxVM extends BaseVM {
       console.log('No saved state found, starting fresh');
     }
 
-    // Create v86 emulator instance
-    this.emulator = V86Loader.create(v86Config);
+    // Create optimized v86 emulator instance
+    try {
+      const optimized = await OptimizedV86.create(v86Config);
+      optimized.setConfig(v86Config);
+      this.emulator = optimized.getEmulator();
+    } catch (error) {
+      // Fallback to standard v86 if optimization fails
+      console.warn('Failed to create optimized v86, using standard:', error);
+      this.emulator = V86Loader.create(v86Config);
+    }
 
     // Set up event handlers
     this.emulator.add_listener('emulator-ready', () => {
@@ -266,7 +275,7 @@ export class LinuxVM extends BaseVM {
     try {
       const state = await V86Loader.saveState(this.emulator);
       const statePath = `${this.state.storagePath}/vm_state.bin`;
-      await puterClient.writeFile(statePath, new Blob([state]), {
+      await puterClient.writeFile(statePath, new Blob([state as any]), {
         createMissingParents: true,
       });
     } catch (error) {

@@ -11,6 +11,9 @@ import { AndroidVM } from './implementations/android';
 import { DOSVM } from './implementations/dos';
 import { PlayStationVM } from './implementations/playstation';
 import { XboxVM } from './implementations/xbox';
+import { CodeExecutionVM } from './implementations/code-execution';
+
+import { GameRunner } from './implementations/game-runner';
 
 export class VMManagerImpl implements VMManager {
   private vms: Map<string, VMInstance> = new Map();
@@ -20,29 +23,44 @@ export class VMManagerImpl implements VMManager {
     // Ensure storage directory exists
     await puterClient.createDirectory(this.storagePath);
 
+    // Resource Management: Pause other running VMs to save resources
+    for (const existingVM of this.vms.values()) {
+      if (existingVM.state.isRunning && !existingVM.state.isPaused) {
+        console.log(`Pausing VM ${existingVM.id} to free resources`);
+        await existingVM.pause();
+      }
+    }
+
     let vm: VMInstance;
 
-    switch (config.type) {
-      case VMType.LINUX:
-        vm = new LinuxVM(config);
-        break;
-      case VMType.WINDOWS:
-        vm = new WindowsVM(config);
-        break;
-      case VMType.ANDROID:
-        vm = new AndroidVM(config);
-        break;
-      case VMType.DOS:
-        vm = new DOSVM(config);
-        break;
-      case VMType.PLAYSTATION:
-        vm = new PlayStationVM(config);
-        break;
-      case VMType.XBOX:
-        vm = new XboxVM(config);
-        break;
-      default:
-        throw new Error(`Unsupported VM type: ${config.type}`);
+    // Check for Game Mode
+    if (config.executionMode === 'game') {
+      vm = new GameRunner(config);
+    } else if (config.executionMode === 'code' || config.type === VMType.CODE) {
+      vm = new CodeExecutionVM(config);
+    } else {
+      switch (config.type) {
+        case VMType.LINUX:
+          vm = new LinuxVM(config);
+          break;
+        case VMType.WINDOWS:
+          vm = new WindowsVM(config);
+          break;
+        case VMType.ANDROID:
+          vm = new AndroidVM(config);
+          break;
+        case VMType.DOS:
+          vm = new DOSVM(config);
+          break;
+        case VMType.PLAYSTATION:
+          vm = new PlayStationVM(config);
+          break;
+        case VMType.XBOX:
+          vm = new XboxVM(config);
+          break;
+        default:
+          throw new Error(`Unsupported VM type: ${config.type}`);
+      }
     }
 
     // Load existing state if available
@@ -96,14 +114,14 @@ export class VMManagerImpl implements VMManager {
   async loadAllVMs(): Promise<void> {
     try {
       const vmsList = await puterClient.listDirectory(this.storagePath);
-      
+
       for (const vmDir of vmsList) {
         if (vmDir.is_dir) {
           try {
             const statePath = `${vmDir.path}/state.json`;
             const stateJson = await puterClient.readFileAsText(statePath);
             const state = JSON.parse(stateJson);
-            
+
             // Recreate VM from saved state
             await this.createVM(state.config);
           } catch (error) {

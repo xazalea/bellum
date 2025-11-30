@@ -37,3 +37,9 @@ public class StopStreamRequest
     public string StreamId { get; set; } = string.Empty;
 }
 
+public class CompileCodeRequest
+{
+    public string Code { get; set; } = string.Empty;
+    public string? Config { get; set; } // Optional config (e.g., Cargo.toml for Rust)
+}
+

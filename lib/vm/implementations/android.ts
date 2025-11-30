@@ -6,6 +6,7 @@ import { VMConfig, VMType } from '../types';
 import { BaseVM } from '../base';
 import { puterClient } from '../../puter/client';
 import { V86Loader, V86Config } from '../../emulators/v86-loader';
+import { OptimizedV86 } from '../../emulators/optimized-v86';
 
 export class AndroidVM extends BaseVM {
   private emulator: any = null;
@@ -27,25 +28,34 @@ export class AndroidVM extends BaseVM {
     // Load v86 library
     await V86Loader.load();
 
-    // Get Android-x86 ISO URL from Puter.js storage
+    // Get Android-x86 ISO URL - try GitHub release first, then local storage
     let androidImageUrl: string | undefined;
     let hdaConfig: { url: string; async: boolean } | undefined;
 
     try {
-      // Check for Android-x86 disk image
-      const diskImagePath = `${this.state.storagePath}/android.img`;
+      // Try loading from GitHub releases via ISOLoader
+      const { ISOLoader } = await import('../../assets/iso-loader');
       try {
-        await puterClient.getFileInfo(diskImagePath);
-        androidImageUrl = await puterClient.getReadURL(diskImagePath);
+        androidImageUrl = await ISOLoader.getISOUrl('android-x86-9.0-r2');
         hdaConfig = { url: androidImageUrl, async: true };
-      } catch (error) {
-        // Try ISO instead
-        const isoPath = `${this.state.storagePath}/android-x86.iso`;
+      } catch (githubError) {
+        console.log('GitHub ISO not available, trying local storage');
+        
+        // Fallback to Puter.js storage
+        const diskImagePath = `${this.state.storagePath}/android.img`;
         try {
-          await puterClient.getFileInfo(isoPath);
-          androidImageUrl = await puterClient.getReadURL(isoPath);
-        } catch (isoError) {
-          console.log('No Android image found');
+          await puterClient.getFileInfo(diskImagePath);
+          androidImageUrl = await puterClient.getReadURL(diskImagePath);
+          hdaConfig = { url: androidImageUrl, async: true };
+        } catch (error) {
+          // Try ISO instead
+          const isoPath = `${this.state.storagePath}/android-x86.iso`;
+          try {
+            await puterClient.getFileInfo(isoPath);
+            androidImageUrl = await puterClient.getReadURL(isoPath);
+          } catch (isoError) {
+            console.log('No Android image found');
+          }
         }
       }
     } catch (error) {
@@ -84,8 +94,16 @@ export class AndroidVM extends BaseVM {
       console.log('No saved state found, starting fresh');
     }
 
-    // Create v86 emulator instance
-    this.emulator = V86Loader.create(v86Config);
+    // Create optimized v86 emulator instance
+    try {
+      const optimized = await OptimizedV86.create(v86Config);
+      optimized.setConfig(v86Config);
+      this.emulator = optimized.getEmulator();
+    } catch (error) {
+      // Fallback to standard v86 if optimization fails
+      console.warn('Failed to create optimized v86, using standard:', error);
+      this.emulator = V86Loader.create(v86Config);
+    }
 
     // Set up event handlers
     this.emulator.add_listener('emulator-ready', () => {
@@ -138,7 +156,7 @@ export class AndroidVM extends BaseVM {
       const rect = this.canvas.getBoundingClientRect();
       const androidX = Math.floor((x - rect.left) * (this.canvas.width / rect.width));
       const androidY = Math.floor((y - rect.top) * (this.canvas.height / rect.height));
-      
+
       // Send mouse events to v86 (which Android-x86 will interpret as touch)
       // v86 handles this automatically through the screen container
     }
@@ -250,7 +268,7 @@ export class AndroidVM extends BaseVM {
     try {
       const state = await V86Loader.saveState(this.emulator);
       const statePath = `${this.state.storagePath}/android_state.bin`;
-      await puterClient.writeFile(statePath, new Blob([state]), {
+      await puterClient.writeFile(statePath, new Blob([state as any]), {
         createMissingParents: true,
       });
     } catch (error) {

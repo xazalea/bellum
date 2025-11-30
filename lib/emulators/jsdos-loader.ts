@@ -3,15 +3,16 @@
  * Handles dynamic loading and initialization of js-dos emulator
  */
 
-import { DosBox } from '@js-dos/browser';
+// import { DosBox } from '@js-dos/browser'; // Removed due to install error
 
 export interface JSDOSConfig {
   wdosboxUrl?: string;
   onprogress?: (stage: string, total: number, loaded: number) => void;
+  hardware?: 'default' | 'high-performance';
 }
 
 export class JSDOSLoader {
-  private static dosbox: typeof DosBox | null = null;
+  private static dosbox: any = null;
   private static loadingPromise: Promise<void> | null = null;
 
   static async load(): Promise<void> {
@@ -25,9 +26,23 @@ export class JSDOSLoader {
 
     this.loadingPromise = (async () => {
       try {
-        // js-dos is imported as a module
-        const dosboxModule = await import('@js-dos/browser');
-        this.dosbox = dosboxModule.DosBox;
+        // Load from CDN if local package fails
+        if ((window as any).Dos) {
+          this.dosbox = (window as any).Dos;
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://js-dos.com/cdn/js-dos-api.js'; // Example CDN
+        document.head.appendChild(script);
+
+        await new Promise<void>((resolve) => {
+          script.onload = () => {
+            this.dosbox = (window as any).Dos;
+            resolve();
+          };
+        });
+
       } catch (error) {
         console.error('Failed to load js-dos:', error);
         throw new Error('Failed to load js-dos emulator');
