@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "node scripts/copy-optimizers.js"
   },
   "dependencies": {
     "next": "^14.2.0",
@@ -22,5 +23,8 @@
     "typescript": "^5.3.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0"
+  },
+  "overrides": {
+    "glob": "^10.3.10"
   }
 }
