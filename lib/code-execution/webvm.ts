@@ -27,15 +27,23 @@ export class WebVM {
   private executors: Map<string, LanguageExecutor> = new Map();
 
   constructor() {
-    this.initializeExecutors();
+    // Don't initialize executors in constructor - lazy load them
   }
 
   /**
-   * Initialize language executors
+   * Initialize language executors (lazy)
    */
-  private initializeExecutors(): void {
-    // Lua executor (Fengari)
-    this.executors.set('lua', new LuaExecutor());
+  private async ensureExecutorsInitialized(): Promise<void> {
+    if (this.executors.size > 0) {
+      return; // Already initialized
+    }
+
+    if (typeof window === 'undefined') {
+      return; // Server-side, skip
+    }
+
+    // Lua executor (Fengari) - use factory to avoid class evaluation
+    this.executors.set('lua', createLuaExecutor());
 
     // Python executor (Pyodide)
     this.executors.set('python', new PythonExecutor());
@@ -126,6 +134,8 @@ export class WebVM {
     code: string,
     input?: string
   ): Promise<CodeExecutionResult> {
+    await this.ensureExecutorsInitialized();
+
     const executor = this.executors.get(language.toLowerCase());
     if (!executor) {
       throw new Error(`Language ${language} is not supported`);
@@ -162,7 +172,8 @@ export class WebVM {
   /**
    * Get available languages
    */
-  getAvailableLanguages(): string[] {
+  async getAvailableLanguages(): Promise<string[]> {
+    await this.ensureExecutorsInitialized();
     return Array.from(this.executors.keys()).filter((lang) =>
       this.executors.get(lang)?.isAvailable()
     );
@@ -223,84 +234,88 @@ export class WebVM {
 }
 
 /**
- * Lua Executor using Fengari (Lua VM in JavaScript)
+ * Lua Executor Factory - Creates Lua executor lazily to avoid fengari SSR issues
  */
-class LuaExecutor implements LanguageExecutor {
-  name = 'lua';
-  private fengari: any = null;
+function createLuaExecutor(): LanguageExecutor {
+  return {
+    name: 'lua',
+    async execute(code: string, input?: string): Promise<CodeExecutionResult> {
+      return executeLuaCode(code, input);
+    },
+    isAvailable(): boolean {
+      return typeof window !== 'undefined';
+    },
+  };
+}
 
-  async execute(code: string, input?: string): Promise<CodeExecutionResult> {
-    if (!this.isAvailable()) {
-      throw new Error('Fengari not available');
-    }
-
-    try {
-      // Load Fengari dynamically
-      if (!this.fengari) {
-        try {
-          const fengariModule = await import('fengari');
-          this.fengari = fengariModule;
-        } catch (error) {
-          throw new Error('Failed to load Fengari. Please install: npm install fengari');
-        }
-      }
-
-      const lua = this.fengari.lua;
-      const lauxlib = this.fengari.lauxlib;
-      const lualib = this.fengari.lualib;
-
-      const L = lauxlib.luaL_newstate();
-      lualib.luaL_openlibs(L);
-
-      // Capture stdout
-      let stdout = '';
-      let stderr = '';
-
-      // Override print to capture output
-      lauxlib.lua_register(L, 'print', (L: any) => {
-        const n = lua.lua_gettop(L);
-        const parts: string[] = [];
-        for (let i = 1; i <= n; i++) {
-          if (lua.lua_isstring(L, i)) {
-            parts.push(lua.lua_tostring(L, i));
-          } else {
-            parts.push(String(lua.lua_topointer(L, i)));
-          }
-        }
-        stdout += parts.join('\t') + '\n';
-        return 0;
-      });
-
-      // Execute code
-      const result = lauxlib.luaL_dostring(L, code);
-
-      if (result !== 0) {
-        const error = lauxlib.lua_tostring(L, -1);
-        stderr = error || 'Unknown error';
-      }
-
-      lauxlib.lua_close(L);
-
-      return {
-        stdout: stdout.trim(),
-        stderr,
-        exitCode: result === 0 ? 0 : 1,
-        executionTime: 0,
-      };
-    } catch (error: any) {
-      return {
-        stdout: '',
-        stderr: error.message || 'Execution error',
-        exitCode: 1,
-        executionTime: 0,
-      };
-    }
+/**
+ * Execute Lua code using Fengari (loaded dynamically)
+ */
+async function executeLuaCode(code: string, input?: string): Promise<CodeExecutionResult> {
+  if (typeof window === 'undefined') {
+    throw new Error('Lua execution only available in browser');
   }
 
-  isAvailable(): boolean {
-    return typeof window !== 'undefined';
+  try {
+    // Load Fengari dynamically using string to prevent webpack static analysis
+    // This ensures fengari is only loaded at runtime, not during build
+    const fengariModule = await import(
+      /* webpackIgnore: true */
+      'fengari'
+    );
+    const lua = fengariModule.lua;
+    const lauxlib = fengariModule.lauxlib;
+    const lualib = fengariModule.lualib;
+
+    const L = lauxlib.luaL_newstate();
+    lualib.luaL_openlibs(L);
+
+    // Capture stdout
+    let stdout = '';
+    let stderr = '';
+
+    // Override print to capture output
+    lauxlib.lua_register(L, 'print', (L: any) => {
+      const n = lua.lua_gettop(L);
+      const parts: string[] = [];
+      for (let i = 1; i <= n; i++) {
+        if (lua.lua_isstring(L, i)) {
+          parts.push(lua.lua_tostring(L, i));
+        } else {
+          parts.push(String(lua.lua_topointer(L, i)));
+        }
+      }
+      stdout += parts.join('\t') + '\n';
+      return 0;
+    });
+
+    // Execute code
+    const result = lauxlib.luaL_dostring(L, code);
+
+    if (result !== 0) {
+      const error = lauxlib.lua_tostring(L, -1);
+      stderr = error || 'Unknown error';
+    }
+
+    lauxlib.lua_close(L);
+
+    return {
+      stdout: stdout.trim(),
+      stderr,
+      exitCode: result === 0 ? 0 : 1,
+      executionTime: 0,
+    };
+  } catch (error: any) {
+    return {
+      stdout: '',
+      stderr: error.message || 'Execution error',
+      exitCode: 1,
+      executionTime: 0,
+    };
   }
 }
+
+// Old LuaExecutor class removed - using factory function instead
 
 /**
  * Python Executor using Pyodide
@@ -603,6 +618,21 @@ class ZigExecutor implements LanguageExecutor {
   }
 }
 
-// Global WebVM instance
-export const webVM = typeof window !== 'undefined' ? new WebVM() : null;
+// Global WebVM instance (client-side only, lazy initialization)
+let webVMInstance: WebVM | null = null;
+
+export function getWebVM(): WebVM | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  
+  if (!webVMInstance) {
+    webVMInstance = new WebVM();
+  }
+  
+  return webVMInstance;
+}
+
+// Export null for SSR compatibility - use getWebVM() instead
+export const webVM: WebVM | null = null;
 

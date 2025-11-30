@@ -192,7 +192,3 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ activeSkin, active
     );
 };
 
-// Export function to open code playground
-export const openCodePlayground = (windowManager: any) => {
-    windowManager.setShowCodePlayground(true);
-};

@@ -70,6 +70,69 @@ const nextConfig = {
       type: 'webassembly/async',
     });
     
+    // Fix for fengari (Lua) - ignore Node.js modules in browser
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        child_process: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        stream: false,
+        url: false,
+        zlib: false,
+        http: false,
+        https: false,
+        assert: false,
+        os: false,
+        path: false,
+      };
+    }
+    
+    // Ignore fengari's Node.js-specific modules in browser builds
+    if (!isServer) {
+      const webpack = require('webpack');
+      config.plugins = config.plugins || [];
+      
+      // Ignore Node.js modules when imported by fengari
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^(fs|child_process|net|tls|crypto|stream|url|zlib|http|https|assert|os|path)$/,
+          contextRegExp: /fengari/,
+        })
+      );
+      
+      // Also ignore fengari during SSR (server-side builds)
+      if (isServer) {
+        config.plugins.push(
+          new webpack.IgnorePlugin({
+            resourceRegExp: /^fengari$/,
+          })
+        );
+      }
+    }
+    
+    // For server builds, completely ignore fengari
+    if (isServer) {
+      const webpack = require('webpack');
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^fengari$/,
+        })
+      );
+    }
+    
+    // Normalize resolve to handle fengari
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+    
+    // Alias fengari to empty module for server builds
+    if (isServer) {
+      config.resolve.alias.fengari = false;
+    }
+    
     return config;
   },
   

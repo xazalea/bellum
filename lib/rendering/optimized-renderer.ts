@@ -3,7 +3,7 @@
  */
 
 import { WebGLRenderer } from './webgl-renderer';
-import { stateOptimizer } from '../performance/optimizers';
+// stateOptimizer imported dynamically to avoid fengari SSR issues
 import { adaptivePerformance } from '../performance/adaptive';
 
 export class OptimizedRenderer extends WebGLRenderer {
@@ -18,10 +18,11 @@ export class OptimizedRenderer extends WebGLRenderer {
     const now = performance.now();
     const adaptive = adaptivePerformance?.getConfig();
 
-    // Apply optimizations periodically
-    if (now - this.lastOptimization >= this.optimizationInterval) {
+    // Apply optimizations periodically (client-side only)
+    if (now - this.lastOptimization >= this.optimizationInterval && typeof window !== 'undefined') {
       if (imageData instanceof ImageData) {
         // Use Go optimizer for parallel frame processing
+        const { stateOptimizer } = await import('../performance/optimizers');
         const optimized = await stateOptimizer.optimizeRenderingGo(imageData);
         
         if (optimized.success && optimized.optimized) {

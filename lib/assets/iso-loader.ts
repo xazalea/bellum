@@ -139,7 +139,7 @@ export class ISOLoader {
       }
     }
 
-    const blob = new Blob(chunks);
+    const blob = new Blob(chunks as BlobPart[]);
 
     // Cache the blob
     try {

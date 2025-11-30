@@ -4,7 +4,7 @@
 
 import { VMConfig, VMType } from '../types';
 import { BaseVM } from '../base';
-import { webVM, CodeExecutionResult } from '../../code-execution/webvm';
+import type { CodeExecutionResult } from '../../code-execution/webvm';
 
 export class CodeExecutionVM extends BaseVM {
   private codePlaygroundContainer: HTMLElement | null = null;
@@ -17,9 +17,13 @@ export class CodeExecutionVM extends BaseVM {
     await this.ensureStoragePath();
     this.container = container;
 
-    // Initialize WebVM if not already done
-    if (webVM) {
-      await webVM.initialize(container);
+    // Initialize WebVM if not already done (client-side only)
+    if (typeof window !== 'undefined') {
+      const { getWebVM } = await import('../../code-execution/webvm');
+      const webVM = getWebVM();
+      if (webVM) {
+        await webVM.initialize(container);
+      }
     }
 
     this.emit('initialized');
@@ -34,6 +38,12 @@ export class CodeExecutionVM extends BaseVM {
       throw new Error('VM not mounted to container');
     }
 
+    if (typeof window === 'undefined') {
+      throw new Error('WebVM only available in browser');
+    }
+
+    const { getWebVM } = await import('../../code-execution/webvm');
+    const webVM = getWebVM();
     if (!webVM) {
       throw new Error('WebVM not available');
     }
@@ -51,8 +61,12 @@ export class CodeExecutionVM extends BaseVM {
       return;
     }
 
-    if (webVM) {
-      await webVM.stop();
+    if (typeof window !== 'undefined') {
+      const { getWebVM } = await import('../../code-execution/webvm');
+      const webVM = getWebVM();
+      if (webVM) {
+        await webVM.stop();
+      }
     }
 
     this.state.isRunning = false;
@@ -95,6 +109,12 @@ export class CodeExecutionVM extends BaseVM {
     code: string,
     input?: string
   ): Promise<CodeExecutionResult> {
+    if (typeof window === 'undefined') {
+      throw new Error('Code execution only available in browser');
+    }
+
+    const { getWebVM } = await import('../../code-execution/webvm');
+    const webVM = getWebVM();
     if (!webVM) {
       throw new Error('WebVM not available');
     }
@@ -105,11 +125,18 @@ export class CodeExecutionVM extends BaseVM {
   /**
    * Get available languages
    */
-  getAvailableLanguages(): string[] {
+  async getAvailableLanguages(): Promise<string[]> {
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
+    const { getWebVM } = await import('../../code-execution/webvm');
+    const webVM = getWebVM();
     if (!webVM) {
       return [];
     }
-    return webVM.getAvailableLanguages();
+
+    return await webVM.getAvailableLanguages();
   }
 
   getCanvas(): HTMLCanvasElement | null {

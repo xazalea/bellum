@@ -165,8 +165,8 @@ export class CodeCompiler {
     exitCode: number;
   }> {
     try {
-      const module = await WebAssembly.instantiate(wasm);
-      const instance = module.instance;
+      const wasmModule = await WebAssembly.instantiate(wasm);
+      const instance = wasmModule.instance;
 
       // Call the main function if it exists
       const main = instance.exports.main as (() => number) | undefined;

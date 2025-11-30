@@ -4,7 +4,6 @@
  */
 
 import { codeCompiler } from '../code-execution/compiler';
-import { webVM } from '../code-execution/webvm';
 
 export interface OptimizationResult {
   success: boolean;
@@ -18,7 +17,7 @@ export interface OptimizationResult {
  */
 export class StateOptimizer {
   private rustOptimizer: WebAssembly.Instance | null = null;
-  private goOptimizer: WebAssembly.Instance | null = null;
+  private goOptimizer: { instance: WebAssembly.Instance } | null = null;
 
   /**
    * Optimize VM state using Rust (fastest)
@@ -73,7 +72,8 @@ pub fn optimize_state(input: &[u8]) -> Vec<u8> {
           throw new Error(compiled.error || 'Failed to compile Rust optimizer');
         }
 
-        this.rustOptimizer = await WebAssembly.instantiate(compiled.wasm);
+        const wasmModule = await WebAssembly.instantiate(compiled.wasm);
+        this.rustOptimizer = wasmModule.instance;
       }
 
       const optimizeFn = (this.rustOptimizer!.exports as any).optimize_state;
@@ -152,8 +152,9 @@ func OptimizeFrame(data []byte, width, height int) []byte {
         throw new Error(compiled.error || 'Failed to compile Go optimizer');
       }
 
-      const module = await WebAssembly.instantiate(compiled.wasm);
-      const optimizeFn = (module.exports as any).optimizeFrame;
+      const wasmModule = await WebAssembly.instantiate(compiled.wasm);
+      this.goOptimizer = wasmModule;
+      const optimizeFn = (wasmModule.instance.exports as any).optimizeFrame;
       
       if (!optimizeFn) {
         throw new Error('Optimize function not found');
@@ -193,6 +194,13 @@ export class CycleOptimizer {
     optimalFrameSkip: number;
   }> {
     try {
+      if (typeof window === 'undefined') {
+        return { predictedCycles: 60, optimalFrameSkip: 0 };
+      }
+
+      const { getWebVM } = await import('../code-execution/webvm');
+      const webVM = getWebVM();
+      
       if (!this.pythonOptimizer && webVM) {
         // Load Python optimizer source file
         const { loadOptimizerSource, OPTIMIZER_FILES } = await import('../optimizers/loader');
@@ -268,6 +276,13 @@ export class MemoryOptimizer {
     targetAllocation: number;
   }> {
     try {
+      if (typeof window === 'undefined') {
+        return { shouldGC: false, targetAllocation: targetUsage };
+      }
+
+      const { getWebVM } = await import('../code-execution/webvm');
+      const webVM = getWebVM();
+      
       if (!webVM) {
         return { shouldGC: false, targetAllocation: targetUsage };
       }

@@ -3,7 +3,7 @@
  */
 
 import { V86Loader, V86Config } from './v86-loader';
-import { stateOptimizer, cycleOptimizer, memoryOptimizer } from '../performance/optimizers';
+// Optimizers imported dynamically to avoid fengari SSR issues
 import { performanceMonitor } from '../performance/monitor';
 import { adaptivePerformance } from '../performance/adaptive';
 
@@ -71,18 +71,24 @@ export class OptimizedV86 {
         this.cycleHistory.shift();
       }
 
-      // Optimize frame skipping
-      cycleOptimizer.optimizeCycles(this.cycleHistory).then((optimization) => {
-        this.frameSkip = optimization.optimalFrameSkip;
-        
-        // Update performance monitor
-        if (performanceMonitor) {
-          performanceMonitor.updateEmulatorMetrics(
-            Math.round(1000 / cycleTime),
-            cycleTime
-          );
-        }
-      });
+      // Optimize frame skipping (client-side only)
+      if (typeof window !== 'undefined') {
+        import('../performance/optimizers').then(({ cycleOptimizer }) => {
+          cycleOptimizer.optimizeCycles(this.cycleHistory).then((optimization) => {
+            this.frameSkip = optimization.optimalFrameSkip;
+            
+            // Update performance monitor
+            if (performanceMonitor) {
+              performanceMonitor.updateEmulatorMetrics(
+                Math.round(1000 / cycleTime),
+                cycleTime
+              );
+            }
+          });
+        }).catch(() => {
+          // Fallback if optimizers fail to load
+        });
+      }
 
       requestAnimationFrame(checkCycle);
     };
@@ -101,11 +107,18 @@ export class OptimizedV86 {
     // Get raw state
     const rawState = await V86Loader.saveState(this.emulator);
 
-    // Optimize using Rust
-    const optimized = await stateOptimizer.optimizeStateRust(rawState);
-    
-    if (optimized.success && optimized.optimized) {
-      return optimized.optimized;
+    // Optimize using Rust (client-side only)
+    if (typeof window !== 'undefined') {
+      try {
+        const { stateOptimizer } = await import('../performance/optimizers');
+        const optimized = await stateOptimizer.optimizeStateRust(rawState);
+        
+        if (optimized.success && optimized.optimized) {
+          return optimized.optimized;
+        }
+      } catch (error) {
+        console.warn('Rust optimizer not available, using raw state:', error);
+      }
     }
 
     // Fallback to raw state
@@ -138,11 +151,12 @@ export class OptimizedV86 {
    * Optimize memory usage
    */
   async optimizeMemory(): Promise<void> {
-    if (!this.emulator) return;
+    if (!this.emulator || typeof window === 'undefined') return;
 
     const currentMemory = (performance as any).memory?.usedJSHeapSize || 0;
-    const targetMemory = (this.config.memory || 512) * 1024 * 1024;
+    const targetMemory = ((this.config as any)?.memory || 512) * 1024 * 1024;
 
+    const { memoryOptimizer } = await import('../performance/optimizers');
     const optimization = await memoryOptimizer.optimizeMemory(
       currentMemory,
       targetMemory

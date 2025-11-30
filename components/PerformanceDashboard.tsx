@@ -46,8 +46,8 @@ export function PerformanceDashboard() {
     window.addEventListener('keydown', handleKeyPress);
 
     return () => {
-      performanceMonitor.off('metrics', handleMetrics);
-      adaptivePerformance.offConfigChange(handleConfig);
+      performanceMonitor?.off('metrics', handleMetrics);
+      adaptivePerformance?.offConfigChange(handleConfig);
       window.removeEventListener('keydown', handleKeyPress);
     };
   }, []);

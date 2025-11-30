@@ -60,8 +60,25 @@ export abstract class BaseVM implements VMInstance {
    * Optimize state using backend service and compiled optimizers
    */
   protected async optimizeStateWithBackend(stateData: ArrayBuffer): Promise<ArrayBuffer> {
+    // Only optimize on client-side to avoid fengari SSR issues
+    if (typeof window === 'undefined') {
+      // Server-side: just use backend
+      try {
+        const backendAvailable = await backendClient.checkHealth();
+        if (backendAvailable) {
+          return await backendClient.optimizeState({
+            stateData,
+            compressionLevel: 6,
+          });
+        }
+      } catch (error) {
+        console.warn('Backend not available:', error);
+      }
+      return stateData;
+    }
+
     try {
-      // First try Rust optimizer (fastest)
+      // First try Rust optimizer (fastest) - client-side only
       const { stateOptimizer } = await import('../performance/optimizers');
       const rustOptimized = await stateOptimizer.optimizeStateRust(stateData);
       

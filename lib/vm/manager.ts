@@ -11,9 +11,20 @@ import { AndroidVM } from './implementations/android';
 import { DOSVM } from './implementations/dos';
 import { PlayStationVM } from './implementations/playstation';
 import { XboxVM } from './implementations/xbox';
-import { CodeExecutionVM } from './implementations/code-execution';
+// CodeExecutionVM imported dynamically to avoid fengari SSR issues
 
 import { GameRunner } from './implementations/game-runner';
+
+// Lazy load CodeExecutionVM to prevent fengari from being bundled
+let codeExecutionModule: typeof import('./implementations/code-execution') | null = null;
+async function getCodeExecutionVM() {
+  // Dynamic import ensures it's only loaded when needed (client-side)
+  if (!codeExecutionModule) {
+    const importedModule = await import('./implementations/code-execution');
+    codeExecutionModule = importedModule;
+  }
+  return codeExecutionModule.CodeExecutionVM;
+}
 
 export class VMManagerImpl implements VMManager {
   private vms: Map<string, VMInstance> = new Map();
@@ -37,6 +48,12 @@ export class VMManagerImpl implements VMManager {
     if (config.executionMode === 'game') {
       vm = new GameRunner(config);
     } else if (config.executionMode === 'code' || config.type === VMType.CODE) {
+      // Dynamically import CodeExecutionVM to avoid fengari SSR issues
+      // Use string-based import to prevent webpack from analyzing it
+      if (typeof window === 'undefined') {
+        throw new Error('Code execution VMs are only available in browser');
+      }
+      const CodeExecutionVM = await getCodeExecutionVM();
       vm = new CodeExecutionVM(config);
     } else {
       switch (config.type) {
