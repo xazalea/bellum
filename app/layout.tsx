@@ -12,11 +12,12 @@ export const metadata: Metadata = {
     description: 'Run Android, Windows, Linux, and gaming consoles in your browser',
     type: 'website',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: '#0a0a0a',
 };
 

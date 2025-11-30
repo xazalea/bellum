@@ -8,7 +8,8 @@ const nextConfig = {
   
   // Experimental features for performance
   experimental: {
-    optimizeCss: true,
+    // optimizeCss requires critters package - disabled for now
+    // optimizeCss: true,
     optimizePackageImports: ['react', 'react-dom'],
   },
   
