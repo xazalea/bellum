@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "node scripts/copy-optimizers.js"
+    "postinstall": "node scripts/copy-optimizers.js && mkdir -p public/unblocker && cp -r lib/arsenic/public/* public/unblocker/ || echo 'Arsenic copy failed, skipping'"
   },
   "dependencies": {
     "@types/adm-zip": "^0.5.7",

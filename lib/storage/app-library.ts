@@ -59,10 +59,9 @@ export class CloudDatabase {
     // Try Puter Cloud first (Unlimited Storage)
     if (this.puter) {
         try {
+            // Use popup auth if not signed in
             if (!this.puter.auth.isSignedIn()) {
-                // Optional: Prompt sign in? For now, we'll assume user might sign in via UI
-                // or we skip to local if not signed in to avoid popup spam
-                // await this.puter.auth.signIn();
+                 await this.puter.auth.signIn();
             }
             
             if (this.puter.auth.isSignedIn()) {

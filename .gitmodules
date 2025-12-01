@@ -1,0 +1,3 @@
+[submodule "lib/arsenic"]
+	path = lib/arsenic
+	url = https://github.com/smartfoloo/arsenic

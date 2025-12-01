@@ -250,6 +250,7 @@ export default function DashboardPage() {
   const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
   const [libName, setLibName] = useState('');
   const [importId, setImportId] = useState('');
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
     const lib = new AppLibraryManager(hiberFile);
@@ -258,6 +259,11 @@ export default function DashboardPage() {
     setTimeout(() => {
       setApps([...lib.getApps()]);
       setLibraries([...lib.getPublicLibraries()]);
+      
+      // Check puter auth
+      if ((window as any).puter?.auth?.isSignedIn()) {
+          setIsSignedIn(true);
+      }
     }, 100);
   }, []);
 
@@ -345,6 +351,21 @@ export default function DashboardPage() {
       alert('Failed to import library');
     }
   };
+  
+  const handleConnectCloud = async () => {
+      const puter = (window as any).puter;
+      if (puter) {
+          if (!puter.auth.isSignedIn()) {
+              await puter.auth.signIn();
+          }
+          if (puter.auth.isSignedIn()) {
+              setIsSignedIn(true);
+              alert('Connected to Puter Cloud!');
+          }
+      } else {
+          alert('Puter.js not loaded');
+      }
+  };
 
   const activeApps = apps.filter(a => a.isActive);
   const archivedApps = apps.filter(a => !a.isActive);
@@ -358,6 +379,21 @@ export default function DashboardPage() {
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
+        {/* Navigation Tabs */}
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
+            <div 
+                style={{ padding: '10px 20px', borderBottom: `2px solid ${colors.accent.primary}`, cursor: 'pointer', fontWeight: 'bold' }}
+            >
+                Dashboard
+            </div>
+            <div 
+                style={{ padding: '10px 20px', color: colors.text.secondary, cursor: 'pointer' }}
+                onClick={() => router.push('/unblocker')}
+            >
+                Unblocker
+            </div>
+        </div>
+        
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
@@ -368,16 +404,17 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', gap: '12px' }}>
              <div style={{ 
                padding: '10px 20px', 
-               background: 'rgba(255,255,255,0.05)', 
+               background: isSignedIn ? 'rgba(46, 204, 113, 0.1)' : 'rgba(255,255,255,0.05)', 
                borderRadius: '12px',
                fontSize: '12px',
                display: 'flex',
                alignItems: 'center',
                gap: '8px',
-               border: `1px solid ${colors.border.primary}`
-             }}>
-               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ecc71' }} />
-               <span>Cloud Database Connected</span>
+               border: `1px solid ${isSignedIn ? '#2ecc71' : colors.border.primary}`,
+               cursor: 'pointer'
+             }} onClick={handleConnectCloud}>
+               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isSignedIn ? '#2ecc71' : '#666' }} />
+               <span>{isSignedIn ? 'Cloud Connected' : 'Connect Cloud'}</span>
              </div>
 
             <input 
