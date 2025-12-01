@@ -5,32 +5,56 @@ import { VMInstance } from '@/lib/vm/types';
 import { vmManager } from '@/lib/vm/manager';
 
 interface VMViewerProps {
-  vmId: string | null;
+  vmId?: string | null;
+  vmType?: import('@/lib/vm/types').VMType;
+  gameId?: string;
   style?: React.CSSProperties;
 }
 
-export function VMViewer({ vmId, style }: VMViewerProps) {
+export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [vm, setVM] = useState<VMInstance | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isLowSpec, setIsLowSpec] = useState(false);
 
   useEffect(() => {
-    if (!vmId) {
-      setVM(null);
-      return;
-    }
+    const initializeVM = async () => {
+      if (vmId) {
+        // Use existing VM
+        const vmInstance = vmManager.getVM(vmId);
+        setVM(vmInstance);
+        if (vmInstance && containerRef.current) {
+          await vmInstance.mount(containerRef.current).catch((error) => {
+            console.error('Failed to mount VM:', error);
+          });
+        }
+      } else if (vmType) {
+        // Create new VM from type
+        try {
+          const vmId = `vm-${vmType}-${Date.now()}`;
+          const vmInstance = await vmManager.createVM({
+            id: vmId,
+            type: vmType,
+            name: `${vmType} VM`,
+            memory: 2048,
+            executionMode: gameId ? 'game' : 'system',
+          });
+          setVM(vmInstance);
+          if (containerRef.current) {
+            await vmInstance.mount(containerRef.current).catch((error) => {
+              console.error('Failed to mount VM:', error);
+            });
+          }
+        } catch (error) {
+          console.error('Failed to create VM:', error);
+        }
+      } else {
+        setVM(null);
+      }
+    };
 
-    const vmInstance = vmManager.getVM(vmId);
-    setVM(vmInstance);
-
-    if (vmInstance && containerRef.current) {
-      // Mount VM to container
-      vmInstance.mount(containerRef.current).catch((error) => {
-        console.error('Failed to mount VM:', error);
-      });
-    }
-  }, [vmId]);
+    initializeVM();
+  }, [vmId, vmType, gameId]);
 
   const handleStart = async () => {
     if (!vm || isStarting) return;

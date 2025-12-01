@@ -20,11 +20,12 @@ export const colors = {
     muted: '#505050',
   },
   
-  // Accent colors
+  // Accent colors - Vaporwave palette
   accent: {
-    primary: '#00ff88',
-    secondary: '#00d4ff',
-    tertiary: '#ff6b9d',
+    primary: '#ff00ff', // Magenta
+    secondary: '#00ffff', // Cyan
+    tertiary: '#ff6b9d', // Pink
+    quaternary: '#8a2be2', // BlueViolet
     warning: '#ffaa00',
     error: '#ff4444',
   },

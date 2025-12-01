@@ -3,13 +3,13 @@ import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 
 export const metadata: Metadata = {
-  title: 'Bellum - Ultra-Fast Web Emulator Platform',
-  description: 'Run Android, Windows, Linux, and gaming consoles in your browser with zero-lag performance',
-  keywords: ['emulator', 'virtual machine', 'web emulator', 'android emulator', 'windows emulator', 'gaming'],
-  authors: [{ name: 'Bellum' }],
+  title: 'nacho. - Universal Compiler Platform',
+  description: 'Transform native binaries into web apps. Run Roblox, Fortnite, and Android apps in your browser with zero lag.',
+  keywords: ['compiler', 'emulator', 'wasm', 'android', 'windows', 'gaming', 'nacho'],
+  authors: [{ name: 'nacho.' }],
   openGraph: {
-    title: 'Bellum - Ultra-Fast Web Emulator Platform',
-    description: 'Run Android, Windows, Linux, and gaming consoles in your browser',
+    title: 'nacho. - Universal Compiler Platform',
+    description: 'Transform native binaries into web apps. Run Roblox, Fortnite, and Android apps in your browser.',
     type: 'website',
   },
 };

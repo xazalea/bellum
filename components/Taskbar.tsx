@@ -13,9 +13,10 @@ export const Taskbar: React.FC<TaskbarProps> = ({ activeSkin, activeVMs }) => {
         switch (activeSkin) {
             case VMType.WINDOWS:
                 return {
-                    backgroundColor: 'rgba(20, 20, 20, 0.85)',
-                    backdropFilter: 'blur(10px)',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: 'linear-gradient(135deg, rgba(255, 0, 255, 0.2), rgba(0, 255, 255, 0.2))',
+                    backdropFilter: 'blur(20px)',
+                    borderTop: '2px solid rgba(255, 0, 255, 0.5)',
+                    boxShadow: '0 -5px 30px rgba(255, 0, 255, 0.3)',
                 };
             case VMType.LINUX:
                 return {
@@ -62,19 +63,32 @@ export const Taskbar: React.FC<TaskbarProps> = ({ activeSkin, activeVMs }) => {
             }}
         >
             {/* Start Button / App Drawer */}
-            <button style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                border: 'none',
-                background: 'rgba(255,255,255,0.1)',
-                color: '#fff',
-                cursor: 'pointer',
-                marginRight: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}>
+            <button 
+                className="taskbar-start-button"
+                style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    border: '2px solid rgba(255, 0, 255, 0.5)',
+                    background: 'linear-gradient(135deg, rgba(255, 0, 255, 0.3), rgba(0, 255, 255, 0.3))',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    marginRight: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 0 15px rgba(255, 0, 255, 0.4)',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                    e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 0, 255, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 255, 0.4)';
+                }}
+            >
                 {activeSkin === VMType.WINDOWS ? '⊞' : activeSkin === VMType.ANDROID ? '⋮⋮⋮' : '●'}
             </button>
 
@@ -84,12 +98,12 @@ export const Taskbar: React.FC<TaskbarProps> = ({ activeSkin, activeVMs }) => {
                     <button
                         key={vmId}
                         style={{
-                            background: 'rgba(255,255,255,0.1)',
-                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 0, 255, 0.3)',
                             color: '#fff',
                             padding: '0 15px',
                             height: '36px',
-                            borderRadius: '4px',
+                            borderRadius: '8px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -97,6 +111,17 @@ export const Taskbar: React.FC<TaskbarProps> = ({ activeSkin, activeVMs }) => {
                             maxWidth: '150px',
                             overflow: 'hidden',
                             whiteSpace: 'nowrap',
+                            transition: 'all 0.3s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 0, 255, 0.2), rgba(0, 255, 255, 0.2))';
+                            e.currentTarget.style.borderColor = 'rgba(255, 0, 255, 0.6)';
+                            e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 255, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 0, 255, 0.3)';
+                            e.currentTarget.style.boxShadow = 'none';
                         }}
                     >
                         <span style={{ fontSize: '12px' }}>💻</span>

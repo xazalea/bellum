@@ -23,13 +23,15 @@ export const OsSwitcher: React.FC<OsSwitcherProps> = ({ currentSkin, onSwitch })
                 position: 'absolute',
                 top: '10px',
                 right: '10px',
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                backdropFilter: 'blur(5px)',
-                padding: '5px',
-                borderRadius: '8px',
+                background: 'linear-gradient(135deg, rgba(255, 0, 255, 0.2), rgba(0, 255, 255, 0.2))',
+                backdropFilter: 'blur(20px)',
+                padding: '8px',
+                borderRadius: '12px',
                 display: 'flex',
-                gap: '5px',
+                gap: '6px',
                 zIndex: 2000,
+                border: '2px solid rgba(255, 0, 255, 0.4)',
+                boxShadow: '0 0 30px rgba(255, 0, 255, 0.3), inset 0 0 20px rgba(0, 255, 255, 0.1)',
             }}
         >
             {skins.map(skin => (
@@ -38,17 +40,32 @@ export const OsSwitcher: React.FC<OsSwitcherProps> = ({ currentSkin, onSwitch })
                     onClick={() => onSwitch(skin.type)}
                     title={`Switch to ${skin.label}`}
                     style={{
-                        background: currentSkin === skin.type ? 'rgba(255,255,255,0.2)' : 'transparent',
-                        border: 'none',
+                        background: currentSkin === skin.type 
+                            ? 'linear-gradient(135deg, rgba(255, 0, 255, 0.4), rgba(0, 255, 255, 0.4))'
+                            : 'rgba(255, 255, 255, 0.05)',
+                        border: currentSkin === skin.type ? '1px solid rgba(255, 0, 255, 0.6)' : '1px solid transparent',
                         color: '#fff',
                         padding: '8px 12px',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         cursor: 'pointer',
                         fontSize: '16px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '5px',
-                        transition: 'background 0.2s',
+                        transition: 'all 0.3s ease',
+                        boxShadow: currentSkin === skin.type ? '0 0 15px rgba(255, 0, 255, 0.5)' : 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                        if (currentSkin !== skin.type) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.boxShadow = '0 0 10px rgba(255, 0, 255, 0.3)';
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (currentSkin !== skin.type) {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }
                     }}
                 >
                     <span>{skin.icon}</span>
