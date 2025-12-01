@@ -1,11 +1,11 @@
 # Bellum - Hyper VM Platform
 
-Bellum is a hyper virtual machine platform that allows you to run multiple virtual machines (Windows, Linux, Android, Xbox, and more) directly in your web browser. All files are stored in the cloud using Puter.js, ensuring fast access and no local storage usage.
+Bellum is a hyper virtual machine platform that allows you to run multiple virtual machines (Windows, Linux, Android, Xbox, and more) directly in your web browser. All files are stored locally using HiberFile (IndexedDB), ensuring fast access and data privacy.
 
 ## Features
 
 - 🖥️ Multiple VM types: Windows, Linux, Android, DOS, and more
-- ☁️ Cloud storage via Puter.js (no local storage needed)
+- 💾 persistent local storage via HiberFile (no cloud needed)
 - 🚀 Fast and efficient emulation
 - 🎮 Run apps and games from different platforms
 - 💾 Automatic file management and synchronization

@@ -30,13 +30,8 @@ export default function RootLayout({
     <html lang="en">
       <head>
         {/* Preconnect to external domains */}
-        <link rel="preconnect" href="https://js.puter.com" />
         <link rel="preconnect" href="https://github.com" />
-        <link rel="dns-prefetch" href="https://js.puter.com" />
         <link rel="dns-prefetch" href="https://github.com" />
-        
-        {/* Puter.js - async load */}
-        <script src="https://js.puter.com/v2/" async defer></script>
         
         {/* Pyodide for Python execution */}
         <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js" async defer></script>
