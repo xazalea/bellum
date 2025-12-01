@@ -48,7 +48,18 @@ export class HiberFile {
 
   async writeFile(path: string, content: string | Blob | ArrayBuffer | Uint8Array, options?: { dedupeName?: boolean; createMissingParents?: boolean }) {
     const store = await this.getStore('readwrite');
-    const blob = content instanceof Blob ? content : new Blob([content]);
+    
+    // Fix: Handle content types explicitly to satisfy TS and browser
+    let blob: Blob;
+    if (content instanceof Blob) {
+        blob = content;
+    } else if (content instanceof Uint8Array) {
+        blob = new Blob([content]);
+    } else if (content instanceof ArrayBuffer) {
+        blob = new Blob([content]);
+    } else {
+        blob = new Blob([String(content)]);
+    }
     
     // Normalize path
     path = path.startsWith('/') ? path.substring(1) : path;
