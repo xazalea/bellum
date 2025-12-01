@@ -3,6 +3,7 @@ import { FileType, BinaryAnalyzer } from './analyzers/binary-analyzer';
 import { puterClient } from '../storage/hiberfile';
 import { X86Loader } from './loaders/x86-loader';
 import { APKLoader } from './loaders/apk-loader';
+import { NachoLoader } from './loaders/nacho-loader';
 
 export interface RuntimeConfig {
     memory: number; // MB
@@ -83,12 +84,14 @@ export class RuntimeManager {
 
         switch (type) {
             case FileType.PE_EXE:
-                this.activeLoader = new X86Loader();
-                await this.activeLoader.load(container, filePath, config.memory);
+                // Switch to Nacho Transpiler for PE files
+                this.activeLoader = new NachoLoader();
+                await this.activeLoader.load(container, filePath, type);
                 break;
             case FileType.APK:
-                this.activeLoader = new APKLoader();
-                await this.activeLoader.load(container, filePath);
+                // Switch to Nacho Transpiler for APK files
+                this.activeLoader = new NachoLoader();
+                await this.activeLoader.load(container, filePath, type);
                 break;
             default:
                 // Fallback to x86 for ISOs/Unknowns
