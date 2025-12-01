@@ -56,6 +56,15 @@ export class WebVM {
 
     // Zig executor (WASM)
     this.executors.set('zig', new ZigExecutor());
+
+    // C++ executor (WASM)
+    this.executors.set('cpp', new CppExecutor());
+
+    // Haskell executor (WASM)
+    this.executors.set('haskell', new HaskellExecutor());
+
+    // PHP executor (WASM)
+    this.executors.set('php', new PhpExecutor());
   }
 
   /**
@@ -616,9 +625,139 @@ class ZigExecutor implements LanguageExecutor {
   isAvailable(): boolean {
     return typeof WebAssembly !== 'undefined';
   }
+
+/**
+ * C++ Executor using WebAssembly
+ */
+class CppExecutor implements LanguageExecutor {
+  name = 'cpp';
+  private wasmModule: WebAssembly.Module | null = null;
+  private wasmInstance: WebAssembly.Instance | null = null;
+
+  async execute(code: string, input?: string): Promise<CodeExecutionResult> {
+    if (!this.wasmInstance) {
+      return {
+        stdout: '',
+        stderr: 'C++ code must be compiled to WebAssembly first. Use the compile button.',
+        exitCode: 1,
+        executionTime: 0,
+      };
+    }
+
+    try {
+      // Capture stdout
+      let stdout = '';
+      const env = {
+        print: (ptr: number) => {
+             // basic print support if implemented in C++ WASM glue
+             stdout += "Output\n"; 
+        }
+        // In a real implementation, we would link WASI here
+      };
+
+      // Re-instantiate to reset state for fresh execution
+      this.wasmInstance = await WebAssembly.instantiate(this.wasmModule!, { env });
+      
+      const main = this.wasmInstance.exports.main as (() => number) | undefined;
+      if (main) {
+        const exitCode = main();
+        return {
+          stdout: stdout, // For now, stdout capture depends on WASI
+          stderr: '',
+          exitCode: exitCode || 0,
+          executionTime: 0,
+        };
+      }
+      
+      // Start export (WASI default)
+      const start = this.wasmInstance.exports._start as (() => void) | undefined;
+      if (start) {
+          start();
+          return {
+              stdout: stdout,
+              stderr: '',
+              exitCode: 0,
+              executionTime: 0
+          };
+      }
+
+      return {
+        stdout: '',
+        stderr: 'No main or _start function found in WASM module',
+        exitCode: 1,
+        executionTime: 0,
+      };
+    } catch (error: any) {
+      return {
+        stdout: '',
+        stderr: error.message || 'WASM execution failed',
+        exitCode: 1,
+        executionTime: 0,
+      };
+    }
+  }
+
+  async loadWasm(wasm: ArrayBuffer): Promise<void> {
+    try {
+      this.wasmModule = await WebAssembly.compile(wasm);
+      // Pre-instantiate to check validity, but we instantiate per-run usually
+      this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
+    } catch (error: any) {
+      throw new Error(`Failed to load WASM: ${error.message}`);
+    }
+  }
+
+  isAvailable(): boolean {
+    return typeof WebAssembly !== 'undefined';
+  }
 }
 
-// Global WebVM instance (client-side only, lazy initialization)
+/**
+ * Haskell Executor (WASM)
+ */
+class HaskellExecutor implements LanguageExecutor {
+  name = 'haskell';
+  private wasmModule: WebAssembly.Module | null = null;
+  
+  async execute(code: string, input?: string): Promise<CodeExecutionResult> {
+      return {
+          stdout: '',
+          stderr: 'Haskell execution requires GHC WASM backend (Coming Soon)',
+          exitCode: 1,
+          executionTime: 0
+      };
+  }
+  
+  async loadWasm(wasm: ArrayBuffer): Promise<void> {
+     this.wasmModule = await WebAssembly.compile(wasm);
+  }
+
+  isAvailable(): boolean {
+    return typeof WebAssembly !== 'undefined';
+  }
+}
+
+/**
+ * PHP Executor (WASM)
+ */
+class PhpExecutor implements LanguageExecutor {
+  name = 'php';
+  
+  async execute(code: string, input?: string): Promise<CodeExecutionResult> {
+      // Placeholder for php-wasm integration
+      return {
+          stdout: '',
+          stderr: 'PHP execution requires php-wasm (Coming Soon)',
+          exitCode: 1,
+          executionTime: 0
+      };
+  }
+
+  isAvailable(): boolean {
+    return typeof WebAssembly !== 'undefined';
+  }
+}
+
 let webVMInstance: WebVM | null = null;
 
 export function getWebVM(): WebVM | null {

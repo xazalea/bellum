@@ -17,6 +17,94 @@ public class CodeCompilationService
     }
 
     /// <summary>
+    /// Compile C++ code to WebAssembly
+    /// </summary>
+    public async Task<CompilationResult> CompileCppAsync(string code)
+    {
+        try
+        {
+            _logger.LogInformation("Compiling C++ code to WebAssembly");
+
+            var workDir = Path.Combine(_tempDirectory, Guid.NewGuid().ToString());
+            Directory.CreateDirectory(workDir);
+
+            try
+            {
+                var sourceFile = Path.Combine(workDir, "main.cpp");
+                var wasmFile = Path.Combine(workDir, "main.wasm");
+
+                await File.WriteAllTextAsync(sourceFile, code);
+
+                // Compile using clang/emcc
+                // Assuming 'clang' with wasm target support is installed
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = "clang",
+                    // -O3: Optimize
+                    // --target=wasm32: Target WASM
+                    // -nostdlib: No standard lib (unless we have wasi-libc)
+                    // -Wl,--no-entry: No main entry if we use _start
+                    // -Wl,--export-all: Export symbols
+                    Arguments = $"--target=wasm32 -O3 -flto -nostdlib -Wl,--no-entry -Wl,--export-all -o {wasmFile} {sourceFile}",
+                    WorkingDirectory = workDir,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                var process = Process.Start(processInfo);
+                if (process == null)
+                {
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        Error = "Failed to start Clang compiler. Ensure 'clang' is installed."
+                    };
+                }
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0)
+                {
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        Error = $"C++ compilation failed: {error}"
+                    };
+                }
+
+                if (!File.Exists(wasmFile))
+                {
+                    return new CompilationResult
+                    {
+                        Success = false,
+                        Error = "WASM file not generated"
+                    };
+                }
+
+                var wasmBytes = await File.ReadAllBytesAsync(wasmFile);
+                return new CompilationResult
+                {
+                    Success = true,
+                    WasmBase64 = Convert.ToBase64String(wasmBytes),
+                    Warnings = ExtractWarnings(output + error)
+                };
+            }
+            finally
+            {
+                try { Directory.Delete(workDir, true); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            return new CompilationResult { Success = false, Error = ex.Message };
+        }
+    }
+
+    /// <summary>
     /// Compile Rust code to WebAssembly
     /// </summary>
     public async Task<CompilationResult> CompileRustAsync(string code, string? cargoToml = null)
@@ -445,4 +533,3 @@ public class CompilationResult
     public string? Error { get; set; }
     public string[] Warnings { get; set; } = Array.Empty<string>();
 }
-
