@@ -56,7 +56,7 @@ export class HiberFile {
     } else if (content instanceof Uint8Array) {
         blob = new Blob([content]);
     } else if (content instanceof ArrayBuffer) {
-        blob = new Blob([content]);
+        blob = new Blob([new Uint8Array(content)]);
     } else {
         blob = new Blob([String(content)]);
     }
