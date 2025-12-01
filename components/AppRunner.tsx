@@ -1,7 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { RuntimeManager } from '../lib/engine/runtime-manager';
-import { FileType } from '../lib/engine/analyzers/binary-analyzer';
 
 interface AppRunnerProps {
     filePath: string;
@@ -9,28 +8,27 @@ interface AppRunnerProps {
 }
 
 export const AppRunner: React.FC<AppRunnerProps> = ({ filePath, onExit }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [status, setStatus] = useState<string>('Initializing...');
     const [error, setError] = useState<string | null>(null);
     const [isRunning, setIsRunning] = useState(false);
 
     useEffect(() => {
         const launch = async () => {
+            if (!containerRef.current) return;
+            
             try {
                 setStatus('Analyzing binary structure...');
                 const runtime = RuntimeManager.getInstance();
                 
                 setStatus('Transpiling to WebAssembly...');
-                const { type, config, loader } = await runtime.prepareRuntime(filePath);
+                const { type, config } = await runtime.prepareRuntime(filePath);
                 
-                setStatus(`Optimization Complete. Launching ${type}...`);
+                setStatus(`Launching ${type}...`);
+                await runtime.launch(containerRef.current, type, filePath, config);
                 
-                // Simulate "Zero Lag" Instant Launch for now
-                // In a real implementation, this would mount the WASM module
-                setTimeout(() => {
-                    setIsRunning(true);
-                    setStatus('');
-                }, 800); // Fake 800ms "compilation" time
+                setIsRunning(true);
+                setStatus('');
 
             } catch (err: any) {
                 console.error(err);
@@ -41,22 +39,21 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ filePath, onExit }) => {
         launch();
 
         return () => {
-            // Cleanup runtime
+            RuntimeManager.getInstance().stop();
         };
     }, [filePath]);
 
     return (
         <div className="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center overflow-hidden">
-            {/* Fullscreen Canvas */}
-            <canvas 
-                ref={canvasRef}
-                className={`absolute inset-0 w-full h-full object-contain ${isRunning ? 'opacity-100' : 'opacity-0'}`}
-                style={{ imageRendering: 'pixelated' }} // For sharp retro look
+            {/* Container for Runtime Canvas/DOM */}
+            <div 
+                ref={containerRef}
+                className={`absolute inset-0 w-full h-full flex items-center justify-center ${isRunning ? 'opacity-100' : 'opacity-0'}`}
             />
 
             {/* Loading / Status Overlay */}
             {!isRunning && !error && (
-                <div className="relative z-10 text-center space-y-4">
+                <div className="relative z-10 text-center space-y-4 pointer-events-none">
                     <div className="w-16 h-16 border-4 border-t-transparent border-blue-500 rounded-full animate-spin mx-auto"></div>
                     <div className="font-mono text-blue-400 text-lg tracking-wider">{status}</div>
                     <div className="text-xs text-gray-500 font-mono">Nacho Universal Transpiler v1.0</div>
