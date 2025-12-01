@@ -53,12 +53,9 @@ export class HiberFile {
     let blob: Blob;
     if (content instanceof Blob) {
         blob = content;
-    } else if (content instanceof Uint8Array) {
-        blob = new Blob([content]);
-    } else if (content instanceof ArrayBuffer) {
-        blob = new Blob([new Uint8Array(content)]);
     } else {
-        blob = new Blob([String(content)]);
+        // Cast to any to avoid ArrayBufferLike/SharedArrayBuffer type mismatches
+        blob = new Blob([content as any]);
     }
     
     // Normalize path
