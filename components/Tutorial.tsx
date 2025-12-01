@@ -70,17 +70,16 @@ export const Tutorial: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
 
-  useEffect(() => {
-    // Check if user has completed tutorial
-    const tutorialCompleted = localStorage.getItem('nacho-tutorial-completed');
-    if (!tutorialCompleted) {
-      setIsVisible(true);
-      // Start tutorial after a brief delay
-      setTimeout(() => {
-        showStep(0);
-      }, 500);
+  const completeTutorial = () => {
+    localStorage.setItem('nacho-tutorial-completed', 'true');
+    setIsVisible(false);
+    
+    // Clear highlight
+    if (highlightedElement) {
+      highlightedElement.style.outline = '';
+      highlightedElement.style.outlineOffset = '';
     }
-  }, []);
+  };
 
   const showStep = (stepIndex: number) => {
     if (stepIndex >= tutorialSteps.length) {
@@ -115,24 +114,59 @@ export const Tutorial: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    // Check if user has completed tutorial
+    const tutorialCompleted = localStorage.getItem('nacho-tutorial-completed');
+    if (!tutorialCompleted) {
+      setIsVisible(true);
+      // Start tutorial after a brief delay
+      setTimeout(() => {
+        // We can't easily call showStep inside here due to dependency cycles or stale closures
+        // So we just manually set the step
+        setCurrentStep(0);
+      }, 500);
+    }
+  }, []);
+
+  // Trigger showStep when currentStep changes, but we need to avoid infinite loops
+  // Instead, we'll just use currentStep to render and perform side effects in a separate effect if needed
+  useEffect(() => {
+     if (isVisible) {
+        const step = tutorialSteps[currentStep];
+         // Highlight target element if specified
+        if (step.target) {
+            const element = document.querySelector(step.target) as HTMLElement;
+            if (element) {
+                setHighlightedElement(element);
+                element.style.outline = '3px solid rgba(255, 0, 255, 0.8)';
+                element.style.outlineOffset = '4px';
+                element.style.transition = 'outline 0.3s ease';
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        } else {
+            if (highlightedElement) {
+                highlightedElement.style.outline = '';
+                highlightedElement.style.outlineOffset = '';
+                setHighlightedElement(null);
+            }
+        }
+        if (step.action) {
+            step.action();
+        }
+     }
+  }, [currentStep, isVisible, highlightedElement]);
+
   const nextStep = () => {
-    showStep(currentStep + 1);
+     if (currentStep + 1 >= tutorialSteps.length) {
+         completeTutorial();
+     } else {
+         setCurrentStep(prev => prev + 1);
+     }
   };
 
   const skipTutorial = () => {
     if (confirm('Are you sure you want to skip the tutorial? You can always access it later from settings.')) {
       completeTutorial();
-    }
-  };
-
-  const completeTutorial = () => {
-    localStorage.setItem('nacho-tutorial-completed', 'true');
-    setIsVisible(false);
-    
-    // Clear highlight
-    if (highlightedElement) {
-      highlightedElement.style.outline = '';
-      highlightedElement.style.outlineOffset = '';
     }
   };
 
@@ -342,4 +376,3 @@ function getPosition(position: string): React.CSSProperties {
       return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
   }
 }
-

@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { VMViewer } from '@/components/VMViewer';
 import { VMType } from '@/lib/vm/types';
 
-export default function AndroidPage() {
+function AndroidContent() {
   const searchParams = useSearchParams();
   const gameId = searchParams.get('game');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,3 +69,10 @@ export default function AndroidPage() {
   );
 }
 
+export default function AndroidPage() {
+  return (
+    <Suspense fallback={<div style={{ color: 'white', padding: '20px' }}>Loading Android Environment...</div>}>
+      <AndroidContent />
+    </Suspense>
+  );
+}

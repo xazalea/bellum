@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { VMType } from '@/lib/vm/types';
 import { vmManager } from '@/lib/vm/manager';
 import { VMViewer } from './VMViewer';
@@ -76,7 +76,7 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ activeSkin, active
         });
     };
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = useCallback((e: MouseEvent) => {
         if (dragState) {
             const dx = e.clientX - dragState.startX;
             const dy = e.clientY - dragState.startY;
@@ -92,25 +92,25 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ activeSkin, active
                 return w;
             }));
         }
-    };
+    }, [dragState]);
 
-    const handleMouseUp = () => {
+    const handleMouseUp = useCallback(() => {
         setDragState(null);
-    };
+    }, []);
 
     useEffect(() => {
         if (dragState) {
-            window.addEventListener('mousemove', handleMouseMove as any);
+            window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mouseup', handleMouseUp);
         } else {
-            window.removeEventListener('mousemove', handleMouseMove as any);
+            window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         }
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove as any);
+            window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [dragState]);
+    }, [dragState, handleMouseMove, handleMouseUp]);
 
     return (
         <div
@@ -191,4 +191,3 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ activeSkin, active
         </div>
     );
 };
-

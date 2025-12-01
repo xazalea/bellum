@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { VMViewer } from '@/components/VMViewer';
 import { VMType } from '@/lib/vm/types';
 
-export default function WindowsPage() {
+function WindowsContent() {
   const searchParams = useSearchParams();
   const gameId = searchParams.get('game');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,3 +69,10 @@ export default function WindowsPage() {
   );
 }
 
+export default function WindowsPage() {
+  return (
+    <Suspense fallback={<div style={{ color: 'white', padding: '20px' }}>Loading Windows Environment...</div>}>
+      <WindowsContent />
+    </Suspense>
+  );
+}
