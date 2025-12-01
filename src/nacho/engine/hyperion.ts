@@ -80,26 +80,15 @@ export class HyperionEngine {
     // --- Game Mode (Browser Locking) ---
 
     public async enableGameMode() {
+        // Fullscreen and Pointer Lock disabled by default to prevent browser blocking
+        // and "User Gesture" errors.
+        
+        // We only attach listeners here, actual locking happens on user click in VM canvas
         try {
-            // 1. Request Fullscreen - DISABLED as per user request
-            // if (!document.fullscreenElement) {
-            //    await document.documentElement.requestFullscreen();
-            //    this.isFullscreen = true;
-            // }
-
-            // 2. Lock Pointer
-            const canvas = document.querySelector('canvas');
-            if (canvas) {
-                await canvas.requestPointerLock();
-                this.isPointerLocked = true;
-            }
-
-            // 3. Disable Browser Keys (prevent F5, Ctrl+W, etc. if possible - mostly handled by PWA mode)
             window.addEventListener('beforeunload', this.preventExit);
             window.addEventListener('keydown', this.suppressBrowserKeys);
-
         } catch (err) {
-            console.warn('Hyperion: Failed to enable full Game Mode', err);
+            console.warn('Hyperion: Failed to attach event listeners', err);
         }
     }
 

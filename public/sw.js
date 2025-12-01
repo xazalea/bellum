@@ -9,7 +9,6 @@ const STATIC_CACHE = 'bellum-static-v1';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
-  '/',
   '/v86/v86.wasm',
   '/v86/bios/seabios.bin',
   '/v86/bios/vgabios.bin',
@@ -17,6 +16,7 @@ const STATIC_ASSETS = [
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
       return cache.addAll(STATIC_ASSETS).catch((err) => {
@@ -24,7 +24,6 @@ self.addEventListener('install', (event) => {
       });
     })
   );
-  self.skipWaiting();
 });
 
 // Activate event - clean up old caches
@@ -65,15 +64,14 @@ self.addEventListener('fetch', (event) => {
   } else if (url.pathname.startsWith('/_next/static/')) {
     // Next.js static assets - cache forever
     event.respondWith(cacheFirst(request, STATIC_CACHE));
-  } else if (url.pathname.includes('/releases/download/')) {
-    // GitHub releases - cache for a long time
-    event.respondWith(cacheFirst(request, RUNTIME_CACHE));
-  } else if (url.pathname.startsWith('/api/')) {
-    // API requests - network first
-    event.respondWith(networkFirst(request, RUNTIME_CACHE));
   } else {
     // Other requests - stale-while-revalidate
-    event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
+    // Use network first for API to ensure fresh data
+    if (url.pathname.startsWith('/api/')) {
+        event.respondWith(networkFirst(request, RUNTIME_CACHE));
+    } else {
+        event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
+    }
   }
 });
 
@@ -96,60 +94,43 @@ async function cacheFirst(request, cacheName) {
     return response;
   } catch (error) {
     console.error('Fetch failed:', error);
+    // Fallback or rethrow
     throw error;
   }
 }
 
 /**
- * Network-first strategy - try network, fallback to cache
+ * Network-first strategy
  */
 async function networkFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      cache.put(request, response.clone());
+    const cache = await caches.open(cacheName);
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        throw error;
     }
-    return response;
-  } catch (error) {
-    const cached = await cache.match(request);
-    if (cached) {
-      return cached;
-    }
-    throw error;
-  }
 }
 
 /**
- * Stale-while-revalidate - return cache immediately, update in background
+ * Stale-while-revalidate
  */
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
 
-  // Update cache in background
-  fetch(request)
-    .then((response) => {
-      if (response.ok) {
-        cache.put(request, response.clone());
-      }
-    })
-    .catch(() => {
-      // Ignore errors
-    });
-
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const response = await fetch(request);
+  const fetchPromise = fetch(request).then((response) => {
     if (response.ok) {
       cache.put(request, response.clone());
     }
     return response;
-  } catch (error) {
-    throw error;
-  }
+  }).catch(e => console.warn('Fetch failed in background', e));
+
+  return cached || fetchPromise;
 }
+

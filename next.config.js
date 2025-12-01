@@ -137,24 +137,33 @@ const nextConfig = {
     return config;
   },
   
-  // Headers removed to fix COOP/COEP issues with external resources
-  // async headers() {
-  //   return [
-  //     {
-  //       source: '/:path*',
-  //       headers: [
-  //         {
-  //           key: 'Cross-Origin-Embedder-Policy',
-  //           value: 'require-corp',
-  //         },
-  //         {
-  //           key: 'Cross-Origin-Opener-Policy',
-  //           value: 'same-origin',
-  //         },
-  //       ],
-  //     },
-  //   ];
-  // },
+  // Headers for COOP/COEP (required for SharedArrayBuffer)
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp',
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
+          },
+        ],
+      },
+      {
+        source: '/v86/:path*',
+        headers: [
+           {
+             key: 'Cache-Control',
+             value: 'public, max-age=31536000, immutable',
+           }
+        ]
+      }
+    ];
+  },
   
   // Output configuration
   output: 'standalone',
