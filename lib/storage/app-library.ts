@@ -1,5 +1,6 @@
 
 import { HiberFile } from './hiberfile';
+import { CompressionService } from './compression';
 
 export interface StoredApp {
   id: string;
@@ -7,8 +8,8 @@ export interface StoredApp {
   size: number;
   type: string;
   icon?: string;
-  isActive: boolean; // true = IndexedDB, false = Cloud Archive
-  storagePath: string; // Path in HiberFile or Manifest in Cloud Database
+  isActive: boolean; // true = IndexedDB (Hot), false = Cloud Archive (Cold)
+  storagePath: string; // Path in HiberFile or Manifest ID
   created: number;
 }
 
@@ -17,116 +18,141 @@ export interface PublicLibrary {
   name: string;
   description: string;
   author: string;
-  apps: StoredApp[]; // Snapshots of apps in the library
+  apps: StoredApp[];
   created: number;
 }
 
+interface ArchiveManifest {
+  id: string;
+  originalSize: number;
+  compressedSize: number;
+  chunks: string[]; // Paths to chunks in Cold Storage
+  timestamp: number;
+  mimeType: string;
+}
+
 /**
- * Cloud Database Provider
- * Implements an unlimited storage database using document-based splitting.
- * Used for both binary archives and metadata records.
+ * Cloud Database Provider (Simulated Unlimited Storage)
+ * Uses a separate IndexedDB store ("Cold Storage") to simulate a cloud bucket.
+ * Implements real Chunking and Compression.
  */
 export class CloudDatabase {
-  private dbId: string;
+  private coldStore: HiberFile;
 
-  // The "Master" Database ID provided
-  private static MASTER_DB_ID = '1xnJH9136Dyptr3qAE28SWJZ3WE1-roFYrlRIFqq0Cvk';
-
-  constructor(dbId: string = CloudDatabase.MASTER_DB_ID) {
-    this.dbId = dbId;
+  constructor() {
+    // We use a separate HiberFile instance pointing to a different DB
+    // This isolates "Cloud" storage from "Local" storage
+    this.coldStore = new HiberFile('bellum-cloud-storage');
   }
 
   /**
-   * Save binary data (file) to the Cloud Database
-   * Splits into Base64 chunks for unlimited storage capacity.
+   * Archive binary data
+   * 1. Compress
+   * 2. Split into chunks
+   * 3. Store in Cold Storage
    */
   async saveBinary(file: Blob, onProgress?: (p: number) => void): Promise<string> {
-    const CHUNK_SIZE = 1024 * 100; // 100KB chunks
-    const totalSize = file.size;
-    const chunks: string[] = [];
+    // 1. Compress
+    const compressed = await CompressionService.compress(file);
     
-    const base64 = await this.blobToBase64(file);
-    const totalLength = base64.length;
+    // 2. Chunking Configuration
+    const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunks (Standard Cloud Block Size)
+    const totalSize = compressed.size;
+    const chunkCount = Math.ceil(totalSize / CHUNK_SIZE);
+    const chunkPaths: string[] = [];
+    const archiveId = crypto.randomUUID();
+
+    // 3. Process Chunks
+    const buffer = await compressed.arrayBuffer();
     
-    let processed = 0;
-    
-    for (let i = 0; i < totalLength; i += CHUNK_SIZE) {
-      const chunk = base64.slice(i, i + CHUNK_SIZE);
-      chunks.push(chunk); 
+    for (let i = 0; i < chunkCount; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, totalSize);
+      const chunkData = buffer.slice(start, end);
       
-      processed += chunk.length;
-      if (onProgress) onProgress((processed / totalLength) * 100);
-      
-      // Simulate database write latency
-      await new Promise(r => setTimeout(r, 20));
+      const chunkPath = `archives/${archiveId}/chunk_${i}`;
+      await this.coldStore.writeFile(chunkPath, chunkData);
+      chunkPaths.push(chunkPath);
+
+      if (onProgress) {
+        onProgress(((i + 1) / chunkCount) * 100);
+      }
     }
 
-    // Returns a handle/manifest pointing to the distributed data
-    return JSON.stringify({
-      dbId: this.dbId,
-      size: totalSize,
-      chunks: chunks.length,
+    // 4. Create Manifest
+    const manifest: ArchiveManifest = {
+      id: archiveId,
+      originalSize: file.size,
+      compressedSize: totalSize,
+      chunks: chunkPaths,
       timestamp: Date.now(),
-      ref: crypto.randomUUID() // Simulation of a record pointer
-    });
+      mimeType: file.type
+    };
+
+    // Store Manifest in Cold Storage as well
+    const manifestPath = `manifests/${archiveId}.json`;
+    await this.coldStore.writeFile(manifestPath, JSON.stringify(manifest));
+
+    return manifestPath;
   }
 
   /**
-   * Load binary data from the Cloud Database
+   * Restore binary data
+   * 1. Read chunks
+   * 2. Assemble
+   * 3. Decompress
    */
-  async loadBinary(manifestStr: string, onProgress?: (p: number) => void): Promise<Blob> {
-    const manifest = JSON.parse(manifestStr);
-    let loaded = 0;
-    const total = manifest.chunks;
-    
-    for (let i = 0; i < total; i++) {
-      loaded++;
-      if (onProgress) onProgress((loaded / total) * 100);
-      await new Promise(r => setTimeout(r, 10));
+  async loadBinary(manifestPath: string, onProgress?: (p: number) => void): Promise<Blob> {
+    // 1. Load Manifest
+    const manifestJson = await this.coldStore.readFileAsText(manifestPath);
+    const manifest: ArchiveManifest = JSON.parse(manifestJson);
+
+    // 2. Load Chunks
+    const chunks: ArrayBuffer[] = [];
+    let loadedCount = 0;
+
+    for (const chunkPath of manifest.chunks) {
+      const chunkBlob = await this.coldStore.readFile(chunkPath);
+      chunks.push(await chunkBlob.arrayBuffer());
+      
+      loadedCount++;
+      if (onProgress) {
+        onProgress((loadedCount / manifest.chunks.length) * 100);
+      }
     }
 
-    // Return mock data as we cannot read from the real public doc without auth
-    return new Blob(["Mock Retrieved Data"], { type: 'application/octet-stream' });
+    // 3. Assemble
+    const compressedBlob = new Blob(chunks);
+
+    // 4. Decompress
+    const originalBlob = await CompressionService.decompress(compressedBlob);
+    
+    // Restore type
+    return new Blob([originalBlob], { type: manifest.mimeType });
   }
 
   /**
-   * Save a structured record (Library, Profile, etc.)
+   * Save Metadata Record
    */
   async saveRecord(collection: string, data: any): Promise<string> {
-    // Simulate saving a JSON record
-    await new Promise(r => setTimeout(r, 500));
-    const recordId = crypto.randomUUID();
-    
-    // In a real impl, this would append to the Doc/Sheet
-    console.log(`[CloudDB] Saved record ${recordId} to ${collection}`);
-    return recordId;
+    const id = data.id || crypto.randomUUID();
+    const path = `records/${collection}/${id}.json`;
+    await this.coldStore.writeFile(path, JSON.stringify(data));
+    return id;
   }
 
   /**
-   * Load a structured record
+   * Load Metadata Record
    */
   async loadRecord(collection: string, id: string): Promise<any> {
-    await new Promise(r => setTimeout(r, 500));
-    // Return mock data
-    return null;
-  }
-
-  private blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const res = reader.result as string;
-        const base64 = res.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    const path = `records/${collection}/${id}.json`;
+    const json = await this.coldStore.readFileAsText(path);
+    return JSON.parse(json);
   }
 }
 
 /**
- * Manages the Application Library and Public Repositories
+ * Manages the Application Library
  */
 export class AppLibraryManager {
   private localStore: HiberFile;
@@ -173,13 +199,14 @@ export class AppLibraryManager {
     const id = crypto.randomUUID();
     const path = `apps/${id}/${file.name}`;
     
+    // Save to "Hot" Storage (Local)
     await this.localStore.writeFile(path, file, { createMissingParents: true });
     
     const app: StoredApp = {
       id,
       name: file.name,
       size: file.size,
-      type: 'application/octet-stream',
+      type: file.type || 'application/octet-stream',
       isActive: true,
       storagePath: path,
       created: Date.now()
@@ -197,13 +224,18 @@ export class AppLibraryManager {
 
     if (!app.isActive) return;
 
+    // 1. Read from Local (Hot)
     const fileBlob = await this.localStore.readFile(app.storagePath);
-    const manifest = await this.cloudDb.saveBinary(fileBlob, onProgress); // Save to "Unlimited" Cloud DB
 
+    // 2. Save to Cloud (Cold) - Real Compression & Chunking
+    const manifestPath = await this.cloudDb.saveBinary(fileBlob, onProgress);
+
+    // 3. Delete from Local (Hot)
     await this.localStore.deleteFile(app.storagePath);
 
+    // 4. Update State
     app.isActive = false;
-    app.storagePath = manifest;
+    app.storagePath = manifestPath;
     await this.saveLibrary();
   }
 
@@ -214,10 +246,14 @@ export class AppLibraryManager {
 
     if (app.isActive) return;
 
-    const blob = await this.cloudDb.loadBinary(app.storagePath, onProgress); // Load from Cloud DB
+    // 1. Load from Cloud (Cold) - Real Decompression & Assembly
+    const blob = await this.cloudDb.loadBinary(app.storagePath, onProgress);
+
+    // 2. Save to Local (Hot)
     const localPath = `apps/${app.id}/${app.name}`;
     await this.localStore.writeFile(localPath, blob, { createMissingParents: true });
 
+    // 3. Update State
     app.isActive = true;
     app.storagePath = localPath;
     await this.saveLibrary();
@@ -231,75 +267,52 @@ export class AppLibraryManager {
     if (app.isActive) {
       await this.localStore.deleteFile(app.storagePath);
     }
+    
     this.apps.splice(appIndex, 1);
     await this.saveLibrary();
   }
 
   // --- Public Library Management ---
 
-  /**
-   * Creates a Public Library (Repo) from selected apps
-   */
   async createPublicLibrary(name: string, description: string, appIds: string[]): Promise<string> {
     const selectedApps = this.apps.filter(a => appIds.includes(a.id));
-    
-    // In a real scenario, we'd ensure all apps are archived to CloudDB first
-    // For now, we assume we can share the metadata
     
     const library: PublicLibrary = {
       id: crypto.randomUUID(),
       name,
       description,
-      author: 'User', // Could be parameterized
-      apps: selectedApps.map(a => ({...a})), // Clone
+      author: 'User', 
+      apps: selectedApps.map(a => ({...a})), 
       created: Date.now()
     };
 
-    // Save to Cloud Database
     const recordId = await this.cloudDb.saveRecord('libraries', library);
     
-    // Store locally for reference
     this.publicLibraries.push(library);
     await this.saveLibrary();
 
     return recordId;
   }
 
-  /**
-   * Import a Public Library from an ID
-   */
   async importPublicLibrary(libraryId: string): Promise<void> {
-    // In a real impl, fetch from CloudDB
-    // Mocking import:
-    const mockLib: PublicLibrary = {
-      id: libraryId,
-      name: 'Community Game Pack',
-      description: 'Imported collection of classic games',
-      author: 'Community',
-      created: Date.now(),
-      apps: [
-        {
-          id: crypto.randomUUID(),
-          name: 'Doom Shareware',
-          size: 1024 * 1024 * 2,
-          type: 'application/octet-stream',
-          isActive: false,
-          storagePath: '{}', // Manifest
-          created: Date.now()
+    // Try to load from Cold Store
+    try {
+      const library = await this.cloudDb.loadRecord('libraries', libraryId);
+      if (library) {
+        this.publicLibraries.push(library);
+        // Merge apps
+        for (const app of library.apps) {
+           if (!this.apps.find(a => a.id === app.id)) {
+             // Imported apps are initially Inactive (Archive references)
+             this.apps.push(app);
+           }
         }
-      ]
-    };
-
-    this.publicLibraries.push(mockLib);
-    
-    // Add apps to local library as Archived
-    for (const app of mockLib.apps) {
-      // Check duplicates
-      if (!this.apps.find(a => a.name === app.name)) {
-        this.apps.push(app);
+        await this.saveLibrary();
+        return;
       }
+    } catch (e) {
+      console.warn('Library not found in local cloud cache');
     }
-    
-    await this.saveLibrary();
+    throw new Error('Library Import Failed');
   }
 }
