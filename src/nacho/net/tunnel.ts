@@ -30,13 +30,13 @@ export class NetworkTunnel {
         this.transport = new WebTransport(this.endpoint);
         await this.transport.ready;
         
-        const stream = await this.transport.createDatagramsStream();
-        this.writer = stream.writable.getWriter();
+        const datagrams = this.transport.datagrams;
+        this.writer = datagrams.writable.getWriter();
         
         this.isConnected = true;
         console.log('Nacho Network Tunnel Connected (WebTransport)');
         
-        this.readDatagrams(stream.readable);
+        this.readDatagrams(datagrams.readable);
     }
 
     private async readDatagrams(readable: ReadableStream<Uint8Array>) {
