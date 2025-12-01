@@ -80,7 +80,7 @@ self.addEventListener('fetch', (event) => {
 /**
  * Cache-first strategy - check cache, then network
  */
-async function cacheFirst(request: Request, cacheName: string): Promise<Response> {
+async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
 
@@ -103,7 +103,7 @@ async function cacheFirst(request: Request, cacheName: string): Promise<Response
 /**
  * Network-first strategy - try network, fallback to cache
  */
-async function networkFirst(request: Request, cacheName: string): Promise<Response> {
+async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
 
   try {
@@ -124,7 +124,7 @@ async function networkFirst(request: Request, cacheName: string): Promise<Respon
 /**
  * Stale-while-revalidate - return cache immediately, update in background
  */
-async function staleWhileRevalidate(request: Request, cacheName: string): Promise<Response> {
+async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
 
@@ -153,4 +153,3 @@ async function staleWhileRevalidate(request: Request, cacheName: string): Promis
     throw error;
   }
 }
-

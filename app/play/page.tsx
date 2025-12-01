@@ -80,8 +80,9 @@ function PlayContent() {
 
   return (
     <div style={{
-      width: '100vw',
-      height: '100vh',
+      width: '100%',
+      height: '100%',
+      flex: 1,
       backgroundColor: colors.bg.primary,
       position: 'relative',
       overflow: 'hidden',

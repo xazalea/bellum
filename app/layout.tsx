@@ -33,6 +33,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://github.com" />
         <link rel="dns-prefetch" href="https://github.com" />
         
+        {/* Puter.js for backend file storage */}
+        <script src="https://js.puter.com/v2/"></script>
+        
         {/* Pyodide for Python execution */}
         <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js" async defer></script>
         

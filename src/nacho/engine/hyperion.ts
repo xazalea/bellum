@@ -81,11 +81,11 @@ export class HyperionEngine {
 
     public async enableGameMode() {
         try {
-            // 1. Request Fullscreen
-            if (!document.fullscreenElement) {
-                await document.documentElement.requestFullscreen();
-                this.isFullscreen = true;
-            }
+            // 1. Request Fullscreen - DISABLED as per user request
+            // if (!document.fullscreenElement) {
+            //    await document.documentElement.requestFullscreen();
+            //    this.isFullscreen = true;
+            // }
 
             // 2. Lock Pointer
             const canvas = document.querySelector('canvas');

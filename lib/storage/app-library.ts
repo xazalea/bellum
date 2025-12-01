@@ -45,13 +45,47 @@ export class CloudDatabase {
     this.coldStore = new HiberFile('bellum-cloud-storage');
   }
 
+  private get puter() {
+    return (typeof window !== 'undefined' ? (window as any).puter : null);
+  }
+
   /**
    * Archive binary data
    * 1. Compress
    * 2. Split into chunks
-   * 3. Store in Cold Storage
+   * 3. Store in Cold Storage (Puter or LocalDB)
    */
   async saveBinary(file: Blob, onProgress?: (p: number) => void): Promise<string> {
+    // Try Puter Cloud first (Unlimited Storage)
+    if (this.puter) {
+        try {
+            if (!this.puter.auth.isSignedIn()) {
+                // Optional: Prompt sign in? For now, we'll assume user might sign in via UI
+                // or we skip to local if not signed in to avoid popup spam
+                // await this.puter.auth.signIn();
+            }
+            
+            if (this.puter.auth.isSignedIn()) {
+                const archiveId = crypto.randomUUID();
+                const path = `bellum/archives/${archiveId}`;
+                
+                // Create directory
+                await this.puter.fs.mkdir(`bellum/archives`).catch(() => {});
+                
+                // Write file (Puter handles large files)
+                await this.puter.fs.write(path, file);
+                
+                // Store metadata about type
+                await this.puter.fs.write(path + '.meta', JSON.stringify({ type: file.type }));
+                
+                return `puter:${path}`;
+            }
+        } catch (e) {
+            console.warn('Puter Cloud save failed, falling back to local Cold Storage', e);
+        }
+    }
+
+    // Fallback to Local Cold Storage (IndexedDB)
     // 1. Compress
     const compressed = await CompressionService.compress(file);
     
@@ -103,6 +137,27 @@ export class CloudDatabase {
    * 3. Decompress
    */
   async loadBinary(manifestPath: string, onProgress?: (p: number) => void): Promise<Blob> {
+    // Check if stored in Puter Cloud
+    if (manifestPath.startsWith('puter:')) {
+        const path = manifestPath.replace('puter:', '');
+        if (this.puter) {
+            if (!this.puter.auth.isSignedIn()) await this.puter.auth.signIn();
+            
+            const blob = await this.puter.fs.read(path);
+            
+            // Try to get metadata for type
+            let type = 'application/octet-stream';
+            try {
+                const meta = await this.puter.fs.read(path + '.meta');
+                const metaJson = await (meta as Blob).text();
+                type = JSON.parse(metaJson).type;
+            } catch (e) {}
+            
+            return new Blob([blob as Blob], { type });
+        }
+        throw new Error('Puter Cloud unavailable but file stored there');
+    }
+
     // 1. Load Manifest
     const manifestJson = await this.coldStore.readFileAsText(manifestPath);
     const manifest: ArchiveManifest = JSON.parse(manifestJson);
