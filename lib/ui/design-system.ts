@@ -1,47 +1,47 @@
 /**
- * Design System - Professional UI inspired by vapor.my
- * Modern, sleek, dark theme with glassmorphism effects
+ * Design System - Matte Dark Blue Theme
+ * Inspired by prism.onl / vapor.my but with a matte finish
  */
 
 export const colors = {
-  // Background colors
+  // Background colors - Matte Dark Blues
   bg: {
-    primary: '#0a0a0a',
-    secondary: '#111111',
-    tertiary: '#1a1a1a',
-    elevated: '#1f1f1f',
+    primary: '#0B1121',   // Very deep matte blue (almost black)
+    secondary: '#151E32', // Deep matte blue
+    tertiary: '#1E293B',  // Slate blue surface
+    elevated: '#334155',  // Lighter slate for hover/elevated
   },
   
   // Text colors
   text: {
-    primary: '#ffffff',
-    secondary: '#b0b0b0',
-    tertiary: '#808080',
-    muted: '#505050',
+    primary: '#F1F5F9',   // Off-white
+    secondary: '#94A3B8', // Muted slate
+    tertiary: '#64748B',  // Darker muted slate
+    muted: '#475569',
   },
   
-  // Accent colors - Vaporwave palette
+  // Accent colors - Muted, sophisticated
   accent: {
-    primary: '#ff00ff', // Magenta
-    secondary: '#00ffff', // Cyan
-    tertiary: '#ff6b9d', // Pink
-    quaternary: '#8a2be2', // BlueViolet
-    warning: '#ffaa00',
-    error: '#ff4444',
+    primary: '#38BDF8',   // Sky blue
+    secondary: '#818CF8', // Indigo
+    tertiary: '#F472B6',  // Muted pink (for subtle highlights)
+    quaternary: '#2DD4BF', // Teal
+    warning: '#FBBF24',
+    error: '#FB7185',
   },
   
   // Border colors
   border: {
-    primary: 'rgba(255, 255, 255, 0.1)',
-    secondary: 'rgba(255, 255, 255, 0.05)',
-    accent: 'rgba(0, 255, 136, 0.3)',
+    primary: '#1E293B',
+    secondary: '#334155',
+    accent: 'rgba(56, 189, 248, 0.3)',
   },
   
-  // Glass effect
-  glass: {
-    light: 'rgba(255, 255, 255, 0.05)',
-    medium: 'rgba(255, 255, 255, 0.08)',
-    dark: 'rgba(0, 0, 0, 0.3)',
+  // Matte effect (no heavy glass/blur, solid opaque colors)
+  matte: {
+    light: '#1E293B',
+    medium: '#0F172A',
+    dark: '#020617',
   },
 };
 
@@ -63,11 +63,10 @@ export const borderRadius = {
 };
 
 export const shadows = {
-  sm: '0 2px 4px rgba(0, 0, 0, 0.2)',
-  md: '0 4px 12px rgba(0, 0, 0, 0.3)',
-  lg: '0 8px 24px rgba(0, 0, 0, 0.4)',
-  glow: '0 0 20px rgba(0, 255, 136, 0.3)',
-  glowStrong: '0 0 30px rgba(0, 255, 136, 0.5)',
+  sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+  md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+  lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+  glow: '0 0 15px rgba(56, 189, 248, 0.2)', // Subtle blue glow
 };
 
 export const transitions = {
@@ -78,8 +77,8 @@ export const transitions = {
 
 export const typography = {
   fontFamily: {
-    sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
-    mono: '"SF Mono", "Monaco", "Inconsolata", "Fira Code", "Droid Sans Mono", "Source Code Pro", monospace',
+    sans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    mono: '"JetBrains Mono", "Fira Code", monospace',
   },
   fontSize: {
     xs: '12px',
@@ -106,4 +105,3 @@ export const zIndex = {
   modal: 200,
   tooltip: 300,
 };
-

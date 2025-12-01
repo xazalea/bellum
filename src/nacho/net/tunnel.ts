@@ -1,23 +1,67 @@
 // Networking shim for multiplayer support
-// Proxies UDP traffic over WebSocket/WebTransport
+// Proxies UDP traffic over WebTransport (High Performance) or WebSocket (Fallback)
 
 export class NetworkTunnel {
+    private transport: WebTransport | null = null;
     private socket: WebSocket | null = null;
+    private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
     private endpoint: string;
     private isConnected: boolean = false;
+    private useWebTransport: boolean = true;
 
     constructor(endpoint: string) {
         this.endpoint = endpoint;
     }
 
     public async connect(): Promise<void> {
+        if (this.useWebTransport && 'WebTransport' in window) {
+            try {
+                await this.connectWebTransport();
+                return;
+            } catch (err) {
+                console.warn('WebTransport connection failed, falling back to WebSocket', err);
+            }
+        }
+        
+        await this.connectWebSocket();
+    }
+
+    private async connectWebTransport() {
+        this.transport = new WebTransport(this.endpoint);
+        await this.transport.ready;
+        
+        const stream = await this.transport.createDatagramsStream();
+        this.writer = stream.writable.getWriter();
+        
+        this.isConnected = true;
+        console.log('Nacho Network Tunnel Connected (WebTransport)');
+        
+        this.readDatagrams(stream.readable);
+    }
+
+    private async readDatagrams(readable: ReadableStream<Uint8Array>) {
+        const reader = readable.getReader();
+        try {
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                this.handleMessage(value);
+            }
+        } catch (err) {
+            console.error('WebTransport read error:', err);
+        }
+    }
+
+    private async connectWebSocket(): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.socket = new WebSocket(this.endpoint);
+            // Replace 'https' with 'wss' for WebSocket
+            const wsEndpoint = this.endpoint.replace(/^https?/, 'wss').replace(/^http?/, 'ws');
+            this.socket = new WebSocket(wsEndpoint);
             this.socket.binaryType = 'arraybuffer';
 
             this.socket.onopen = () => {
                 this.isConnected = true;
-                console.log('Nacho Network Tunnel Connected');
+                console.log('Nacho Network Tunnel Connected (WebSocket)');
                 resolve();
             };
 
@@ -33,18 +77,21 @@ export class NetworkTunnel {
     }
 
     public sendPacket(data: Uint8Array): void {
-        if (!this.isConnected || !this.socket) {
-            console.warn('Network Tunnel not connected, dropping packet');
+        if (!this.isConnected) {
+            // console.warn('Network Tunnel not connected, dropping packet');
             return;
         }
-        this.socket.send(data);
+
+        if (this.transport && this.writer) {
+            this.writer.write(data).catch(err => console.error('Write error:', err));
+        } else if (this.socket) {
+            this.socket.send(data);
+        }
     }
 
-    private handleMessage(data: ArrayBuffer): void {
+    private handleMessage(data: ArrayBuffer | Uint8Array): void {
         // Dispatch received packet to the emulator/runtime
-        // This would hook into the compiled WASM's memory
-        const packet = new Uint8Array(data);
-        // console.log('Received packet:', packet.byteLength, 'bytes');
+        const packet = data instanceof Uint8Array ? data : new Uint8Array(data);
         
         // Event dispatch (mock)
         const event = new CustomEvent('nacho-network-packet', { detail: packet });
@@ -52,10 +99,12 @@ export class NetworkTunnel {
     }
 
     public close(): void {
+        if (this.transport) {
+            this.transport.close();
+        }
         if (this.socket) {
             this.socket.close();
-            this.isConnected = false;
         }
+        this.isConnected = false;
     }
 }
-
