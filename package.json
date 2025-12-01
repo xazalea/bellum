@@ -14,6 +14,7 @@
     "@types/jszip": "^3.4.0",
     "adm-zip": "^0.5.16",
     "fengari": "^0.1.4",
+    "framer-motion": "^12.23.24",
     "js-dos": "^7.0.0",
     "jszip": "^3.10.1",
     "next": "^14.2.0",
