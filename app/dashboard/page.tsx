@@ -129,7 +129,7 @@ const AppCard = ({
              <span>{app.isActive ? 'Archiving...' : 'Activating...'}</span>
              <span>{Math.round(progress)}%</span>
            </div>
-           <ProgressBar progress={progress} color={app.isActive ? colors.error.primary : colors.accent.primary} />
+           <ProgressBar progress={progress} color={app.isActive ? colors.accent.error : colors.accent.primary} />
         </div>
       )}
 
