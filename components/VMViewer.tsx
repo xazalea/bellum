@@ -10,6 +10,45 @@ interface VMViewerProps {
   style?: React.CSSProperties;
 }
 
+const BrowserVM = ({ url }: { url: string }) => {
+    const [currentUrl, setCurrentUrl] = useState(url || 'https://google.com/search?q=test&igu=1');
+    const [inputUrl, setInputUrl] = useState(currentUrl);
+
+    const handleNavigate = (e: React.FormEvent) => {
+        e.preventDefault();
+        let target = inputUrl;
+        if (!target.startsWith('http')) target = 'https://' + target;
+        setCurrentUrl(target);
+    };
+
+    return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+            <div style={{ padding: '8px', background: '#f1f3f4', display: 'flex', gap: '8px', borderBottom: '1px solid #dadce0' }}>
+                <button onClick={() => setCurrentUrl(currentUrl)} style={{border:'none', background:'transparent'}}>↻</button>
+                <form onSubmit={handleNavigate} style={{flex:1}}>
+                    <input 
+                        type="text" 
+                        value={inputUrl} 
+                        onChange={e => setInputUrl(e.target.value)}
+                        style={{ width: '100%', padding: '6px 12px', borderRadius: '16px', border: '1px solid #dadce0', background: '#fff' }}
+                    />
+                </form>
+            </div>
+            <div style={{ flex: 1, position: 'relative' }}>
+                {/* Note: Real browser-in-browser usually requires a proxy service or server-side rendering 
+                    due to X-Frame-Options. We use a placeholder for secure sites or a proxy service if available.
+                    For this demo, we assume we can load some content or use a proxy.
+                */}
+                <iframe 
+                    src={currentUrl} 
+                    style={{ width: '100%', height: '100%', border: 'none' }} 
+                    sandbox="allow-scripts allow-same-origin allow-forms"
+                />
+            </div>
+        </div>
+    );
+};
+
 export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [vm, setVM] = useState<VMInstance | null>(null);
@@ -40,7 +79,7 @@ export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
             type: vmType,
             name: `${vmType} VM`,
             memory: 2048,
-            executionMode: gameId ? 'game' : 'system',
+            executionMode: gameId ? 'game' : (vmType === VMType.BROWSER ? 'browser' : 'system'),
           });
           setVM(vmInstance);
           if (containerRef.current) {
@@ -148,7 +187,11 @@ export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
             alignItems: 'center',
             background: '#000'
         }} 
-      />
+      >
+        {vm?.config.type === VMType.BROWSER && vm?.state.isRunning && (
+            <BrowserVM url="https://bing.com" />
+        )}
+      </div>
 
       {/* Overlay / Controls if not running or strictly system UI */}
       {(!vm?.state.isRunning || vm?.state.isPaused) && (

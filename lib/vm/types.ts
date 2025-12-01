@@ -11,6 +11,7 @@ export enum VMType {
   MACOS = 'macos',
   PLAYSTATION = 'playstation',
   CODE = 'code', // Code execution environment (WebVM)
+  BROWSER = 'browser', // Browser-in-Browser
 }
 
 export interface VMConfig {
@@ -22,7 +23,7 @@ export interface VMConfig {
   diskSize?: number; // in MB
   networkEnabled?: boolean;
   customConfig?: Record<string, any>;
-  executionMode?: 'system' | 'game' | 'code'; // 'system' = full OS, 'game' = direct execution, 'code' = code execution
+  executionMode?: 'system' | 'game' | 'code' | 'browser'; // 'system' = full OS, 'game' = direct execution, 'code' = code execution
 }
 
 export interface VMState {
@@ -68,4 +69,3 @@ export interface VMManager {
   saveAllVMs(): Promise<void>;
   loadAllVMs(): Promise<void>;
 }
-

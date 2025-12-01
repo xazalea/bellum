@@ -6,8 +6,50 @@ import { colors } from '@/lib/ui/design-system';
 import { hiberFile } from '@/lib/storage/hiberfile';
 import { AppLibraryManager, StoredApp, PublicLibrary } from '@/lib/storage/app-library';
 import { useRouter } from 'next/navigation';
+import { VMType } from '@/lib/vm/types';
 
 // --- Components ---
+
+const SystemMonitor = () => {
+    const [stats, setStats] = useState({ cpu: 0, ram: 0, net: 0 });
+    
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setStats({
+                cpu: Math.random() * 30 + 5,
+                ram: Math.random() * 40 + 20,
+                net: Math.random() * 100
+            });
+        }, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', width: '100%' }}>
+            <div style={{ flex: 1, background: colors.bg.secondary, padding: '15px', borderRadius: '12px', border: `1px solid ${colors.border.primary}` }}>
+                <div style={{ fontSize: '12px', color: colors.text.secondary, marginBottom: '5px' }}>CPU LOAD</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.accent.primary }}>{stats.cpu.toFixed(1)}%</div>
+                <div style={{ height: '4px', background: colors.bg.tertiary, marginTop: '10px', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${stats.cpu}%`, height: '100%', background: colors.accent.primary }} />
+                </div>
+            </div>
+            <div style={{ flex: 1, background: colors.bg.secondary, padding: '15px', borderRadius: '12px', border: `1px solid ${colors.border.primary}` }}>
+                <div style={{ fontSize: '12px', color: colors.text.secondary, marginBottom: '5px' }}>MEMORY</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.accent.secondary }}>{stats.ram.toFixed(1)}%</div>
+                <div style={{ height: '4px', background: colors.bg.tertiary, marginTop: '10px', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${stats.ram}%`, height: '100%', background: colors.accent.secondary }} />
+                </div>
+            </div>
+            <div style={{ flex: 1, background: colors.bg.secondary, padding: '15px', borderRadius: '12px', border: `1px solid ${colors.border.primary}` }}>
+                <div style={{ fontSize: '12px', color: colors.text.secondary, marginBottom: '5px' }}>NETWORK</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: colors.accent.quaternary }}>{stats.net.toFixed(0)} ms</div>
+                <div style={{ height: '4px', background: colors.bg.tertiary, marginTop: '10px', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min(stats.net, 100)}%`, height: '100%', background: colors.accent.quaternary }} />
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const ProgressBar = ({ progress, color = colors.accent.primary }: { progress: number; color?: string }) => (
   <div style={{ 
@@ -43,7 +85,7 @@ const AppCard = ({
   onActivate: (id: string) => void; 
   onDeactivate: (id: string) => void; 
   onDelete: (id: string) => void;
-  onPlay: (path: string) => void;
+  onPlay: (app: StoredApp) => void;
   onSelect?: (id: string) => void;
   selected?: boolean;
 }) => {
@@ -82,7 +124,8 @@ const AppCard = ({
         position: 'relative',
         overflow: 'hidden',
         boxShadow: app.isActive ? `0 4px 20px ${colors.accent.primary}15` : 'none',
-        cursor: onSelect ? 'pointer' : 'default'
+        cursor: onSelect ? 'pointer' : 'default',
+        minHeight: '200px'
       }}
     >
       {/* Status Indicator */}
@@ -113,7 +156,7 @@ const AppCard = ({
           marginBottom: '16px',
           fontSize: '24px'
         }}>
-          {app.isActive ? '🚀' : '📦'}
+          {app.icon || (app.isActive ? '🚀' : '📦')}
         </div>
         <h3 style={{ color: colors.text.primary, fontWeight: '600', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {app.name}
@@ -137,7 +180,7 @@ const AppCard = ({
         {app.isActive ? (
           <>
             <button 
-              onClick={() => onPlay(app.storagePath)}
+              onClick={() => onPlay(app)}
               style={{
                 flex: 2,
                 padding: '8px',
@@ -261,8 +304,14 @@ export default function DashboardPage() {
     }
   };
 
-  const handlePlay = (path: string) => {
-    router.push(`/play?file=${encodeURIComponent(path)}`);
+  const handlePlay = (app: StoredApp) => {
+    // Handle Special Apps
+    if (app.name.includes('Chrome') || app.name.includes('Browser')) {
+        // Use browser VM
+        router.push(`/play?vmType=${VMType.BROWSER}`);
+        return;
+    }
+    router.push(`/play?file=${encodeURIComponent(app.storagePath)}`);
   };
 
   // --- Library Actions ---
@@ -359,6 +408,9 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        {/* System Monitor */}
+        <SystemMonitor />
 
         {/* Library Management Toolbar */}
         <div style={{ marginBottom: '40px', padding: '20px', background: colors.bg.secondary, borderRadius: '16px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>

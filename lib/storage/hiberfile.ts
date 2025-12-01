@@ -3,13 +3,14 @@
 // Replaces Puter.js for file hosting
 
 export class HiberFile {
-  private dbName = 'hiberfile-storage';
+  private dbName: string;
   private storeName = 'files';
   private db: IDBDatabase | null = null;
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
 
-  constructor() {
+  constructor(dbName: string = 'hiberfile-storage') {
+      this.dbName = dbName;
       this.initPromise = this.ensureInitialized();
   }
 
@@ -45,9 +46,9 @@ export class HiberFile {
     return this.db.transaction(this.storeName, mode).objectStore(this.storeName);
   }
 
-  async writeFile(path: string, content: string | Blob | ArrayBuffer, options?: { dedupeName?: boolean; createMissingParents?: boolean }) {
+  async writeFile(path: string, content: string | Blob | ArrayBuffer | Uint8Array, options?: { dedupeName?: boolean; createMissingParents?: boolean }) {
     const store = await this.getStore('readwrite');
-    const blob = content instanceof Blob ? content : new Blob([content instanceof ArrayBuffer ? content : String(content)]);
+    const blob = content instanceof Blob ? content : new Blob([content]);
     
     // Normalize path
     path = path.startsWith('/') ? path.substring(1) : path;
@@ -264,4 +265,3 @@ export class HiberFile {
 export const hiberFile = new HiberFile();
 // Alias for compatibility during refactor
 export const puterClient = hiberFile;
-
