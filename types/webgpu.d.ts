@@ -1,19 +1,121 @@
 // WebGPU Type Definitions
 
 interface GPUAdapter {
-  requestDevice(): Promise<GPUDevice>;
+  requestDevice(descriptor?: GPUDeviceDescriptor): Promise<GPUDevice>;
+}
+
+interface GPUDeviceDescriptor {
+  label?: string;
+  requiredFeatures?: string[];
+  requiredLimits?: Record<string, number>;
 }
 
 interface GPUDevice {
   createCommandEncoder(): GPUCommandEncoder;
   createTexture(descriptor: GPUTextureDescriptor): GPUTexture;
   createRenderPipeline(descriptor: GPURenderPipelineDescriptor): GPURenderPipeline;
+  createComputePipeline(descriptor: GPUComputePipelineDescriptor): GPUComputePipeline;
+  createShaderModule(descriptor: GPUShaderModuleDescriptor): GPUShaderModule;
+  createBuffer(descriptor: GPUBufferDescriptor): GPUBuffer;
+  createBindGroup(descriptor: GPUBindGroupDescriptor): GPUBindGroup;
   queue: GPUQueue;
 }
 
+interface GPUBufferDescriptor {
+  size: number;
+  usage: GPUBufferUsageFlags;
+  mappedAtCreation?: boolean;
+  label?: string;
+}
+
+interface GPUBuffer {
+  getMappedRange(offset?: number, size?: number): ArrayBuffer;
+  unmap(): void;
+  mapAsync(mode: GPUMapModeFlags, offset?: number, size?: number): Promise<void>;
+  destroy(): void;
+}
+
+type GPUBufferUsageFlags = number;
+declare const GPUBufferUsage: {
+  readonly MAP_READ: number;
+  readonly MAP_WRITE: number;
+  readonly COPY_SRC: number;
+  readonly COPY_DST: number;
+  readonly INDEX: number;
+  readonly VERTEX: number;
+  readonly UNIFORM: number;
+  readonly STORAGE: number;
+  readonly INDIRECT: number;
+  readonly QUERY_RESOLVE: number;
+};
+
+type GPUMapModeFlags = number;
+declare const GPUMapMode: {
+  readonly READ: number;
+  readonly WRITE: number;
+};
+
+interface GPUShaderModuleDescriptor {
+  code: string;
+  sourceMap?: any;
+  label?: string;
+}
+
+interface GPUComputePipelineDescriptor {
+  layout: GPUPipelineLayout | GPUAutoLayoutMode;
+  compute: GPUProgrammableStage;
+  label?: string;
+}
+
+interface GPUProgrammableStage {
+  module: GPUShaderModule;
+  entryPoint: string;
+  constants?: Record<string, number>;
+}
+
+interface GPUComputePipeline {
+  getBindGroupLayout(index: number): GPUBindGroupLayout;
+}
+
+interface GPUBindGroupLayout {}
+
+interface GPUBindGroupDescriptor {
+  layout: GPUBindGroupLayout;
+  entries: GPUBindGroupEntry[];
+  label?: string;
+}
+
+interface GPUBindGroupEntry {
+  binding: number;
+  resource: GPUBindingResource;
+}
+
+type GPUBindingResource = GPUBufferBinding | GPUTextureView | GPUSampler;
+
+interface GPUBufferBinding {
+  buffer: GPUBuffer;
+  offset?: number;
+  size?: number;
+}
+
+interface GPUSampler {}
+
 interface GPUCommandEncoder {
   beginRenderPass(descriptor: GPURenderPassDescriptor): GPURenderPassEncoder;
+  beginComputePass(descriptor?: GPUComputePassDescriptor): GPUComputePassEncoder;
+  copyBufferToBuffer(source: GPUBuffer, sourceOffset: number, destination: GPUBuffer, destinationOffset: number, size: number): void;
   finish(): GPUCommandBuffer;
+}
+
+interface GPUComputePassDescriptor {
+  label?: string;
+}
+
+interface GPUComputePassEncoder {
+  setPipeline(pipeline: GPUComputePipeline): void;
+  setBindGroup(index: number, bindGroup: GPUBindGroup, dynamicOffsets?: number[]): void;
+  dispatchWorkgroups(workgroupCountX: number, workgroupCountY?: number, workgroupCountZ?: number): void;
+  end(): void;
 }
 
 interface GPURenderPassEncoder {
@@ -131,6 +233,7 @@ interface GPUBlendComponent {
 
 interface GPUQueue {
   writeTexture(destination: GPUImageCopyTexture, data: ArrayBufferView, dataLayout: GPUImageDataLayout, size: GPUExtent3D): void;
+  writeBuffer(buffer: GPUBuffer, bufferOffset: number, data: BufferSource, dataOffset?: number, size?: number): void;
   submit(commandBuffers: GPUCommandBuffer[]): void;
 }
 
@@ -226,9 +329,16 @@ interface Navigator {
 }
 
 interface GPU {
-  requestAdapter(): Promise<GPUAdapter | null>;
+  requestAdapter(options?: GPURequestAdapterOptions): Promise<GPUAdapter | null>;
   getPreferredCanvasFormat(): GPUTextureFormat;
 }
+
+interface GPURequestAdapterOptions {
+  powerPreference?: GPUPowerPreference;
+  forceFallbackAdapter?: boolean;
+}
+
+type GPUPowerPreference = 'low-power' | 'high-performance';
 
 interface HTMLCanvasElement {
   getContext(contextId: 'webgpu', options?: GPUCanvasConfiguration): GPUCanvasContext | null;
@@ -250,4 +360,3 @@ interface GPUCanvasConfiguration {
 
 type GPUCanvasAlphaMode = 'opaque' | 'premultiplied';
 type PredefinedColorSpace = 'srgb' | 'display-p3';
-
