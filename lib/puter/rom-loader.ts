@@ -33,7 +33,7 @@ export class RomLoader {
     }
 
     static async uploadRom(file: File, destinationPath: string): Promise<void> {
-        await puterClient.writeFile(destinationPath, file, { createMissingParents: true });
+        await puterClient.writeFile(destinationPath, file, { compress: true });
     }
 
     static getWindowsRequirements(): RomRequirement[] {
