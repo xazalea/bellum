@@ -625,6 +625,7 @@ class ZigExecutor implements LanguageExecutor {
   isAvailable(): boolean {
     return typeof WebAssembly !== 'undefined';
   }
+}
 
 /**
  * C++ Executor using WebAssembly
