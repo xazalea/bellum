@@ -254,7 +254,7 @@ export class HiberFile {
     
   async createDirectory(path: string): Promise<void> {
       path = path.startsWith('/') ? path.substring(1) : path;
-      const store = await this.getStore('readwrite');
+      const store = await this.getStore(this.storeName, 'readwrite');
       return new Promise<void>((resolve, reject) => {
           const request = store.put({
               path,
