@@ -45,7 +45,8 @@ self.addEventListener('activate', (event) => {
 // On-Demand Materialization:
 // Intercept requests for heavy assets and generate/stream them if needed.
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
   
   // Materialization API
   if (url.pathname.startsWith('/_nacho/materialize/')) {
@@ -53,9 +54,6 @@ self.addEventListener('fetch', (event) => {
       return;
   }
   
-  // ... rest of existing logic
-
-
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
