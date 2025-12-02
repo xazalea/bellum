@@ -98,7 +98,7 @@ export class NachoLoader {
     this.updateStatus('Linking', 'Binding Syscalls...');
     
     try {
-        const module = await WebAssembly.compile(wasmBytes.buffer);
+        const module = await WebAssembly.compile(wasmBytes);
         this.instance = await WebAssembly.instantiate(module, this.syscallBridge.getImports());
         
         this.updateStatus('Running', 'Execution Started (Neural Accelerated)');
