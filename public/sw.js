@@ -42,10 +42,19 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - cache-first strategy
+// On-Demand Materialization:
+// Intercept requests for heavy assets and generate/stream them if needed.
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const url = new URL(event.request.url);
+  
+  // Materialization API
+  if (url.pathname.startsWith('/_nacho/materialize/')) {
+      event.respondWith(handleMaterialization(event.request));
+      return;
+  }
+  
+  // ... rest of existing logic
+
 
   // Skip non-GET requests
   if (request.method !== 'GET') {
@@ -132,5 +141,32 @@ async function staleWhileRevalidate(request, cacheName) {
   }).catch(e => console.warn('Fetch failed in background', e));
 
   return cached || fetchPromise;
+}
+
+/**
+ * Handle On-Demand Materialization
+ * Generates resources via ServiceWorker compute instead of fetching from server
+ */
+async function handleMaterialization(request) {
+    const url = new URL(request.url);
+    const resourceId = url.pathname.split('/').pop();
+    
+    // Mock generation logic
+    // In a real scenario, this would use WASM or JS logic to generate textures/geometry
+    // "Materializing" a requested asset from procedural rules.
+    
+    const data = new Float32Array(1024 * 1024); // 1MB dummy data
+    for(let i=0; i<data.length; i++) data[i] = Math.random();
+    
+    // Return as a binary stream
+    const blob = new Blob([data], { type: 'application/octet-stream' });
+    const response = new Response(blob, {
+        headers: {
+            'X-Nacho-Materialized': 'true',
+            'Cache-Control': 'public, max-age=3600'
+        }
+    });
+    
+    return response;
 }
 
