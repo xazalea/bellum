@@ -100,7 +100,7 @@ export class AppManager implements AppLauncher {
     try {
       // Upload app file to Puter.js
       await puterClient.writeFile(app.filePath, appFile, {
-        createMissingParents: true,
+        compress: true,
       });
 
       // Create saves directory
@@ -111,7 +111,7 @@ export class AppManager implements AppLauncher {
       await puterClient.writeFile(
         metadataPath,
         JSON.stringify(app, null, 2),
-        { createMissingParents: true }
+        { compress: true }
       );
 
       installation.status = 'installed';
@@ -135,7 +135,7 @@ export class AppManager implements AppLauncher {
     await puterClient.writeFile(
       metadataPath,
       JSON.stringify(app, null, 2),
-      { createMissingParents: true }
+      { compress: true }
     );
 
     // Get app file URL
