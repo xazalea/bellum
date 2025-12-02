@@ -23,7 +23,23 @@
       "@/lib/*": ["./lib/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "types/**/*.d.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "lib/arsenic",
+    "lib/arsenic/public",
+    "lib/arsenic/src",
+    "lib/arsenic/assets",
+    "lib/arsenic/games",
+    "public/unblocker",
+    "public/optimizers",
+    "public/arsenic"
+  ]
 }
 
