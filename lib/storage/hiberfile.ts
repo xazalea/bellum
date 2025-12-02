@@ -271,7 +271,7 @@ export class HiberFile {
 
   async listDirectory(path: string): Promise<Array<{ name: string; path: string; is_dir: boolean }>> {
       path = path.startsWith('/') ? path.substring(1) : path;
-      const store = await this.getStore('readonly');
+      const store = await this.getStore(this.storeName, 'readonly');
       return new Promise<any[]>((resolve, reject) => {
           const request = store.getAll();
           request.onerror = () => reject(request.error);
@@ -296,7 +296,7 @@ export class HiberFile {
 
   async getFileInfo(path: string): Promise<{ name: string; size: number; path: string; is_dir: boolean; created: number; modified: number }> {
       path = path.startsWith('/') ? path.substring(1) : path;
-      const store = await this.getStore('readonly');
+      const store = await this.getStore(this.storeName, 'readonly');
       return new Promise<any>((resolve, reject) => {
           const request = store.get(path);
           request.onerror = () => reject(request.error);
