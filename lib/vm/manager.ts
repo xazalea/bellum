@@ -15,7 +15,7 @@ import { BaseVM } from './base';
 // import { XboxVM } from './implementations/xbox';
 // CodeExecutionVM imported dynamically to avoid fengari SSR issues
 
-import { GameRunner } from './implementations/game-runner';
+// import { GameRunner } from './implementations/game-runner';
 
 // Lazy load CodeExecutionVM to prevent fengari from being bundled
 let codeExecutionModule: typeof import('./implementations/code-execution') | null = null;
@@ -48,7 +48,7 @@ export class VMManagerImpl implements VMManager {
 
     // Check for Game Mode
     if (config.executionMode === 'game') {
-      vm = new GameRunner(config);
+      throw new Error('Game runner is temporarily unavailable in this build.');
     } else if (config.executionMode === 'code' || config.type === VMType.CODE) {
       // Dynamically import CodeExecutionVM to avoid fengari SSR issues
       // Use string-based import to prevent webpack from analyzing it
