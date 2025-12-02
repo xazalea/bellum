@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { vmManager } from '@/lib/vm/manager';
 import { VMInstance, VMType } from '@/lib/vm/types';
 import { colors } from '@/lib/ui/design-system';
@@ -51,12 +51,27 @@ export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string>('Initializing...');
 
+  const handleStart = useCallback(async () => {
+    if (!vm || isStarting) return;
+    setIsStarting(true);
+    setStatusMessage('Booting...');
+    try {
+      await vm.start();
+      setStatusMessage('Online');
+    } catch (error) {
+      console.error('Failed to start VM:', error);
+      setStatusMessage('Boot Failed');
+    } finally {
+      setIsStarting(false);
+    }
+  }, [vm, isStarting]);
+
   // Auto-start logic
   useEffect(() => {
     if (vm && !vm.state.isRunning && !isStarting) {
         handleStart();
     }
-  }, [vm]);
+  }, [vm, isStarting, handleStart]);
 
   useEffect(() => {
     const initializeVM = async () => {
@@ -102,21 +117,6 @@ export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
     const interval = setInterval(onStateChange, 500);
     return () => clearInterval(interval);
   }, [vm]);
-
-  const handleStart = async () => {
-    if (!vm || isStarting) return;
-    setIsStarting(true);
-    setStatusMessage('Booting...');
-    try {
-      await vm.start();
-      setStatusMessage('Online');
-    } catch (error) {
-      console.error('Failed to start VM:', error);
-      setStatusMessage('Boot Failed');
-    } finally {
-      setIsStarting(false);
-    }
-  };
 
   if (!vmId && !vmType) {
     return (

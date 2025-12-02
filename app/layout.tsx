@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 
@@ -34,10 +35,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://github.com" />
         
         {/* Puter.js for backend file storage */}
-        <script src="https://js.puter.com/v2/"></script>
+        <Script src="https://js.puter.com/v2/" strategy="beforeInteractive" />
         
         {/* Pyodide for Python execution */}
-        <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js" async defer></script>
+        <Script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js" strategy="afterInteractive" />
         
         {/* Performance hints */}
         <link rel="preload" as="fetch" href="/v86/v86.wasm" crossOrigin="anonymous" />

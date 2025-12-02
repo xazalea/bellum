@@ -103,8 +103,8 @@ export class NachoLoader {
             ? wasmBytes.buffer 
             : new Uint8Array(wasmBytes).buffer;
 
-        const module = await WebAssembly.compile(wasmBuffer);
-        this.instance = await WebAssembly.instantiate(module, this.syscallBridge.getImports());
+        const wasmModule = await WebAssembly.compile(wasmBuffer);
+        this.instance = await WebAssembly.instantiate(wasmModule, this.syscallBridge.getImports());
         
         this.updateStatus('Running', 'Execution Started (Neural Accelerated)');
 
