@@ -5,12 +5,14 @@
 import { VMConfig, VMInstance, VMManager, VMType } from './types';
 import { puterClient } from '../puter/client';
 import { BaseVM } from './base';
-import { LinuxVM } from './implementations/linux';
-import { WindowsVM } from './implementations/windows';
-import { AndroidVM } from './implementations/android';
-import { DOSVM } from './implementations/dos';
-import { PlayStationVM } from './implementations/playstation';
-import { XboxVM } from './implementations/xbox';
+// Legacy VM implementations are temporarily unavailable in this build.
+// Once the Nacho Transpiler replaces legacy VMs, reintroduce the modules below.
+// import { LinuxVM } from './implementations/linux';
+// import { WindowsVM } from './implementations/windows';
+// import { AndroidVM } from './implementations/android';
+// import { DOSVM } from './implementations/dos';
+// import { PlayStationVM } from './implementations/playstation';
+// import { XboxVM } from './implementations/xbox';
 // CodeExecutionVM imported dynamically to avoid fengari SSR issues
 
 import { GameRunner } from './implementations/game-runner';
@@ -56,28 +58,7 @@ export class VMManagerImpl implements VMManager {
       const CodeExecutionVM = await getCodeExecutionVM();
       vm = new CodeExecutionVM(config);
     } else {
-      switch (config.type) {
-        case VMType.LINUX:
-          vm = new LinuxVM(config);
-          break;
-        case VMType.WINDOWS:
-          vm = new WindowsVM(config);
-          break;
-        case VMType.ANDROID:
-          vm = new AndroidVM(config);
-          break;
-        case VMType.DOS:
-          vm = new DOSVM(config);
-          break;
-        case VMType.PLAYSTATION:
-          vm = new PlayStationVM(config);
-          break;
-        case VMType.XBOX:
-          vm = new XboxVM(config);
-          break;
-        default:
-          throw new Error(`Unsupported VM type: ${config.type}`);
-      }
+      throw new Error(`Legacy VM type ${config.type} is temporarily unavailable in this build. Please use Nacho runtime.`);
     }
 
     // Load existing state if available
