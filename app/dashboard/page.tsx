@@ -198,20 +198,6 @@ export default function DashboardPage() {
           </div>
           
           <div style={{ display: 'flex', gap: '12px' }}>
-             <button 
-                onClick={() => router.push('/unblocker')}
-                style={{
-                    padding: '12px 24px',
-                    background: 'transparent',
-                    color: colors.text.secondary,
-                    border: `1px solid ${colors.border.primary}`,
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    fontWeight: '600'
-                }}
-             >
-                Web Games
-             </button>
             <input 
               type="file" 
               ref={fileInputRef}

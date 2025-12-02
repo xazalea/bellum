@@ -80,9 +80,6 @@ export class HiberFile {
     const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
     const chunkKeys: string[] = [];
 
-    const chunkStore = await this.getStore(this.chunkStoreName, 'readwrite');
-    const fileStore = await this.getStore(this.storeName, 'readwrite');
-
     // Process chunks
     for (let i = 0; i < totalChunks; i++) {
         const start = i * CHUNK_SIZE;
@@ -99,6 +96,7 @@ export class HiberFile {
         const chunkKey = `${path}_chunk_${i}`;
         chunkKeys.push(chunkKey);
 
+        const chunkStore = await this.getStore(this.chunkStoreName, 'readwrite');
         await new Promise<void>((resolve, reject) => {
             const req = chunkStore.put({
                 key: chunkKey,
@@ -123,6 +121,7 @@ export class HiberFile {
         chunks: chunkKeys
     };
 
+    const fileStore = await this.getStore(this.storeName, 'readwrite');
     return new Promise<any>((resolve, reject) => {
       const request = fileStore.put(manifest);
       request.onerror = () => reject(request.error);
