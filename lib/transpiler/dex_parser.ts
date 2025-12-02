@@ -100,12 +100,22 @@ export class DEXParser {
     const view = new DataView(this.data.buffer);
     
     // Get string data offset
-    const stringDataOff = view.getUint32(header.stringIdsOff + stringIdx * 4, true);
+    const entryOffset = header.stringIdsOff + stringIdx * 4;
+    if (entryOffset + 4 > this.data.length) {
+      throw new Error('DEX string index out of range');
+    }
+    const stringDataOff = view.getUint32(entryOffset, true);
+    if (stringDataOff >= this.data.length) {
+      throw new Error('DEX string data offset out of range');
+    }
     
     // Read UTF-8 string (null-terminated)
     let length = 0;
-    while (this.data[stringDataOff + length] !== 0) {
+    while (stringDataOff + length < this.data.length && this.data[stringDataOff + length] !== 0) {
       length++;
+    }
+    if (stringDataOff + length > this.data.length) {
+      throw new Error('DEX string extends beyond buffer');
     }
     
     const decoder = new TextDecoder('utf-8');

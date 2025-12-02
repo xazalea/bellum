@@ -15,6 +15,7 @@ import { FileType } from '../analyzers/binary-analyzer';
 // Advanced Accelerators
 import { hyperion } from '../../nacho/ai/hyperion';
 import { neuralAccelerator } from '../../nacho/gpu/transformer';
+import JSZip from 'jszip';
 
 export class NachoLoader {
   private memory: WebAssembly.Memory | null = null;
@@ -54,11 +55,19 @@ export class NachoLoader {
       codeSection = new Uint8Array(buffer); 
       arch = 'x86';
     } else if (type === FileType.APK) {
+      this.updateStatus('Parsing APK', 'Extracting Dalvik Bytecode...');
+      const zip = await JSZip.loadAsync(blob);
+      const dexFile = zip.file('classes.dex');
+      if (!dexFile) {
+        throw new Error('APK missing classes.dex payload');
+      }
+      const dexBuffer = await dexFile.async('arraybuffer');
       this.updateStatus('Parsing DEX', 'Reading Dalvik Bytecode...');
-      const parser = new DEXParser(buffer);
+      const parser = new DEXParser(dexBuffer);
       parser.parseHeader();
       arch = 'dalvik';
-      codeSection = new Uint8Array(buffer);
+      codeSection = new Uint8Array(dexBuffer);
+      entryPoint = 0;
     }
 
     // 2. Lift to IR (Using C++ Lifter if available, else fallback)
