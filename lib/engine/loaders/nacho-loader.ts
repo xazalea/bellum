@@ -23,7 +23,8 @@ export class NachoLoader {
   async load(container: HTMLElement, filePath: string, type: FileType) {
     this.updateStatus('Initializing', `Loading ${filePath}...`);
     console.log(`Nacho Transpiler: Loading ${filePath} as ${type}`);
-    const buffer = await puterClient.readFile(filePath);
+    const blob = await puterClient.readFile(filePath);
+    const buffer = await blob.arrayBuffer();
 
     // 1. Parse Headers & Setup Memory
     this.memory = new WebAssembly.Memory({ initial: 256, maximum: 2048 });
