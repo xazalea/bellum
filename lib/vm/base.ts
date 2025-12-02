@@ -46,7 +46,7 @@ export abstract class BaseVM implements VMInstance {
 
       const statePath = `${this.state.storagePath}/state.json`;
       await puterClient.writeFile(statePath, JSON.stringify(stateData, null, 2), {
-        createMissingParents: true,
+        compress: true,
       });
 
       this.state.lastSaved = new Date();

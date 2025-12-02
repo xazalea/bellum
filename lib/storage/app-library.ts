@@ -254,7 +254,7 @@ export class AppLibraryManager {
     const path = `apps/${id}/${file.name}`;
     
     // Save to "Hot" Storage (Local)
-    await this.localStore.writeFile(path, file, { createMissingParents: true });
+    await this.localStore.writeFile(path, file, { compress: true });
     
     const app: StoredApp = {
       id,
@@ -305,7 +305,7 @@ export class AppLibraryManager {
 
     // 2. Save to Local (Hot)
     const localPath = `apps/${app.id}/${app.name}`;
-    await this.localStore.writeFile(localPath, blob, { createMissingParents: true });
+    await this.localStore.writeFile(localPath, blob, { compress: true });
 
     // 3. Update State
     app.isActive = true;
