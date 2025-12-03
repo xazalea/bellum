@@ -110,6 +110,8 @@ interface GPURenderPipeline {
 
 interface GPUBindGroupLayout {}
 
+interface GPUBindGroup {}
+
 interface GPUBindGroupDescriptor {
   layout: GPUBindGroupLayout;
   entries: GPUBindGroupEntry[];
