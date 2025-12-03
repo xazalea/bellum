@@ -2,11 +2,36 @@
 
 interface GPUAdapter {
   requestDevice(descriptor?: GPUDeviceDescriptor): Promise<GPUDevice>;
+  features: GPUSupportedFeatures;
+  info: GPUAdapterInfo;
 }
+
+interface GPUSupportedFeatures {
+  has(feature: string): boolean;
+}
+
+interface GPUAdapterInfo {
+  vendor: string;
+  architecture: string;
+  device: string;
+  description: string;
+}
+
+type GPUFeatureName = 
+  | 'depth-clip-control'
+  | 'depth32float-stencil8'
+  | 'texture-compression-bc'
+  | 'texture-compression-etc2'
+  | 'texture-compression-astc'
+  | 'timestamp-query'
+  | 'indirect-first-instance'
+  | 'shader-f16'
+  | 'rg11b10ufloat-renderable'
+  | 'bgra8unorm-storage';
 
 interface GPUDeviceDescriptor {
   label?: string;
-  requiredFeatures?: string[];
+  requiredFeatures?: GPUFeatureName[];
   requiredLimits?: Record<string, number>;
 }
 
