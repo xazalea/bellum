@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AppInstance } from '../../lib/app-manager/types';
-import { AppRunner } from '../../lib/engine/runner';
+import { AppInstance } from '../lib/app-manager/types';
+import { AppRunner } from '../lib/engine/runner';
 import { X, Minimize2, Maximize2, Cpu, Zap, Activity, Monitor } from 'lucide-react';
 import { motion } from 'framer-motion';
 
