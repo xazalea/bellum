@@ -62,6 +62,16 @@ export class HiberFile {
     return this.initPromise;
   }
 
+  private async batchProcess<T, R>(items: T[], batchSize: number, processFn: (item: T) => Promise<R>): Promise<R[]> {
+      const results: R[] = [];
+      for (let i = 0; i < items.length; i += batchSize) {
+          const batch = items.slice(i, i + batchSize);
+          const batchResults = await Promise.all(batch.map(processFn));
+          results.push(...batchResults);
+      }
+      return results;
+  }
+
   async writeFile(path: string, content: string | Blob | ArrayBuffer | Uint8Array, options: { compress?: boolean } = { compress: true }) {
     await this.ensureInitialized();
     if (!this.db) throw new Error('DB not initialized');
@@ -81,42 +91,44 @@ export class HiberFile {
     const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
     const chunkKeys: string[] = [];
 
-    // Process chunks
+    // Prepare chunks
+    const chunksToProcess = [];
     for (let i = 0; i < totalChunks; i++) {
         const start = i * CHUNK_SIZE;
         const end = Math.min(start + CHUNK_SIZE, blob.size);
-        const chunkBlob = blob.slice(start, end);
-        
-        // Compress chunk if requested using the new Service
-        let finalChunk = chunkBlob;
+        chunksToProcess.push({ index: i, chunk: blob.slice(start, end) });
+    }
+
+    // Process chunks in batches to prevent transaction overload
+    await this.batchProcess(chunksToProcess, 5, async ({ index, chunk }) => {
+        let finalChunk = chunk;
         let compressionMethod = 'none';
         
         if (options.compress) {
-            const arrayBuffer = await chunkBlob.arrayBuffer();
+            const arrayBuffer = await chunk.arrayBuffer();
             const { data, method } = await this.compressionService.compress(new Uint8Array(arrayBuffer), path);
             // @ts-ignore - ArrayBufferLike strictness
             finalChunk = new Blob([data]);
             compressionMethod = method;
         }
 
-        // Generate key (simple content hash would be better for dedup, but path+index is safer for now)
-        const chunkKey = `${path}_chunk_${i}`;
-        chunkKeys.push(chunkKey);
+        const chunkKey = `${path}_chunk_${index}`;
+        chunkKeys[index] = chunkKey; // Store in order
 
-        // New Transaction per chunk to prevent timeout
-        await new Promise<void>((resolve, reject) => {
+        // New Transaction per chunk
+        return new Promise<void>((resolve, reject) => {
             const tx = this.db!.transaction(this.chunkStoreName, 'readwrite');
             const store = tx.objectStore(this.chunkStoreName);
             const req = store.put({
                 key: chunkKey,
                 content: finalChunk,
                 compressed: options.compress,
-                compressionMethod // Store the method used
+                compressionMethod 
             });
             req.onsuccess = () => resolve();
             req.onerror = () => reject(req.error);
         });
-    }
+    });
 
     // Save Manifest
     const manifest: FileManifest = {
@@ -157,13 +169,9 @@ export class HiberFile {
 
     if (manifest.is_dir) throw new Error('Cannot read directory');
 
-    // Reassemble - fetch ALL raw chunks first to avoid transaction timeout
-    // We use a single transaction for reading all chunks if possible, or new one per chunk
-    // Since we need to decompress (which is async), we must fetch data first, THEN process.
-    
+    // Reassemble - Fetch in batches to avoid opening too many transactions
     // 1. Fetch all chunk data
-    const chunkDataList = await Promise.all(manifest.chunks.map(async (chunkKey) => {
-        // New transaction per chunk read ensures safety against async timeouts
+    const chunkDataList = await this.batchProcess(manifest.chunks, 10, async (chunkKey) => {
         return new Promise<any>((resolve, reject) => {
             const tx = this.db!.transaction(this.chunkStoreName, 'readonly');
             const store = tx.objectStore(this.chunkStoreName);
@@ -171,7 +179,7 @@ export class HiberFile {
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
         });
-    }));
+    });
 
     const chunks: Blob[] = [];
 
@@ -181,11 +189,10 @@ export class HiberFile {
         if (!chunkData) throw new Error(`Chunk missing: ${manifest.chunks[i]}`);
 
         if (chunkData.compressed) {
-            // Handle legacy bool or new method
-            const method = chunkData.compressionMethod || 'gzip'; // Fallback to gzip for legacy
+            const method = chunkData.compressionMethod || 'gzip'; 
             const arrayBuffer = await (chunkData.content as Blob).arrayBuffer();
             const decompressed = await this.compressionService.decompress(new Uint8Array(arrayBuffer), method as any);
-            // @ts-ignore - ArrayBufferLike strictness
+            // @ts-ignore 
             chunks.push(new Blob([decompressed]));
         } else {
             chunks.push(chunkData.content);
@@ -225,8 +232,8 @@ export class HiberFile {
             }
         }
 
-        // Fetch in parallel with separate transactions
-        const rawChunks = await Promise.all(requiredChunkKeys.map(key => {
+        // Fetch in batches
+        const rawChunks = await this.batchProcess(requiredChunkKeys, 5, async (key) => {
              return new Promise<any>((resolve, reject) => {
                 const tx = this.db!.transaction(this.chunkStoreName, 'readonly');
                 const store = tx.objectStore(this.chunkStoreName);
@@ -234,15 +241,15 @@ export class HiberFile {
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
             });
-        }));
+        });
         
         // 2. Decompress/Process
         for (const chunkData of rawChunks) {
             let blob = chunkData.content;
             if (chunkData.compressed) {
-                // @ts-ignore - decompress isn't static
+                // @ts-ignore 
                 blob = await this.compressionService.decompress(new Uint8Array(await blob.arrayBuffer()), chunkData.compressionMethod || 'gzip');
-                // @ts-ignore - Blob strictness
+                // @ts-ignore 
                 blob = new Blob([blob]);
             }
             loadedChunks.push(blob);
@@ -274,7 +281,6 @@ export class HiberFile {
 
     path = path.startsWith('/') ? path.substring(1) : path;
     
-    // Get manifest to delete chunks
     try {
         const manifest = await new Promise<FileManifest>((resolve, reject) => {
             const tx = this.db!.transaction(this.storeName, 'readonly');
@@ -285,14 +291,15 @@ export class HiberFile {
         });
 
         if (manifest && manifest.chunks) {
-            // Delete chunks in parallel/batch
-             const tx = this.db!.transaction(this.chunkStoreName, 'readwrite');
-             const chunkStore = tx.objectStore(this.chunkStoreName);
-             
-             await Promise.all(manifest.chunks.map(key => new Promise<void>((resolve) => {
-                const req = chunkStore.delete(key);
-                req.onsuccess = () => resolve();
-             })));
+             // Batch delete chunks
+             await this.batchProcess(manifest.chunks, 20, async (key) => {
+                 return new Promise<void>((resolve) => {
+                    const tx = this.db!.transaction(this.chunkStoreName, 'readwrite');
+                    const chunkStore = tx.objectStore(this.chunkStoreName);
+                    const req = chunkStore.delete(key);
+                    req.onsuccess = () => resolve();
+                 });
+             });
         }
     } catch (e) {
         console.warn('Error cleaning up chunks:', e);
@@ -307,6 +314,8 @@ export class HiberFile {
     });
   }
     
+  // ... (rest of methods like createDirectory, listDirectory remain unchanged as they are single transactions)
+  
   async createDirectory(path: string): Promise<void> {
       await this.ensureInitialized();
       if (!this.db) throw new Error('DB not initialized');
@@ -340,10 +349,8 @@ export class HiberFile {
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
               const all = request.result as any[];
-              // Simple prefix matching for simulated folder structure
-              // Direct children only
               const files = all.filter(f => {
-                  if (path === '' || path === '/') return !f.path.includes('/'); // Root
+                  if (path === '' || path === '/') return !f.path.includes('/'); 
                   if (!f.path.startsWith(path + '/')) return false;
                   const relative = f.path.slice(path.length + 1);
                   return !relative.includes('/');
@@ -449,7 +456,7 @@ export class HiberFile {
     return results;
   }
 
-  // UI Helpers - Replaces Puter UI
+  // UI Helpers
   async showOpenFilePicker(): Promise<{ read: () => Promise<Blob>; path: string }> {
       return new Promise((resolve, reject) => {
           const input = document.createElement('input');
@@ -478,5 +485,4 @@ export class HiberFile {
 }
 
 export const hiberFile = new HiberFile();
-// Alias for compatibility during refactor
 export const puterClient = hiberFile;
