@@ -103,7 +103,7 @@ export class HiberFile {
         const chunkKey = `${path}_chunk_${i}`;
         chunkKeys.push(chunkKey);
 
-        // New Transaction per chunk
+        // New Transaction per chunk to prevent timeout
         await new Promise<void>((resolve, reject) => {
             const tx = this.db!.transaction(this.chunkStoreName, 'readwrite');
             const store = tx.objectStore(this.chunkStoreName);
@@ -151,18 +151,29 @@ export class HiberFile {
 
     if (manifest.is_dir) throw new Error('Cannot read directory');
 
-    // Reassemble
-    const chunkStore = await this.getStore(this.chunkStoreName, 'readonly');
-    const chunks: Blob[] = [];
-
-    for (const chunkKey of manifest.chunks) {
-        const chunkData = await new Promise<any>((resolve, reject) => {
-            const req = chunkStore.get(chunkKey);
+    // Reassemble - fetch ALL raw chunks first to avoid transaction timeout
+    // We use a single transaction for reading all chunks if possible, or new one per chunk
+    // Since we need to decompress (which is async), we must fetch data first, THEN process.
+    
+    // 1. Fetch all chunk data
+    const chunkDataList = await Promise.all(manifest.chunks.map(async (chunkKey) => {
+        // New transaction per chunk read ensures safety against async timeouts
+        return new Promise<any>((resolve, reject) => {
+            if (!this.db) return reject(new Error('DB not initialized'));
+            const tx = this.db.transaction(this.chunkStoreName, 'readonly');
+            const store = tx.objectStore(this.chunkStoreName);
+            const req = store.get(chunkKey);
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
         });
+    }));
 
-        if (!chunkData) throw new Error(`Chunk missing: ${chunkKey}`);
+    const chunks: Blob[] = [];
+
+    // 2. Process/Decompress
+    for (let i = 0; i < chunkDataList.length; i++) {
+        const chunkData = chunkDataList[i];
+        if (!chunkData) throw new Error(`Chunk missing: ${manifest.chunks[i]}`);
 
         if (chunkData.compressed) {
             // Handle legacy bool or new method
@@ -182,11 +193,13 @@ export class HiberFile {
     // Optimized lazy chunk reader for the Engine
     async readChunk(path: string, offset: number, length: number): Promise<ArrayBuffer> {
         path = path.startsWith('/') ? path.substring(1) : path;
-        const fileStore = await this.getStore(this.storeName, 'readonly');
         
         // Get Manifest
-        const manifest = await new Promise<FileManifest>((resolve, reject) => {
-            const req = fileStore.get(path);
+        const manifest = await new Promise<FileManifest>(async (resolve, reject) => {
+             if (!this.db) return reject(new Error('DB not initialized'));
+             const tx = this.db.transaction(this.storeName, 'readonly');
+             const store = tx.objectStore(this.storeName);
+            const req = store.get(path);
             req.onsuccess = () => req.result ? resolve(req.result) : reject(new Error(`File not found: ${path}`));
             req.onerror = () => reject(req.error);
         });
@@ -195,20 +208,31 @@ export class HiberFile {
         const startChunkIndex = Math.floor(offset / manifest.chunkSize);
         const endChunkIndex = Math.floor((offset + length - 1) / manifest.chunkSize);
         
-        const chunkStore = await this.getStore(this.chunkStoreName, 'readonly');
         const loadedChunks: Blob[] = [];
         
-        // Fetch only necessary chunks
+        // 1. Fetch necessary chunks (raw)
+        const requiredChunkKeys = [];
         for (let i = startChunkIndex; i <= endChunkIndex; i++) {
-            if (i >= manifest.chunks.length) break;
-            
-            const chunkKey = manifest.chunks[i];
-            const chunkData = await new Promise<any>((resolve, reject) => {
-                const req = chunkStore.get(chunkKey);
+            if (i < manifest.chunks.length) {
+                requiredChunkKeys.push(manifest.chunks[i]);
+            }
+        }
+
+        // Fetch in parallel with separate transactions or one transaction?
+        // Separate is safer for interleaving, but slightly slower. Given the error, SAFETY FIRST.
+        const rawChunks = await Promise.all(requiredChunkKeys.map(key => {
+             return new Promise<any>((resolve, reject) => {
+                if (!this.db) return reject(new Error('DB not initialized'));
+                const tx = this.db.transaction(this.chunkStoreName, 'readonly');
+                const store = tx.objectStore(this.chunkStoreName);
+                const req = store.get(key);
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
             });
-
+        }));
+        
+        // 2. Decompress/Process
+        for (const chunkData of rawChunks) {
             let blob = chunkData.content;
             if (chunkData.compressed) {
                 // @ts-ignore - decompress isn't static
@@ -241,28 +265,34 @@ export class HiberFile {
 
   async deleteFile(path: string): Promise<void> {
     path = path.startsWith('/') ? path.substring(1) : path;
-    const fileStore = await this.getStore(this.storeName, 'readwrite');
     
     // Get manifest to delete chunks
     try {
-        const manifest = await new Promise<FileManifest>((resolve, reject) => {
-            const req = fileStore.get(path);
+        const manifest = await new Promise<FileManifest>(async (resolve, reject) => {
+            const store = await this.getStore(this.storeName, 'readonly'); // use helper for single op
+            const req = store.get(path);
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
         });
 
         if (manifest && manifest.chunks) {
-            const chunkStore = await this.getStore(this.chunkStoreName, 'readwrite');
-            await Promise.all(manifest.chunks.map(key => new Promise<void>((resolve) => {
+            // Delete chunks in parallel/batch
+            // We can do this in one transaction since no awaits are needed BETWEEN deletes
+             const tx = this.db!.transaction(this.chunkStoreName, 'readwrite');
+             const chunkStore = tx.objectStore(this.chunkStoreName);
+             
+             await Promise.all(manifest.chunks.map(key => new Promise<void>((resolve) => {
                 const req = chunkStore.delete(key);
                 req.onsuccess = () => resolve();
-            })));
+             })));
         }
     } catch (e) {
         console.warn('Error cleaning up chunks:', e);
     }
 
     return new Promise<void>((resolve, reject) => {
+      const tx = this.db!.transaction(this.storeName, 'readwrite');
+      const fileStore = tx.objectStore(this.storeName);
       const request = fileStore.delete(path);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve();
