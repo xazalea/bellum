@@ -783,6 +783,7 @@ class PhpExecutor implements LanguageExecutor {
       // Use CompilerService to produce a binary representation of the PHP logic
       try {
         const wasmBytes = await compilerService.compile(code, 'php');
+        // @ts-ignore - ArrayBufferLike compatibility
         const wasmModule = await WebAssembly.compile(wasmBytes);
         
         let stdout = '';
