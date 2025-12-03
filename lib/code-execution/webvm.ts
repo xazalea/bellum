@@ -777,7 +777,7 @@ class PhpExecutor implements LanguageExecutor {
       // Use CompilerService to produce a binary representation of the PHP logic
       try {
         const wasmBytes = await compilerService.compile(code, 'php');
-        const module = await WebAssembly.compile(wasmBytes);
+        const wasmModule = await WebAssembly.compile(wasmBytes);
         
         let stdout = '';
         const env = {
@@ -785,7 +785,7 @@ class PhpExecutor implements LanguageExecutor {
             memory: new WebAssembly.Memory({ initial: 1 })
         };
         
-        const instance = await WebAssembly.instantiate(module, { env });
+        const instance = await WebAssembly.instantiate(wasmModule, { env });
         const start = instance.exports.start as (() => void);
         if (start) start();
         
