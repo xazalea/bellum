@@ -82,9 +82,9 @@ export default function DashboardPage() {
   useEffect(() => {
     const lib = new AppLibraryManager(hiberFile);
     setLibrary(lib);
-    setTimeout(() => {
-      setApps([...lib.getApps()]);
-    }, 100);
+    lib.init().then(() => {
+        setApps([...lib.getApps()]);
+    });
   }, []);
 
   const refreshApps = () => {

@@ -29,11 +29,16 @@ export class AppLibraryManager {
   private cloudDb: CloudDatabase;
   private apps: StoredApp[] = [];
   private publicLibraries: PublicLibrary[] = [];
+  private readyPromise: Promise<void>;
 
   constructor(localStore: HiberFile) {
     this.localStore = localStore;
     this.cloudDb = new CloudDatabase();
-    this.loadLibrary();
+    this.readyPromise = this.loadLibrary();
+  }
+
+  async init() {
+      return this.readyPromise;
   }
 
   private async loadLibrary() {
@@ -66,6 +71,7 @@ export class AppLibraryManager {
   // --- App Management ---
 
   async installApp(file: File): Promise<StoredApp> {
+    await this.readyPromise;
     const id = crypto.randomUUID();
     const path = `apps/${id}/${file.name}`;
     
@@ -88,6 +94,7 @@ export class AppLibraryManager {
   }
 
   async deactivateApp(appId: string, onProgress?: (p: number) => void): Promise<void> {
+    await this.readyPromise;
     const appIndex = this.apps.findIndex(a => a.id === appId);
     if (appIndex === -1) throw new Error('App not found');
     const app = this.apps[appIndex];
@@ -110,6 +117,7 @@ export class AppLibraryManager {
   }
 
   async activateApp(appId: string, onProgress?: (p: number) => void): Promise<void> {
+    await this.readyPromise;
     const appIndex = this.apps.findIndex(a => a.id === appId);
     if (appIndex === -1) throw new Error('App not found');
     const app = this.apps[appIndex];
@@ -130,6 +138,7 @@ export class AppLibraryManager {
   }
 
   async deleteApp(appId: string) {
+    await this.readyPromise;
     const appIndex = this.apps.findIndex(a => a.id === appId);
     if (appIndex === -1) return;
     const app = this.apps[appIndex];
@@ -145,6 +154,7 @@ export class AppLibraryManager {
   // --- Public Library Management ---
 
   async createPublicLibrary(name: string, description: string, appIds: string[]): Promise<string> {
+    await this.readyPromise;
     const selectedApps = this.apps.filter(a => appIds.includes(a.id));
     
     const library: PublicLibrary = {
@@ -165,6 +175,7 @@ export class AppLibraryManager {
   }
 
   async importPublicLibrary(libraryId: string): Promise<void> {
+    await this.readyPromise;
     // Try to load from Cold Store
     try {
       const library = await this.cloudDb.loadRecord('libraries', libraryId);

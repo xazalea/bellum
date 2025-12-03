@@ -32,40 +32,40 @@ export class HiberFile {
 
   async ensureInitialized() {
     if (this.initialized) return;
-    return new Promise<void>((resolve, reject) => {
-      if (typeof window === 'undefined') {
-          resolve(); // Skip on server
-          return;
-      }
-      const request = indexedDB.open(this.dbName, 2); // Bump version for new store
-      request.onerror = () => {
-          console.error('HiberFile DB Error:', request.error);
-          resolve();
-      };
-      request.onsuccess = () => {
-        this.db = request.result;
-        this.initialized = true;
-        resolve();
-      };
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName, { keyPath: 'path' });
-        }
-        if (!db.objectStoreNames.contains(this.chunkStoreName)) {
-            db.createObjectStore(this.chunkStoreName, { keyPath: 'key' });
-        }
-      };
-    });
-  }
-
-  private async getStore(storeName: string, mode: IDBTransactionMode) {
-    await this.initPromise;
-    if (!this.db) throw new Error('HiberFile DB not initialized');
-    return this.db.transaction(storeName, mode).objectStore(storeName);
+    if (!this.initPromise) {
+        this.initPromise = new Promise<void>((resolve, reject) => {
+            if (typeof window === 'undefined') {
+                resolve(); // Skip on server
+                return;
+            }
+            const request = indexedDB.open(this.dbName, 2); // Bump version for new store
+            request.onerror = () => {
+                console.error('HiberFile DB Error:', request.error);
+                resolve();
+            };
+            request.onsuccess = () => {
+                this.db = request.result;
+                this.initialized = true;
+                resolve();
+            };
+            request.onupgradeneeded = (event) => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName, { keyPath: 'path' });
+                }
+                if (!db.objectStoreNames.contains(this.chunkStoreName)) {
+                    db.createObjectStore(this.chunkStoreName, { keyPath: 'key' });
+                }
+            };
+        });
+    }
+    return this.initPromise;
   }
 
   async writeFile(path: string, content: string | Blob | ArrayBuffer | Uint8Array, options: { compress?: boolean } = { compress: true }) {
+    await this.ensureInitialized();
+    if (!this.db) throw new Error('DB not initialized');
+
     path = path.startsWith('/') ? path.substring(1) : path;
     
     // Normalize content to Blob
@@ -131,8 +131,9 @@ export class HiberFile {
         chunks: chunkKeys
     };
 
-    const fileStore = await this.getStore(this.storeName, 'readwrite');
     return new Promise<any>((resolve, reject) => {
+      const tx = this.db!.transaction(this.storeName, 'readwrite');
+      const fileStore = tx.objectStore(this.storeName);
       const request = fileStore.put(manifest);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve({ path });
@@ -140,10 +141,15 @@ export class HiberFile {
   }
 
   async readFile(path: string): Promise<Blob> {
+    await this.ensureInitialized();
+    if (!this.db) throw new Error('DB not initialized');
+
     path = path.startsWith('/') ? path.substring(1) : path;
-    const fileStore = await this.getStore(this.storeName, 'readonly');
     
+    // Transaction 1: Get Manifest
     const manifest = await new Promise<FileManifest>((resolve, reject) => {
+        const tx = this.db!.transaction(this.storeName, 'readonly');
+        const fileStore = tx.objectStore(this.storeName);
         const req = fileStore.get(path);
         req.onsuccess = () => req.result ? resolve(req.result) : reject(new Error(`File not found: ${path}`));
         req.onerror = () => reject(req.error);
@@ -159,8 +165,7 @@ export class HiberFile {
     const chunkDataList = await Promise.all(manifest.chunks.map(async (chunkKey) => {
         // New transaction per chunk read ensures safety against async timeouts
         return new Promise<any>((resolve, reject) => {
-            if (!this.db) return reject(new Error('DB not initialized'));
-            const tx = this.db.transaction(this.chunkStoreName, 'readonly');
+            const tx = this.db!.transaction(this.chunkStoreName, 'readonly');
             const store = tx.objectStore(this.chunkStoreName);
             const req = store.get(chunkKey);
             req.onsuccess = () => resolve(req.result);
@@ -192,12 +197,14 @@ export class HiberFile {
   
     // Optimized lazy chunk reader for the Engine
     async readChunk(path: string, offset: number, length: number): Promise<ArrayBuffer> {
+        await this.ensureInitialized();
+        if (!this.db) throw new Error('DB not initialized');
+
         path = path.startsWith('/') ? path.substring(1) : path;
         
         // Get Manifest
-        const manifest = await new Promise<FileManifest>(async (resolve, reject) => {
-             if (!this.db) return reject(new Error('DB not initialized'));
-             const tx = this.db.transaction(this.storeName, 'readonly');
+        const manifest = await new Promise<FileManifest>((resolve, reject) => {
+             const tx = this.db!.transaction(this.storeName, 'readonly');
              const store = tx.objectStore(this.storeName);
             const req = store.get(path);
             req.onsuccess = () => req.result ? resolve(req.result) : reject(new Error(`File not found: ${path}`));
@@ -218,12 +225,10 @@ export class HiberFile {
             }
         }
 
-        // Fetch in parallel with separate transactions or one transaction?
-        // Separate is safer for interleaving, but slightly slower. Given the error, SAFETY FIRST.
+        // Fetch in parallel with separate transactions
         const rawChunks = await Promise.all(requiredChunkKeys.map(key => {
              return new Promise<any>((resolve, reject) => {
-                if (!this.db) return reject(new Error('DB not initialized'));
-                const tx = this.db.transaction(this.chunkStoreName, 'readonly');
+                const tx = this.db!.transaction(this.chunkStoreName, 'readonly');
                 const store = tx.objectStore(this.chunkStoreName);
                 const req = store.get(key);
                 req.onsuccess = () => resolve(req.result);
@@ -264,12 +269,16 @@ export class HiberFile {
   }
 
   async deleteFile(path: string): Promise<void> {
+    await this.ensureInitialized();
+    if (!this.db) throw new Error('DB not initialized');
+
     path = path.startsWith('/') ? path.substring(1) : path;
     
     // Get manifest to delete chunks
     try {
-        const manifest = await new Promise<FileManifest>(async (resolve, reject) => {
-            const store = await this.getStore(this.storeName, 'readonly'); // use helper for single op
+        const manifest = await new Promise<FileManifest>((resolve, reject) => {
+            const tx = this.db!.transaction(this.storeName, 'readonly');
+            const store = tx.objectStore(this.storeName);
             const req = store.get(path);
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
@@ -277,7 +286,6 @@ export class HiberFile {
 
         if (manifest && manifest.chunks) {
             // Delete chunks in parallel/batch
-            // We can do this in one transaction since no awaits are needed BETWEEN deletes
              const tx = this.db!.transaction(this.chunkStoreName, 'readwrite');
              const chunkStore = tx.objectStore(this.chunkStoreName);
              
@@ -300,9 +308,13 @@ export class HiberFile {
   }
     
   async createDirectory(path: string): Promise<void> {
+      await this.ensureInitialized();
+      if (!this.db) throw new Error('DB not initialized');
+
       path = path.startsWith('/') ? path.substring(1) : path;
-      const store = await this.getStore(this.storeName, 'readwrite');
       return new Promise<void>((resolve, reject) => {
+          const tx = this.db!.transaction(this.storeName, 'readwrite');
+          const store = tx.objectStore(this.storeName);
           const request = store.put({
               path,
               is_dir: true,
@@ -317,9 +329,13 @@ export class HiberFile {
   }
 
   async listDirectory(path: string): Promise<Array<{ name: string; path: string; is_dir: boolean }>> {
+      await this.ensureInitialized();
+      if (!this.db) throw new Error('DB not initialized');
+
       path = path.startsWith('/') ? path.substring(1) : path;
-      const store = await this.getStore(this.storeName, 'readonly');
       return new Promise<any[]>((resolve, reject) => {
+          const tx = this.db!.transaction(this.storeName, 'readonly');
+          const store = tx.objectStore(this.storeName);
           const request = store.getAll();
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
@@ -342,9 +358,13 @@ export class HiberFile {
   }
 
   async getFileInfo(path: string): Promise<{ name: string; size: number; path: string; is_dir: boolean; created: number; modified: number }> {
+      await this.ensureInitialized();
+      if (!this.db) throw new Error('DB not initialized');
+
       path = path.startsWith('/') ? path.substring(1) : path;
-      const store = await this.getStore(this.storeName, 'readonly');
       return new Promise<any>((resolve, reject) => {
+          const tx = this.db!.transaction(this.storeName, 'readonly');
+          const store = tx.objectStore(this.storeName);
           const request = store.get(path);
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
