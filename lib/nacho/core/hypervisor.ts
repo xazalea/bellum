@@ -7,6 +7,7 @@ import { cpuManager } from '../cpu/cpu-manager';
 import { gpuManager } from '../gpu/gpu-manager';
 import { neuralCore } from '../ai/neural-core';
 import { memoryManager } from '../memory/unified-memory';
+import { gemmaAccelerator } from '../ai/gemma-gpu';
 
 export class Hypervisor {
     private static instance: Hypervisor;
@@ -29,6 +30,9 @@ export class Hypervisor {
         
         // 1. Initialize Subsystems
         await gpuManager.initialize();
+        
+        // Initialize Gemma 270M Accelerator
+        await gemmaAccelerator.initialize();
         
         // 2. Verify Memory
         if (memoryManager.getBuffer().byteLength === 0) {
@@ -75,4 +79,3 @@ export class Hypervisor {
 }
 
 export const hypervisor = Hypervisor.getInstance();
-

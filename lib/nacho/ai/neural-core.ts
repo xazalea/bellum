@@ -1,15 +1,63 @@
 /**
  * Neural Core - AI Co-Processor
  * Handles Branch Prediction, Auto-Optimization, and Resource Management.
+ * Integrates Cloud AI (LLM7) and Local AI (Gemma 270M).
  */
+
+import { gemmaAccelerator } from './gemma-gpu';
 
 export class NeuralCore {
     // Branch History Table (BHT) simulation
     private branchHistory: Map<number, number> = new Map();
     private confidenceThreshold = 0.85;
+    
+    // Remote AI Config
+    private readonly REMOTE_API_URL = "https://api.llm7.io/v1/chat/completions";
+    private readonly REMOTE_MODEL = "default";
 
     constructor() {
         console.log('NeuralCore: AI Agent Online');
+    }
+
+    /**
+     * Cloud-Assisted Optimization (LLM7)
+     * Sends code snippets/IR to the cloud for analysis.
+     */
+    async optimizeWithCloud(context: string): Promise<string> {
+        try {
+            const response = await fetch(this.REMOTE_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer unused'
+                },
+                body: JSON.stringify({
+                    model: this.REMOTE_MODEL,
+                    messages: [
+                        { 
+                            role: "system", 
+                            content: "You are an expert JIT compiler optimizer. Analyze the provided IR/Code and suggest vectorization or unrolling strategies. Output JSON only." 
+                        },
+                        { role: "user", content: context }
+                    ]
+                })
+            });
+
+            if (!response.ok) return '';
+            const data = await response.json();
+            return data.choices[0]?.message?.content || '';
+        } catch (e) {
+            console.warn('NeuralCore: Cloud Optimization Failed (Offline?)', e);
+            return '';
+        }
+    }
+
+    /**
+     * Local Inference (Gemma 270M - Uncensored)
+     * Runs on RTX-Level WebGPU backend.
+     */
+    async queryLocalAgent(prompt: string): Promise<string> {
+        return await gemmaAccelerator.generate(prompt);
     }
 
     /**
@@ -17,8 +65,6 @@ export class NeuralCore {
      * @param address Instruction Pointer (IP)
      */
     predictBranch(address: number): boolean {
-        // In a real NN, this would feed address + history vector into a model.
-        // For POC, we use a 2-bit saturating counter simulation.
         const state = this.branchHistory.get(address) ?? 0; // 0 = Strongly Not Taken
         return state >= 2; // 2 = Weakly Taken, 3 = Strongly Taken
     }
@@ -41,18 +87,15 @@ export class NeuralCore {
      */
     analyzeBlock(ir: any[]): { vectorizable: boolean, loopFactor: number } {
         let scalarOps = 0;
-        let vectorOps = 0;
-        
-        // Heuristic scan
+        // ... existing logic
         for (const instr of ir) {
             // @ts-ignore
             if (['ADD', 'SUB', 'MUL'].includes(instr.opcode)) scalarOps++;
         }
 
-        // If density of math ops is high, suggest vectorization
         return {
             vectorizable: scalarOps > 10,
-            loopFactor: scalarOps > 50 ? 4 : 1 // Suggest unroll factor
+            loopFactor: scalarOps > 50 ? 4 : 1
         };
     }
 }
