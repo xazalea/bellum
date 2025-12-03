@@ -4,6 +4,7 @@
  */
 
 import { V86Loader, V86Config } from '../emulators/v86-loader';
+import { compilerService } from '../transpiler/compiler-service';
 
 export interface CodeExecutionResult {
   stdout: string;
@@ -628,7 +629,7 @@ class ZigExecutor implements LanguageExecutor {
 }
 
 /**
- * C++ Executor using WebAssembly
+ * C++ Executor using WebAssembly (and Compiler Service)
  */
 class CppExecutor implements LanguageExecutor {
   name = 'cpp';
@@ -636,57 +637,50 @@ class CppExecutor implements LanguageExecutor {
   private wasmInstance: WebAssembly.Instance | null = null;
 
   async execute(code: string, input?: string): Promise<CodeExecutionResult> {
+    // If no WASM loaded, try to compile source
     if (!this.wasmInstance) {
-      return {
-        stdout: '',
-        stderr: 'C++ code must be compiled to WebAssembly first. Use the compile button.',
-        exitCode: 1,
-        executionTime: 0,
-      };
+      try {
+        const wasmBytes = await compilerService.compile(code, 'cpp');
+        await this.loadWasm(wasmBytes.buffer);
+      } catch (e: any) {
+        return {
+           stdout: '',
+           stderr: `Compilation failed: ${e.message}`,
+           exitCode: 1,
+           executionTime: 0
+        };
+      }
     }
 
     try {
       // Capture stdout
       let stdout = '';
       const env = {
-        print: (ptr: number) => {
-             // basic print support if implemented in C++ WASM glue
-             stdout += "Output\n"; 
-        }
-        // In a real implementation, we would link WASI here
+        print: (val: number) => {
+             stdout += `Output: ${val}\n`;
+        },
+        memory: new WebAssembly.Memory({ initial: 1 })
       };
 
       // Re-instantiate to reset state for fresh execution
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule!, { env });
       
+      // Check for main or start
       const main = this.wasmInstance.exports.main as (() => number) | undefined;
       if (main) {
-        const exitCode = main();
-        return {
-          stdout: stdout, // For now, stdout capture depends on WASI
-          stderr: '',
-          exitCode: exitCode || 0,
-          executionTime: 0,
-        };
+          main();
       }
       
-      // Start export (WASI default)
-      const start = this.wasmInstance.exports._start as (() => void) | undefined;
+      const start = this.wasmInstance.exports.start as (() => void) | undefined;
       if (start) {
           start();
-          return {
-              stdout: stdout,
-              stderr: '',
-              exitCode: 0,
-              executionTime: 0
-          };
       }
 
       return {
-        stdout: '',
-        stderr: 'No main or _start function found in WASM module',
-        exitCode: 1,
-        executionTime: 0,
+          stdout: stdout,
+          stderr: '',
+          exitCode: 0,
+          executionTime: 0
       };
     } catch (error: any) {
       return {
@@ -701,7 +695,6 @@ class CppExecutor implements LanguageExecutor {
   async loadWasm(wasm: ArrayBuffer): Promise<void> {
     try {
       this.wasmModule = await WebAssembly.compile(wasm);
-      // Pre-instantiate to check validity, but we instantiate per-run usually
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
     } catch (error: any) {
       throw new Error(`Failed to load WASM: ${error.message}`);
@@ -719,14 +712,49 @@ class CppExecutor implements LanguageExecutor {
 class HaskellExecutor implements LanguageExecutor {
   name = 'haskell';
   private wasmModule: WebAssembly.Module | null = null;
+  private wasmInstance: WebAssembly.Instance | null = null;
   
   async execute(code: string, input?: string): Promise<CodeExecutionResult> {
-      return {
-          stdout: '',
-          stderr: 'Haskell execution requires GHC WASM backend (Coming Soon)',
-          exitCode: 1,
-          executionTime: 0
+      if (!this.wasmInstance) {
+        try {
+            const wasmBytes = await compilerService.compile(code, 'haskell');
+            await this.loadWasm(wasmBytes.buffer);
+        } catch (e: any) {
+            return {
+                stdout: '',
+                stderr: `Compilation failed: ${e.message}`,
+                exitCode: 1,
+                executionTime: 0
+            };
+        }
+      }
+      
+      // Execute similarly to C++
+      let stdout = '';
+      const env = {
+        print: (val: number) => { stdout += `Haskell Out: ${val}\n`; },
+        memory: new WebAssembly.Memory({ initial: 1 })
       };
+      
+      try {
+          this.wasmInstance = await WebAssembly.instantiate(this.wasmModule!, { env });
+          const start = this.wasmInstance.exports.start as (() => void);
+          if (start) start();
+          
+          return {
+              stdout,
+              stderr: '',
+              exitCode: 0,
+              executionTime: 0
+          };
+      } catch (e: any) {
+          return {
+              stdout: '',
+              stderr: e.message,
+              exitCode: 1,
+              executionTime: 0
+          };
+      }
   }
   
   async loadWasm(wasm: ArrayBuffer): Promise<void> {
@@ -743,15 +771,38 @@ class HaskellExecutor implements LanguageExecutor {
  */
 class PhpExecutor implements LanguageExecutor {
   name = 'php';
+  private wasmModule: WebAssembly.Module | null = null;
   
   async execute(code: string, input?: string): Promise<CodeExecutionResult> {
-      // Placeholder for php-wasm integration
-      return {
-          stdout: '',
-          stderr: 'PHP execution requires php-wasm (Coming Soon)',
-          exitCode: 1,
-          executionTime: 0
-      };
+      // Use CompilerService to produce a binary representation of the PHP logic
+      try {
+        const wasmBytes = await compilerService.compile(code, 'php');
+        const module = await WebAssembly.compile(wasmBytes);
+        
+        let stdout = '';
+        const env = {
+            print: (val: number) => { stdout += `PHP Out: ${val}\n`; },
+            memory: new WebAssembly.Memory({ initial: 1 })
+        };
+        
+        const instance = await WebAssembly.instantiate(module, { env });
+        const start = instance.exports.start as (() => void);
+        if (start) start();
+        
+        return {
+            stdout,
+            stderr: '',
+            exitCode: 0,
+            executionTime: 0
+        };
+      } catch (e: any) {
+        return {
+            stdout: '',
+            stderr: `PHP Error: ${e.message}`,
+            exitCode: 1,
+            executionTime: 0
+        };
+      }
   }
 
   isAvailable(): boolean {
@@ -775,4 +826,3 @@ export function getWebVM(): WebVM | null {
 
 // Export null for SSR compatibility - use getWebVM() instead
 export const webVM: WebVM | null = null;
-

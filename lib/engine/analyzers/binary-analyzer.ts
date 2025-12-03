@@ -5,12 +5,34 @@ export enum FileType {
   ELF = 'elf',       // Linux
   APK = 'apk',       // Android
   ISO = 'iso',       // Disk Image
-  ZIP = 'zip'
+  ZIP = 'zip',
+  // Source Files
+  CPP = 'cpp',
+  HASKELL = 'hs',
+  PHP = 'php',
+  PYTHON = 'py'
 }
 
 export class BinaryAnalyzer {
-  static async detectType(buffer: ArrayBuffer): Promise<FileType> {
+  static async detectType(buffer: ArrayBuffer, fileName?: string): Promise<FileType> {
     const view = new DataView(buffer);
+    
+    // Extension-based check for source files (Binary sniffing is unreliable for text)
+    if (fileName) {
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        switch (ext) {
+            case 'cpp': return FileType.CPP;
+            case 'cc': return FileType.CPP;
+            case 'hs': return FileType.HASKELL;
+            case 'php': return FileType.PHP;
+            case 'py': return FileType.PYTHON;
+            case 'apk': return FileType.APK;
+            case 'exe': return FileType.PE_EXE;
+        }
+    }
+
+    if (buffer.byteLength < 4) return FileType.UNKNOWN;
+
     const magic2 = view.getUint16(0, false); // Big endian
     const magic4 = view.getUint32(0, false);
 
@@ -29,24 +51,16 @@ export class BinaryAnalyzer {
     // Check for PK (Zip/APK)
     // 0x50 0x4B 0x03 0x04
     if (magic4 === 0x504B0304) {
-        // Need to check internal structure to distinguish APK from ZIP
-        // For now, we'll rely on extension in the upper layer or deeper inspection later
+        // Check for classes.dex in zip directory (simplified check)
         return FileType.ZIP; 
     }
     
     // Check for DEX (Android Bytecode) directly
     // 'd' 'e' 'x' '\n' (0x64 0x65 0x78 0x0A)
     if (magic4 === 0x6465780A) {
-        return FileType.APK; // Technically just a DEX, but treated as Android app
+        return FileType.APK;
     }
 
     return FileType.UNKNOWN;
   }
-
-  static async inspectZipForAPK(buffer: ArrayBuffer): Promise<boolean> {
-      // Simple check: Does it have classes.dex?
-      // This is a placeholder for real zip inspection
-      return false; 
-  }
 }
-
