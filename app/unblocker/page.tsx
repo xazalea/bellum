@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function UnblockerPage() {
   return (
-    <div className="fixed inset-0 bg-black z-50 pt-16">
+    <div className="fixed inset-0 bg-black z-50">
       <iframe 
         src="/unblocker/index.html"
         className="w-full h-full border-0"
