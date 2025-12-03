@@ -27,7 +27,7 @@ export const AppWindow: React.FC<AppWindowProps> = ({ app, onClose }) => {
       // Hook into status updates
       // @ts-ignore - Accessing internal loader for stats
       if (runner.loader) {
-          runner.loader.onStatusUpdate = (s, d) => {
+          runner.loader.onStatusUpdate = (s: string, d?: string) => {
               setStatus(s);
               if (d) setDetail(d);
           };
