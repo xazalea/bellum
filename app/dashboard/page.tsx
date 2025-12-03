@@ -151,7 +151,7 @@ export default function DashboardPage() {
 
   return (
     <div 
-        className="min-h-screen bg-black text-white flex"
+        className="min-h-screen bg-black text-white flex pt-24"
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}

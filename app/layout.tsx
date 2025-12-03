@@ -46,9 +46,9 @@ export default function RootLayout({
       </head>
       <body className="bg-black text-white min-h-screen">
         <DynamicIsland />
-        <div className="pt-24">
+        <main>
           {children}
-        </div>
+        </main>
         <ClientInit />
       </body>
     </html>

@@ -14,6 +14,7 @@ export default function LandingPage() {
       backgroundColor: colors.bg.primary,
       color: colors.text.primary,
       overflow: 'hidden',
+      paddingTop: '96px', // Added padding for Dynamic Island
     }}>
       {/* Hero Section */}
       <div style={{

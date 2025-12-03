@@ -38,3 +38,7 @@ next-env.d.ts
 # npm
 .npmrc.local
 
+# Large Asset Directories
+**/assets/games/
+lib/arsenic/public/assets/games/
+public/unblocker/assets/games/
