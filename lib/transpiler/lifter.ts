@@ -3,23 +3,21 @@
  */
 
 export enum IROpcode {
-  LOAD = 'LOAD',
-  STORE = 'STORE',
-  ADD = 'ADD',
-  SUB = 'SUB',
-  MOV = 'MOV',
-  CALL = 'CALL',
-  RET = 'RET',
-  JMP = 'JMP',
-  CMP = 'CMP',
-  UNKNOWN = 'UNKNOWN'
+  ADD = 0, SUB, MUL, DIV, AND, OR, XOR, SHL, SHR,
+  LOAD, STORE, PUSH, POP,
+  JMP, JE, JNE, CALL, RET,
+  V_ADD, V_SUB, V_MUL,
+  SYSCALL, UNKNOWN
 }
 
 export interface IRInstruction {
   opcode: IROpcode;
-  operands: any[];
-  address: number; // Original address
-  size: number;    // Original size in bytes
+  address: number;
+  size: number;
+  op1: bigint;
+  op2: bigint;
+  op3?: bigint;
+  operands?: any[]; // Legacy support
 }
 
 export interface LifterContext {
@@ -34,9 +32,6 @@ export class InstructionLifter {
     let pc = context.entryPoint;
 
     // POC: Simple sequential decoder
-    // In a real implementation, this would use a recursive traversal (Recursive Descent)
-    // and a proper disassembler library (like Capstone compiled to WASM, or a JS port).
-    
     while (pc < context.data.length) {
       const byte = context.data[pc];
       let instr: IRInstruction;
@@ -45,25 +40,28 @@ export class InstructionLifter {
       if (context.arch === 'x86') {
         switch (byte) {
           case 0x90: // NOP
-            instr = { opcode: IROpcode.MOV, operands: ['nop'], address: pc, size: 1 };
+             // Treated as PUSH 0 (No side effect) or just ignored
+            instr = { opcode: IROpcode.UNKNOWN, op1: 0n, op2: 0n, address: pc, size: 1 };
             break;
           case 0xC3: // RET
-            instr = { opcode: IROpcode.RET, operands: [], address: pc, size: 1 };
+            instr = { opcode: IROpcode.RET, op1: 0n, op2: 0n, address: pc, size: 1 };
             break;
           case 0xE9: // JMP relative
-            instr = { opcode: IROpcode.JMP, operands: ['rel'], address: pc, size: 5 }; // simplified
+            instr = { opcode: IROpcode.JMP, op1: 0n, op2: 0n, address: pc, size: 5 };
             break;
-          case 0xB8: // MOV EAX, imm32
-            instr = { opcode: IROpcode.MOV, operands: ['eax', 'imm32'], address: pc, size: 5 };
+          case 0xB8: // MOV EAX, imm32 -> Represent as PUSH imm32 for stack machine
+             // For POC, we read 4 bytes
+             let imm = 0;
+             if (pc + 4 < context.data.length) {
+                 imm = context.data[pc+1] | (context.data[pc+2] << 8) | (context.data[pc+3] << 16) | (context.data[pc+4] << 24);
+             }
+            instr = { opcode: IROpcode.PUSH, op1: BigInt(imm), op2: 0n, address: pc, size: 5 };
             break;
           default:
-            instr = { opcode: IROpcode.UNKNOWN, operands: [byte], address: pc, size: 1 };
+            instr = { opcode: IROpcode.UNKNOWN, op1: BigInt(byte), op2: 0n, address: pc, size: 1 };
         }
-      } else if (context.arch === 'dalvik') {
-          // Dalvik decoding stub
-          instr = { opcode: IROpcode.UNKNOWN, operands: [byte], address: pc, size: 2 }; // Dalvik instrs are 2-byte aligned usually
       } else {
-         instr = { opcode: IROpcode.UNKNOWN, operands: [], address: pc, size: 1 };
+         instr = { opcode: IROpcode.UNKNOWN, op1: 0n, op2: 0n, address: pc, size: 1 };
       }
 
       ir.push(instr);
@@ -76,4 +74,3 @@ export class InstructionLifter {
     return ir;
   }
 }
-

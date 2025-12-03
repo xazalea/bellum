@@ -28,7 +28,7 @@ export class GemmaAccelerator {
     private readonly MODEL_URL = "https://huggingface.co/pixasocial/survival-uncensored-gemma-270m-v2/resolve/main/model.safetensors"; // Placeholder path
 
     async initialize() {
-        if (!navigator.gpu) return;
+        if (typeof navigator === 'undefined' || !navigator.gpu) return;
         
         const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
         if (!adapter) return;

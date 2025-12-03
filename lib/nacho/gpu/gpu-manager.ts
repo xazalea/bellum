@@ -13,7 +13,7 @@ export class GPUManager {
     private commandQueue: GPUCommandEncoder[] = [];
     
     async initialize() {
-        if (!navigator.gpu) throw new Error('WebGPU Not Supported');
+        if (typeof navigator === 'undefined' || !navigator.gpu) throw new Error('WebGPU Not Supported');
         
         const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
         if (!adapter) throw new Error('No GPU Adapter Found');

@@ -70,7 +70,9 @@ export class NeuralAccelerator {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
+        // @ts-ignore - BufferSource strictness
         this.device.queue.writeBuffer(gpuInput, 0, input);
+        // @ts-ignore - BufferSource strictness
         this.device.queue.writeBuffer(uniformBuffer, 0, new Uint32Array([width, height]));
 
         const bindGroup = this.device.createBindGroup({

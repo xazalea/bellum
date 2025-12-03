@@ -54,6 +54,10 @@ export class CPUManager {
     private maxWorkers: number;
 
     constructor() {
+        if (typeof window === 'undefined') {
+            this.maxWorkers = 0;
+            return;
+        }
         // Use hardware concurrency, reserve 1 for UI, 1 for GPU Orchestrator
         this.maxWorkers = Math.max(2, (navigator.hardwareConcurrency || 4) - 2);
         this.initializePool();

@@ -4,7 +4,7 @@
  */
 
 import { WASMCompiler } from './wasm_compiler';
-import { InstructionLifter } from './lifter'; // Used for internal IR generation
+import { InstructionLifter, IROpcode } from './lifter'; // Used for internal IR generation
 
 export class CompilerService {
     private static instance: CompilerService;
@@ -41,31 +41,17 @@ export class CompilerService {
         // Generate a simple IR that prints "Hello from [Lang]" 
         // and does some computation based on the source length.
         
-        // IR Opcodes: ADD, PUSH, etc.
-        // We'll use the IROpcode enum values (assuming they are exported or we match them)
-        // 0=ADD, 12=PUSH, etc. (Need to verify with lifter.ts)
-        
-        // PUSH 42 (Result)
-        // PUSH 1 (Stdout)
-        // CALL PRINT
-        
         const ir = [];
         
         // Pseudo-IR generation
         // We will generate instructions that the WASMCompiler understands.
-        // Using the IROpcode enum from lifter.ts would be best, but avoiding circular imports if possible.
-        // Let's rely on the structure expected by WASMCompiler.
-        
-        // See lib/transpiler/lifter.ts for Opcodes
-        // ADD=0, SUB=1, PUSH=9, CALL=13 (approx)
-        
-        // Let's just return a valid IR array that WASMCompiler expects.
-        // { opcode: 9 (PUSH), op1: 42n }
         
         // Basic "Hello World" IR
-        ir.push({ opcode: 9, op1: BigInt(1337), op2: BigInt(0), address: 0, size: 1 }); // PUSH 1337
-        ir.push({ opcode: 9, op1: BigInt(source.length), op2: BigInt(0), address: 1, size: 1 }); // PUSH len
-        ir.push({ opcode: 0, op1: BigInt(1337), op2: BigInt(source.length), address: 2, size: 1 }); // ADD (Result on stack)
+        ir.push({ opcode: IROpcode.PUSH, op1: BigInt(1337), op2: BigInt(0), address: 0, size: 1 }); // PUSH 1337
+        ir.push({ opcode: IROpcode.PUSH, op1: BigInt(source.length), op2: BigInt(0), address: 1, size: 1 }); // PUSH len
+        // ADD currently in WASMCompiler takes op1 and op2 and pushes result, but stack machine usually pops.
+        // In our simplistic POC WASMCompiler, ADD takes immediates and pushes result.
+        ir.push({ opcode: IROpcode.ADD, op1: BigInt(1337), op2: BigInt(source.length), address: 2, size: 1 }); 
         
         return ir;
     }

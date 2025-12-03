@@ -42,7 +42,7 @@ export class Optimizer {
           return {
               ...instr,
               opcode: IROpcode.PUSH,
-              op1: BigInt(Number(instr.op1) + Number(instr.op2)),
+              op1: instr.op1 + instr.op2,
               op2: BigInt(0)
           };
       }
@@ -55,7 +55,8 @@ export class Optimizer {
       for (const instr of ir) {
           if (instr.opcode === IROpcode.JMP || instr.opcode === IROpcode.JE) {
               // If target < current address -> Loop detected
-              if (instr.op1 < instr.address) {
+              // op1 is the jump target address
+              if (instr.op1 < BigInt(instr.address)) {
                   // Mark block as HOT
                   // console.log(`Optimizer: Loop detected at ${instr.address.toString(16)}`);
               }
@@ -64,6 +65,8 @@ export class Optimizer {
   }
 
   private isConst(val: bigint): boolean {
-      return val < BigInt(1000000); // Arbitrary heuristic for immediate values
+      // Heuristic: Small values are likely immediates/constants in this simple IR
+      // In a real IR, we'd check operand type (Immediate vs Register)
+      return val < BigInt(1000000); 
   }
 }

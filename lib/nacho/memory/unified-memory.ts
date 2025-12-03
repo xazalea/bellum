@@ -18,7 +18,8 @@ export class UnifiedMemory {
     
     private constructor(sizeMB: number = 4096) {
         // Check for COOP/COEP
-        if (!crossOriginIsolated) {
+        const isIsolated = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
+        if (!isIsolated) {
             console.warn('UnifiedMemory: Cross-Origin Isolation not active. SharedArrayBuffer will fail. Falling back to ArrayBuffer (No Threading).');
             this.heap = new ArrayBuffer(sizeMB * 1024 * 1024) as any; // Fallback cast
         } else {
