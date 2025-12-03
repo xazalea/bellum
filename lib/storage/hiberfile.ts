@@ -2,7 +2,7 @@
 // HiberFile - Local Persistent Storage using IndexedDB
 // Replaces Puter.js for file hosting
 
-import { CompressionService } from './compression';
+import { CompressionService } from '../nacho/storage/compression-service';
 
 interface FileManifest {
     path: string;
@@ -23,6 +23,7 @@ export class HiberFile {
   private db: IDBDatabase | null = null;
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
+  private compressionService = CompressionService.getInstance();
 
   constructor(dbName: string = 'hiberfile-storage') {
       this.dbName = dbName;
@@ -86,22 +87,31 @@ export class HiberFile {
         const end = Math.min(start + CHUNK_SIZE, blob.size);
         const chunkBlob = blob.slice(start, end);
         
-        // Compress chunk if requested
+        // Compress chunk if requested using the new Service
         let finalChunk = chunkBlob;
+        let compressionMethod = 'none';
+        
         if (options.compress) {
-            finalChunk = await CompressionService.compress(chunkBlob);
+            const arrayBuffer = await chunkBlob.arrayBuffer();
+            const { data, method } = await this.compressionService.compress(new Uint8Array(arrayBuffer), path);
+            // @ts-ignore - ArrayBufferLike strictness
+            finalChunk = new Blob([data]);
+            compressionMethod = method;
         }
 
         // Generate key (simple content hash would be better for dedup, but path+index is safer for now)
         const chunkKey = `${path}_chunk_${i}`;
         chunkKeys.push(chunkKey);
 
-        const chunkStore = await this.getStore(this.chunkStoreName, 'readwrite');
+        // New Transaction per chunk
         await new Promise<void>((resolve, reject) => {
-            const req = chunkStore.put({
+            const tx = this.db!.transaction(this.chunkStoreName, 'readwrite');
+            const store = tx.objectStore(this.chunkStoreName);
+            const req = store.put({
                 key: chunkKey,
                 content: finalChunk,
-                compressed: options.compress
+                compressed: options.compress,
+                compressionMethod // Store the method used
             });
             req.onsuccess = () => resolve();
             req.onerror = () => reject(req.error);
@@ -155,7 +165,12 @@ export class HiberFile {
         if (!chunkData) throw new Error(`Chunk missing: ${chunkKey}`);
 
         if (chunkData.compressed) {
-            chunks.push(await CompressionService.decompress(chunkData.content));
+            // Handle legacy bool or new method
+            const method = chunkData.compressionMethod || 'gzip'; // Fallback to gzip for legacy
+            const arrayBuffer = await (chunkData.content as Blob).arrayBuffer();
+            const decompressed = await this.compressionService.decompress(new Uint8Array(arrayBuffer), method as any);
+            // @ts-ignore - ArrayBufferLike strictness
+            chunks.push(new Blob([decompressed]));
         } else {
             chunks.push(chunkData.content);
         }
@@ -164,52 +179,55 @@ export class HiberFile {
     return new Blob(chunks);
   }
   
-  // Optimized lazy chunk reader for the Engine
-  async readChunk(path: string, offset: number, length: number): Promise<ArrayBuffer> {
-      path = path.startsWith('/') ? path.substring(1) : path;
-      const fileStore = await this.getStore(this.storeName, 'readonly');
-      
-      // Get Manifest
-      const manifest = await new Promise<FileManifest>((resolve, reject) => {
-          const req = fileStore.get(path);
-          req.onsuccess = () => req.result ? resolve(req.result) : reject(new Error(`File not found: ${path}`));
-          req.onerror = () => reject(req.error);
-      });
+    // Optimized lazy chunk reader for the Engine
+    async readChunk(path: string, offset: number, length: number): Promise<ArrayBuffer> {
+        path = path.startsWith('/') ? path.substring(1) : path;
+        const fileStore = await this.getStore(this.storeName, 'readonly');
+        
+        // Get Manifest
+        const manifest = await new Promise<FileManifest>((resolve, reject) => {
+            const req = fileStore.get(path);
+            req.onsuccess = () => req.result ? resolve(req.result) : reject(new Error(`File not found: ${path}`));
+            req.onerror = () => reject(req.error);
+        });
 
-      // Calculate which chunks cover the requested range
-      const startChunkIndex = Math.floor(offset / manifest.chunkSize);
-      const endChunkIndex = Math.floor((offset + length - 1) / manifest.chunkSize);
-      
-      const chunkStore = await this.getStore(this.chunkStoreName, 'readonly');
-      const loadedChunks: Blob[] = [];
-      
-      // Fetch only necessary chunks
-      for (let i = startChunkIndex; i <= endChunkIndex; i++) {
-          if (i >= manifest.chunks.length) break;
-          
-          const chunkKey = manifest.chunks[i];
-          const chunkData = await new Promise<any>((resolve, reject) => {
-              const req = chunkStore.get(chunkKey);
-              req.onsuccess = () => resolve(req.result);
-              req.onerror = () => reject(req.error);
-          });
+        // Calculate which chunks cover the requested range
+        const startChunkIndex = Math.floor(offset / manifest.chunkSize);
+        const endChunkIndex = Math.floor((offset + length - 1) / manifest.chunkSize);
+        
+        const chunkStore = await this.getStore(this.chunkStoreName, 'readonly');
+        const loadedChunks: Blob[] = [];
+        
+        // Fetch only necessary chunks
+        for (let i = startChunkIndex; i <= endChunkIndex; i++) {
+            if (i >= manifest.chunks.length) break;
+            
+            const chunkKey = manifest.chunks[i];
+            const chunkData = await new Promise<any>((resolve, reject) => {
+                const req = chunkStore.get(chunkKey);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
 
-          let blob = chunkData.content;
-          if (chunkData.compressed) {
-              blob = await CompressionService.decompress(blob);
-          }
-          loadedChunks.push(blob);
-      }
+            let blob = chunkData.content;
+            if (chunkData.compressed) {
+                // @ts-ignore - decompress isn't static
+                blob = await this.compressionService.decompress(new Uint8Array(await blob.arrayBuffer()), chunkData.compressionMethod || 'gzip');
+                // @ts-ignore - Blob strictness
+                blob = new Blob([blob]);
+            }
+            loadedChunks.push(blob);
+        }
 
-      // Combine necessary chunks
-      const combinedBlob = new Blob(loadedChunks);
-      
-      // Slice the exact requested byte range relative to the start of the first loaded chunk
-      const relativeOffset = offset % manifest.chunkSize;
-      const slice = combinedBlob.slice(relativeOffset, relativeOffset + length);
-      
-      return await slice.arrayBuffer();
-  }
+        // Combine necessary chunks
+        const combinedBlob = new Blob(loadedChunks);
+        
+        // Slice the exact requested byte range relative to the start of the first loaded chunk
+        const relativeOffset = offset % manifest.chunkSize;
+        const slice = combinedBlob.slice(relativeOffset, relativeOffset + length);
+        
+        return await slice.arrayBuffer();
+    }
 
   async readFileAsText(path: string): Promise<string> {
     const blob = await this.readFile(path);

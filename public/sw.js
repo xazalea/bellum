@@ -101,8 +101,8 @@ async function cacheFirst(request, cacheName) {
     return response;
   } catch (error) {
     console.error('Fetch failed:', error);
-    // Fallback or rethrow
-    throw error;
+    // Return error response instead of throwing to prevent "Failed to convert value to Response"
+    return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
   }
 }
 
@@ -120,7 +120,7 @@ async function networkFirst(request, cacheName) {
     } catch (error) {
         const cached = await cache.match(request);
         if (cached) return cached;
-        throw error;
+        return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
     }
 }
 
@@ -136,7 +136,11 @@ async function staleWhileRevalidate(request, cacheName) {
       cache.put(request, response.clone());
     }
     return response;
-  }).catch(e => console.warn('Fetch failed in background', e));
+  }).catch(e => {
+      console.warn('Fetch failed in background', e);
+      // Return a 503 response if background fetch fails, so we don't return undefined
+      return new Response('Background fetch failed', { status: 503 });
+  });
 
   return cached || fetchPromise;
 }
@@ -147,7 +151,6 @@ async function staleWhileRevalidate(request, cacheName) {
  */
 async function handleMaterialization(request) {
     const url = new URL(request.url);
-    const resourceId = url.pathname.split('/').pop();
     
     // Mock generation logic
     // In a real scenario, this would use WASM or JS logic to generate textures/geometry
@@ -167,4 +170,3 @@ async function handleMaterialization(request) {
     
     return response;
 }
-

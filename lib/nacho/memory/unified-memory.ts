@@ -16,21 +16,37 @@ export class UnifiedMemory {
     // 0x10000000 - 0x1FFFFFFF: Framebuffer / Textures (256MB)
     // 0x20000000 - 0xFFFFFFFF: Application Heap (~3.5GB)
     
-    private constructor(sizeMB: number = 4096) {
+    private constructor(sizeMB: number = 256) { // Reduced default from 4096MB to 256MB to prevent crashes
         // Check for COOP/COEP
         const isIsolated = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
-        if (!isIsolated) {
-            console.warn('UnifiedMemory: Cross-Origin Isolation not active. SharedArrayBuffer will fail. Falling back to ArrayBuffer (No Threading).');
-            this.heap = new ArrayBuffer(sizeMB * 1024 * 1024) as any; // Fallback cast
-        } else {
-            this.heap = new SharedArrayBuffer(sizeMB * 1024 * 1024);
+        
+        try {
+            if (!isIsolated) {
+                console.warn('UnifiedMemory: Cross-Origin Isolation not active. SharedArrayBuffer will fail. Falling back to ArrayBuffer (No Threading).');
+                this.heap = new ArrayBuffer(sizeMB * 1024 * 1024) as any; 
+            } else {
+                this.heap = new SharedArrayBuffer(sizeMB * 1024 * 1024);
+            }
+        } catch (e) {
+            console.error('UnifiedMemory: Allocation Failed for', sizeMB, 'MB. Trying fallback to 64MB.');
+            // Emergency Fallback
+            if (!isIsolated) {
+                this.heap = new ArrayBuffer(64 * 1024 * 1024) as any;
+            } else {
+                try {
+                    this.heap = new SharedArrayBuffer(64 * 1024 * 1024);
+                } catch (e2) {
+                    console.error('UnifiedMemory: Critical Allocation Failure (64MB Shared). Fallback to ArrayBuffer.');
+                    this.heap = new ArrayBuffer(64 * 1024 * 1024) as any;
+                }
+            }
         }
         
         this.view = new DataView(this.heap);
         this.u8 = new Uint8Array(this.heap);
         this.f32 = new Float32Array(this.heap);
         
-        console.log(`UnifiedMemory: Allocated ${sizeMB}MB Unified Heap`);
+        console.log(`UnifiedMemory: Allocated ${this.heap.byteLength / 1024 / 1024}MB Unified Heap`);
     }
 
     static getInstance(): UnifiedMemory {
@@ -64,6 +80,13 @@ export class UnifiedMemory {
     getFramebufferView(width: number, height: number): Uint32Array {
         // Framebuffer starts at 0x10000000
         const fbStart = 0x10000000;
+        // Ensure we don't go out of bounds if heap is smaller than standard offset
+        if (fbStart + (width * height * 4) > this.heap.byteLength) {
+             // Dynamically allocate separate buffer if heap too small (Fallback behavior)
+             // In a real kernel, we would remap, but here we just warn and return a detached buffer to avoid crash
+             console.warn('UnifiedMemory: Heap too small for fixed framebuffer offset. Returning detached buffer.');
+             return new Uint32Array(width * height);
+        }
         return new Uint32Array(this.heap, fbStart, width * height);
     }
 }

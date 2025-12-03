@@ -1,14 +1,18 @@
-'use client';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Nacho Unblocker',
+  description: 'Access the web freely with Nacho Unblocker.',
+};
 
 export default function UnblockerPage() {
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#000' }}>
-      <iframe
+    <div className="fixed inset-0 bg-black z-50 pt-16">
+      <iframe 
         src="/unblocker/index.html"
-        title="nacho unblocker"
-        style={{ border: 'none', width: '100%', height: '100%' }}
-        allow="fullscreen"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+        className="w-full h-full border-0"
+        allowFullScreen
+        title="Nacho Unblocker"
       />
     </div>
   );

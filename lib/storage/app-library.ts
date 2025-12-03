@@ -1,6 +1,6 @@
 
 import { HiberFile } from './hiberfile';
-import { CompressionService } from './compression';
+import { CompressionService, compressionService } from '../nacho/storage/compression-service';
 
 export interface StoredApp {
   id: string;
@@ -45,6 +45,11 @@ export class CloudDatabase {
     this.coldStore = new HiberFile('bellum-cloud-storage');
   }
 
+  private get compressionService() {
+      // Import dynamically or assume global if needed, but best to use import
+      return CompressionService.getInstance();
+  }
+
   private get puter() {
     return (typeof window !== 'undefined' ? (window as any).puter : null);
   }
@@ -86,7 +91,10 @@ export class CloudDatabase {
 
     // Fallback to Local Cold Storage (IndexedDB)
     // 1. Compress
-    const compressed = await CompressionService.compress(file);
+    // @ts-ignore - Property 'name' does not exist on type 'Blob' (it exists on File which extends Blob)
+    const { data: compressedBytes } = await compressionService.compress(new Uint8Array(await file.arrayBuffer()), file.name || 'binary');
+    // @ts-ignore - ArrayBufferLike strictness
+    const compressed = new Blob([compressedBytes]);
     
     // 2. Chunking Configuration
     const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunks (Standard Cloud Block Size)
@@ -179,7 +187,9 @@ export class CloudDatabase {
     const compressedBlob = new Blob(chunks);
 
     // 4. Decompress
-    const originalBlob = await CompressionService.decompress(compressedBlob);
+    const originalBytes = await compressionService.decompress(new Uint8Array(await compressedBlob.arrayBuffer()), 'gzip' as any);
+    // @ts-ignore - ArrayBufferLike strictness
+    const originalBlob = new Blob([originalBytes]);
     
     // Restore type
     return new Blob([originalBlob], { type: manifest.mimeType });

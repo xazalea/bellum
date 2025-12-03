@@ -8,6 +8,7 @@ import { gpuManager } from '../gpu/gpu-manager';
 import { neuralCore } from '../ai/neural-core';
 import { memoryManager } from '../memory/unified-memory';
 import { gemmaAccelerator } from '../ai/gemma-gpu';
+import { infiniteStorage } from '../storage/infinite-storage';
 
 export class Hypervisor {
     private static instance: Hypervisor;
@@ -31,6 +32,9 @@ export class Hypervisor {
         // 1. Initialize Subsystems
         await gpuManager.initialize();
         
+        // Initialize Infinite Storage (VFS)
+        await infiniteStorage.initialize();
+
         // Initialize Gemma 270M Accelerator
         await gemmaAccelerator.initialize();
         

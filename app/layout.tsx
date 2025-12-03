@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import Link from 'next/link';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 
@@ -22,6 +23,21 @@ export const viewport = {
   themeColor: '#0a0a0a',
 };
 
+function Navbar() {
+  return (
+    <nav className="fixed top-0 left-0 right-0 h-16 bg-black/50 backdrop-blur-md border-b border-white/10 flex items-center px-6 z-50">
+      <Link href="/" className="text-xl font-bold tracking-tighter mr-8">
+        nacho<span className="text-blue-500">.</span>
+      </Link>
+      <div className="flex gap-6 text-sm font-medium text-gray-400">
+        <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+        <Link href="/unblocker" className="hover:text-white transition-colors">Unblocker</Link>
+        <Link href="/games" className="hover:text-white transition-colors">Games</Link>
+      </div>
+    </nav>
+  );
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -43,11 +59,13 @@ export default function RootLayout({
         {/* Performance hints */}
         <link rel="preload" as="fetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
       </head>
-      <body>
-        {children}
+      <body className="bg-black text-white min-h-screen">
+        <Navbar />
+        <div className="pt-16">
+          {children}
+        </div>
         <ClientInit />
       </body>
     </html>
   );
 }
-
