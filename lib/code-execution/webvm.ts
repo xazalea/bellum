@@ -490,8 +490,9 @@ class GoExecutor implements LanguageExecutor {
     }
   }
 
-  async loadWasm(wasm: ArrayBuffer): Promise<void> {
+  async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
     try {
+      // @ts-ignore - ArrayBufferLike compatible
       this.wasmModule = await WebAssembly.compile(wasm);
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
     } catch (error: any) {
@@ -552,8 +553,9 @@ class RustExecutor implements LanguageExecutor {
     }
   }
 
-  async loadWasm(wasm: ArrayBuffer): Promise<void> {
+  async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
     try {
+      // @ts-ignore
       this.wasmModule = await WebAssembly.compile(wasm);
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
     } catch (error: any) {
@@ -614,8 +616,9 @@ class ZigExecutor implements LanguageExecutor {
     }
   }
 
-  async loadWasm(wasm: ArrayBuffer): Promise<void> {
+  async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
     try {
+      // @ts-ignore
       this.wasmModule = await WebAssembly.compile(wasm);
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
     } catch (error: any) {
@@ -641,7 +644,8 @@ class CppExecutor implements LanguageExecutor {
     if (!this.wasmInstance) {
       try {
         const wasmBytes = await compilerService.compile(code, 'cpp');
-        await this.loadWasm(wasmBytes.buffer);
+        // Directly pass buffer
+        await this.loadWasm(wasmBytes.buffer as ArrayBuffer); 
       } catch (e: any) {
         return {
            stdout: '',
@@ -692,8 +696,9 @@ class CppExecutor implements LanguageExecutor {
     }
   }
 
-  async loadWasm(wasm: ArrayBuffer): Promise<void> {
+  async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
     try {
+      // @ts-ignore
       this.wasmModule = await WebAssembly.compile(wasm);
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
     } catch (error: any) {
@@ -718,7 +723,7 @@ class HaskellExecutor implements LanguageExecutor {
       if (!this.wasmInstance) {
         try {
             const wasmBytes = await compilerService.compile(code, 'haskell');
-            await this.loadWasm(wasmBytes.buffer);
+            await this.loadWasm(wasmBytes.buffer as ArrayBuffer);
         } catch (e: any) {
             return {
                 stdout: '',
@@ -757,7 +762,8 @@ class HaskellExecutor implements LanguageExecutor {
       }
   }
   
-  async loadWasm(wasm: ArrayBuffer): Promise<void> {
+  async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
+     // @ts-ignore
      this.wasmModule = await WebAssembly.compile(wasm);
   }
 
