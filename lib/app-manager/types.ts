@@ -44,6 +44,10 @@ export interface AppMetadata {
   };
 }
 
+export interface AppInstance extends AppMetadata {
+  // Runtime-specific properties (if any)
+}
+
 export interface AppInstallation {
   app: AppMetadata;
   vmId: string;
@@ -59,4 +63,3 @@ export interface AppLauncher {
   listInstalled(vmId?: string): Promise<AppMetadata[]>;
   getAppInfo(appId: string): Promise<AppMetadata | null>;
 }
-
