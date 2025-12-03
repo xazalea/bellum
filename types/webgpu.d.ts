@@ -100,6 +100,12 @@ interface GPUProgrammableStage {
 
 interface GPUComputePipeline {
   getBindGroupLayout(index: number): GPUBindGroupLayout;
+  label?: string;
+}
+
+interface GPURenderPipeline {
+  getBindGroupLayout(index: number): GPUBindGroupLayout;
+  label?: string;
 }
 
 interface GPUBindGroupLayout {}
