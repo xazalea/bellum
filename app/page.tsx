@@ -82,7 +82,7 @@ export default function LandingPage() {
 
         {/* Feature Pills */}
         <div style={{
-          marginTop: '120px',
+          marginTop: '80px',
           display: 'flex',
           justifyContent: 'center',
           gap: '16px',
@@ -101,6 +101,40 @@ export default function LandingPage() {
               {tag}
             </div>
           ))}
+        </div>
+
+        {/* Hero Video */}
+        <div style={{
+          marginTop: '80px',
+          position: 'relative',
+          borderRadius: '32px',
+          overflow: 'hidden',
+          border: `1px solid ${colors.border.primary}`,
+          boxShadow: `0 20px 80px -20px ${colors.accent.primary}20`,
+          maxWidth: '900px',
+          margin: '80px auto 0',
+        }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.2) 100%)',
+            zIndex: 1,
+            pointerEvents: 'none',
+          }} />
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              background: colors.bg.secondary,
+            }}
+          >
+            <source src="/back.mp4" type="video/mp4" />
+          </video>
         </div>
       </div>
 
