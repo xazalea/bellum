@@ -17,6 +17,7 @@
     "framer-motion": "^12.23.24",
     "js-dos": "^7.0.0",
     "jszip": "^3.10.1",
+    "lucide-react": "^0.555.0",
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
