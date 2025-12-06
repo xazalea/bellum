@@ -60,14 +60,24 @@ export class CPUManager {
         }
         // Use hardware concurrency, reserve 1 for UI, 1 for GPU Orchestrator
         this.maxWorkers = Math.max(2, (navigator.hardwareConcurrency || 4) - 2);
-        this.initializePool();
+        // Pool initialization is now handled explicitly via initializeWorkers
     }
 
-    private initializePool() {
+    async initializeWorkers(count: number) {
+        // Reset if re-initializing
+        if (this.workers.length > 0) {
+            this.terminateAll();
+        }
+        
+        this.maxWorkers = count;
         for (let i = 0; i < this.maxWorkers; i++) {
             this.workers.push(new CPUWorker(i));
         }
         console.log(`CPUManager: Initialized ${this.maxWorkers} Execution Threads`);
+    }
+
+    private initializePool() {
+        // Deprecated, use initializeWorkers
     }
 
     dispatchTask(task: WorkerMessage) {
