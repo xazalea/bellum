@@ -28,11 +28,11 @@ export class NativeBridge {
      */
     public async loadModule(wasmBuffer: ArrayBuffer) {
         try {
-            const module = await WebAssembly.instantiate(wasmBuffer, {
+            const wasmModule = await WebAssembly.instantiate(wasmBuffer, {
                 env: this.env
             });
-            this.instance = module.instance;
-            this.memory = module.instance.exports.memory as WebAssembly.Memory;
+            this.instance = wasmModule.instance;
+            this.memory = wasmModule.instance.exports.memory as WebAssembly.Memory;
             console.log("NativeBridge: Module loaded successfully.");
 
             // Check for initialization function

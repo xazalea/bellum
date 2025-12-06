@@ -172,7 +172,7 @@ export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
       {vm?.config.type === VMType.XBOX && (
         <div style={{ color: 'white', padding: 20 }}>
           <h3>JIT Pipeline Test Running...</h3>
-          <p>Check Developer Console for "Generated WGSL"</p>
+          <p>Check Developer Console for &quot;Generated WGSL&quot;</p>
           {/* Self-invoking function to run test once */}
           {(() => {
             // @ts-ignore
