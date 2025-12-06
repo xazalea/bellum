@@ -121,11 +121,8 @@ export class NachoEngine {
                 this.initAI()
             ]);
 
-            // 2. Initialize Workers (CPU)
-            // Check if running in browser environment
-            if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
-                await cpuManager.initializeWorkers(navigator.hardwareConcurrency || 4);
-            }
+            // 2. CPU Workers are already initialized in CPUManager constructor
+            // No additional initialization needed
 
             console.log(`🌮 Nacho Engine: Ready in ${(performance.now() - start).toFixed(2)}ms`);
             this.isRunning = true;
