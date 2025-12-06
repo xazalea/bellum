@@ -67,8 +67,13 @@ export class BrowserServerEngine {
     fsApiHosting = {
         handle: null as FileSystemDirectoryHandle | null,
         mount: async () => {
-            if (typeof window.showDirectoryPicker === 'function') {
-                this.fsApiHosting.handle = await window.showDirectoryPicker();
+            // Guard for SSR and browser support
+            if (typeof window === 'undefined') {
+                throw new Error("FS API not available during SSR");
+            }
+            if ('showDirectoryPicker' in window && typeof (window as any).showDirectoryPicker === 'function') {
+                const picker = (window as any).showDirectoryPicker as () => Promise<FileSystemDirectoryHandle>;
+                this.fsApiHosting.handle = await picker();
                 return this.fsApiHosting.handle.name;
             }
             throw new Error("FS API not supported");
