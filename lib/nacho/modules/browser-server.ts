@@ -309,7 +309,11 @@ export class BrowserServerEngine {
     directoryIndexer = {
         scan: async (handle: FileSystemDirectoryHandle) => {
             const files = [];
-            for await (const entry of handle.values()) files.push(entry.name);
+            const iterator = (handle as any).entries ? (handle as any).entries() : (handle as any).values?.();
+            if (!iterator) return files;
+            for await (const [, entry] of iterator) {
+                files.push(entry.name);
+            }
             return files;
         }
     };
