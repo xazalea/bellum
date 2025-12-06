@@ -223,7 +223,7 @@ export class StorageCapacityEngine {
     immortalArchives = {
         archives: new Set<string>(),
         seal: (id: string) => {
-            this.immortalArchives.add(id);
+            this.immortalArchives.archives.add(id);
             Object.freeze(this.immortalArchives); // Metaphorical seal
         }
     };
