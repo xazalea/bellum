@@ -30,6 +30,10 @@ export class GPUManager {
         console.log('GPUManager: WebGPU Engine Online (RTX-Level Mode)');
     }
 
+    getDevice(): GPUDevice | null {
+        return this.device;
+    }
+
     private async createPipelines() {
         if (!this.device) return;
 
