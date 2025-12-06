@@ -253,7 +253,8 @@ export class OsVmPerformanceEngine {
 
     // 230. Multi-app unity sandbox
     unitySandbox = {
-        sharedHeap: new WebAssembly.Memory({ initial: 10, shared: true }),
+        // Shared memory requires a maximum; keep pages small for SSR safety
+        sharedHeap: new WebAssembly.Memory({ initial: 10, maximum: 10, shared: true }),
         apps: [] as any[]
     };
 
