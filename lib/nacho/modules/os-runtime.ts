@@ -394,7 +394,7 @@ export class OsVmPerformanceEngine {
     driverLifter = {
         lift: (driverBinary: Uint8Array) => {
             // Static recompilation
-            return new WebAssembly.Module(driverBinary); // Assume it's already WASM for now
+            return new WebAssembly.Module(driverBinary.buffer); // Assume it's already WASM for now
         }
     };
 
