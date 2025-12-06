@@ -253,8 +253,7 @@ export class OsVmPerformanceEngine {
 
     // 230. Multi-app unity sandbox
     unitySandbox = {
-        // Shared memory requires a maximum; keep pages small for SSR safety
-        sharedHeap: new WebAssembly.Memory({ initial: 10, maximum: 10, shared: true }),
+        sharedHeap: new WebAssembly.Memory({ initial: 10, shared: true }),
         apps: [] as any[]
     };
 
@@ -395,10 +394,7 @@ export class OsVmPerformanceEngine {
     driverLifter = {
         lift: (driverBinary: Uint8Array) => {
             // Static recompilation
-            // Ensure BufferSource is a real ArrayBuffer (avoid SAB/ArrayBufferLike issues)
-            const copy = new Uint8Array(driverBinary.byteLength);
-            copy.set(driverBinary);
-            return new WebAssembly.Module(copy.buffer); // Assume it's already WASM for now
+            return new WebAssembly.Module(driverBinary); // Assume it's already WASM for now
         }
     };
 

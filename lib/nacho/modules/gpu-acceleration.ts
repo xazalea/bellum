@@ -61,7 +61,7 @@ export class GpuHyperAcceleration {
         buffers: new Set<SharedArrayBuffer>(),
         create: (size: number) => {
             const sab = new SharedArrayBuffer(size);
-            this.zeroCopyGpuBuffers.buffers.add(sab);
+            this.zeroCopyGpuBuffers.add(sab);
             return sab;
         }
     };

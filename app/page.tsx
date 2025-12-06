@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import DesktopEnvironment from '@/components/DesktopEnvironment';
+import Dashboard from '@/components/Dashboard';
 
 export default function Page() {
-  return <DesktopEnvironment />;
+  return <Dashboard />;
 }

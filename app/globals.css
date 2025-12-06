@@ -3,27 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 241, 245, 249; /* #F1F5F9 */
-  --background-start-rgb: 11, 17, 33; /* #0B1121 */
-  --background-end-rgb: 15, 23, 42; /* #0F172A */
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 15, 23, 42; /* Slate 900 */
+  --background-end-rgb: 15, 23, 42;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(to bottom, rgb(var(--background-start-rgb)), rgb(var(--background-end-rgb)));
+  background: rgb(var(--background-start-rgb));
   min-height: 100vh;
-  font-family: 'Inter', sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
 }
 
-/* Custom Scrollbar for Matte Look */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B1121;
+  background: #0f172a;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -33,37 +33,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
-}
-
-/* Matte Utilities */
-.bg-matte-surface {
-  background-color: #1E293B;
-}
-
-.bg-matte-dark {
-  background-color: #0F172A;
-}
-
-.border-matte {
-  border: 1px solid #334155;
-}
-
-.text-matte-accent {
-  color: #38BDF8;
-}
-
-/* Prism/Vapor inspired animations */
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-@keyframes pulse-matte {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
 }
