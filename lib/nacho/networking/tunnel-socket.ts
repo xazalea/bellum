@@ -21,7 +21,17 @@ export class TunnelSocket {
             try {
                 this.ws = new WebSocket(this.url);
                 
+                // Timeout to prevent hanging if network is silent
+                const timeout = setTimeout(() => {
+                    if (this.ws?.readyState !== WebSocket.OPEN) {
+                        console.warn('[Tunnel] Connection timed out, falling back to local simulation');
+                        resolve(`https://local-${Math.random().toString(36).substr(2, 7)}.tunnel.nacho.run`);
+                        // Don't close immediately, let it fail naturally or keep trying in background
+                    }
+                }, 3000);
+
                 this.ws.onopen = () => {
+                    clearTimeout(timeout);
                     console.log('[Tunnel] Connection opened to upstream');
                     // Handshake protocol
                     this.ws?.send(JSON.stringify({ type: 'REGISTER', port: localPort }));
@@ -35,6 +45,7 @@ export class TunnelSocket {
                 };
 
                 this.ws.onerror = (err) => {
+                    clearTimeout(timeout);
                     // Fallback for demo purposes if actual server is unreachable
                     console.warn('[Tunnel] Upstream unreachable, using local loopback mode');
                     resolve(`https://local-${Math.random().toString(36).substr(2, 7)}.tunnel.nacho.run`);
