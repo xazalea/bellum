@@ -31,6 +31,9 @@ import { VmExecutionHacksEngine } from './modules/hacking/vm-execution';
 import { GpuHijackingEngine } from './modules/hacking/gpu-hijacking';
 import { RuntimeCompilerEngine } from './modules/hacking/runtime-compiler';
 import { InputLatencyEngine } from './modules/hacking/input-latency';
+import { TemporalWasmEngine } from './modules/hacking/temporal-wasm';
+import { CompressionStabilityEngine } from './modules/hacking/entropy-compression';
+import { MicroOpsEngine } from './modules/hacking/micro-ops';
 
 export enum ExecutionTier {
     INTERPRETER = 0,
@@ -72,6 +75,9 @@ export class NachoEngine {
     public gpuHijacking: GpuHijackingEngine;
     public runtimeCompiler: RuntimeCompilerEngine;
     public inputLatency: InputLatencyEngine;
+    public temporalWasm: TemporalWasmEngine;
+    public compressionStability: CompressionStabilityEngine;
+    public microOps: MicroOpsEngine;
 
     private constructor() {
         this.coreExecution = new CoreExecutionEngine();
@@ -88,6 +94,9 @@ export class NachoEngine {
         this.gpuHijacking = new GpuHijackingEngine();
         this.runtimeCompiler = new RuntimeCompilerEngine();
         this.inputLatency = new InputLatencyEngine();
+        this.temporalWasm = new TemporalWasmEngine();
+        this.compressionStability = new CompressionStabilityEngine();
+        this.microOps = new MicroOpsEngine();
     }
 
     static getInstance(): NachoEngine {
@@ -121,8 +130,11 @@ export class NachoEngine {
                 this.initAI()
             ]);
 
-            // 2. CPU Workers are already initialized in CPUManager constructor
-            // No additional initialization needed
+            // 2. Initialize Workers (CPU)
+            // Check if running in browser environment
+            if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+                await cpuManager.initializeWorkers(navigator.hardwareConcurrency || 4);
+            }
 
             console.log(`🌮 Nacho Engine: Ready in ${(performance.now() - start).toFixed(2)}ms`);
             this.isRunning = true;
