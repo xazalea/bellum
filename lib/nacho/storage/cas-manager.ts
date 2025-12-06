@@ -118,6 +118,46 @@ export class CASManager {
         return buffer;
     }
 
+    async readChunk(path: string, offset: number, length: number): Promise<Uint8Array | null> {
+        const manifest = this.manifestIndex.get(path);
+        if (!manifest) return null;
+
+        const start = offset;
+        const end = offset + length;
+        const result = new Uint8Array(length);
+        let currentOffset = 0;
+
+        for (const hash of manifest.chunks) {
+            const meta = this.chunkIndex.get(hash);
+            if (!meta) throw new Error(`Chunk missing: ${hash}`);
+
+            const chunkStart = currentOffset;
+            const chunkEnd = currentOffset + meta.size;
+
+            // Check intersection
+            if (chunkEnd > start && chunkStart < end) {
+                // Fetch & Decompress (TODO: Cache decompressed chunks in RAM LRU)
+                const blob = await puterClient.readFile(`/.cas/chunks/${hash}`);
+                const compressed = new Uint8Array(await blob.arrayBuffer());
+                const chunk = await compressionService.decompress(compressed, meta.compression);
+
+                // Calculate slice relative to chunk
+                const sliceStart = Math.max(0, start - chunkStart);
+                const sliceEnd = Math.min(chunk.length, end - chunkStart);
+                
+                // Calculate target position in result buffer
+                const targetStart = Math.max(0, chunkStart - start);
+
+                result.set(chunk.slice(sliceStart, sliceEnd), targetStart);
+            }
+
+            currentOffset += meta.size;
+            if (currentOffset >= end) break;
+        }
+
+        return result;
+    }
+
     private async computeHash(data: Uint8Array): Promise<string> {
         // @ts-ignore - Strictness on BufferSource
         const buffer = await crypto.subtle.digest('SHA-256', data);

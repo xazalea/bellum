@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
-import { DynamicIsland } from '@/components/DynamicIsland';
+import { AppShell } from '@/components/AppShell';
 
 export const metadata: Metadata = {
   title: 'nacho. - Universal Compiler Platform',
@@ -35,9 +35,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://github.com" />
         <link rel="dns-prefetch" href="https://github.com" />
         
-        {/* Puter.js for backend file storage */}
-        <Script src="https://js.puter.com/v2/" strategy="beforeInteractive" />
-        
         {/* Pyodide for Python execution */}
         <Script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js" strategy="afterInteractive" />
         
@@ -45,10 +42,9 @@ export default function RootLayout({
         <link rel="preload" as="fetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
       </head>
       <body className="bg-black text-white min-h-screen">
-        <DynamicIsland />
-        <main>
+        <AppShell>
           {children}
-        </main>
+        </AppShell>
         <ClientInit />
       </body>
     </html>
