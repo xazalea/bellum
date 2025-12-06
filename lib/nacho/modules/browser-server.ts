@@ -6,6 +6,7 @@
 
 import { TunnelSocket } from '../networking/tunnel-socket';
 import { V86Wrapper } from '../emulation/v86-wrapper';
+import { nachoEngine } from '../engine';
 
 export class BrowserServerEngine {
     // A. Browser-Based Virtual Server Hosting (1-10)
