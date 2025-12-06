@@ -1,7 +1,5 @@
-/**
- * Hyperion - High-Performance Game Loop Coordinator
- * Ensures 60/120 FPS scheduling, input polling, and browser environment locking.
- */
+import { webgpu } from './webgpu-context';
+import { megakernel } from './megakernel';
 
 export class HyperionEngine {
     private isRunning: boolean = false;
@@ -9,7 +7,7 @@ export class HyperionEngine {
     private frameId: number | null = null;
     private targetFPS: number = 60;
     private frameInterval: number = 1000 / 60;
-    
+
     // Game Mode State
     private isFullscreen: boolean = false;
     private isPointerLocked: boolean = false;
@@ -19,6 +17,16 @@ export class HyperionEngine {
 
     constructor() {
         this.loop = this.loop.bind(this);
+    }
+
+    public async attachCanvas(canvas: HTMLCanvasElement) {
+        const success = await webgpu.initialize(canvas);
+        if (success) {
+            console.log("Hyperion: WebGPU Context Attached");
+            await megakernel.init(50000); // Initialize with 50k particles
+        } else {
+            console.warn("Hyperion: WebGPU initialization failed, falling back to CPU/Canvas2D if available.");
+        }
     }
 
     public setTargetFPS(fps: number) {
@@ -52,7 +60,7 @@ export class HyperionEngine {
         // Use requestPostAnimationFrame if available (Chrome experiment), otherwise standard rAF
         // @ts-ignore
         if (window.requestPostAnimationFrame) {
-             // @ts-ignore
+            // @ts-ignore
             this.frameId = window.requestPostAnimationFrame(this.loop);
         } else {
             this.frameId = requestAnimationFrame(this.loop);
@@ -67,8 +75,12 @@ export class HyperionEngine {
         if (elapsed > this.frameInterval) {
             // Cap dt to prevent spiral of death
             const dt = Math.min(elapsed, 100);
-            
+
             if (this.updateCallback) this.updateCallback(dt);
+
+            // Run Megakernel (WebGPU Physics + Render)
+            megakernel.run(dt);
+
             if (this.renderCallback) this.renderCallback(dt);
 
             this.lastFrameTime = timestamp - (elapsed % this.frameInterval);
@@ -82,7 +94,7 @@ export class HyperionEngine {
     public async enableGameMode() {
         // Fullscreen and Pointer Lock disabled by default to prevent browser blocking
         // and "User Gesture" errors.
-        
+
         // We only attach listeners here, actual locking happens on user click in VM canvas
         try {
             window.addEventListener('beforeunload', this.preventExit);
@@ -94,7 +106,7 @@ export class HyperionEngine {
 
     public disableGameMode() {
         if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => {});
+            document.exitFullscreen().catch(() => { });
         }
         if (document.pointerLockElement) {
             document.exitPointerLock();
@@ -112,7 +124,7 @@ export class HyperionEngine {
     private suppressBrowserKeys = (e: KeyboardEvent) => {
         // Block common browser shortcuts that interfere with gaming
         // Note: Modern browsers restrict what can be blocked for security
-        const blockedKeys = ['F11', 'F5', 'Tab', 'Alt']; 
+        const blockedKeys = ['F11', 'F5', 'Tab', 'Alt'];
         if (blockedKeys.includes(e.key) || (e.ctrlKey && ['w', 'r', 't', 'n'].includes(e.key.toLowerCase()))) {
             e.preventDefault();
         }
@@ -120,5 +132,3 @@ export class HyperionEngine {
 }
 
 export const hyperion = new HyperionEngine();
-
-

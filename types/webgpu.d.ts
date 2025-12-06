@@ -17,7 +17,7 @@ interface GPUAdapterInfo {
   description: string;
 }
 
-type GPUFeatureName = 
+type GPUFeatureName =
   | 'depth-clip-control'
   | 'depth32float-stencil8'
   | 'texture-compression-bc'
@@ -44,7 +44,9 @@ interface GPUDevice {
   createBuffer(descriptor: GPUBufferDescriptor): GPUBuffer;
   createBindGroup(descriptor: GPUBindGroupDescriptor): GPUBindGroup;
   queue: GPUQueue;
+  lost: Promise<GPUDeviceLostInfo>;
 }
+
 
 interface GPUBufferDescriptor {
   size: number;
@@ -108,9 +110,9 @@ interface GPURenderPipeline {
   label?: string;
 }
 
-interface GPUBindGroupLayout {}
+interface GPUBindGroupLayout { }
 
-interface GPUBindGroup {}
+interface GPUBindGroup { }
 
 interface GPUBindGroupDescriptor {
   layout: GPUBindGroupLayout;
@@ -131,7 +133,7 @@ interface GPUBufferBinding {
   size?: number;
 }
 
-interface GPUSampler {}
+interface GPUSampler { }
 
 interface GPUCommandEncoder {
   beginRenderPass(descriptor: GPURenderPassDescriptor): GPURenderPassEncoder;
@@ -152,6 +154,8 @@ interface GPUComputePassEncoder {
 }
 
 interface GPURenderPassEncoder {
+  setPipeline(pipeline: GPURenderPipeline): void;
+  setBindGroup(index: number, bindGroup: GPUBindGroup, dynamicOffsets?: number[]): void;
   draw(vertexCount: number, instanceCount?: number, firstVertex?: number, firstInstance?: number): void;
   drawIndexed(indexCount: number, instanceCount?: number, firstIndex?: number, baseVertex?: number, firstInstance?: number): void;
   end(): void;
@@ -191,7 +195,7 @@ interface GPUTexture {
   createView(descriptor?: GPUTextureViewDescriptor): GPUTextureView;
 }
 
-interface GPUTextureView {}
+interface GPUTextureView { }
 
 interface GPUTextureViewDescriptor {
   format?: GPUTextureFormat;
@@ -204,6 +208,7 @@ interface GPUTextureViewDescriptor {
 }
 
 interface GPURenderPipelineDescriptor {
+  label?: string;
   vertex: GPUVertexState;
   fragment?: GPUFragmentState;
   primitive?: GPUPrimitiveState;
@@ -231,8 +236,8 @@ interface GPUPrimitiveState {
   cullMode?: GPUCullMode;
 }
 
-interface GPUShaderModule {}
-interface GPUPipelineLayout {}
+interface GPUShaderModule { }
+interface GPUPipelineLayout { }
 type GPUAutoLayoutMode = 'auto';
 
 interface GPUVertexBufferLayout {
@@ -270,7 +275,7 @@ interface GPUQueue {
   submit(commandBuffers: GPUCommandBuffer[]): void;
 }
 
-interface GPUCommandBuffer {}
+interface GPUCommandBuffer { }
 
 interface GPUImageCopyTexture {
   texture: GPUTexture;
@@ -380,6 +385,7 @@ interface HTMLCanvasElement {
 interface GPUCanvasContext {
   configure(configuration: GPUCanvasConfiguration): void;
   getCurrentTexture(): GPUTexture;
+  canvas: HTMLCanvasElement;
 }
 
 interface GPUCanvasConfiguration {
@@ -393,3 +399,8 @@ interface GPUCanvasConfiguration {
 
 type GPUCanvasAlphaMode = 'opaque' | 'premultiplied';
 type PredefinedColorSpace = 'srgb' | 'display-p3';
+
+interface GPUDeviceLostInfo {
+  message: string;
+  reason: 'unknown' | 'destroyed';
+}

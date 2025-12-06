@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { VMType } from '@/lib/vm/types';
 import { vmManager } from '@/lib/vm/manager';
 import { VMViewer } from './VMViewer';
+import { SystemMonitor } from './SystemMonitor';
 
 interface WindowManagerProps {
     activeSkin: VMType;
@@ -184,7 +185,11 @@ export const WindowManager: React.FC<WindowManagerProps> = ({ activeSkin, active
 
                     {/* VM Content */}
                     <div style={{ flex: 1, position: 'relative' }}>
-                        <VMViewer vmId={win.id} />
+                        {win.id === 'system-monitor' ? (
+                            <SystemMonitor />
+                        ) : (
+                            <VMViewer vmId={win.id} />
+                        )}
                     </div>
                 </div>
             ))}
