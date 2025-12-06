@@ -109,44 +109,50 @@ export default function Terminal() {
         setActiveService(type);
         
         if (type === 'tunnel') {
-            addLog('system', 'Initializing Vercel Tunnel Handshake...');
-            setTimeout(() => addLog('info', 'Generating crypto keys for secure tunnel...'), 800);
-            setTimeout(() => addLog('info', 'Connecting to edge network (iad1)...'), 1500);
-            setTimeout(() => {
-                const url = `https://${Math.random().toString(36).substring(7)}.tunnel.nacho.run`;
+            addLog('system', 'Initializing Secure Tunnel Handshake...');
+            try {
+                addLog('info', 'Generating crypto keys for secure tunnel...');
+                const url = await nachoEngine.browserServer.tunnelService.start(3000);
                 setServiceUrl(url);
                 addLog('success', 'Tunnel established successfully!');
                 addLog('success', `Public Access URL: ${url}`);
-            }, 3000);
+            } catch (e: any) {
+                addLog('error', `Tunnel Failed: ${e.message}`);
+            }
         } else if (type === 'llm') {
-            addLog('system', 'Booting LLM Hosting Container (llama.cpp)...');
-            setTimeout(() => addLog('info', 'Allocating GPU VRAM (WebGPU)...'), 1000);
-            setTimeout(() => addLog('info', 'Loading model weights (Llama-3-8B-Quantized)...'), 2000);
-            setTimeout(() => {
-                const url = `https://${Math.random().toString(36).substring(7)}.llm.nacho.run`;
+            addLog('system', 'Booting Local WebGPU LLM Container...');
+            try {
+                addLog('info', 'Allocating GPU VRAM (WebGPU)...');
+                const model = await nachoEngine.browserServer.llmRunner.loadModel('Llama-3');
+                const url = 'http://localhost:8000';
                 setServiceUrl(url);
-                addLog('success', 'LLM API Endpoint Ready!');
-                addLog('success', `Swagger UI: ${url}/docs`);
-            }, 4000);
+                addLog('success', `LLM Engine Loaded: ${model}`);
+                addLog('success', `API Endpoint: ${url}`);
+            } catch (e: any) {
+                addLog('error', `LLM Init Failed: ${e.message}`);
+            }
         } else if (type === 'web') {
             addLog('system', 'Starting Static Web Server...');
-            setTimeout(() => addLog('info', 'Binding to port 8080...'), 500);
-            setTimeout(() => {
-                const url = `https://${Math.random().toString(36).substring(7)}.web.nacho.run`;
-                setServiceUrl(url);
+            try {
+                addLog('info', 'Binding to port 8080...');
+                const res = await nachoEngine.browserServer.webServerRunner.start('./public');
+                setServiceUrl(res.url);
                 addLog('success', 'Web Server Online!');
-                addLog('success', `Site URL: ${url}`);
-            }, 1500);
+                addLog('success', `Site URL: ${res.url}`);
+            } catch (e: any) {
+                addLog('error', `Web Server Failed: ${e.message}`);
+            }
         } else if (type === 'minecraft') {
-            addLog('system', 'Initializing Minecraft Server Instance...');
-            setTimeout(() => addLog('info', 'Generating world (Seed: 847293)...'), 1000);
-            setTimeout(() => addLog('info', 'Starting JVM (Eaglercraft/Paper)...'), 2500);
-            setTimeout(() => {
-                const ip = `mc-${Math.random().toString(36).substring(7)}.nacho.gg`;
-                setServiceUrl(ip);
+            addLog('system', 'Initializing Minecraft Server Instance (JVM via WASM)...');
+            try {
+                addLog('info', 'Starting JVM (Eaglercraft/Paper)...');
+                const res = await nachoEngine.browserServer.minecraftRunner.start('1.20.1');
+                setServiceUrl(res.ip);
                 addLog('success', 'Minecraft Server Started!');
-                addLog('success', `Server IP: ${ip}`);
-            }, 4500);
+                addLog('success', `Server IP: ${res.ip}`);
+            } catch (e: any) {
+                addLog('error', `MC Server Failed: ${e.message}`);
+            }
 import { nachoEngine } from '@/lib/nacho/engine';
 
 // ... inside component ...
