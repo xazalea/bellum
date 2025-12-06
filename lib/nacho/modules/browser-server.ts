@@ -308,11 +308,12 @@ export class BrowserServerEngine {
     // 29. Directory Indexer UI
     directoryIndexer = {
         scan: async (handle: FileSystemDirectoryHandle) => {
-            const files = [];
-            const iterator = (handle as any).entries ? (handle as any).entries() : (handle as any).values?.();
+            const files: string[] = [];
+            const iterator: AsyncIterableIterator<any> | undefined =
+                (handle as any).entries ? (handle as any).entries() : (handle as any).values?.();
             if (!iterator) return files;
             for await (const [, entry] of iterator) {
-                files.push(entry.name);
+                files.push(entry.name as string);
             }
             return files;
         }
