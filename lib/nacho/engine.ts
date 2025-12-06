@@ -34,6 +34,8 @@ import { InputLatencyEngine } from './modules/hacking/input-latency';
 import { TemporalWasmEngine } from './modules/hacking/temporal-wasm';
 import { CompressionStabilityEngine } from './modules/hacking/entropy-compression';
 import { MicroOpsEngine } from './modules/hacking/micro-ops';
+import { BrowserServerEngine } from './modules/browser-server';
+import { ArsenicHypervisor } from '../arsenic/hypervisor';
 
 export enum ExecutionTier {
     INTERPRETER = 0,
@@ -78,6 +80,8 @@ export class NachoEngine {
     public temporalWasm: TemporalWasmEngine;
     public compressionStability: CompressionStabilityEngine;
     public microOps: MicroOpsEngine;
+    public browserServer: BrowserServerEngine;
+    public arsenic: ArsenicHypervisor;
 
     private constructor() {
         this.coreExecution = new CoreExecutionEngine();
@@ -97,6 +101,8 @@ export class NachoEngine {
         this.temporalWasm = new TemporalWasmEngine();
         this.compressionStability = new CompressionStabilityEngine();
         this.microOps = new MicroOpsEngine();
+        this.browserServer = new BrowserServerEngine();
+        this.arsenic = new ArsenicHypervisor();
     }
 
     static getInstance(): NachoEngine {

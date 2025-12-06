@@ -3,6 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { nachoEngine } from '@/lib/nacho/engine';
 import { vmManager } from '@/lib/vm/manager';
 import { VMType } from '@/lib/vm/types';
+import Terminal from './Terminal';
+import { getFingerprint } from '@/lib/tracking';
+import { Settings as SettingsIcon, Terminal as TerminalIcon, LayoutGrid } from 'lucide-react';
 
 // Icons
 const Icons = {
@@ -30,23 +33,28 @@ export default function Dashboard() {
     const [activeApps, setActiveApps] = useState<any[]>([]);
     const [dragActive, setDragActive] = useState(false);
     const [viewingAppId, setViewingAppId] = useState<string | null>(null);
+    // Dev mode removed, terminal is always available via tab
+    const [activeTab, setActiveTab] = useState<'apps' | 'terminal'>('apps');
+    const [userId, setUserId] = useState<string>('');
+    
     const viewerRef = useRef<HTMLDivElement>(null);
     
-    // Initialize Engine
+    // Initialize Engine & Tracking
     useEffect(() => {
         nachoEngine.boot().catch(console.error);
         
+        getFingerprint().then(id => {
+            setUserId(id);
+            console.log('User ID:', id);
+        });
+
         const interval = setInterval(() => {
-            // Simulate/Fetch stats from engine
-            // In a real scenario, these would come from nachoEngine.interfaceTooling.ramMonitoring.getStats() etc.
             setStats({
                 cpu: Math.round(Math.random() * 20 + 10),
                 ram: Math.round(Math.random() * 10 + 20),
                 gpu: Math.round(Math.random() * 30 + 5),
                 fps: Math.round(58 + Math.random() * 4)
             });
-            
-            // Update active VMs
             setActiveApps(vmManager.listVMs().filter(vm => vm.state.isRunning));
         }, 1000);
 
@@ -81,7 +89,7 @@ export default function Dashboard() {
         let type = VMType.CODE;
         if (ext === 'apk') type = VMType.ANDROID;
         else if (ext === 'exe') type = VMType.WINDOWS;
-        else if (ext === 'iso') type = VMType.LINUX; // Generic fallback
+        else if (ext === 'iso') type = VMType.LINUX; 
         else if (ext === 'js' || ext === 'wasm') type = VMType.CODE;
 
         const id = `app-${Date.now()}`;
@@ -91,7 +99,6 @@ export default function Dashboard() {
             name: file.name,
             memory: 1024
         });
-        // Auto-start
         const vm = vmManager.getVM(id);
         if (vm) await vm.start();
     };
@@ -99,118 +106,142 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-slate-900 text-white font-sans selection:bg-blue-500 selection:text-white">
             {/* Top Bar */}
-            <header className="h-16 border-b border-white/10 flex items-center px-6 justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+            <header className="h-16 border-b border-white/20 flex items-center px-6 justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <span className="font-bold text-lg">N</span>
                     </div>
                     <h1 className="font-bold text-xl tracking-tight">Nacho Engine <span className="text-blue-400 text-xs font-mono ml-1">v2.0</span></h1>
                 </div>
-                <div className="flex gap-4 text-sm font-mono text-slate-400">
-                    <div className="flex items-center gap-2">
-                        <Icons.Cpu /> <span>CPU: {stats.cpu}%</span>
+                <div className="flex items-center gap-6">
+                    {/* Tab Switcher (Always Visible) */}
+                    <div className="flex bg-slate-800 p-1 rounded-lg border border-white/10">
+                        <button 
+                            onClick={() => setActiveTab('apps')}
+                            className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 transition-all ${activeTab === 'apps' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            <LayoutGrid size={14} /> Apps
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('terminal')}
+                            className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 transition-all ${activeTab === 'terminal' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            <TerminalIcon size={14} /> Terminal
+                        </button>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Icons.Box /> <span>RAM: {stats.ram}%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Icons.Zap /> <span>GPU: {stats.gpu}%</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-green-400">
-                        <Icons.Activity /> <span>{stats.fps} FPS</span>
+
+                    <div className="flex gap-4 text-sm font-mono text-slate-400 border-r border-white/10 pr-6">
+                        <div className="flex items-center gap-2">
+                            <Icons.Cpu /> <span className="hidden lg:inline">CPU: {stats.cpu}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Icons.Box /> <span className="hidden lg:inline">RAM: {stats.ram}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Icons.Zap /> <span className="hidden lg:inline">GPU: {stats.gpu}%</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-green-400">
+                            <Icons.Activity /> <span>{stats.fps} FPS</span>
+                        </div>
                     </div>
                 </div>
             </header>
 
-            <main className="p-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <main className="p-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-4rem)]">
                 
-                {/* Main Runner Area */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div 
-                        className={`
-                            border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4
-                            transition-all duration-200 ease-out cursor-pointer
-                            ${dragActive ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' : 'border-white/20 hover:border-white/40 hover:bg-white/5'}
-                        `}
-                        onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
-                        onDragLeave={() => setDragActive(false)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={handleFileDrop}
-                        onClick={() => document.getElementById('file-upload')?.click()}
-                    >
-                        <input 
-                            type="file" 
-                            id="file-upload" 
-                            multiple 
-                            className="hidden" 
-                            onChange={(e) => {
-                                if (e.target.files) {
-                                    Array.from(e.target.files).forEach(processFile);
-                                }
-                            }}
-                        />
-                        <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 mb-2">
-                            <Icons.Upload />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold mb-2">Universal App Runner</h2>
-                            <p className="text-slate-400 max-w-md mx-auto">
-                                Drag & Drop or Click to load <br />
-                                <span className="text-white font-mono bg-white/10 px-1 rounded">.APK</span>,{' '}
-                                <span className="text-white font-mono bg-white/10 px-1 rounded">.EXE</span>,{' '}
-                                <span className="text-white font-mono bg-white/10 px-1 rounded">.ISO</span>, or{' '}
-                                <span className="text-white font-mono bg-white/10 px-1 rounded">.WASM</span>
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Running Apps Grid */}
-                    <div>
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <Icons.Play /> Active Runtimes
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {activeApps.length === 0 ? (
-                                <div className="col-span-full h-32 rounded-xl border border-white/10 bg-slate-800/50 flex items-center justify-center text-slate-500 italic">
-                                    No active runtime containers. Drop a file to start.
+                {/* Main Content Area */}
+                <div className="lg:col-span-2 h-full flex flex-col overflow-hidden">
+                    {activeTab === 'terminal' ? (
+                        <Terminal />
+                    ) : (
+                        <div className="space-y-6 overflow-y-auto pb-20">
+                            <div 
+                                className={`
+                                    border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4
+                                    transition-all duration-200 ease-out cursor-pointer
+                                    ${dragActive ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' : 'border-white/30 hover:border-white/50 hover:bg-white/5'}
+                                `}
+                                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                                onDragLeave={() => setDragActive(false)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handleFileDrop}
+                                onClick={() => document.getElementById('file-upload')?.click()}
+                            >
+                                <input 
+                                    type="file" 
+                                    id="file-upload" 
+                                    multiple 
+                                    className="hidden" 
+                                    onChange={(e) => {
+                                        if (e.target.files) {
+                                            Array.from(e.target.files).forEach(processFile);
+                                        }
+                                    }}
+                                />
+                                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border border-white/20 mb-2">
+                                    <Icons.Upload />
                                 </div>
-                            ) : (
-                                activeApps.map(app => (
-                                    <div key={app.id} className="bg-slate-800 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/50 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
-                                                {app.config.name.substring(0, 2).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold truncate max-w-[150px]">{app.config.name}</div>
-                                                <div className="text-xs text-slate-400 font-mono">
-                                                    {getRuintimeLabel(app.config.type)}
+                                <div>
+                                    <h2 className="text-2xl font-bold mb-2">Universal App Runner</h2>
+                                    <p className="text-slate-400 max-w-md mx-auto">
+                                        Drag & Drop or Click to load <br />
+                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.APK</span>,{' '}
+                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.EXE</span>,{' '}
+                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.ISO</span>, or{' '}
+                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.WASM</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Running Apps Grid */}
+                            <div>
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <Icons.Play /> Active Runtimes
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {activeApps.length === 0 ? (
+                                        <div className="col-span-full h-32 rounded-xl border border-white/20 bg-slate-800/50 flex items-center justify-center text-slate-500 italic">
+                                            No active runtime containers. Drop a file to start.
+                                        </div>
+                                    ) : (
+                                        activeApps.map(app => (
+                                            <div key={app.id} className="bg-slate-800 border border-white/20 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/50 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
+                                                        {app.config.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold truncate max-w-[150px]">{app.config.name}</div>
+                                                        <div className="text-xs text-slate-400 font-mono">
+                                                            {getRuintimeLabel(app.config.type)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button className="p-2 hover:bg-white/10 rounded-lg text-red-400" onClick={() => app.stop()}>
+                                                        Stop
+                                                    </button>
+                                                    <button 
+                                                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+                                                        onClick={() => setViewingAppId(app.id)}
+                                                    >
+                                                        View
+                                                    </button>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button className="p-2 hover:bg-white/10 rounded-lg text-red-400" onClick={() => app.stop()}>
-                                                Stop
-                                            </button>
-                                            <button 
-                                                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
-                                                onClick={() => setViewingAppId(app.id)}
-                                            >
-                                                View
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
+                                        ))
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Viewer Modal */}
                 {viewingAppId && (
                     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-8">
-                        <div className="bg-slate-900 border border-white/20 rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col shadow-2xl">
-                            <div className="h-12 border-b border-white/10 flex items-center justify-between px-6">
+                        <div className="bg-slate-900 border border-white/30 rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col shadow-2xl">
+                            <div className="h-12 border-b border-white/20 flex items-center justify-between px-6">
                                 <span className="font-bold">Runtime Viewer</span>
                                 <button 
                                     onClick={() => setViewingAppId(null)}
@@ -228,7 +259,7 @@ export default function Dashboard() {
 
                 {/* Sidebar / Status */}
                 <div className="space-y-6">
-                    <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-6">
+                    <div className="bg-slate-800/50 border border-white/20 rounded-2xl p-6">
                         <h3 className="font-bold mb-4 text-sm uppercase tracking-wider text-slate-400">Engine Status</h3>
                         <div className="space-y-4">
                             <StatusItem label="Core Execution" status="Online" color="green" />
@@ -237,9 +268,15 @@ export default function Dashboard() {
                             <StatusItem label="Hypervisor" status="Idle" color="yellow" />
                             <StatusItem label="Network Mesh" status="Offline" color="slate" />
                         </div>
+                        <div className="mt-6 pt-4 border-t border-white/10">
+                            <div className="flex justify-between items-center text-xs text-slate-500">
+                                <span>User ID</span>
+                                <span className="font-mono">{userId.substring(0, 8)}...</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="bg-blue-900/20 border border-blue-500/20 rounded-2xl p-6">
+                    <div className="bg-blue-900/20 border border-white/20 rounded-2xl p-6">
                         <h3 className="font-bold mb-2 text-blue-100">Supported Formats</h3>
                         <ul className="space-y-2 text-sm text-blue-200/70">
                             <li className="flex items-center gap-2">✓ Android Packages (APK)</li>
@@ -272,4 +309,3 @@ const StatusItem = ({ label, status, color }: { label: string, status: string, c
         </div>
     );
 };
-

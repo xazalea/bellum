@@ -142,7 +142,7 @@ export class CompressionStabilityEngine {
     sparseGhostPages = {
         ghosts: new Set<number>(),
         mark: (pageId: number) => {
-            this.sparseGhostPages.add(pageId);
+            this.sparseGhostPages.ghosts.add(pageId);
         }
     };
 
