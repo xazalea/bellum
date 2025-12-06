@@ -176,8 +176,8 @@ export class StorageSorceryEngine {
     shreddedArchive = {
         shreds: [] as Blob[],
         add: (data: Uint8Array) => {
-            // Convert to an ArrayBuffer so BlobPart is always compatible (avoids SAB type errors)
-            const copy = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+            // Clone into a new Uint8Array to ensure backing buffer is an ArrayBuffer (not SAB)
+            const copy = new Uint8Array(data);
             this.shreddedArchive.shreds.push(new Blob([copy]));
         }
     };
