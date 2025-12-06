@@ -365,8 +365,8 @@ export class TemporalWasmEngine {
     // 44. Raymarch Step Prediction Table
     raymarchStepPrediction = {
         table: new Uint8Array(1920 * 1080), // Screen space
-        predict: (x: number, y: number) => {
-            return this.raymarchStepPrediction[y * 1920 + x];
+        predict: (x: number, y: number): number => {
+            return this.raymarchStepPrediction.table[y * 1920 + x];
         }
     };
 
