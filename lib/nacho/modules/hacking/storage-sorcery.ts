@@ -176,7 +176,7 @@ export class StorageSorceryEngine {
     shreddedArchive = {
         shreds: [] as Blob[],
         add: (data: Uint8Array) => {
-            this.shreddedArchive.shreds.push(new Blob([data]));
+            this.shreddedArchive.shreds.push(new Blob([new Uint8Array(data)]));
         }
     };
 
