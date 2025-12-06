@@ -116,10 +116,13 @@ export class BrowserServerEngine {
     localSslTermination = {
         keyPair: null as CryptoKeyPair | null,
         generateCert: async () => {
-            this.localSslTermination.keyPair = await crypto.subtle.generateKey(
-                { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]) },
-                true, ["sign", "verify"]
-            );
+            const algo: RsaHashedKeyGenParams = {
+                name: "RSASSA-PKCS1-v1_5",
+                modulusLength: 2048,
+                publicExponent: new Uint8Array([1, 0, 1]),
+                hash: "SHA-256"
+            };
+            this.localSslTermination.keyPair = await crypto.subtle.generateKey(algo, true, ["sign", "verify"]);
             return this.localSslTermination.keyPair;
         }
     };
