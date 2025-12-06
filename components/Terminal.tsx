@@ -187,9 +187,9 @@ import { nachoEngine } from '@/lib/nacho/engine';
     };
 
     return (
-        <div className="h-full flex flex-col bg-black/90 font-mono text-sm rounded-xl overflow-hidden border border-white/20 shadow-2xl">
+        <div className="h-full flex flex-col bg-transparent font-mono text-sm rounded-xl overflow-hidden border border-white/10 shadow-none">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-white/10">
+            <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
                 <div className="flex items-center gap-2 text-slate-300">
                     <TerminalIcon size={16} />
                     <span className="font-bold">Nacho Terminal</span>
@@ -201,7 +201,7 @@ import { nachoEngine } from '@/lib/nacho/engine';
                             flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
                             ${activeService === 'tunnel'
                                 ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-                                : 'bg-blue-600/20 text-blue-400 border border-blue-500/50 hover:bg-blue-600/30'}
+                                : 'bg-blue-600/10 text-blue-400 border border-blue-500/30 hover:bg-blue-600/20'}
                         `}
                         title="Host Secure Tunnel"
                     >
@@ -213,7 +213,7 @@ import { nachoEngine } from '@/lib/nacho/engine';
                             flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
                             ${activeService === 'llm'
                                 ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' 
-                                : 'bg-purple-600/20 text-purple-400 border border-purple-500/50 hover:bg-purple-600/30'}
+                                : 'bg-purple-600/10 text-purple-400 border border-purple-500/30 hover:bg-purple-600/20'}
                         `}
                         title="Host LLM"
                     >
@@ -225,7 +225,7 @@ import { nachoEngine } from '@/lib/nacho/engine';
                             flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
                             ${activeService === 'web'
                                 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' 
-                                : 'bg-orange-600/20 text-orange-400 border border-orange-500/50 hover:bg-orange-600/30'}
+                                : 'bg-orange-600/10 text-orange-400 border border-orange-500/30 hover:bg-orange-600/20'}
                         `}
                         title="Host Web Server"
                     >
@@ -237,7 +237,7 @@ import { nachoEngine } from '@/lib/nacho/engine';
                             flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
                             ${activeService === 'minecraft'
                                 ? 'bg-green-600/20 text-green-400 border border-green-500/50' 
-                                : 'bg-green-700/20 text-green-400 border border-green-500/50 hover:bg-green-600/30'}
+                                : 'bg-green-700/10 text-green-400 border border-green-500/30 hover:bg-green-600/20'}
                         `}
                         title="Host Minecraft Server"
                     >
@@ -249,7 +249,7 @@ import { nachoEngine } from '@/lib/nacho/engine';
                             flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
                             ${activeService === 'desktop'
                                 ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/50' 
-                                : 'bg-cyan-700/20 text-cyan-400 border border-cyan-500/50 hover:bg-cyan-600/30'}
+                                : 'bg-cyan-700/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-600/20'}
                         `}
                         title="Host Ubuntu Desktop"
                     >
@@ -268,16 +268,16 @@ import { nachoEngine } from '@/lib/nacho/engine';
             </div>
 
             {/* Output Area */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+            <div className="flex-1 p-4 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {logs.map((log, i) => (
                     <div key={i} className="flex gap-3 hover:bg-white/5 p-0.5 rounded">
-                        <span className="text-slate-500 shrink-0">[{log.timestamp}]</span>
+                        <span className="text-gray-500 shrink-0">[{log.timestamp}]</span>
                         <span className={`
                             ${log.type === 'error' ? 'text-red-400' : ''}
                             ${log.type === 'success' ? 'text-green-400' : ''}
                             ${log.type === 'warning' ? 'text-yellow-400' : ''}
                             ${log.type === 'system' ? 'text-blue-400 font-bold' : ''}
-                            ${log.type === 'info' ? 'text-slate-200' : ''}
+                            ${log.type === 'info' ? 'text-gray-300' : ''}
                         `}>
                             {log.message}
                         </span>
@@ -288,9 +288,9 @@ import { nachoEngine } from '@/lib/nacho/engine';
 
             {/* Active Service Info */}
             {activeService && serviceUrl && (
-                <div className="bg-blue-900/20 border-t border-blue-500/30 p-3 flex items-center justify-between animate-in slide-in-from-bottom-2">
+                <div className="bg-blue-900/10 border-t border-blue-500/20 p-3 flex items-center justify-between animate-in slide-in-from-bottom-2">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
                             <Globe size={16} />
                         </div>
                         <div>
@@ -305,7 +305,7 @@ import { nachoEngine } from '@/lib/nacho/engine';
             )}
 
             {/* Input Line */}
-            <form onSubmit={handleCommand} className="p-3 bg-slate-900 border-t border-white/10 flex items-center gap-2">
+            <form onSubmit={handleCommand} className="p-3 bg-white/5 border-t border-white/10 flex items-center gap-2">
                 <span className="text-green-500 font-bold">➜</span>
                 <span className="text-blue-400 font-bold">~</span>
                 <input 

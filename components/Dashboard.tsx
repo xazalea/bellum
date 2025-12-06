@@ -5,18 +5,19 @@ import { vmManager } from '@/lib/vm/manager';
 import { VMType } from '@/lib/vm/types';
 import Terminal from './Terminal';
 import { getFingerprint } from '@/lib/tracking';
-import { Settings as SettingsIcon, Terminal as TerminalIcon, LayoutGrid } from 'lucide-react';
+import { 
+    Terminal as TerminalIcon, 
+    LayoutGrid, 
+    Cpu, 
+    Zap, 
+    Box, 
+    Activity, 
+    Upload, 
+    Play,
+    Settings
+} from 'lucide-react';
 
-// Icons
-const Icons = {
-    Cpu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>,
-    Zap: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>,
-    Box: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>,
-    Play: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
-    Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
-    Activity: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-};
-
+// Helper for runtime labels
 const getRuintimeLabel = (type: string) => {
     switch (type) {
         case 'windows': return 'Win32/64 Runtime';
@@ -33,20 +34,15 @@ export default function Dashboard() {
     const [activeApps, setActiveApps] = useState<any[]>([]);
     const [dragActive, setDragActive] = useState(false);
     const [viewingAppId, setViewingAppId] = useState<string | null>(null);
-    // Dev mode removed, terminal is always available via tab
     const [activeTab, setActiveTab] = useState<'apps' | 'terminal'>('apps');
     const [userId, setUserId] = useState<string>('');
     
     const viewerRef = useRef<HTMLDivElement>(null);
     
-    // Initialize Engine & Tracking
+    // Initialize
     useEffect(() => {
         nachoEngine.boot().catch(console.error);
-        
-        getFingerprint().then(id => {
-            setUserId(id);
-            console.log('User ID:', id);
-        });
+        getFingerprint().then(setUserId);
 
         const interval = setInterval(() => {
             setStats({
@@ -61,13 +57,11 @@ export default function Dashboard() {
         return () => clearInterval(interval);
     }, []);
 
-    // Mount viewer when viewingAppId changes
+    // Viewer Mount
     useEffect(() => {
         if (viewingAppId && viewerRef.current) {
             const app = vmManager.getVM(viewingAppId);
-            if (app) {
-                app.mount(viewerRef.current).catch(console.error);
-            }
+            if (app) app.mount(viewerRef.current).catch(console.error);
         }
     }, [viewingAppId]);
 
@@ -75,17 +69,12 @@ export default function Dashboard() {
         e.preventDefault();
         e.stopPropagation();
         setDragActive(false);
-
         const files = Array.from(e.dataTransfer.files);
-        for (const file of files) {
-            await processFile(file);
-        }
+        for (const file of files) await processFile(file);
     };
 
     const processFile = async (file: File) => {
-        console.log("Processing file:", file.name);
         const ext = file.name.split('.').pop()?.toLowerCase();
-        
         let type = VMType.CODE;
         if (ext === 'apk') type = VMType.ANDROID;
         else if (ext === 'exe') type = VMType.WINDOWS;
@@ -93,219 +82,173 @@ export default function Dashboard() {
         else if (ext === 'js' || ext === 'wasm') type = VMType.CODE;
 
         const id = `app-${Date.now()}`;
-        await vmManager.createVM({
-            id,
-            type,
-            name: file.name,
-            memory: 1024
-        });
+        await vmManager.createVM({ id, type, name: file.name, memory: 1024 });
         const vm = vmManager.getVM(id);
         if (vm) await vm.start();
     };
 
     return (
-        <div className="min-h-screen bg-slate-900 text-white font-sans selection:bg-blue-500 selection:text-white">
-            {/* Top Bar */}
-            <header className="h-16 border-b border-white/20 flex items-center px-6 justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <span className="font-bold text-lg">N</span>
-                    </div>
-                    <h1 className="font-bold text-xl tracking-tight">Nacho Engine <span className="text-blue-400 text-xs font-mono ml-1">v2.0</span></h1>
+        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 lg:p-8 relative overflow-hidden">
+            
+            {/* Floating Rings (Background Decoration) */}
+            <div className="absolute top-[-10%] left-[-5%] w-64 h-64 rounded-full border-[20px] border-[#1a1a1a] floating-ring opacity-50" />
+            <div className="absolute bottom-[-10%] right-[-5%] w-80 h-80 rounded-full border-[30px] border-[#1a1a1a] floating-ring opacity-50" style={{ animationDelay: '2s' }} />
+
+            {/* Main Zena Card */}
+            <div className="zena-card w-full max-w-7xl min-h-[85vh] flex flex-col bg-noise relative z-10">
+                
+                {/* Gradient Wave (Bottom Left) */}
+                <div className="absolute bottom-0 left-0 w-full h-[400px] pointer-events-none opacity-40">
+                    <div className="w-[120%] h-full bg-gradient-to-r from-purple-900 via-orange-900 to-transparent blur-[80px] transform -rotate-6 translate-y-20 -translate-x-20" />
                 </div>
-                <div className="flex items-center gap-6">
-                    {/* Tab Switcher (Always Visible) */}
-                    <div className="flex bg-slate-800 p-1 rounded-lg border border-white/10">
+
+                {/* Header */}
+                <header className="flex items-center justify-between px-8 py-6 relative z-20">
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-white tracking-tight">nacho</span>
+                    </div>
+
+                    <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
                         <button 
                             onClick={() => setActiveTab('apps')}
-                            className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 transition-all ${activeTab === 'apps' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                            className={`transition-colors ${activeTab === 'apps' ? 'text-white' : 'hover:text-white'}`}
                         >
-                            <LayoutGrid size={14} /> Apps
+                            Apps
                         </button>
                         <button 
                             onClick={() => setActiveTab('terminal')}
-                            className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 transition-all ${activeTab === 'terminal' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                            className={`transition-colors ${activeTab === 'terminal' ? 'text-white' : 'hover:text-white'}`}
                         >
-                            <TerminalIcon size={14} /> Terminal
+                            Terminal
                         </button>
-                    </div>
+                        <button className="hover:text-white transition-colors">Docs</button>
+                    </nav>
 
-                    <div className="flex gap-4 text-sm font-mono text-slate-400 border-r border-white/10 pr-6">
-                        <div className="flex items-center gap-2">
-                            <Icons.Cpu /> <span className="hidden lg:inline">CPU: {stats.cpu}%</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Icons.Box /> <span className="hidden lg:inline">RAM: {stats.ram}%</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Icons.Zap /> <span className="hidden lg:inline">GPU: {stats.gpu}%</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-green-400">
-                            <Icons.Activity /> <span>{stats.fps} FPS</span>
-                        </div>
-                    </div>
-                </div>
-            </header>
+                    <button className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white px-6 py-2 rounded-full font-medium transition-all shadow-lg shadow-purple-900/20 flex items-center gap-2">
+                        <span>Status</span>
+                        <div className={`w-2 h-2 rounded-full ${stats.fps > 30 ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                    </button>
+                </header>
 
-            <main className="p-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-4rem)]">
-                
-                {/* Main Content Area */}
-                <div className="lg:col-span-2 h-full flex flex-col overflow-hidden">
-                    {activeTab === 'terminal' ? (
-                        <Terminal />
-                    ) : (
-                        <div className="space-y-6 overflow-y-auto pb-20">
-                            <div 
-                                className={`
-                                    border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center text-center gap-4
-                                    transition-all duration-200 ease-out cursor-pointer
-                                    ${dragActive ? 'border-blue-500 bg-blue-500/10 scale-[1.01]' : 'border-white/30 hover:border-white/50 hover:bg-white/5'}
-                                `}
-                                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
-                                onDragLeave={() => setDragActive(false)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={handleFileDrop}
-                                onClick={() => document.getElementById('file-upload')?.click()}
-                            >
-                                <input 
-                                    type="file" 
-                                    id="file-upload" 
-                                    multiple 
-                                    className="hidden" 
-                                    onChange={(e) => {
-                                        if (e.target.files) {
-                                            Array.from(e.target.files).forEach(processFile);
-                                        }
-                                    }}
-                                />
-                                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border border-white/20 mb-2">
-                                    <Icons.Upload />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold mb-2">Universal App Runner</h2>
-                                    <p className="text-slate-400 max-w-md mx-auto">
-                                        Drag & Drop or Click to load <br />
-                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.APK</span>,{' '}
-                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.EXE</span>,{' '}
-                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.ISO</span>, or{' '}
-                                        <span className="text-white font-mono bg-white/10 px-1 rounded">.WASM</span>
+                {/* Content */}
+                <main className="flex-1 relative z-20 flex flex-col p-8">
+                    
+                    {activeTab === 'apps' ? (
+                        <div className="flex flex-col lg:flex-row gap-12 h-full">
+                            {/* Left: Hero Text & Stats */}
+                            <div className="flex-1 flex flex-col justify-center space-y-8">
+                                <div className="space-y-4">
+                                    <h1 className="text-5xl lg:text-6xl font-bold text-white leading-tight">
+                                        We make a <br/>
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">"better World"</span>
+                                        <br/>
+                                        For your every app
+                                    </h1>
+                                    <p className="text-gray-400 text-lg max-w-md">
+                                        Universal runtime execution. Any binary, any platform, locally.
+                                        Trust us.
                                     </p>
+                                </div>
+
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-2 gap-4 max-w-md">
+                                    <StatCard icon={<Cpu size={18} />} label="CPU" value={`${stats.cpu}%`} />
+                                    <StatCard icon={<Box size={18} />} label="RAM" value={`${stats.ram}%`} />
+                                    <StatCard icon={<Zap size={18} />} label="GPU" value={`${stats.gpu}%`} />
+                                    <StatCard icon={<Activity size={18} />} label="FPS" value={`${stats.fps}`} highlight />
                                 </div>
                             </div>
 
-                            {/* Running Apps Grid */}
-                            <div>
-                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                    <Icons.Play /> Active Runtimes
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {activeApps.length === 0 ? (
-                                        <div className="col-span-full h-32 rounded-xl border border-white/20 bg-slate-800/50 flex items-center justify-center text-slate-500 italic">
-                                            No active runtime containers. Drop a file to start.
-                                        </div>
-                                    ) : (
-                                        activeApps.map(app => (
-                                            <div key={app.id} className="bg-slate-800 border border-white/20 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/50 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
-                                                        {app.config.name.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold truncate max-w-[150px]">{app.config.name}</div>
-                                                        <div className="text-xs text-slate-400 font-mono">
-                                                            {getRuintimeLabel(app.config.type)}
+                            {/* Right: App Runner / Illustration Area */}
+                            <div className="flex-1 relative">
+                                {/* Runner Box - Floating */}
+                                <div 
+                                    className={`
+                                        w-full h-full min-h-[400px]
+                                        bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8
+                                        flex flex-col items-center justify-center text-center gap-6
+                                        transition-all duration-300
+                                        ${dragActive ? 'border-purple-500 bg-purple-500/10' : 'hover:border-white/20'}
+                                    `}
+                                    onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                                    onDragLeave={() => setDragActive(false)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={handleFileDrop}
+                                    onClick={() => document.getElementById('file-upload')?.click()}
+                                >
+                                    <input 
+                                        type="file" id="file-upload" multiple className="hidden" 
+                                        onChange={(e) => e.target.files && Array.from(e.target.files).forEach(processFile)}
+                                    />
+                                    
+                                    {activeApps.length > 0 ? (
+                                        <div className="w-full space-y-4">
+                                            <div className="text-left text-sm text-gray-400 uppercase font-bold tracking-wider">Running</div>
+                                            {activeApps.map(app => (
+                                                <div key={app.id} className="bg-black/40 p-4 rounded-xl border border-white/5 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold">
+                                                            {app.config.name[0].toUpperCase()}
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <div className="font-medium text-white">{app.config.name}</div>
+                                                            <div className="text-xs text-gray-500">{getRuintimeLabel(app.config.type)}</div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button className="p-2 hover:bg-white/10 rounded-lg text-red-400" onClick={() => app.stop()}>
-                                                        Stop
-                                                    </button>
                                                     <button 
-                                                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
-                                                        onClick={() => setViewingAppId(app.id)}
+                                                        onClick={(e) => { e.stopPropagation(); setViewingAppId(app.id); }}
+                                                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs text-white transition-colors"
                                                     >
                                                         View
                                                     </button>
                                                 </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-600 to-orange-500 flex items-center justify-center shadow-2xl shadow-purple-900/50">
+                                                <Upload size={40} className="text-white" />
                                             </div>
-                                        ))
+                                            <div>
+                                                <h3 className="text-xl font-bold text-white">Drop App Here</h3>
+                                                <p className="text-gray-400 mt-2">APK, EXE, ISO, WASM</p>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
                         </div>
+                    ) : (
+                        // Terminal Tab
+                        <div className="h-full w-full bg-black/40 backdrop-blur-sm border border-white/10 rounded-3xl overflow-hidden">
+                            <Terminal />
+                        </div>
                     )}
-                </div>
+                </main>
 
-                {/* Viewer Modal */}
+                {/* Viewer Overlay */}
                 {viewingAppId && (
-                    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-8">
-                        <div className="bg-slate-900 border border-white/30 rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col shadow-2xl">
-                            <div className="h-12 border-b border-white/20 flex items-center justify-between px-6">
-                                <span className="font-bold">Runtime Viewer</span>
-                                <button 
-                                    onClick={() => setViewingAppId(null)}
-                                    className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-lg"
-                                >
-                                    ✕
-                                </button>
+                    <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-8">
+                        <div className="w-full max-w-6xl h-[80vh] bg-black border border-white/20 rounded-2xl overflow-hidden flex flex-col">
+                            <div className="h-12 border-b border-white/10 flex items-center justify-between px-4 bg-white/5">
+                                <span className="font-mono text-sm text-gray-400">Runtime Environment</span>
+                                <button onClick={() => setViewingAppId(null)} className="text-white hover:text-red-400">✕</button>
                             </div>
-                            <div className="flex-1 bg-black rounded-b-2xl overflow-hidden relative" ref={viewerRef}>
-                                {/* Canvas mounts here */}
-                            </div>
+                            <div className="flex-1 relative" ref={viewerRef} />
                         </div>
                     </div>
                 )}
-
-                {/* Sidebar / Status */}
-                <div className="space-y-6">
-                    <div className="bg-slate-800/50 border border-white/20 rounded-2xl p-6">
-                        <h3 className="font-bold mb-4 text-sm uppercase tracking-wider text-slate-400">Engine Status</h3>
-                        <div className="space-y-4">
-                            <StatusItem label="Core Execution" status="Online" color="green" />
-                            <StatusItem label="GPU Acceleration" status="Active" color="blue" />
-                            <StatusItem label="Storage" status="Ready" color="green" />
-                            <StatusItem label="Hypervisor" status="Idle" color="yellow" />
-                            <StatusItem label="Network Mesh" status="Offline" color="slate" />
-                        </div>
-                        <div className="mt-6 pt-4 border-t border-white/10">
-                            <div className="flex justify-between items-center text-xs text-slate-500">
-                                <span>User ID</span>
-                                <span className="font-mono">{userId.substring(0, 8)}...</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-blue-900/20 border border-white/20 rounded-2xl p-6">
-                        <h3 className="font-bold mb-2 text-blue-100">Supported Formats</h3>
-                        <ul className="space-y-2 text-sm text-blue-200/70">
-                            <li className="flex items-center gap-2">✓ Android Packages (APK)</li>
-                            <li className="flex items-center gap-2">✓ Win32/64 Executables (EXE)</li>
-                            <li className="flex items-center gap-2">✓ Disc Images (ISO)</li>
-                            <li className="flex items-center gap-2">✓ WebAssembly (WASM)</li>
-                        </ul>
-                    </div>
-                </div>
-            </main>
+            </div>
         </div>
     );
 }
 
-const StatusItem = ({ label, status, color }: { label: string, status: string, color: string }) => {
-    const colors: any = {
-        green: 'bg-green-500',
-        blue: 'bg-blue-500',
-        yellow: 'bg-yellow-500',
-        slate: 'bg-slate-500'
-    };
-    
-    return (
-        <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">{label}</span>
-            <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${colors[color] || 'bg-slate-500'} animate-pulse`}></span>
-                <span className="text-xs font-mono font-medium">{status}</span>
-            </div>
+const StatCard = ({ icon, label, value, highlight = false }: { icon: any, label: string, value: string, highlight?: boolean }) => (
+    <div className={`p-4 rounded-xl border ${highlight ? 'border-green-500/30 bg-green-500/10' : 'border-white/5 bg-white/5'} backdrop-blur-sm flex items-center gap-3`}>
+        <div className={`${highlight ? 'text-green-400' : 'text-gray-400'}`}>{icon}</div>
+        <div>
+            <div className="text-xs text-gray-500 uppercase font-bold">{label}</div>
+            <div className={`font-mono font-medium ${highlight ? 'text-green-400' : 'text-white'}`}>{value}</div>
         </div>
-    );
-};
+    </div>
+);
