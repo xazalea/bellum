@@ -7,9 +7,18 @@ import { hiberFile } from '@/lib/storage/hiberfile';
 import { AppLibraryManager, StoredApp } from '@/lib/storage/app-library';
 import { useRouter } from 'next/navigation';
 import { Box, Grid, Layout, Search, Upload, Gamepad2, FileCode, Package, Clock, Terminal, Cpu } from 'lucide-react';
+import Image from 'next/image';
 
 const getIcon = (app: StoredApp) => {
-    if (app.icon) return <img src={app.icon} alt="" className="w-full h-full object-cover rounded-xl" />;
+    if (app.icon) return (
+        <Image
+            src={app.icon}
+            alt=""
+            width={56}
+            height={56}
+            className="w-full h-full object-cover rounded-xl"
+        />
+    );
     const ext = app.name.split('.').pop()?.toLowerCase();
     switch (ext) {
         case 'apk': return <span className="text-green-400 text-2xl">🤖</span>;

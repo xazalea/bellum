@@ -99,8 +99,8 @@ export class BrowserServerEngine {
     wasmContainerRunner = {
         containers: new Map<string, WebAssembly.Instance>(),
         run: async (imageId: string, wasmBytes: ArrayBuffer) => {
-            const module = await WebAssembly.compile(wasmBytes);
-            const instance = await WebAssembly.instantiate(module, {
+            const compiledModule = await WebAssembly.compile(wasmBytes);
+            const instance = await WebAssembly.instantiate(compiledModule, {
                 wasi_snapshot_preview1: { fd_write: () => 0 } // Mock WASI
             });
             this.wasmContainerRunner.containers.set(imageId, instance);

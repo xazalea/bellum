@@ -140,7 +140,7 @@ export default function Dashboard() {
                                 <div className="space-y-4">
                                     <h1 className="text-5xl lg:text-6xl font-bold text-white leading-tight">
                                         We make a <br/>
-                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">"better World"</span>
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">&quot;better World&quot;</span>
                                         <br/>
                                         For your every app
                                     </h1>
