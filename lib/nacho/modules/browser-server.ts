@@ -135,8 +135,10 @@ export class BrowserServerEngine {
     wasmJavaRuntime = {
         jvm: null as Worker | null,
         bootJar: (jarFile: File) => {
-            this.wasmJavaRuntime.jvm = new Worker(new URL('../workers/jvm.worker.ts', import.meta.url));
-            this.wasmJavaRuntime.jvm.postMessage({ type: 'LOAD_JAR', file: jarFile });
+            // Worker file not yet implemented - placeholder for future JVM WASM worker
+            // this.wasmJavaRuntime.jvm = new Worker(new URL('../workers/jvm.worker.ts', import.meta.url));
+            // this.wasmJavaRuntime.jvm.postMessage({ type: 'LOAD_JAR', file: jarFile });
+            console.log('[JVM] Boot request for:', jarFile.name, '(Worker not yet implemented)');
         }
     };
 
@@ -237,7 +239,9 @@ export class BrowserServerEngine {
     localNodeWasm = {
         worker: null as Worker | null,
         start: () => {
-            this.localNodeWasm.worker = new Worker(new URL('../workers/node-wasm.worker.ts', import.meta.url));
+            // Worker file not yet implemented - placeholder for future Node.js WASM worker
+            // this.localNodeWasm.worker = new Worker(new URL('../workers/node-wasm.worker.ts', import.meta.url));
+            console.log('[Node-WASM] Server start requested (Worker not yet implemented)');
         }
     };
 

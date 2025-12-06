@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Loader2, Server, Terminal as TerminalIcon, Globe, ShieldAlert, Copy, Bot, Box, Globe as GlobeIcon, Monitor } from 'lucide-react';
+import { nachoEngine } from '@/lib/nacho/engine';
 
 interface LogEntry {
     timestamp: string;
@@ -153,10 +154,6 @@ export default function Terminal() {
             } catch (e: any) {
                 addLog('error', `MC Server Failed: ${e.message}`);
             }
-import { nachoEngine } from '@/lib/nacho/engine';
-
-// ... inside component ...
-
         } else if (type === 'desktop') {
             addLog('system', 'Initializing Ubuntu Desktop (LXDE/VNC) via V86/WASM...');
             addLog('info', 'Pulling docker image: dorowu/ubuntu-desktop-lxde-vnc (Mapped to WASM ISO)...');

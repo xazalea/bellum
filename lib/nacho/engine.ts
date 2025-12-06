@@ -35,7 +35,11 @@ import { TemporalWasmEngine } from './modules/hacking/temporal-wasm';
 import { CompressionStabilityEngine } from './modules/hacking/entropy-compression';
 import { MicroOpsEngine } from './modules/hacking/micro-ops';
 import { BrowserServerEngine } from './modules/browser-server';
+<<<<<<< Current (Your changes)
 import { ArsenicHypervisor } from '../arsenic/hypervisor';
+=======
+import { ArsenicHypervisor } from '@/lib/arsenic/hypervisor';
+>>>>>>> Incoming (Background Agent changes)
 
 export enum ExecutionTier {
     INTERPRETER = 0,
