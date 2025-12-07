@@ -98,10 +98,13 @@ export class WASMCompiler {
 
     // Finalize Code Section
     const bodySize = body.length;
+    // Fix: Properly calculate section size using LEB128 for the inner content size
+    // Structure: [SectionID, SectionSize(LEB), NumFunctions, BodySize(LEB), BodyBytes...]
+    const contentSize = 1 + this.leb128(bodySize).length + bodySize;
+    
     this.codeSection = [
         0x0a, 
-        // Size of section: num_funcs_byte + body_size_leb + body
-        ...this.leb128(1 + this.leb128(bodySize).length + bodySize),
+        ...this.leb128(contentSize),
         0x01, // Num bodies
         ...this.leb128(bodySize),
         ...body
@@ -125,30 +128,38 @@ export class WASMCompiler {
 
   private fixSectionSize(section: number[]) {
       // Section structure: [ID, Size (LEB128 placeholder), Content...]
-      // We need to calculate content length and insert it.
-      // For this simple POC, we hardcoded placeholders as 0x00 (1 byte)
-      // This is fragile but sufficient for the demo.
-      // Real implementation uses a byte builder.
+      // Check if we need to expand the placeholder
       const contentLen = section.length - 2;
+      const sizeLeb = this.leb128(contentLen);
+      
+      if (sizeLeb.length > 1) {
+         // Shift content if LEB128 takes more than 1 byte
+         // For this simple compiler, we just reconstruct the section
+         // This is safer than trying to splice in place with fixed offsets
+         const id = section[0];
+         const content = section.slice(2);
+         
+         // Rebuild: [ID, ...SizeLEB, ...Content]
+         // Clear and push
+         section.length = 0;
+         section.push(id);
+         section.push(...sizeLeb);
+         section.push(...content);
+      } else {
       section[1] = contentLen; 
+      }
   }
 
   private leb128(value: number): number[] {
     const bytes = [];
-    while (true) {
+    do {
       let byte = value & 0x7f;
-      value >>= 7;
-      if (value === 0 && (byte & 0x40) === 0) {
-        bytes.push(byte);
-        break;
-      } else if (value === -1 && (byte & 0x40) !== 0) {
-        bytes.push(byte);
-        break;
-      } else {
+      value >>>= 7; // Unsigned right shift
+      if (value !== 0) {
         byte |= 0x80;
-        bytes.push(byte);
       }
-    }
+      bytes.push(byte);
+    } while (value !== 0);
     return bytes;
   }
 }
