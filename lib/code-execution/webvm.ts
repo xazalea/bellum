@@ -6,6 +6,18 @@
 import { V86Loader, V86Config } from '../emulators/v86-loader';
 import { compilerService } from '../transpiler/compiler-service';
 
+// Safe WASM compiler to guard against truncated/invalid payloads
+async function compileWasmSafe(input: ArrayBuffer | SharedArrayBuffer | Uint8Array): Promise<WebAssembly.Module> {
+  const view = input instanceof Uint8Array ? input : new Uint8Array(input as ArrayBufferLike);
+  if (view.byteLength < 8) throw new Error(`Invalid WASM payload (too small: ${view.byteLength} bytes)`);
+  const magic = view.subarray(0, 4);
+  if (!(magic[0] === 0x00 && magic[1] === 0x61 && magic[2] === 0x73 && magic[3] === 0x6d)) {
+    throw new Error('Invalid WASM payload (missing magic header)');
+  }
+  const buffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
+  return await WebAssembly.compile(buffer);
+}
+
 export interface CodeExecutionResult {
   stdout: string;
   stderr: string;
@@ -492,8 +504,7 @@ class GoExecutor implements LanguageExecutor {
 
   async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
     try {
-      // @ts-ignore - ArrayBufferLike compatible
-      this.wasmModule = await WebAssembly.compile(wasm);
+      this.wasmModule = await compileWasmSafe(wasm);
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
     } catch (error: any) {
       throw new Error(`Failed to load WASM: ${error.message}`);
@@ -555,8 +566,7 @@ class RustExecutor implements LanguageExecutor {
 
   async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
     try {
-      // @ts-ignore
-      this.wasmModule = await WebAssembly.compile(wasm);
+      this.wasmModule = await compileWasmSafe(wasm);
       this.wasmInstance = await WebAssembly.instantiate(this.wasmModule);
     } catch (error: any) {
       throw new Error(`Failed to load WASM: ${error.message}`);
@@ -763,8 +773,7 @@ class HaskellExecutor implements LanguageExecutor {
   }
   
   async loadWasm(wasm: ArrayBuffer | SharedArrayBuffer): Promise<void> {
-     // @ts-ignore
-     this.wasmModule = await WebAssembly.compile(wasm);
+     this.wasmModule = await compileWasmSafe(wasm);
   }
 
   isAvailable(): boolean {
@@ -783,8 +792,7 @@ class PhpExecutor implements LanguageExecutor {
       // Use CompilerService to produce a binary representation of the PHP logic
       try {
         const wasmBytes = await compilerService.compile(code, 'php');
-        // @ts-ignore - ArrayBufferLike compatibility
-        const wasmModule = await WebAssembly.compile(wasmBytes);
+        const wasmModule = await compileWasmSafe(wasmBytes);
         
         let stdout = '';
         const env = {
