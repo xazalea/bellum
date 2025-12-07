@@ -120,6 +120,13 @@ export class NachoLoader {
     const compiler = new WASMCompiler();
     wasmBytes = compiler.compile(optimizedIR);
 
+    // Add debug logging
+    console.log('WASM Compiler Output:', {
+        length: wasmBytes.byteLength,
+        header: Array.from(wasmBytes.subarray(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '),
+        tail: Array.from(wasmBytes.subarray(Math.max(0, wasmBytes.byteLength - 16))).map(b => b.toString(16).padStart(2, '0')).join(' ')
+    });
+
     // Cache Result
     await this.saveCache(filePath, wasmBytes);
 

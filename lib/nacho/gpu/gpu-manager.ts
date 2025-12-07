@@ -1,10 +1,3 @@
-/**
- * GPU Manager - Multi-Pipeline WebGPU Engine
- * Manages Graphics, Physics, AI, and Audio pipelines with unified memory access.
- */
-
-import { memoryManager } from '../memory/unified-memory';
-
 export type PipelineType = 'GRAPHICS' | 'PHYSICS' | 'AI' | 'AUDIO';
 
 export class GPUManager {
@@ -18,11 +11,15 @@ export class GPUManager {
         const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
         if (!adapter) throw new Error('No GPU Adapter Found');
         
+        // Check limits before requesting
+        const supportedMaxStorage = adapter.limits.maxStorageBufferBindingSize || 128 * 1024 * 1024;
+        const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
+
         this.device = await adapter.requestDevice({
             requiredFeatures: ['shader-f16', 'bgra8unorm-storage'], // Advanced features
             requiredLimits: {
                 maxComputeWorkgroupSizeX: 256,
-                maxStorageBufferBindingSize: 2 * 1024 * 1024 * 1024 // 2GB max buffer
+                maxStorageBufferBindingSize: requestedMaxStorage
             }
         });
 
@@ -72,12 +69,13 @@ export class GPUManager {
             @group(0) @binding(1) var<storage, read_write> result: array<f32>;
             
             @compute @workgroup_size(64)
-            fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-                // Simplified operation
-                result[id.x] = matrixA[id.x] * 2.0; 
+            fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+                // Mock MatMul
+                let idx = global_id.x;
+                result[idx] = matrixA[idx] * 2.0;
             }
         `;
-        
+
         this.pipelines.set('AI', this.device.createComputePipeline({
             layout: 'auto',
             compute: {
@@ -87,30 +85,13 @@ export class GPUManager {
         }));
     }
 
-    /**
-     * Zero-Copy Dispatch
-     * Binds the Unified Memory heap directly to the GPU shader.
-     */
-    dispatch(type: PipelineType, workgroups: number) {
-        if (!this.device) return;
-        
-        const pipeline = this.pipelines.get(type);
-        if (!pipeline) return;
+    submitCommand(encoder: GPUCommandEncoder) {
+        this.commandQueue.push(encoder);
+    }
 
-        // In a real scenario, we would bind the `memoryManager.getBuffer()` directly here
-        // by creating a GPUBuffer mapped to the SharedArrayBuffer.
-        // WebGPU currently requires copying for external buffers, but "zero-copy" is achieved
-        // logically by maintaining the authoritative state in the shared heap.
-        
-        const encoder = this.device.createCommandEncoder();
-        const pass = encoder.beginComputePass();
-        pass.setPipeline(pipeline as GPUComputePipeline);
-        // pass.setBindGroup(0, ...); // Bind Unified Heap
-        pass.dispatchWorkgroups(workgroups);
-        pass.end();
-        
-        this.device.queue.submit([encoder.finish()]);
+    flush() {
+        if (!this.device || this.commandQueue.length === 0) return;
+        this.device.queue.submit(this.commandQueue.map(e => e.finish()));
+        this.commandQueue = [];
     }
 }
-
-export const gpuManager = new GPUManager();
