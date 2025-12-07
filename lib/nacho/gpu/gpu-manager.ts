@@ -14,12 +14,18 @@ export class GPUManager {
         // Check limits before requesting
 <<<<<<< Current (Your changes)
 <<<<<<< Current (Your changes)
+<<<<<<< Current (Your changes)
         const supportedMaxStorage = adapter.limits.maxStorageBufferBindingSize || 128 * 1024 * 1024;
 =======
         const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
 >>>>>>> Incoming (Background Agent changes)
         const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
         
+=======
+        const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
+        const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
+
+>>>>>>> Incoming (Background Agent changes)
 =======
         const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
         const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
