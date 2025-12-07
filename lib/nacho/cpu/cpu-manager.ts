@@ -63,6 +63,17 @@ export class CPUManager {
         // Pool initialization is now handled explicitly via initializeWorkers
     }
 
+<<<<<<< Current (Your changes)
+=======
+    private ensureWorkers() {
+        if (typeof window === 'undefined') return;
+        if (this.workers.length === 0) {
+            const count = this.maxWorkers || Math.max(2, (navigator.hardwareConcurrency || 4) - 2);
+            this.initializeWorkers(count);
+        }
+    }
+
+>>>>>>> Incoming (Background Agent changes)
     async initializeWorkers(count: number) {
         // Reset if re-initializing
         if (this.workers.length > 0) {
@@ -81,6 +92,7 @@ export class CPUManager {
     }
 
     dispatchTask(task: WorkerMessage) {
+        this.ensureWorkers();
         // Find idle worker
         const worker = this.workers.find(w => !w.isBusy());
         if (worker) {
