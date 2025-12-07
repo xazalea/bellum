@@ -63,8 +63,6 @@ export class CPUManager {
         // Pool initialization is now handled explicitly via initializeWorkers
     }
 
-<<<<<<< Current (Your changes)
-=======
     private ensureWorkers() {
         if (typeof window === 'undefined') return;
         if (this.workers.length === 0) {
@@ -73,7 +71,6 @@ export class CPUManager {
         }
     }
 
->>>>>>> Incoming (Background Agent changes)
     async initializeWorkers(count: number) {
         // Reset if re-initializing
         if (this.workers.length > 0) {
