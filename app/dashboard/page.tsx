@@ -7,9 +7,18 @@ import { hiberFile } from '@/lib/storage/hiberfile';
 import { AppLibraryManager, StoredApp } from '@/lib/storage/app-library';
 import { useRouter } from 'next/navigation';
 import { Box, Grid, Layout, Search, Upload, Gamepad2, FileCode, Package, Clock, Terminal, Cpu } from 'lucide-react';
+import Image from 'next/image';
 
 const getIcon = (app: StoredApp) => {
-    if (app.icon) return <img src={app.icon} alt="" className="w-full h-full object-cover rounded-xl" />;
+    if (app.icon) return (
+        <Image
+            src={app.icon}
+            alt=""
+            width={56}
+            height={56}
+            className="w-full h-full object-cover rounded-xl"
+        />
+    );
     const ext = app.name.split('.').pop()?.toLowerCase();
     switch (ext) {
         case 'apk': return <span className="text-green-400 text-2xl">🤖</span>;
@@ -73,6 +82,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [library, setLibrary] = useState<AppLibraryManager | null>(null);
   const [apps, setApps] = useState<StoredApp[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -80,12 +91,67 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const lib = new AppLibraryManager(hiberFile);
-    setLibrary(lib);
-    lib.init().then(() => {
-        setApps([...lib.getApps()]);
-    });
+    const initLibrary = async () => {
+        try {
+            const lib = new AppLibraryManager(hiberFile);
+            setLibrary(lib);
+            
+            // Timeout protection for critical storage failures
+            const timeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Storage system timed out. Please refresh.')), 8000)
+            );
+
+            await Promise.race([
+                lib.init(),
+                timeout
+            ]);
+            
+            setApps([...lib.getApps()]);
+            setIsLoading(false);
+        } catch (err: any) {
+            console.error('Dashboard Initialization Error:', err);
+            setError(err.message || 'Critical Storage Failure');
+            setIsLoading(false);
+        }
+    };
+    
+    initLibrary();
   }, []);
+
+  if (error) {
+      return (
+        <div className="min-h-screen bg-black text-white flex items-center justify-center pt-24 font-mono">
+            <div className="max-w-md w-full p-8 bg-red-950/20 border border-red-500/30 rounded-2xl backdrop-blur-xl">
+                <div className="flex items-center gap-4 mb-6 text-red-500">
+                    <Terminal size={32} />
+                    <h1 className="text-xl font-bold">SYSTEM FAILURE</h1>
+                </div>
+                <div className="bg-black/50 p-4 rounded-lg border border-red-500/10 mb-6 font-mono text-sm text-red-200">
+                    > ERROR: {error}<br/>
+                    > STATUS: CRITICAL<br/>
+                    > ACTION: RESTART REQUIRED
+                </div>
+                <button 
+                    onClick={() => window.location.reload()}
+                    className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-red-900/20"
+                >
+                    REBOOT SYSTEM
+                </button>
+            </div>
+        </div>
+      );
+  }
+
+  if (isLoading) {
+      return (
+        <div className="min-h-screen bg-black text-white flex items-center justify-center pt-24">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                <div className="text-blue-500 font-mono text-sm tracking-wider animate-pulse">INITIALIZING CORE...</div>
+            </div>
+        </div>
+      );
+  }
 
   const refreshApps = () => {
     if (library) {

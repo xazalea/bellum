@@ -50,6 +50,16 @@ export class InfiniteStorage {
     }
 
     /**
+     * Read a specific byte range from a file (Lazy Loading)
+     * Essential for "Zero-Lag" streaming of large assets/ISOs
+     */
+    async readRange(path: string, offset: number, length: number): Promise<Uint8Array> {
+        const bytes = await casManager.readChunk(path, offset, length);
+        if (!bytes) throw new Error(`File not found or range invalid: ${path}`);
+        return bytes;
+    }
+
+    /**
      * Virtual Snapshots
      * Archive current state of a directory
      */

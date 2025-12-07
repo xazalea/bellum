@@ -120,6 +120,13 @@ export class NachoLoader {
     const compiler = new WASMCompiler();
     wasmBytes = compiler.compile(optimizedIR);
 
+    // Add debug logging
+    console.log('WASM Compiler Output:', {
+        length: wasmBytes.byteLength,
+        header: Array.from(wasmBytes.subarray(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '),
+        tail: Array.from(wasmBytes.subarray(Math.max(0, wasmBytes.byteLength - 16))).map(b => b.toString(16).padStart(2, '0')).join(' ')
+    });
+
     // Cache Result
     await this.saveCache(filePath, wasmBytes);
 
@@ -130,12 +137,26 @@ export class NachoLoader {
   private async instantiateAndRun(wasmBytes: Uint8Array) {
     this.updateStatus('Linking', 'Binding Syscalls...');
     try {
-        // Standardize to ArrayBuffer for compatibility
-        const wasmBuffer = wasmBytes.buffer instanceof ArrayBuffer 
-            ? wasmBytes.buffer 
-            : new Uint8Array(wasmBytes).buffer;
+        // Standardize to ArrayBuffer for compatibility and respect view offsets
+        const wasmView = wasmBytes instanceof Uint8Array ? wasmBytes : new Uint8Array(wasmBytes);
+        const wasmBuffer = wasmView.buffer.slice(wasmView.byteOffset, wasmView.byteOffset + wasmView.byteLength);
 
-        const wasmModule = await WebAssembly.compile(wasmBuffer);
+        // Validate minimal WASM header to avoid truncated binaries
+        const header = new Uint8Array(wasmBuffer, 0, 4);
+        const isWasm = header[0] === 0x00 && header[1] === 0x61 && header[2] === 0x73 && header[3] === 0x6d;
+        if (!isWasm) {
+            throw new Error('Invalid WASM payload (missing magic header)');
+        }
+        if (wasmView.byteLength < 8) {
+            throw new Error(`Invalid WASM payload (too small: ${wasmView.byteLength} bytes)`);
+        }
+
+        // Use an ArrayBuffer copy to satisfy TS BufferSource expectations (no SAB)
+        const wasmBufferForCompile = wasmView.buffer.slice(
+            wasmView.byteOffset,
+            wasmView.byteOffset + wasmView.byteLength
+        ) as ArrayBuffer;
+        const wasmModule = await WebAssembly.compile(wasmBufferForCompile);
         // @ts-ignore - Shared Memory import
         this.instance = await WebAssembly.instantiate(wasmModule, {
             ...this.syscallBridge!.getImports(),

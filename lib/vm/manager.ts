@@ -17,6 +17,8 @@ import { BaseVM } from './base';
 
 // import { GameRunner } from './implementations/game-runner';
 
+import { GenericVM } from './implementations/generic';
+
 // Lazy load CodeExecutionVM to prevent fengari from being bundled
 let codeExecutionModule: typeof import('./implementations/code-execution') | null = null;
 async function getCodeExecutionVM() {
@@ -48,7 +50,7 @@ export class VMManagerImpl implements VMManager {
 
     // Check for Game Mode
     if (config.executionMode === 'game') {
-      throw new Error('Game runner is temporarily unavailable in this build.');
+        vm = new GenericVM(config);
     } else if (config.executionMode === 'code' || config.type === VMType.CODE) {
       // Dynamically import CodeExecutionVM to avoid fengari SSR issues
       // Use string-based import to prevent webpack from analyzing it
@@ -58,7 +60,8 @@ export class VMManagerImpl implements VMManager {
       const CodeExecutionVM = await getCodeExecutionVM();
       vm = new CodeExecutionVM(config);
     } else {
-      throw new Error(`Legacy VM type ${config.type} is temporarily unavailable in this build. Please use Nacho runtime.`);
+      // Use GenericVM for all other types (Windows, Android, etc.) powered by Nacho Engine
+      vm = new GenericVM(config);
     }
 
     // Load existing state if available
