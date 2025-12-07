@@ -15,6 +15,7 @@ export class GPUManager {
 <<<<<<< Current (Your changes)
 <<<<<<< Current (Your changes)
 <<<<<<< Current (Your changes)
+<<<<<<< Current (Your changes)
         const supportedMaxStorage = adapter.limits.maxStorageBufferBindingSize || 128 * 1024 * 1024;
 =======
         const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
@@ -30,6 +31,11 @@ export class GPUManager {
         const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
         const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
 
+>>>>>>> Incoming (Background Agent changes)
+=======
+        const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
+        const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
+        
 >>>>>>> Incoming (Background Agent changes)
         this.device = await adapter.requestDevice({
             requiredFeatures: ['shader-f16', 'bgra8unorm-storage'], // Advanced features

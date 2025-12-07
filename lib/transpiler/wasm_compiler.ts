@@ -149,6 +149,7 @@ export class WASMCompiler {
 <<<<<<< Current (Your changes)
 <<<<<<< Current (Your changes)
 <<<<<<< Current (Your changes)
+<<<<<<< Current (Your changes)
          section[1] = contentLen; 
 =======
       section[1] = contentLen; 
@@ -158,6 +159,9 @@ export class WASMCompiler {
 >>>>>>> Incoming (Background Agent changes)
 =======
          section[1] = contentLen; 
+>>>>>>> Incoming (Background Agent changes)
+=======
+      section[1] = contentLen; 
 >>>>>>> Incoming (Background Agent changes)
       }
   }
@@ -175,3 +179,4 @@ export class WASMCompiler {
     return bytes;
   }
 }
+
