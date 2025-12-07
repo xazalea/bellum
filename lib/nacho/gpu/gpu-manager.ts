@@ -14,7 +14,7 @@ export class GPUManager {
         // Check limits before requesting
         const supportedMaxStorage = adapter.limits.maxStorageBufferBindingSize || 128 * 1024 * 1024;
         const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
-
+        
         this.device = await adapter.requestDevice({
             requiredFeatures: ['shader-f16', 'bgra8unorm-storage'], // Advanced features
             requiredLimits: {
@@ -75,7 +75,7 @@ export class GPUManager {
                 result[idx] = matrixA[idx] * 2.0;
             }
         `;
-
+        
         this.pipelines.set('AI', this.device.createComputePipeline({
             layout: 'auto',
             compute: {
@@ -88,15 +88,12 @@ export class GPUManager {
     submitCommand(encoder: GPUCommandEncoder) {
         this.commandQueue.push(encoder);
     }
-<<<<<<< Current (Your changes)
-=======
 
     dispatch(pipelineType: PipelineType, workgroups: number) {
         if (!this.device) return;
         // Mock dispatch for the hypervisor loop
         // In a real scenario, this would encode compute passes
     }
->>>>>>> Incoming (Background Agent changes)
 
     flush() {
         if (!this.device || this.commandQueue.length === 0) return;
@@ -104,3 +101,6 @@ export class GPUManager {
         this.commandQueue = [];
     }
 }
+
+export const gpuManager = new GPUManager();
+
