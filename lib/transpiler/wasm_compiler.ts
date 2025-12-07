@@ -1,5 +1,4 @@
-<<<<<<< Current (Your changes)
-=======
+
 /**
  * WASM Compiler - Generates WebAssembly binary from IR
  * Extended Support: SIMD, Locals, Linear Memory, Multithreading
