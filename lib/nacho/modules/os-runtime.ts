@@ -253,7 +253,7 @@ export class OsVmPerformanceEngine {
 
     // 230. Multi-app unity sandbox
     unitySandbox = {
-        sharedHeap: new WebAssembly.Memory({ initial: 10, shared: true }),
+        sharedHeap: new WebAssembly.Memory({ initial: 10, maximum: 20, shared: true }),
         apps: [] as any[]
     };
 
