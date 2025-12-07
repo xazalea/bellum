@@ -12,7 +12,11 @@ export class GPUManager {
         if (!adapter) throw new Error('No GPU Adapter Found');
         
         // Check limits before requesting
+<<<<<<< Current (Your changes)
         const supportedMaxStorage = adapter.limits.maxStorageBufferBindingSize || 128 * 1024 * 1024;
+=======
+        const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
+>>>>>>> Incoming (Background Agent changes)
         const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
         
         this.device = await adapter.requestDevice({

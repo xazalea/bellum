@@ -146,7 +146,11 @@ export class WASMCompiler {
          section.push(...sizeLeb);
          section.push(...content);
       } else {
+<<<<<<< Current (Your changes)
          section[1] = contentLen; 
+=======
+      section[1] = contentLen; 
+>>>>>>> Incoming (Background Agent changes)
       }
   }
 
