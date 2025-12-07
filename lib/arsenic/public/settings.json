@@ -1,0 +1,73 @@
+{
+  "ai-model": [
+    {
+      "name": "Llama3-8B-8192",
+      "value": "llama3-8B-8192",
+      "desc": "Best for daily tasks and fast answers"
+    },
+    {
+      "name": "Llama3-70B-8192",
+      "value": "llama3-70b-8192",
+      "desc": "Best for complex tasks"
+    },
+    {
+      "name": "Gemma 2-9B-IT",
+      "value": "gemma2-9b-it",
+      "desc": "Best for coding"
+    }
+  ],
+  "proxy-backend": [
+    {
+      "name": "Ultraviolet",
+      "value": "ultraviolet"
+    },
+    {
+      "name": "Dynamic",
+      "value": "dynamic"
+    }
+  ],
+  "search-engine": [
+    {
+      "name": "DuckDuckGo",
+      "value": "duckduckgo"
+    },
+    {
+      "name": "Google",
+      "value": "google"
+    },
+    {
+      "name": "Bing",
+      "value": "bing"
+    },
+    {
+      "name": "Yahoo",
+      "value": "yahoo"
+    }
+  ],
+  "tab-cloak": [
+    {
+      "name": "Default",
+      "value": "default"
+    },
+    {
+      "name": "Canvas",
+      "value": "canvas"
+    },
+    {
+      "name": "Google Classroom",
+      "value": "google-classroom"
+    },
+    {
+      "name": "Google",
+      "value": "google"
+    },
+    {
+      "name": "Google Drive",
+      "value": "google-drive"
+    },
+    {
+      "name": "Khan Academy",
+      "value": "khan-academy"
+    }
+  ]
+}
