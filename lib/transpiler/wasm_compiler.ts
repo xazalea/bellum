@@ -1,3 +1,5 @@
+<<<<<<< Current (Your changes)
+=======
 /**
  * WASM Compiler - Generates WebAssembly binary from IR
  * Extended Support: SIMD, Locals, Linear Memory, Multithreading
@@ -146,7 +148,7 @@ export class WASMCompiler {
          section.push(...sizeLeb);
          section.push(...content);
       } else {
-         section[1] = contentLen; 
+      section[1] = contentLen; 
       }
   }
 
@@ -163,3 +165,4 @@ export class WASMCompiler {
     return bytes;
   }
 }
+>>>>>>> Incoming (Background Agent changes)
