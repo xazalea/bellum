@@ -144,8 +144,17 @@ export class NachoLoader {
             throw new Error(`Invalid WASM payload (too small: ${wasmView.byteLength} bytes)`);
         }
 
+<<<<<<< Current (Your changes)
         // Use the typed view (BufferSource) to satisfy TS and avoid SAB typing issues
         const wasmModule = await WebAssembly.compile(wasmView);
+=======
+        // Use an ArrayBuffer copy to satisfy TS BufferSource expectations (no SAB)
+        const wasmBufferForCompile = wasmView.buffer.slice(
+            wasmView.byteOffset,
+            wasmView.byteOffset + wasmView.byteLength
+        ) as ArrayBuffer;
+        const wasmModule = await WebAssembly.compile(wasmBufferForCompile);
+>>>>>>> Incoming (Background Agent changes)
         // @ts-ignore - Shared Memory import
         this.instance = await WebAssembly.instantiate(wasmModule, {
             ...this.syscallBridge!.getImports(),
