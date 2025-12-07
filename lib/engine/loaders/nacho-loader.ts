@@ -130,10 +130,19 @@ export class NachoLoader {
   private async instantiateAndRun(wasmBytes: Uint8Array) {
     this.updateStatus('Linking', 'Binding Syscalls...');
     try {
-        // Standardize to ArrayBuffer for compatibility
-        const wasmBuffer = wasmBytes.buffer instanceof ArrayBuffer 
-            ? wasmBytes.buffer 
-            : new Uint8Array(wasmBytes).buffer;
+        // Standardize to ArrayBuffer for compatibility and respect view offsets
+        const wasmView = wasmBytes instanceof Uint8Array ? wasmBytes : new Uint8Array(wasmBytes);
+        const wasmBuffer = wasmView.buffer.slice(wasmView.byteOffset, wasmView.byteOffset + wasmView.byteLength);
+
+        // Validate minimal WASM header to avoid truncated binaries
+        const header = new Uint8Array(wasmBuffer, 0, 4);
+        const isWasm = header[0] === 0x00 && header[1] === 0x61 && header[2] === 0x73 && header[3] === 0x6d;
+        if (!isWasm) {
+            throw new Error('Invalid WASM payload (missing magic header)');
+        }
+        if (wasmView.byteLength < 8) {
+            throw new Error(`Invalid WASM payload (too small: ${wasmView.byteLength} bytes)`);
+        }
 
         const wasmModule = await WebAssembly.compile(wasmBuffer);
         // @ts-ignore - Shared Memory import

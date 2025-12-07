@@ -105,7 +105,12 @@ export class BrowserServerEngine {
     wasmContainerRunner = {
         containers: new Map<string, WebAssembly.Instance>(),
         run: async (imageId: string, wasmBytes: ArrayBuffer) => {
-            const compiledModule = await WebAssembly.compile(wasmBytes);
+            const view = wasmBytes instanceof ArrayBuffer ? new Uint8Array(wasmBytes) : new Uint8Array(wasmBytes as any);
+            const wasmBuffer = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+            const header = new Uint8Array(wasmBuffer, 0, 4);
+            const isWasm = header[0] === 0x00 && header[1] === 0x61 && header[2] === 0x73 && header[3] === 0x6d;
+            if (!isWasm) throw new Error('Invalid WASM image (missing magic header)');
+            const compiledModule = await WebAssembly.compile(wasmBuffer);
             const instance = await WebAssembly.instantiate(compiledModule, {
                 wasi_snapshot_preview1: { fd_write: () => 0 } // Mock WASI
             });
