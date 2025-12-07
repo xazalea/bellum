@@ -88,6 +88,15 @@ export class GPUManager {
     submitCommand(encoder: GPUCommandEncoder) {
         this.commandQueue.push(encoder);
     }
+<<<<<<< Current (Your changes)
+=======
+
+    dispatch(pipelineType: PipelineType, workgroups: number) {
+        if (!this.device) return;
+        // Mock dispatch for the hypervisor loop
+        // In a real scenario, this would encode compute passes
+    }
+>>>>>>> Incoming (Background Agent changes)
 
     flush() {
         if (!this.device || this.commandQueue.length === 0) return;
