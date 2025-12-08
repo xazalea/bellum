@@ -3,7 +3,7 @@
  * Extended Support: SIMD, Locals, Linear Memory, Multithreading
  */
 
-import { IRInstruction, IROpcode } from './lifter';
+import { IRInstruction, IROpcode } from './lifter'; // Now resolves via index.ts -> types.ts
 
 export class WASMCompiler {
   // Internal buffers for section construction
@@ -71,22 +71,21 @@ export class WASMCompiler {
     body.push(0x01, 0x01, 0x7f); // 1 local of type i32
 
     for (const instr of ir) {
-        switch (instr.opcode) {
-            case IROpcode.ADD:
-                // Push op1, op2, add
-                body.push(0x41, ...this.leb128(Number(instr.op1)));
-                body.push(0x41, ...this.leb128(Number(instr.op2)));
-                body.push(0x6a); // i32.add
-                body.push(0x21, 0x00); // local.set 0
-                break;
-            case IROpcode.PUSH:
-                // Store to stack (memory)
-                // For POC, just print
-                body.push(0x41, ...this.leb128(Number(instr.op1)));
-                body.push(0x10, 0x00); // call print
-                break;
-            // ... other ops
+        // Check both enum and string literal for safety
+        if (instr.opcode === IROpcode.ADD || instr.opcode === 'add') {
+            // Push op1, op2, add
+            body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
+            body.push(0x41, ...this.leb128(Number(instr.op2?.value || 0)));
+            body.push(0x6a); // i32.add
+            body.push(0x21, 0x00); // local.set 0
         }
+        else if (instr.opcode === IROpcode.PUSH || instr.opcode === 'push') {
+            // Store to stack (memory)
+            // For POC, just print
+            body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
+            body.push(0x10, 0x00); // call print
+        }
+        // ... other ops
     }
     
     // Hello World Check
@@ -163,4 +162,3 @@ export class WASMCompiler {
     return bytes;
   }
 }
-

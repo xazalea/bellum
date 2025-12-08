@@ -18,6 +18,18 @@ export enum IRType {
     VOID = 'void'
 }
 
+// Define IROpcode to match usage in wasm_compiler.ts
+export enum IROpcode {
+    PUSH = 'push', // Using string values as in previous inference, or int?
+    ADD = 'add',
+    SUB = 'sub',
+    MUL = 'mul',
+    DIV = 'div',
+    RET = 'ret',
+    MOV = 'mov',
+    BR = 'br'
+}
+
 export interface IROperand {
     type: 'reg' | 'imm' | 'mem' | 'temp';
     value: number | string;
@@ -52,5 +64,3 @@ export interface FunctionIR {
 export interface Decoder {
     decode(buffer: Uint8Array, offset: number, addr: number): BasicBlock;
 }
-
-

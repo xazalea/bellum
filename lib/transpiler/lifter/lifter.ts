@@ -2,6 +2,12 @@ import { Arch, FunctionIR, BasicBlock, Decoder } from './types';
 import { X86Decoder } from './decoders/x86';
 import { ARMDecoder } from './decoders/arm';
 
+// Re-export IROpcode for convenience if it were an enum, but it's not defined here.
+// However, to fix the import error in wasm_compiler.ts, we should export it if it exists.
+// Since it doesn't exist, we will likely break wasm_compiler.ts if we don't fix it.
+// But wait, types.ts has IRInstruction with opcode: string.
+// So IROpcode is just a helper object/enum. We should define it in types.ts and export it.
+
 export class FreestandingLifter {
     private decoders: Map<Arch, Decoder> = new Map();
     
@@ -59,5 +65,3 @@ export class FreestandingLifter {
 }
 
 export const lifter = new FreestandingLifter();
-
-
