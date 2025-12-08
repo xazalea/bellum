@@ -127,9 +127,9 @@ export default function DashboardPage() {
                     <h1 className="text-xl font-bold">SYSTEM FAILURE</h1>
                 </div>
                 <div className="bg-black/50 p-4 rounded-lg border border-red-500/10 mb-6 font-mono text-sm text-red-200">
-                    {'>'} ERROR: {error}<br/>
-                    {'>'} STATUS: CRITICAL<br/>
-                    {'>'} ACTION: RESTART REQUIRED
+                    > ERROR: {error}<br/>
+                    > STATUS: CRITICAL<br/>
+                    > ACTION: RESTART REQUIRED
                 </div>
                 <button 
                     onClick={() => window.location.reload()}

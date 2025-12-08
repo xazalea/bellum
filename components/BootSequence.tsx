@@ -25,7 +25,7 @@ export function BootSequence({ onComplete }: { onComplete: () => void }) {
             onComplete();
         };
         sequence();
-    }, [onComplete]);
+    }, []);
 
     return (
         <div className="fixed inset-0 bg-black z-[9999] flex flex-col items-center justify-center font-mono text-white overflow-hidden">
