@@ -83,6 +83,20 @@
 - Progress tracking
 - Mandatory on first visit
 
+### 9. Universal Runtime Specification (Roadmap)
+- **File**: `UNIVERSAL_RUNTIME_SPEC.md`
+- **Code**: `lib/nacho/features.ts`
+- Comprehensive 500-item feature list targeting "ZERO-LAG" performance
+- Integrated into `NachoEngine` for capability tracking
+- Categories:
+  - Core Execution Engine
+  - GPU/WebGPU Hyper-Acceleration
+  - Storage + "Near-Infinite Local Capacity"
+  - Graphics, Rendering & Gamepipe
+  - OS & VM Performance
+  - Extreme Performance Optimizations
+  - Interface & Tooling
+
 ## 🎮 Game Support
 
 ### Available Games
@@ -100,6 +114,7 @@
 
 ```
 bellum/
+├── UNIVERSAL_RUNTIME_SPEC.md # Complete 500-item feature roadmap
 ├── app/
 │   ├── page.tsx              # Landing page
 │   ├── dashboard/

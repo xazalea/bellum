@@ -14,6 +14,7 @@ import { cpuManager } from './cpu/cpu-manager';
 import { memoryManager } from './memory/unified-memory';
 import { infiniteStorage } from './storage/infinite-storage';
 import { neuralCore } from './ai/neural-core';
+import { UNIVERSAL_RUNTIME_FEATURES, RUNTIME_GOALS } from './features';
 
 // Feature Modules (1-500)
 import { CoreExecutionEngine } from './modules/core-execution';
@@ -110,6 +111,17 @@ export class NachoEngine {
             NachoEngine.instance = new NachoEngine();
         }
         return NachoEngine.instance;
+    }
+
+    /**
+     * Returns the complete feature specification for the Universal Runtime.
+     * See UNIVERSAL_RUNTIME_SPEC.md for details.
+     */
+    getFeatures() {
+        return {
+            spec: UNIVERSAL_RUNTIME_FEATURES,
+            goals: RUNTIME_GOALS
+        };
     }
 
     /**
