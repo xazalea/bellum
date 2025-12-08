@@ -64,3 +64,4 @@ export interface FunctionIR {
 export interface Decoder {
     decode(buffer: Uint8Array, offset: number, addr: number): BasicBlock;
 }
+
