@@ -70,19 +70,22 @@ export class WASMCompiler {
     body.push(0x01, 0x01, 0x7f); // 1 local of type i32
 
     for (const instr of ir) {
-        // Cast opcode to string to allow comparison with both enum and string literal if types are mismatched
-        const op = instr.opcode as string;
-        if (op === IROpcode.ADD || op === 'add') {
+        // Normalize opcode to string to handle enum values and raw strings uniformly
+        const op = String(instr.opcode);
+        if (op === 'add') {
             // Push op1, op2, add
-            body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
-            body.push(0x41, ...this.leb128(Number(instr.op2?.value || 0)));
+            const op1Val = Number((instr as any).op1?.value ?? instr.op1 ?? 0);
+            const op2Val = Number((instr as any).op2?.value ?? instr.op2 ?? 0);
+            body.push(0x41, ...this.leb128(op1Val));
+            body.push(0x41, ...this.leb128(op2Val));
             body.push(0x6a); // i32.add
             body.push(0x21, 0x00); // local.set 0
         }
-        else if (op === IROpcode.PUSH || op === 'push') {
+        else if (op === 'push') {
             // Store to stack (memory)
             // For POC, just print
-            body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
+            const op1Val = Number((instr as any).op1?.value ?? instr.op1 ?? 0);
+            body.push(0x41, ...this.leb128(op1Val));
             body.push(0x10, 0x00); // call print
         }
         // ... other ops
