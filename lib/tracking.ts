@@ -48,8 +48,8 @@ export const getFingerprint = async (): Promise<string> => {
 const getThumbmarkId = async (): Promise<string> => {
     try {
         const tm = new Thumbmark();
-        const data = await tm.getFingerprintData();
-        return data.hash;
+        const data = await tm.get();
+        return data.thumbmark;
     } catch (e) {
         console.warn('Thumbmark failed, falling back to empty', e);
         return 'tm-failed';
