@@ -167,7 +167,7 @@ export class GameTransformer {
       {
         name: 'AndroidManifest.xml',
         type: 'xml',
-        data: new TextEncoder().encode('<manifest></manifest>'),
+        data: new TextEncoder().encode('<manifest></manifest>').buffer,
         size: 20,
         compressed: false
       }
