@@ -1,6 +1,6 @@
 
 import { WASMCompiler } from './lib/transpiler/wasm_compiler';
-import { IROpcode } from './lib/transpiler/lifter/lifter'; 
+import { IROpcode } from './lib/transpiler/lifter'; 
 // Wait, IROpcode is NOT exported by lifter.ts. 
 // It is used in wasm_compiler.ts as if it is imported from './lifter'.
 // But lifter.ts doesn't export it.
