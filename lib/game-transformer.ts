@@ -202,7 +202,9 @@ export class GameTransformer {
     const seenHashes = new Set<string>();
 
     return assets.filter(asset => {
-      const hash = storageEngine.assetFingerprinting.fingerprint(new Uint8Array(asset.data));
+      const hash = storageEngine.assetFingerprinting.fingerprint(
+        asset.data instanceof Uint8Array ? asset.data : new Uint8Array(asset.data)
+      );
       if (seenHashes.has(hash)) {
         console.log(`🗑️ Deduplicated duplicate asset: ${asset.name}`);
         return false;
@@ -223,19 +225,31 @@ export class GameTransformer {
       // Apply compression based on type
       if (options.compressionLevel === 'ultra') {
         // Multi-layer compression stack
-        optimizedData = storageEngine.multiLayerCompression.compress(new Uint8Array(optimizedData));
+        const u8Data = optimizedData instanceof Uint8Array 
+            ? optimizedData 
+            : new Uint8Array(optimizedData);
+            
+        optimizedData = storageEngine.multiLayerCompression.compress(u8Data);
 
         // Apply predictive compression
         const mimeType = this.getMimeType(asset.type);
         const algo = storageEngine.predictiveCompression.chooseAlgo(mimeType);
 
         // Apply hyper-entropy reduction
-        optimizedData = storageEngine.hyperEntropyReduction.preprocess(new Uint8Array(optimizedData));
+        const u8PreData = optimizedData instanceof Uint8Array 
+            ? optimizedData 
+            : new Uint8Array(optimizedData);
+            
+        optimizedData = storageEngine.hyperEntropyReduction.preprocess(u8PreData);
       }
 
       // Apply GPU-assisted LZ acceleration if enabled
       if (options.enableGPUAcceleration) {
-        optimizedData = storageEngine.gpuLzAccel.compress(new Uint8Array(optimizedData));
+        const u8Data = optimizedData instanceof Uint8Array 
+            ? optimizedData 
+            : new Uint8Array(optimizedData);
+            
+        optimizedData = storageEngine.gpuLzAccel.compress(u8Data);
       }
 
       optimizedAssets.push({
