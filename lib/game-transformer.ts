@@ -230,7 +230,10 @@ export class GameTransformer {
             : new Uint8Array(optimizedData);
             
         const multiLayerResult = storageEngine.multiLayerCompression.compress(u8Data);
-        optimizedData = multiLayerResult instanceof Uint8Array ? multiLayerResult : new Uint8Array(multiLayerResult);
+        // Cast to unknown first to avoid overlap error if types are incompatible
+        optimizedData = multiLayerResult instanceof Uint8Array 
+            ? multiLayerResult 
+            : new Uint8Array(multiLayerResult as unknown as ArrayBufferLike);
 
         // Apply predictive compression
         const mimeType = this.getMimeType(asset.type);
@@ -242,7 +245,10 @@ export class GameTransformer {
             : new Uint8Array(optimizedData);
             
         const entropyResult = storageEngine.hyperEntropyReduction.preprocess(u8PreData);
-        optimizedData = entropyResult instanceof Uint8Array ? entropyResult : new Uint8Array(entropyResult);
+        // Cast to unknown first to avoid overlap error if types are incompatible
+        optimizedData = entropyResult instanceof Uint8Array 
+            ? entropyResult 
+            : new Uint8Array(entropyResult as unknown as ArrayBufferLike);
       }
 
       // Apply GPU-assisted LZ acceleration if enabled
