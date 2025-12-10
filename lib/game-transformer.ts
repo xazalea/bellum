@@ -229,7 +229,8 @@ export class GameTransformer {
             ? optimizedData 
             : new Uint8Array(optimizedData);
             
-        optimizedData = storageEngine.multiLayerCompression.compress(u8Data);
+        const multiLayerResult = storageEngine.multiLayerCompression.compress(u8Data);
+        optimizedData = multiLayerResult instanceof Uint8Array ? multiLayerResult : new Uint8Array(multiLayerResult);
 
         // Apply predictive compression
         const mimeType = this.getMimeType(asset.type);
@@ -240,7 +241,8 @@ export class GameTransformer {
             ? optimizedData 
             : new Uint8Array(optimizedData);
             
-        optimizedData = storageEngine.hyperEntropyReduction.preprocess(u8PreData);
+        const entropyResult = storageEngine.hyperEntropyReduction.preprocess(u8PreData);
+        optimizedData = entropyResult instanceof Uint8Array ? entropyResult : new Uint8Array(entropyResult);
       }
 
       // Apply GPU-assisted LZ acceleration if enabled
@@ -249,7 +251,9 @@ export class GameTransformer {
             ? optimizedData 
             : new Uint8Array(optimizedData);
             
-        optimizedData = storageEngine.gpuLzAccel.compress(u8Data);
+        const lzResult = storageEngine.gpuLzAccel.compress(u8Data);
+        // Ensure result is Uint8Array or ArrayBuffer, not just any return type
+        optimizedData = lzResult instanceof Uint8Array ? lzResult : new Uint8Array(lzResult as unknown as ArrayBufferLike);
       }
 
       optimizedAssets.push({
