@@ -205,7 +205,7 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
                                         <div className="p-3 bg-blue-900/20 border border-blue-500/20 rounded-lg flex gap-3">
                                             <Shield className="text-blue-400 shrink-0" size={16} />
                                             <p className="text-xs text-blue-200">
-                                                No password required. Your account is secured by your device's unique hardware fingerprint.
+                                                No password required. Your account is secured by your device&apos;s unique hardware fingerprint.
                                             </p>
                                         </div>
                                     )}

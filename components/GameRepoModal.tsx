@@ -27,6 +27,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
         if (isOpen) {
             loadRepos();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     const loadRepos = async () => {
