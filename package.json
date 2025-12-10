@@ -15,6 +15,7 @@
     "@types/adm-zip": "^0.5.7",
     "@types/jszip": "^3.4.0",
     "adm-zip": "^0.5.16",
+    "clsx": "^2.1.1",
     "fengari": "^0.1.4",
     "firebase": "^10.7.1",
     "framer-motion": "^12.23.24",
@@ -23,7 +24,8 @@
     "lucide-react": "^0.555.0",
     "next": "^14.2.0",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
