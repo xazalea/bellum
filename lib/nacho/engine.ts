@@ -37,6 +37,7 @@ import { CompressionStabilityEngine } from './modules/hacking/entropy-compressio
 import { MicroOpsEngine } from './modules/hacking/micro-ops';
 import { BrowserServerEngine } from './modules/browser-server';
 import { ArsenicHypervisor } from '@/lib/arsenic/hypervisor';
+import { DistributedComputeService, clusterService } from './modules/distributed-compute';
 
 export enum ExecutionTier {
     INTERPRETER = 0,
@@ -83,6 +84,7 @@ export class NachoEngine {
     public microOps: MicroOpsEngine;
     public browserServer: BrowserServerEngine;
     public arsenic: ArsenicHypervisor;
+    public clusterService: DistributedComputeService;
 
     private constructor() {
         this.coreExecution = new CoreExecutionEngine();
@@ -104,6 +106,7 @@ export class NachoEngine {
         this.microOps = new MicroOpsEngine();
         this.browserServer = new BrowserServerEngine();
         this.arsenic = new ArsenicHypervisor();
+        this.clusterService = clusterService;
     }
 
     static getInstance(): NachoEngine {
@@ -140,6 +143,7 @@ export class NachoEngine {
             console.log('Initializing OS & VM Performance (201-250)...');
             console.log('Initializing Futuristic Optimizations (251-350)...');
             console.log('Initializing Interface & Tooling (351-500)...');
+            console.log('Initializing Distributed Compute Service...');
 
             await Promise.all([
                 this.initGPU(),
@@ -232,4 +236,3 @@ export class NachoEngine {
 }
 
 export const nachoEngine = NachoEngine.getInstance();
-

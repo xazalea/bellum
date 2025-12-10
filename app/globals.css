@@ -4,76 +4,96 @@
 
 :root {
   --foreground-rgb: 255, 255, 255;
-  --background-rgb: 18, 18, 18;
+  --background-rgb: 15, 20, 25;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: #0a0a0a;
+  background: #0f1419;
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
 }
 
-/* Noise Texture */
-.bg-noise {
-  position: relative;
-}
-
-.bg-noise::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
-
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #1e293b;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 3px;
+  background: #3b82f6;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #2563eb;
 }
 
-/* Utilities for Zena Look */
-.zena-card {
-  background: #111;
-  border-radius: 2rem;
-  box-shadow: 
-    0 0 0 1px rgba(255,255,255,0.05),
-    0 20px 50px -10px rgba(0,0,0,0.5);
-  overflow: hidden;
-  position: relative;
+/* Borg.games Style Utilities */
+.borg-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease-in-out;
 }
 
-.zena-gradient-text {
-  background: linear-gradient(to right, #fff, #ccc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.borg-card:hover {
+  background: #334155;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1);
 }
 
-/* Floating Ring Animation */
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(5deg); }
+.borg-button-primary {
+  background: #3b82f6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-medium: 0.875rem;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.floating-ring {
-  animation: float 8s ease-in-out infinite;
+.borg-button-primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.borg-input {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: white;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.borg-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Animation for game cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.game-card-enter {
+  animation: fadeInUp 0.3s ease-out;
 }

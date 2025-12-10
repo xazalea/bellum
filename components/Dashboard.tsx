@@ -5,16 +5,25 @@ import { vmManager } from '@/lib/vm/manager';
 import { VMType } from '@/lib/vm/types';
 import Terminal from './Terminal';
 import { getFingerprint } from '@/lib/tracking';
-import { 
-    Terminal as TerminalIcon, 
-    LayoutGrid, 
-    Cpu, 
-    Zap, 
-    Box, 
-    Activity, 
-    Upload, 
+import { firebaseService, signInAnonymous, UserGameData } from '@/lib/firebase/firebase';
+import { gameTransformer } from '@/lib/game-transformer';
+import {
+    Terminal as TerminalIcon,
+    LayoutGrid,
+    Cpu,
+    Zap,
+    Box,
+    Activity,
+    Upload,
     Play,
-    Settings
+    Settings,
+    User,
+    LogIn,
+    Gamepad2,
+    Download,
+    Star,
+    Clock,
+    HardDrive
 } from 'lucide-react';
 
 // Helper for runtime labels
@@ -34,8 +43,17 @@ export default function Dashboard() {
     const [activeApps, setActiveApps] = useState<any[]>([]);
     const [dragActive, setDragActive] = useState(false);
     const [viewingAppId, setViewingAppId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'apps' | 'terminal'>('apps');
+    const [activeTab, setActiveTab] = useState<'home' | 'my-games' | 'terminal'>('home');
     const [userId, setUserId] = useState<string>('');
+    const [currentUser, setCurrentUser] = useState<any>(null);
+    const [userGames, setUserGames] = useState<UserGameData[]>([]);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [featuredGames] = useState([
+        { id: 'minecraft', name: 'Minecraft', type: 'windows', description: 'Build, explore, survive' },
+        { id: 'factorio', name: 'Factorio', type: 'windows', description: 'Build factories and automate' },
+        { id: 'among-us', name: 'Among Us', type: 'windows', description: 'Find the impostor among us' },
+        { id: 'rocket-league', name: 'Rocket League', type: 'windows', description: 'Soccer with cars and rockets' }
+    ]);
     
     const viewerRef = useRef<HTMLDivElement>(null);
     
@@ -43,6 +61,18 @@ export default function Dashboard() {
     useEffect(() => {
         nachoEngine.boot().catch(console.error);
         getFingerprint().then(setUserId);
+
+        // Firebase authentication
+        const initAuth = async () => {
+            const user = await signInAnonymous();
+            if (user) {
+                setCurrentUser(user);
+                setIsAuthenticated(true);
+                const games = await firebaseService.loadUserGames();
+                setUserGames(games);
+            }
+        };
+        initAuth();
 
         const interval = setInterval(() => {
             setStats({
@@ -78,167 +108,348 @@ export default function Dashboard() {
         let type = VMType.CODE;
         if (ext === 'apk') type = VMType.ANDROID;
         else if (ext === 'exe') type = VMType.WINDOWS;
-        else if (ext === 'iso') type = VMType.LINUX; 
+        else if (ext === 'iso') type = VMType.LINUX;
         else if (ext === 'js' || ext === 'wasm') type = VMType.CODE;
 
+        console.log(`🎮 Transforming ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
+        // Transform the game with extreme optimization
+        const transformationResult = await gameTransformer.transformGame(file, {
+            targetPlatform: 'wasm',
+            compressionLevel: 'ultra',
+            optimizationLevel: 'maximum',
+            enableGPUAcceleration: true,
+            enableAI: true
+        });
+
+        if (!transformationResult.success) {
+            console.error('❌ Game transformation failed:', transformationResult.error);
+            alert(`Failed to transform game: ${transformationResult.error}`);
+            return;
+        }
+
         const id = `app-${Date.now()}`;
-        await vmManager.createVM({ id, type, name: file.name, memory: 1024 });
+
+        // Create VM with optimized game
+        await vmManager.createVM({
+            id,
+            type,
+            name: file.name,
+            memory: 1024,
+            executionMode: 'game'
+        });
+
         const vm = vmManager.getVM(id);
-        if (vm) await vm.start();
+        if (vm) {
+            await vm.start();
+
+            // Update active apps
+            setActiveApps(prev => [...prev, vm]);
+        }
+
+        // Save to Firebase if authenticated
+        if (isAuthenticated) {
+            const gameData: UserGameData = {
+                id,
+                name: file.name,
+                type,
+                optimizedSize: transformationResult.optimizedSize,
+                lastPlayed: new Date(),
+                playtime: 0,
+                metadata: {
+                    originalSize: transformationResult.originalSize,
+                    compressionRatio: transformationResult.compressionRatio,
+                    webAppUrl: transformationResult.webAppUrl
+                }
+            };
+
+            await firebaseService.saveGameData(id, gameData);
+
+            // Upload optimized web app bundle
+            if (transformationResult.webAppUrl) {
+                const response = await fetch(transformationResult.webAppUrl);
+                const optimizedBlob = await response.blob();
+                const optimizedFile = new File([optimizedBlob], `${file.name}.optimized.html`, {
+                    type: 'text/html'
+                });
+                await firebaseService.uploadGameFile(id, optimizedFile);
+            }
+
+            // Refresh user games
+            const games = await firebaseService.loadUserGames();
+            setUserGames(games);
+        }
+
+        console.log(`✅ Game transformed successfully!`);
+        console.log(`📊 Compression: ${(transformationResult.compressionRatio).toFixed(1)}%`);
+        console.log(`💾 Size reduced: ${(transformationResult.originalSize / 1024 / 1024).toFixed(2)}MB → ${(transformationResult.optimizedSize / 1024 / 1024).toFixed(2)}MB`);
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 lg:p-8 relative overflow-hidden">
-            
-            {/* Floating Rings (Background Decoration) */}
-            <div className="absolute top-[-10%] left-[-5%] w-64 h-64 rounded-full border-[20px] border-[#1a1a1a] floating-ring opacity-50" />
-            <div className="absolute bottom-[-10%] right-[-5%] w-80 h-80 rounded-full border-[30px] border-[#1a1a1a] floating-ring opacity-50" style={{ animationDelay: '2s' }} />
-
-            {/* Main Zena Card */}
-            <div className="zena-card w-full max-w-7xl min-h-[85vh] flex flex-col bg-noise relative z-10">
-                
-                {/* Gradient Wave (Bottom Left) */}
-                <div className="absolute bottom-0 left-0 w-full h-[400px] pointer-events-none opacity-40">
-                    <div className="w-[120%] h-full bg-gradient-to-r from-purple-900 via-orange-900 to-transparent blur-[80px] transform -rotate-6 translate-y-20 -translate-x-20" />
-                </div>
-
-                {/* Header */}
-                <header className="flex items-center justify-between px-8 py-6 relative z-20">
-                    <div className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-white tracking-tight">nacho</span>
-                    </div>
-
-                    <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-                        <button 
-                            onClick={() => setActiveTab('apps')}
-                            className={`transition-colors ${activeTab === 'apps' ? 'text-white' : 'hover:text-white'}`}
-                        >
-                            Apps
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('terminal')}
-                            className={`transition-colors ${activeTab === 'terminal' ? 'text-white' : 'hover:text-white'}`}
-                        >
-                            Terminal
-                        </button>
-                        <button className="hover:text-white transition-colors">Docs</button>
-                    </nav>
-
-                    <button className="bg-[#6d28d9] hover:bg-[#5b21b6] text-white px-6 py-2 rounded-full font-medium transition-all shadow-lg shadow-purple-900/20 flex items-center gap-2">
-                        <span>Status</span>
-                        <div className={`w-2 h-2 rounded-full ${stats.fps > 30 ? 'bg-green-400' : 'bg-yellow-400'}`} />
-                    </button>
-                </header>
-
-                {/* Content */}
-                <main className="flex-1 relative z-20 flex flex-col p-8">
-                    
-                    {activeTab === 'apps' ? (
-                        <div className="flex flex-col lg:flex-row gap-12 h-full">
-                            {/* Left: Hero Text & Stats */}
-                            <div className="flex-1 flex flex-col justify-center space-y-8">
-                                <div className="space-y-4">
-                                    <h1 className="text-5xl lg:text-6xl font-bold text-white leading-tight">
-                                        We make a <br/>
-                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">&quot;better World&quot;</span>
-                                        <br/>
-                                        For your every app
-                                    </h1>
-                                    <p className="text-gray-400 text-lg max-w-md">
-                                        Universal runtime execution. Any binary, any platform, locally.
-                                        Trust us.
-                                    </p>
-                                </div>
-
-                                {/* Stats Grid */}
-                                <div className="grid grid-cols-2 gap-4 max-w-md">
-                                    <StatCard icon={<Cpu size={18} />} label="CPU" value={`${stats.cpu}%`} />
-                                    <StatCard icon={<Box size={18} />} label="RAM" value={`${stats.ram}%`} />
-                                    <StatCard icon={<Zap size={18} />} label="GPU" value={`${stats.gpu}%`} />
-                                    <StatCard icon={<Activity size={18} />} label="FPS" value={`${stats.fps}`} highlight />
-                                </div>
+        <div className="min-h-screen bg-[#0f1419] text-white">
+            {/* Header */}
+            <header className="border-b border-[#1e293b] bg-[#0f1419]/80 backdrop-blur-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        <div className="flex items-center space-x-8">
+                            <div className="flex items-center space-x-2">
+                                <Gamepad2 className="w-8 h-8 text-[#3b82f6]" />
+                                <span className="text-xl font-bold text-white">borg</span>
                             </div>
-
-                            {/* Right: App Runner / Illustration Area */}
-                            <div className="flex-1 relative">
-                                {/* Runner Box - Floating */}
-                                <div 
-                                    className={`
-                                        w-full h-full min-h-[400px]
-                                        bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8
-                                        flex flex-col items-center justify-center text-center gap-6
-                                        transition-all duration-300
-                                        ${dragActive ? 'border-purple-500 bg-purple-500/10' : 'hover:border-white/20'}
-                                    `}
-                                    onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
-                                    onDragLeave={() => setDragActive(false)}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={handleFileDrop}
-                                    onClick={() => document.getElementById('file-upload')?.click()}
+                            <nav className="hidden md:flex space-x-8">
+                                <button
+                                    onClick={() => setActiveTab('home')}
+                                    className={`text-sm font-medium transition-colors ${
+                                        activeTab === 'home' ? 'text-[#3b82f6]' : 'text-gray-400 hover:text-white'
+                                    }`}
                                 >
-                                    <input 
-                                        type="file" id="file-upload" multiple className="hidden" 
-                                        onChange={(e) => e.target.files && Array.from(e.target.files).forEach(processFile)}
-                                    />
-                                    
-                                    {activeApps.length > 0 ? (
-                                        <div className="w-full space-y-4">
-                                            <div className="text-left text-sm text-gray-400 uppercase font-bold tracking-wider">Running</div>
-                                            {activeApps.map(app => (
-                                                <div key={app.id} className="bg-black/40 p-4 rounded-xl border border-white/5 flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold">
-                                                            {app.config.name[0].toUpperCase()}
-                                                        </div>
-                                                        <div className="text-left">
-                                                            <div className="font-medium text-white">{app.config.name}</div>
-                                                            <div className="text-xs text-gray-500">{getRuintimeLabel(app.config.type)}</div>
-                                                        </div>
-                                                    </div>
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); setViewingAppId(app.id); }}
-                                                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs text-white transition-colors"
-                                                    >
-                                                        View
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-600 to-orange-500 flex items-center justify-center shadow-2xl shadow-purple-900/50">
-                                                <Upload size={40} className="text-white" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-xl font-bold text-white">Drop App Here</h3>
-                                                <p className="text-gray-400 mt-2">APK, EXE, ISO, WASM</p>
-                                            </div>
-                                        </>
-                                    )}
+                                    Home
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('my-games')}
+                                    className={`text-sm font-medium transition-colors ${
+                                        activeTab === 'my-games' ? 'text-[#3b82f6]' : 'text-gray-400 hover:text-white'
+                                    }`}
+                                >
+                                    My Games
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('terminal')}
+                                    className={`text-sm font-medium transition-colors ${
+                                        activeTab === 'terminal' ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-white'
+                                    }`}
+                                >
+                                    Terminal
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div className="flex items-center space-x-4">
+                            {isAuthenticated ? (
+                                <div className="flex items-center space-x-2 text-sm text-gray-400">
+                                    <User className="w-4 h-4" />
+                                    <span>Anonymous User</span>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={async () => {
+                                        const user = await signInAnonymous();
+                                        if (user) {
+                                            setCurrentUser(user);
+                                            setIsAuthenticated(true);
+                                        }
+                                    }}
+                                    className="flex items-center space-x-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    <LogIn className="w-4 h-4" />
+                                    <span>Sign In</span>
+                                </button>
+                            )}
+
+                            {/* Performance Stats */}
+                            <div className="hidden md:flex items-center space-x-4 text-xs text-gray-400">
+                                <div className="flex items-center space-x-1">
+                                    <Cpu className="w-3 h-3" />
+                                    <span>{stats.cpu}%</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                    <Box className="w-3 h-3" />
+                                    <span>{stats.ram}%</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                    <Activity className="w-3 h-3 text-green-400" />
+                                    <span>{stats.fps} FPS</span>
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        // Terminal Tab
-                        <div className="h-full w-full bg-black/40 backdrop-blur-sm border border-white/10 rounded-3xl overflow-hidden">
-                            <Terminal />
-                        </div>
-                    )}
-                </main>
+                    </div>
+                </div>
+            </header>
 
-                {/* Viewer Overlay */}
-                {viewingAppId && (
-                    <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-8">
-                        <div className="w-full max-w-6xl h-[80vh] bg-black border border-white/20 rounded-2xl overflow-hidden flex flex-col">
-                            <div className="h-12 border-b border-white/10 flex items-center justify-between px-4 bg-white/5">
-                                <span className="font-mono text-sm text-gray-400">Runtime Environment</span>
-                                <button onClick={() => setViewingAppId(null)} className="text-white hover:text-red-400">✕</button>
+            {/* Main Content */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {activeTab === 'home' && (
+                    <div className="space-y-12">
+                        {/* Hero Section */}
+                        <div className="text-center space-y-4">
+                            <h1 className="text-4xl md:text-6xl font-bold text-white">
+                                Play <span className="text-[#3b82f6]">Any Game</span> in Your Browser
+                            </h1>
+                            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                                Transform Windows, Android, and Xbox games into web games with incredible speed.
+                                Optimized for local storage with Firebase account saving.
+                            </p>
+                        </div>
+
+                        {/* Upload Zone */}
+                        <div className="max-w-2xl mx-auto">
+                            <div
+                                className={`
+                                    relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 cursor-pointer
+                                    ${dragActive
+                                        ? 'border-[#3b82f6] bg-[#3b82f6]/10'
+                                        : 'border-gray-600 hover:border-gray-500 bg-[#1e293b]/50 hover:bg-[#1e293b]/70'
+                                    }
+                                `}
+                                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                                onDragLeave={() => setDragActive(false)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handleFileDrop}
+                                onClick={() => document.getElementById('file-upload')?.click()}
+                            >
+                                <input
+                                    type="file" id="file-upload" multiple className="hidden"
+                                    onChange={(e) => e.target.files && Array.from(e.target.files).forEach(processFile)}
+                                />
+
+                                <div className="space-y-4">
+                                    <div className="w-16 h-16 mx-auto bg-[#3b82f6] rounded-full flex items-center justify-center">
+                                        <Upload className="w-8 h-8 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-white">Upload Your Game</h3>
+                                        <p className="text-gray-400 mt-2">
+                                            Drag and drop or click to upload APK, EXE, ISO, or WASM files
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex-1 relative" ref={viewerRef} />
+                        </div>
+
+                        {/* Featured Games */}
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-bold text-white">Featured Games</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {featuredGames.map((game) => (
+                                    <div key={game.id} className="bg-[#1e293b] rounded-xl p-6 hover:bg-[#1e293b]/80 transition-colors group cursor-pointer">
+                                        <div className="w-12 h-12 bg-[#3b82f6] rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                            <Gamepad2 className="w-6 h-6 text-white" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-white mb-2">{game.name}</h3>
+                                        <p className="text-gray-400 text-sm mb-4">{game.description}</p>
+                                        <button className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                                            <Play className="w-4 h-4" />
+                                            <span>Play Now</span>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Running Games */}
+                        {activeApps.length > 0 && (
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-bold text-white">Currently Running</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {activeApps.map(app => (
+                                        <div key={app.id} className="bg-[#1e293b] rounded-xl p-4 flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="w-10 h-10 bg-[#3b82f6] rounded-lg flex items-center justify-center text-white font-bold">
+                                                    {app.config.name[0].toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-white">{app.config.name}</div>
+                                                    <div className="text-xs text-gray-400">{getRuintimeLabel(app.config.type)}</div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setViewingAppId(app.id)}
+                                                className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                            >
+                                                Play
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'my-games' && (
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h1 className="text-3xl font-bold text-white">My Games</h1>
+                            {!isAuthenticated && (
+                                <div className="text-gray-400 text-sm">
+                                    Sign in to save and sync your games across devices
+                                </div>
+                            )}
+                        </div>
+
+                        {userGames.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {userGames.map((game) => (
+                                    <div key={game.id} className="bg-[#1e293b] rounded-xl p-6 hover:bg-[#1e293b]/80 transition-colors">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="w-12 h-12 bg-[#3b82f6] rounded-lg flex items-center justify-center">
+                                                <Gamepad2 className="w-6 h-6 text-white" />
+                                            </div>
+                                            <div className="flex items-center space-x-2 text-xs text-gray-400">
+                                                <HardDrive className="w-3 h-3" />
+                                                <span>{(game.optimizedSize / 1024 / 1024).toFixed(1)}MB</span>
+                                            </div>
+                                        </div>
+
+                                        <h3 className="text-lg font-semibold text-white mb-2">{game.name}</h3>
+                                        <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
+                                            <div className="flex items-center space-x-1">
+                                                <Clock className="w-3 h-3" />
+                                                <span>{game.playtime}m played</span>
+                                            </div>
+                                            <div className="text-xs uppercase">{game.type}</div>
+                                        </div>
+
+                                        <button className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                                            <Play className="w-4 h-4" />
+                                            <span>Play</span>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <Gamepad2 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                                <h3 className="text-xl font-semibold text-white mb-2">No games yet</h3>
+                                <p className="text-gray-400 mb-6">Upload your first game to get started</p>
+                                <button
+                                    onClick={() => setActiveTab('home')}
+                                    className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                                >
+                                    Upload Game
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'terminal' && (
+                    <div className="space-y-6">
+                        <h1 className="text-3xl font-bold text-white">Terminal</h1>
+                        <div className="bg-[#1e293b] rounded-xl overflow-hidden">
+                            <Terminal />
                         </div>
                     </div>
                 )}
-            </div>
+            </main>
+
+            {/* Game Viewer Modal */}
+            {viewingAppId && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="w-full max-w-6xl h-[80vh] bg-[#0f1419] border border-[#1e293b] rounded-xl overflow-hidden flex flex-col">
+                        <div className="h-14 border-b border-[#1e293b] flex items-center justify-between px-6 bg-[#1e293b]/50">
+                            <span className="font-medium text-white">Game Runtime</span>
+                            <button
+                                onClick={() => setViewingAppId(null)}
+                                className="text-gray-400 hover:text-white transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="flex-1 relative" ref={viewerRef} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

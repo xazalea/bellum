@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+
+    // Check if the request body contains valid repository fields
+    function isValidRepository() {
+      let data = request.resource.data;
+      return data.name is string 
+          && data.name.size() > 0
+          && data.description is string
+          && data.ownerId is string
+          && data.ownerName is string
+          && data.isPublic is bool
+          && data.games is list
+          && data.createdAt is number;
+    }
+
+    // --- Rules ---
+
+    match /game_repositories/{repoId} {
+      // Allow reading if the repository is public
+      allow read: if resource.data.isPublic == true;
+
+      // Allow reading if requesting user is the owner (Insecure without Auth, but allows app to function)
+      // Ideally: if request.auth != null && request.auth.uid == resource.data.ownerId
+      allow read: if true; 
+
+      // Allow creation if the data schema is valid
+      allow create: if isValidRepository();
+
+      // Allow updates if the schema remains valid
+      allow update: if isValidRepository();
+      
+      // Prevent deletion for safety (unless you want to allow it)
+      allow delete: if false;
+    }
+  }
+}

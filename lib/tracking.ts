@@ -1,51 +1,58 @@
 /**
- * Simple fingerprinting and user tracking utility
- * Simulates functionalities of fingerprintjs and supercookie
+ * Fingerprinting and user tracking utility
+ * Uses fingerprintjs and thumbmarkjs for robust, precise browser fingerprinting
  */
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
+import { Thumbmark } from '@thumbmarkjs/thumbmarkjs';
+
+let fpPromise: Promise<any> | null = null;
+
+if (typeof window !== 'undefined') {
+    fpPromise = FingerprintJS.load();
+}
 
 export const getFingerprint = async (): Promise<string> => {
-    // Try to use persistent storage
-    let fp = localStorage.getItem('nacho_fingerprint');
+    if (typeof window === 'undefined') return 'server-side-rendering';
     
-    if (!fp) {
-        // Generate a new one using available browser signals (simulated high-entropy)
-        const signals = [
-            navigator.userAgent,
-            navigator.language,
-            (navigator as any).deviceMemory,
-            navigator.hardwareConcurrency,
-            new Date().getTimezoneOffset(),
-            window.screen.width + 'x' + window.screen.height,
-            // Canvas fingerprint simulation
-            getCanvasFingerprint()
-        ];
+    try {
+        // Parallel execution for speed
+        const [fpInstance, thumbmarkId] = await Promise.all([
+            fpPromise,
+            getThumbmarkId()
+        ]);
 
-        const raw = signals.join('|');
-        const buffer = new TextEncoder().encode(raw);
+        const fpResult = await fpInstance.get();
+        const fingerprintId = fpResult.visitorId;
+
+        // Combine both IDs for maximum precision and collision resistance
+        // We hash them together to create a single unique "Super ID"
+        const combined = `${fingerprintId}|${thumbmarkId}`;
+        const buffer = new TextEncoder().encode(combined);
         const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
-        fp = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        localStorage.setItem('nacho_fingerprint', fp);
-    }
+        const superId = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    return fp;
-};
-
-const getCanvasFingerprint = () => {
-    try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return 'no_canvas';
-        ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
-        ctx.fillStyle = '#f60';
-        ctx.fillRect(125, 1, 62, 20);
-        ctx.fillStyle = '#069';
-        ctx.fillText('NachoEngine', 2, 15);
-        return canvas.toDataURL();
+        return superId;
     } catch (e) {
-        return 'error';
+        console.error('Fingerprint generation failed', e);
+        // Fallback to basic local storage UUID if FP fails
+        let fallback = localStorage.getItem('nacho_device_id');
+        if (!fallback) {
+            fallback = crypto.randomUUID();
+            localStorage.setItem('nacho_device_id', fallback);
+        }
+        return fallback;
     }
 };
+
+const getThumbmarkId = async (): Promise<string> => {
+    try {
+        const tm = new Thumbmark();
+        const data = await tm.getFingerprintData();
+        return data.hash;
+    } catch (e) {
+        console.warn('Thumbmark failed, falling back to empty', e);
+        return 'tm-failed';
+    }
+}
 
