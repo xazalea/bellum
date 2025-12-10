@@ -71,15 +71,15 @@ export class WASMCompiler {
 
     for (const instr of ir) {
         // Cast opcode to string to allow comparison with both enum and string literal if types are mismatched
-        const op = instr.opcode as string;
-        if (op === IROpcode.ADD || op === 'add') {
+        const op = instr.opcode as unknown as string;
+        if (op === (IROpcode.ADD as unknown as string) || op === 'add') {
             // Push op1, op2, add
             body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
             body.push(0x41, ...this.leb128(Number(instr.op2?.value || 0)));
             body.push(0x6a); // i32.add
             body.push(0x21, 0x00); // local.set 0
         }
-        else if (op === IROpcode.PUSH || op === 'push') {
+        else if (op === (IROpcode.PUSH as unknown as string) || op === 'push') {
             // Store to stack (memory)
             // For POC, just print
             body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
