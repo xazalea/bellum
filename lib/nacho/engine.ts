@@ -15,6 +15,7 @@ import { memoryManager } from './memory/unified-memory';
 import { infiniteStorage } from './storage/infinite-storage';
 import { neuralCore } from './ai/neural-core';
 import { UNIVERSAL_RUNTIME_FEATURES, RUNTIME_GOALS } from './features';
+import { hyperRuntime } from '../performance/hyper-runtime';
 
 // Feature Modules (1-500)
 import { CoreExecutionEngine } from './modules/core-execution';
@@ -149,7 +150,8 @@ export class NachoEngine {
                 this.initGPU(),
                 this.initMemory(),
                 this.initStorage(),
-                this.initAI()
+                this.initAI(),
+                hyperRuntime.ensureInitialized(), // warms GPU/Audio/Workers & primes event loop
             ]);
 
             // 2. Initialize Workers (CPU)
@@ -218,15 +220,10 @@ export class NachoEngine {
             // binaryTranslator.executeTick();
 
             this.frameCount++;
-            
-            if (typeof requestAnimationFrame !== 'undefined') {
-                requestAnimationFrame(loop);
-            }
         };
 
-        if (typeof requestAnimationFrame !== 'undefined') {
-            requestAnimationFrame(loop);
-        }
+        // Prefer hyperRuntime frame loop (microtask-bent drift suppression)
+        hyperRuntime.runFrameLoop(loop);
     }
 
     halt() {

@@ -1,5 +1,6 @@
 import { webgpu } from './webgpu-context';
 import { megakernel } from './megakernel';
+import { hyperOptimizer } from '../optimization/hyper_optimizer';
 
 export class HyperionEngine {
     private isRunning: boolean = false;
@@ -23,6 +24,10 @@ export class HyperionEngine {
         const success = await webgpu.initialize(canvas);
         if (success) {
             console.log("Hyperion: WebGPU Context Attached");
+            
+            // Initialize Hyper-Optimizations
+            await hyperOptimizer.initializeGPUHijacker();
+
             await megakernel.init(50000); // Initialize with 50k particles
         } else {
             console.warn("Hyperion: WebGPU initialization failed, falling back to CPU/Canvas2D if available.");
@@ -43,12 +48,21 @@ export class HyperionEngine {
         if (this.isRunning) return;
         this.isRunning = true;
         this.lastFrameTime = performance.now();
+        
+        // Activate Hyper-Optimizations
+        hyperOptimizer.start();
+        hyperOptimizer.enableAudioTiming();
+
         this.enableGameMode();
         this.scheduleLoop();
     }
 
     public stop() {
         this.isRunning = false;
+        
+        // Deactivate Hyper-Optimizations
+        hyperOptimizer.stop();
+
         if (this.frameId !== null) {
             cancelAnimationFrame(this.frameId);
             this.frameId = null;
