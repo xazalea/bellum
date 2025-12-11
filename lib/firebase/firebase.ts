@@ -30,6 +30,7 @@ export interface UserGameData {
   lastPlayed: Date;
   playtime: number;
   metadata: any;
+  iconUrl?: string; // URL to the game icon
 }
 
 export class FirebaseService {

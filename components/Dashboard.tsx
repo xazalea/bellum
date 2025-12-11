@@ -8,6 +8,8 @@ import Terminal from './Terminal';
 import { getFingerprint } from '@/lib/tracking';
 import { firebaseService, signInAnonymous, UserGameData } from '@/lib/firebase/firebase';
 import { gameTransformer } from '@/lib/game-transformer';
+import { gameRepoService, GameRepository } from '@/lib/nacho/modules/game-repository';
+import JSZip from 'jszip';
 import {
     Terminal as TerminalIcon,
     Upload,
@@ -16,16 +18,18 @@ import {
     LogIn,
     Gamepad2,
     Search,
-    Monitor
+    Monitor,
+    Globe,
+    Lock
 } from 'lucide-react';
 import Image from 'next/image';
 
 // --- Components ---
 
-const BorgCard = ({ game, onPlay }: { game: any, onPlay: (g: any) => void }) => (
+const BorgCard = ({ game, onPlay, subtext }: { game: any, onPlay: (g: any) => void, subtext?: string }) => (
     <div className="group relative bg-[#1e293b] border border-white/5 rounded-xl overflow-hidden hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
-        {/* Cover Image Placeholder - would be an Image component in real app */}
-        <div className="aspect-[3/4] bg-slate-800 relative overflow-hidden">
+        {/* Cover Image Placeholder */}
+        <div className="aspect-[3/4] bg-slate-800 relative overflow-hidden flex items-center justify-center">
              {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-[#0f1419] to-transparent opacity-60 z-10" />
             
@@ -39,16 +43,23 @@ const BorgCard = ({ game, onPlay }: { game: any, onPlay: (g: any) => void }) => 
                 </button>
             </div>
 
-            {/* Placeholder Icon if no image */}
-            <div className="absolute inset-0 flex items-center justify-center text-slate-600">
-                <Gamepad2 size={48} />
-            </div>
+            {/* Icon */}
+            {game.iconUrl ? (
+                <img src={game.iconUrl} alt={game.name} className="w-full h-full object-cover" />
+            ) : (
+                <div className="text-slate-600">
+                    <Gamepad2 size={48} />
+                </div>
+            )}
         </div>
 
         {/* Info */}
         <div className="p-4 relative z-20">
-            <h3 className="font-bold text-white text-lg truncate">{game.name}</h3>
-            <p className="text-blue-400 text-xs font-medium uppercase tracking-wide mt-1">{game.type}</p>
+            <h3 className="font-bold text-white text-lg truncate" title={game.name}>{game.name}</h3>
+            <div className="flex items-center justify-between mt-1">
+                 <p className="text-blue-400 text-xs font-medium uppercase tracking-wide">{game.type}</p>
+                 {subtext && <p className="text-slate-500 text-xs">{subtext}</p>}
+            </div>
         </div>
     </div>
 );
@@ -68,25 +79,9 @@ export default function Dashboard() {
     const [viewingAppId, setViewingAppId] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userGames, setUserGames] = useState<UserGameData[]>([]);
+    const [communityRepos, setCommunityRepos] = useState<GameRepository[]>([]);
     const [dragActive, setDragActive] = useState(false);
     const viewerRef = useRef<HTMLDivElement>(null);
-
-    // Mock Data
-    const featuredGames = [
-        { id: 'minecraft', name: 'Minecraft', type: 'windows' },
-        { id: 'factorio', name: 'Factorio', type: 'windows' },
-        { id: 'among-us', name: 'Among Us', type: 'windows' },
-        { id: 'rocket-league', name: 'Rocket League', type: 'windows' },
-        { id: 'stardew', name: 'Stardew Valley', type: 'windows' },
-        { id: 'terraria', name: 'Terraria', type: 'windows' },
-    ];
-
-    const newGames = [
-        { id: 'cyberpunk', name: 'Cyberpunk 2077', type: 'windows' },
-        { id: 'elden-ring', name: 'Elden Ring', type: 'windows' },
-        { id: 'hades', name: 'Hades', type: 'windows' },
-        { id: 'celeste', name: 'Celeste', type: 'windows' },
-    ];
 
     useEffect(() => {
         nachoEngine.boot().catch(console.error);
@@ -95,8 +90,13 @@ export default function Dashboard() {
         signInAnonymous().then(user => {
             if (user) {
                 setIsAuthenticated(true);
-                firebaseService.loadUserGames().then(setUserGames);
+                refreshUserGames();
             }
+        });
+
+        // Load Community Repos
+        gameRepoService.getPublicRepositories().then(repos => {
+            setCommunityRepos(repos);
         });
 
         // Polling active apps
@@ -105,6 +105,11 @@ export default function Dashboard() {
         }, 1000);
         return () => clearInterval(interval);
     }, []);
+
+    const refreshUserGames = async () => {
+        const games = await firebaseService.loadUserGames();
+        setUserGames(games);
+    }
 
     // Game Launcher
     const handlePlay = async (game: any) => {
@@ -145,6 +150,7 @@ export default function Dashboard() {
         else if (ext === 'exe') type = VMType.WINDOWS;
         else if (ext === 'iso') type = VMType.LINUX;
 
+        // 1. Transform
         const transformationResult = await gameTransformer.transformGame(file, {
             targetPlatform: 'wasm',
             compressionLevel: 'ultra',
@@ -159,6 +165,42 @@ export default function Dashboard() {
         }
 
         const id = `app-${Date.now()}`;
+        
+        // 2. Extract Icon (if APK)
+        let iconUrl: string | undefined = undefined;
+        if (type === VMType.ANDROID) {
+             try {
+                const zip = await JSZip.loadAsync(file);
+                // Find icon files
+                const iconFiles = Object.keys(zip.files).filter(f => f.includes('ic_launcher') && f.endsWith('.png'));
+                if (iconFiles.length > 0) {
+                    // Sort by path length (heuristic: longer path often means deeper/specific density folder like mipmap-xxxhdpi)
+                    // Or check file size. Let's pick the largest file size to get best quality.
+                    let bestIconFile = iconFiles[0];
+                    let maxSize = 0;
+                    
+                    for (const f of iconFiles) {
+                        const d = await zip.file(f)?.async('blob');
+                        if (d && d.size > maxSize) {
+                            maxSize = d.size;
+                            bestIconFile = f;
+                        }
+                    }
+
+                    const iconBlob = await zip.file(bestIconFile)?.async('blob');
+                    if (iconBlob && isAuthenticated) {
+                        const uploadedUrl = await firebaseService.uploadGameFile(id, new File([iconBlob], 'icon.png', { type: 'image/png' }));
+                        if (uploadedUrl) iconUrl = uploadedUrl;
+                    } else if (iconBlob) {
+                        iconUrl = URL.createObjectURL(iconBlob);
+                    }
+                }
+             } catch (e) {
+                 console.warn('Failed to extract APK icon:', e);
+             }
+        }
+
+        // 3. Create VM
         await vmManager.createVM({
             id, type, name: file.name, memory: 1024, executionMode: 'game'
         });
@@ -173,11 +215,12 @@ export default function Dashboard() {
 
         if (isAuthenticated) {
             // Save metadata logic here...
-            firebaseService.saveGameData(id, {
+            await firebaseService.saveGameData(id, {
                 id, name: file.name, type, optimizedSize: transformationResult.optimizedSize,
-                lastPlayed: new Date(), playtime: 0, metadata: {}
+                lastPlayed: new Date(), playtime: 0, metadata: {},
+                iconUrl
             });
-            firebaseService.loadUserGames().then(setUserGames);
+            refreshUserGames();
         }
     };
 
@@ -254,35 +297,53 @@ export default function Dashboard() {
                 
                 {activeTab === 'home' && (
                     <div className="space-y-12 animate-in fade-in duration-500">
-                        {/* Most Popular */}
+                        {/* Community Repositories */}
                         <section>
-                            <SectionHeader title="Most Popular" />
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                {featuredGames.slice(0, 4).map(game => (
-                                    <BorgCard key={game.id} game={game} onPlay={handlePlay} />
-                                ))}
-                            </div>
+                            <SectionHeader title="Community Repositories" />
+                            {communityRepos.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {communityRepos.map(repo => (
+                                        <div key={repo.id} className="bg-[#1e293b] border border-white/5 p-6 rounded-xl hover:border-blue-500/50 transition-all">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <Globe className="text-blue-500" size={20} />
+                                                <h3 className="font-bold text-white text-lg">{repo.name}</h3>
+                                            </div>
+                                            <p className="text-slate-400 text-sm mb-4 line-clamp-2">{repo.description}</p>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {repo.games.slice(0, 4).map(game => (
+                                                    <div key={game.id} className="bg-black/30 p-2 rounded text-xs text-slate-300 truncate">
+                                                        {game.name}
+                                                    </div>
+                                                ))}
+                                                {repo.games.length > 4 && (
+                                                    <div className="bg-black/30 p-2 rounded text-xs text-slate-500 text-center">
+                                                        +{repo.games.length - 4} more
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-slate-500 border-2 border-dashed border-white/5 rounded-2xl">
+                                    <Globe className="mx-auto mb-4 opacity-50" size={48} />
+                                    <p>No community repositories found.</p>
+                                    <p className="text-sm mt-2">Create one in the Terminal using <code className="text-blue-400">repo create</code></p>
+                                </div>
+                            )}
                         </section>
 
-                        {/* Newly Added */}
-                        <section>
-                            <SectionHeader title="Newly Added" />
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                {newGames.map(game => (
-                                    <BorgCard key={game.id} game={game} onPlay={handlePlay} />
-                                ))}
-                            </div>
-                        </section>
-
-                        {/* All Games */}
-                        <section>
-                            <SectionHeader title="All Games" />
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                                {[...featuredGames, ...newGames].map(game => (
-                                    <BorgCard key={`all-${game.id}`} game={game} onPlay={handlePlay} />
-                                ))}
-                            </div>
-                        </section>
+                        {/* Recent User Games */}
+                        {userGames.length > 0 && (
+                            <section>
+                                <SectionHeader title="Your Recent Games" />
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                    {userGames.slice(0, 4).map(game => (
+                                        <BorgCard key={game.id} game={game} onPlay={handlePlay} />
+                                    ))}
+                                </div>
+                            </section>
+                        )}
                     </div>
                 )}
 
