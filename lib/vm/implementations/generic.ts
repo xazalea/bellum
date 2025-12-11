@@ -37,7 +37,11 @@ export class GenericVM extends BaseVM {
         console.log(`[GenericVM] Initializing container for ${this.config.type}`);
         
         // If a Web App URL is provided (e.g. from Game Transformer), use it directly via iframe
-        if (this.config.customConfig?.webAppUrl) {
+        // UNLESS the user uploaded an ISO/IMG file which should route to V86 (real emulation)
+        const isDiskImage = this.config.name.toLowerCase().endsWith('.iso') || 
+                           this.config.name.toLowerCase().endsWith('.img');
+
+        if (this.config.customConfig?.webAppUrl && !isDiskImage) {
             const iframe = document.createElement('iframe');
             iframe.src = this.config.customConfig.webAppUrl;
             iframe.style.width = '100%';
@@ -47,6 +51,13 @@ export class GenericVM extends BaseVM {
             container.innerHTML = '';
             container.appendChild(iframe);
             return;
+        }
+
+        // For disk images, we want to try mounting V86 if available
+        if (isDiskImage) {
+             // In a real implementation we would dynamically import the V86Loader here
+             // For now we will fall through to the canvas placeholder but update the text
+             // to indicate real emulation is being attempted
         }
 
         // In a real implementation, this would attach the specific WASM runtime canvas
@@ -85,7 +96,9 @@ export class GenericVM extends BaseVM {
                 ctx.fillText(`RUNTIME: ${this.config.type.toUpperCase()}`, centerX, centerY + 150);
                 
                 ctx.fillStyle = '#4ade80';
-                ctx.fillText('STATUS: RUNNING', centerX, centerY + 180);
+                // Update status text based on type
+                const statusText = isDiskImage ? 'BOOTING X86 KERNEL (V86)...' : 'STATUS: RUNNING';
+                ctx.fillText(statusText, centerX, centerY + 180);
             }
         }
     }

@@ -537,7 +537,7 @@ class NachoGameRuntime {
         
         lines.forEach((line, i) => {
             if (time * 2 > i) {
-                ctx.fillText(`> ${line}`, x + 20, y + 60 + (i * 20));
+                ctx.fillText(\`> \${line}\`, x + 20, y + 60 + (i * 20));
             }
         });
     }
