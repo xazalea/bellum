@@ -10,8 +10,7 @@ import { firebaseService, signInAnonymous, UserGameData } from '@/lib/firebase/f
 import { gameTransformer } from '@/lib/game-transformer';
 import { gameRepoService, GameRepository } from '@/lib/nacho/modules/game-repository';
 import JSZip from 'jszip';
-import {
-    Terminal as TerminalIcon,
+import { AuthModal } from './AuthModal';
     Upload,
     Play,
     User,
@@ -82,15 +81,28 @@ export default function Dashboard() {
     const [communityRepos, setCommunityRepos] = useState<GameRepository[]>([]);
     const [dragActive, setDragActive] = useState(false);
     const viewerRef = useRef<HTMLDivElement>(null);
-
+    const [authModalOpen, setAuthModalOpen] = useState(false);
+    
     useEffect(() => {
         nachoEngine.boot().catch(console.error);
-        
+
         // Auth Init
         signInAnonymous().then(user => {
             if (user) {
+                // Anonymous sign-in default removed to allow real sign-in
+                // setIsAuthenticated(true);
+                // refreshUserGames();
+            }
+        });
+        
+        // Listen to auth state changes for real user persistence
+        const unsubscribe = firebaseService.auth.onAuthStateChanged((user) => {
+            if (user) {
                 setIsAuthenticated(true);
                 refreshUserGames();
+            } else {
+                setIsAuthenticated(false);
+                setUserGames([]);
             }
         });
 
@@ -103,7 +115,10 @@ export default function Dashboard() {
         const interval = setInterval(() => {
             setActiveApps(vmManager.listVMs().filter(vm => vm.state.isRunning));
         }, 1000);
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            unsubscribe();
+        };
     }, []);
 
     const refreshUserGames = async () => {
@@ -168,7 +183,7 @@ export default function Dashboard() {
         }
 
         const id = `app-${Date.now()}`;
-        
+
         // 2. Extract Icon (if APK)
         let iconUrl: string | undefined = undefined;
         if (type === VMType.ANDROID) {
@@ -247,24 +262,24 @@ export default function Dashboard() {
                         </div>
                         
                         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-                            <button 
-                                onClick={() => setActiveTab('home')}
+                                <button
+                                    onClick={() => setActiveTab('home')}
                                 className={`${activeTab === 'home' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
-                            >
-                                Home
-                            </button>
-                            <button 
-                                onClick={() => setActiveTab('my-games')}
+                                >
+                                    Home
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('my-games')}
                                 className={`${activeTab === 'my-games' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
-                            >
-                                My Games
-                            </button>
-                            <button 
-                                onClick={() => setActiveTab('terminal')}
+                                >
+                                    My Games
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('terminal')}
                                 className={`${activeTab === 'terminal' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
-                            >
-                                Terminal
-                            </button>
+                                >
+                                    Terminal
+                                </button>
                         </div>
                     </div>
 
@@ -278,22 +293,31 @@ export default function Dashboard() {
                                 className="bg-transparent border-none outline-none text-sm text-white placeholder-slate-500 w-48"
                             />
                         </div>
-                        
-                        {isAuthenticated ? (
-                            <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-                                <User size={16} />
-                            </div>
-                        ) : (
-                            <button 
-                                onClick={() => signInAnonymous().then(u => u && setIsAuthenticated(true))}
-                                className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg transition-all"
-                            >
-                                Log In
-                            </button>
-                        )}
+
+                            {isAuthenticated ? (
+                                <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                                    <User size={16} />
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setAuthModalOpen(true)}
+                                    className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg transition-all"
+                                >
+                                    Log In
+                                </button>
+                            )}
                     </div>
                 </div>
             </nav>
+
+            <AuthModal 
+                isOpen={authModalOpen} 
+                onClose={() => setAuthModalOpen(false)} 
+                onAuthSuccess={() => {
+                    setIsAuthenticated(true);
+                    refreshUserGames();
+                }} 
+            />
 
             {/* --- Main Content --- */}
             <div className="pt-24 pb-12 px-4 max-w-7xl mx-auto min-h-screen">
@@ -353,29 +377,29 @@ export default function Dashboard() {
                 {activeTab === 'my-games' && (
                     <div className="animate-in fade-in duration-500">
                         <SectionHeader title="My Games Library" />
-                        
+
                         {/* Upload Area */}
-                        <div 
-                            className={`
+                            <div
+                                className={`
                                 mb-8 border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer group
-                                ${dragActive 
+                                    ${dragActive
                                     ? 'border-blue-500 bg-blue-500/10' 
                                     : 'border-slate-700 hover:border-blue-500/50 bg-[#1e293b]/50'
-                                }
-                            `}
-                            onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
-                            onDragLeave={() => setDragActive(false)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={handleFileDrop}
-                            onClick={() => document.getElementById('file-upload')?.click()}
-                        >
-                            <input 
+                                    }
+                                `}
+                                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                                onDragLeave={() => setDragActive(false)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handleFileDrop}
+                                onClick={() => document.getElementById('file-upload')?.click()}
+                            >
+                                <input
                                 type="file" 
                                 id="file-upload" 
                                 className="hidden" 
                                 multiple 
                                 onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
-                            />
+                                />
                             <div className="w-16 h-16 bg-blue-600/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                                 <Upload size={32} />
                             </div>
@@ -417,13 +441,13 @@ export default function Dashboard() {
                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                             <span className="font-bold text-white">Nacho Runtime Environment</span>
                         </div>
-                        <button 
-                            onClick={() => setViewingAppId(null)}
+                            <button
+                                onClick={() => setViewingAppId(null)}
                             className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-4 py-1.5 rounded-lg text-sm font-bold transition-all"
-                        >
+                            >
                             Exit Game
-                        </button>
-                    </div>
+                            </button>
+                        </div>
                     <div className="flex-1 relative bg-black" ref={viewerRef}>
                         {/* The VM mounts here */}
                     </div>
