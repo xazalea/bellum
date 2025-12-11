@@ -45,7 +45,7 @@ export default function RootLayout({
         <Script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js" strategy="afterInteractive" />
 
         {/* Performance hints */}
-        <link rel="preload" as="fetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
+        <link rel="prefetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
       </head>
       <body className="bg-[#0f1419] text-white min-h-screen">
         <AppShell>

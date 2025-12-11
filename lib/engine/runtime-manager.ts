@@ -89,9 +89,9 @@ export class RuntimeManager {
                 await this.activeLoader.load(container, filePath, type);
                 break;
             case FileType.APK:
-                // Switch to Nacho Transpiler for APK files
-                this.activeLoader = new NachoLoader();
-                await this.activeLoader.load(container, filePath, type);
+                // Switch to APK Loader (Dalvik Simulator) for visual feedback
+                this.activeLoader = new APKLoader();
+                await this.activeLoader.load(container, filePath);
                 break;
             default:
                 // Fallback to x86 for ISOs/Unknowns
