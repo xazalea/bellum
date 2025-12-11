@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RuntimeManager } from '../lib/engine/runtime-manager';
-import { NachoLoader } from '../lib/engine/loaders/nacho-loader';
+import { NachoLoader } from '@/lib/engine/loaders/nacho-loader';
 
 interface AppRunnerProps {
     filePath: string;

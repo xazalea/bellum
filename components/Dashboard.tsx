@@ -103,6 +103,36 @@ export default function Dashboard() {
         for (const file of files) await processFile(file);
     };
 
+    const handlePlay = async (game: any) => {
+        try {
+            // Check if VM exists
+            let vm = vmManager.getVM(game.id);
+            
+            if (!vm) {
+                // Create new VM
+                console.log(`Creating VM for ${game.name}...`);
+                vm = await vmManager.createVM({
+                    id: game.id,
+                    name: game.name,
+                    type: (game.type as VMType) || VMType.WINDOWS,
+                    memory: 1024,
+                    executionMode: 'game'
+                });
+                await vm.start();
+                setActiveApps(prev => {
+                    // Avoid duplicates
+                    if (prev.find(a => a.id === vm!.id)) return prev;
+                    return [...prev, vm!];
+                });
+            }
+            
+            setViewingAppId(game.id);
+        } catch (error) {
+            console.error("Failed to start game:", error);
+            alert("Failed to start game runtime. See console for details.");
+        }
+    };
+
     const processFile = async (file: File) => {
         const ext = file.name.split('.').pop()?.toLowerCase();
         let type = VMType.CODE;
@@ -327,7 +357,10 @@ export default function Dashboard() {
                                         </div>
                                         <h3 className="text-lg font-semibold text-white mb-2">{game.name}</h3>
                                         <p className="text-gray-400 text-sm mb-4">{game.description}</p>
-                                        <button className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                                        <button 
+                                            onClick={() => handlePlay(game)}
+                                            className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                                        >
                                             <Play className="w-4 h-4" />
                                             <span>Play Now</span>
                                         </button>
@@ -400,7 +433,10 @@ export default function Dashboard() {
                                             <div className="text-xs uppercase">{game.type}</div>
                                         </div>
 
-                                        <button className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2">
+                                        <button 
+                                            onClick={() => handlePlay(game)}
+                                            className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                                        >
                                             <Play className="w-4 h-4" />
                                             <span>Play</span>
                                         </button>
