@@ -402,20 +402,167 @@ class NachoGameRuntime {
     }
 
     update(timestamp) {
-        // Game logic update
+        // Game logic update - placeholder animation
+        const time = timestamp * 0.001;
+        const ctx = this.canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Clear
+        ctx.fillStyle = '#0f1419';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw animated background
+        const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+        gradient.addColorStop(0, '#0f1419');
+        gradient.addColorStop(1, '#1e293b');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if (this.gameType === 'android') {
+            this.renderAndroidUI(ctx, time);
+        } else if (this.gameType === 'windows' || this.gameType === 'exe') {
+            this.renderWindowsUI(ctx, time);
+        } else {
+            this.renderGenericUI(ctx, time);
+        }
     }
 
     render() {
-        const ctx = this.canvas.getContext('2d');
-        if (ctx) {
-            ctx.fillStyle = '#0f1419';
-            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            ctx.fillStyle = '#3b82f6';
-            ctx.font = '24px monospace';
-            ctx.fillText('Nacho Game Runtime', 50, 100);
-            ctx.fillText('Game Type: ${gameType}', 50, 140);
-            ctx.fillText('Status: Running', 50, 180);
-        }
+        // Handled in update for animation
+    }
+
+    renderAndroidUI(ctx, time) {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const phoneW = 320;
+        const phoneH = 640;
+        const x = (w - phoneW) / 2;
+        const y = (h - phoneH) / 2;
+
+        // Phone Frame
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.roundRect(x, y, phoneW, phoneH, 30);
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Screen
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(x + 10, y + 10, phoneW - 20, phoneH - 20, 20);
+        ctx.clip();
+
+        // OS Header
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillRect(x, y, phoneW, 40);
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('12:00', x + 25, y + 35);
+        ctx.fillText('5G', x + phoneW - 40, y + 35);
+
+        // App Content
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 10, y + 50, phoneW - 20, phoneH - 60);
+        
+        // Icon
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(x + phoneW/2, y + 200, 40, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // "Loading" Animation
+        ctx.fillStyle = '#3b82f6';
+        const loadW = 150;
+        const progress = (Math.sin(time) + 1) / 2;
+        ctx.fillRect(x + (phoneW - loadW)/2, y + 300, loadW * progress, 4);
+        
+        ctx.fillStyle = '#64748b';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Starting Android Runtime...', x + phoneW/2, y + 280);
+
+        ctx.restore();
+    }
+
+    renderWindowsUI(ctx, time) {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Desktop Background
+        ctx.fillStyle = '#0f172a'; // Dark blue wallpaper
+        ctx.fillRect(0, 0, w, h);
+
+        // Window
+        const winW = 800;
+        const winH = 500;
+        const x = (w - winW) / 2;
+        const y = (h - winH) / 2;
+
+        // Window Frame
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x, y, winW, winH);
+        ctx.fillStyle = '#e2e8f0'; // Title bar
+        ctx.fillRect(x, y, winW, 30);
+        
+        // Window Controls
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(x + winW - 30, y + 8, 14, 14);
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(x + winW - 50, y + 8, 14, 14);
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(x + winW - 70, y + 8, 14, 14);
+
+        // Title
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Nacho Compatibility Layer (Wine/Proton)', x + 10, y + 20);
+
+        // Content Area (Terminal/Log style)
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x + 2, y + 30, winW - 4, winH - 32);
+        
+        ctx.fillStyle = '#22c55e';
+        ctx.font = '14px monospace';
+        const lines = [
+            'Booting kernel...',
+            'Mounting virtual filesystem...',
+            'Loading DirectX drivers...',
+            'Initializing GPU (WebGPU Bridge)...',
+            'Starting application...',
+            'Status: Running'
+        ];
+        
+        lines.forEach((line, i) => {
+            if (time * 2 > i) {
+                ctx.fillText(`> ${line}`, x + 20, y + 60 + (i * 20));
+            }
+        });
+    }
+
+    renderGenericUI(ctx, time) {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        ctx.fillStyle = '#3b82f6';
+        ctx.font = '24px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Nacho Game Runtime', cx, cy - 40);
+        
+        ctx.font = '16px monospace';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`Type: ${this.gameType}`, cx, cy);
+        
+        // Pulse
+        const pulse = (Math.sin(time * 3) + 1) * 10;
+        ctx.beginPath();
+        ctx.arc(cx, cy + 60, 5 + pulse, 0, Math.PI * 2);
+        ctx.fillStyle = '#22c55e';
+        ctx.fill();
     }
 
     showError(message) {
