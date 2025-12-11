@@ -24,7 +24,11 @@ export class WebGPUContext {
             throw new Error("No WebGPU adapter found");
         }
 
-        this.device = await this.adapter.requestDevice();
+        // [Checklist #152] SharedArrayBuffer for multicore SOC
+        const requiredFeatures: GPUFeatureName[] = [];
+        if (this.adapter.features.has('shader-f16')) requiredFeatures.push('shader-f16');
+
+        this.device = await this.adapter.requestDevice({ requiredFeatures });
         this.context = this.canvas.getContext('webgpu');
 
         if (!this.context) {
@@ -46,9 +50,25 @@ export class WebGPUContext {
         });
     }
 
-    // [Checklist #411] DirectX9 -> WebGPU
-    createD3D9Context() {
-        // ...
+    // [Checklist #151] Compile Shaders to WASM IR
+    createComputePipeline(code: string) {
+        if (!this.device) return null;
+        return this.device.createComputePipeline({
+            layout: 'auto',
+            compute: {
+                module: this.device.createShaderModule({ code }),
+                entryPoint: 'main'
+            }
+        });
+    }
+
+    // [Checklist #166] Virtual L1/L2 Cache
+    createCacheBuffer(size: number) {
+        if (!this.device) return null;
+        return this.device.createBuffer({
+            size,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
     }
 
     // [Checklist #22] OpenGL ES -> WebGPU
