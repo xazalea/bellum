@@ -73,7 +73,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 // --- Main Dashboard ---
 
 export default function Dashboard() {
-    const [activeTab, setActiveTab] = useState<'home' | 'my-games' | 'terminal'>('home');
+    const [activeTab, setActiveTab] = useState<'home' | 'store' | 'my-games'>('home');
     const [activeApps, setActiveApps] = useState<any[]>([]);
     const [viewingAppId, setViewingAppId] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -82,6 +82,7 @@ export default function Dashboard() {
     const [dragActive, setDragActive] = useState(false);
     const viewerRef = useRef<HTMLDivElement>(null);
     const [authModalOpen, setAuthModalOpen] = useState(false);
+    const [terminalOpen, setTerminalOpen] = useState(false);
     
     useEffect(() => {
         nachoEngine.boot().catch(console.error);
@@ -269,22 +270,30 @@ export default function Dashboard() {
                                     Home
                                 </button>
                                 <button
+                                    onClick={() => setActiveTab('store')}
+                                className={`${activeTab === 'store' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
+                                >
+                                    Library
+                                </button>
+                                <button
                                     onClick={() => setActiveTab('my-games')}
                                 className={`${activeTab === 'my-games' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
                                 >
                                     My Games
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('terminal')}
-                                className={`${activeTab === 'terminal' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
-                                >
-                                    Terminal
                                 </button>
                         </div>
                     </div>
 
                     {/* Right Side */}
                     <div className="flex items-center gap-4">
+                        {/* Terminal Toggle */}
+                        <button
+                            onClick={() => setTerminalOpen(true)}
+                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                            title="Open Terminal"
+                        >
+                            <TerminalIcon size={20} />
+                        </button>
                         <div className="hidden md:flex items-center bg-[#1e293b] rounded-full px-4 py-1.5 border border-white/5 focus-within:border-blue-500/50 transition-colors">
                             <Search size={14} className="text-slate-500 mr-2" />
                             <input 
@@ -324,6 +333,37 @@ export default function Dashboard() {
                 
                 {activeTab === 'home' && (
                     <div className="space-y-12 animate-in fade-in duration-500">
+                        {/* Welcome Banner */}
+                        <div className="bg-gradient-to-r from-blue-900/40 to-slate-900/40 border border-white/5 rounded-2xl p-8 flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold text-white mb-2">Welcome to Nacho</h1>
+                                <p className="text-slate-400">Your high-performance web runtime for legacy & native games.</p>
+                            </div>
+                            <div className="hidden md:block">
+                                <Gamepad2 size={64} className="text-blue-500/50" />
+                            </div>
+                        </div>
+
+                        {/* Recent User Games */}
+                        <section>
+                            <SectionHeader title="Jump Back In" />
+                            {userGames.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                    {userGames.slice(0, 4).map(game => (
+                                        <NachoCard key={game.id} game={game} onPlay={handlePlay} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-slate-500 bg-[#1e293b]/30 rounded-xl">
+                                    <p>No recent games. Visit the Library or Upload one!</p>
+                                </div>
+                            )}
+                        </section>
+                    </div>
+                )}
+
+                {activeTab === 'store' && (
+                    <div className="space-y-12 animate-in fade-in duration-500">
                         {/* Community Repositories */}
                         <section>
                             <SectionHeader title="Community Repositories" />
@@ -355,22 +395,9 @@ export default function Dashboard() {
                                 <div className="text-center py-12 text-slate-500 border-2 border-dashed border-white/5 rounded-2xl">
                                     <Globe className="mx-auto mb-4 opacity-50" size={48} />
                                     <p>No community repositories found.</p>
-                                    <p className="text-sm mt-2">Create one in the Terminal using <code className="text-blue-400">repo create</code></p>
                                 </div>
                             )}
                         </section>
-
-                        {/* Recent User Games */}
-                        {userGames.length > 0 && (
-                            <section>
-                                <SectionHeader title="Your Recent Games" />
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                    {userGames.slice(0, 4).map(game => (
-                                        <NachoCard key={game.id} game={game} onPlay={handlePlay} />
-                                    ))}
-                                </div>
-                            </section>
-                        )}
                     </div>
                 )}
 
@@ -423,11 +450,23 @@ export default function Dashboard() {
                     </div>
                 )}
 
-                {activeTab === 'terminal' && (
-                    <div className="animate-in fade-in duration-500">
-                        <SectionHeader title="System Terminal" />
-                        <div className="bg-[#1e293b] rounded-xl overflow-hidden border border-white/10 h-[600px] shadow-2xl">
-                            <Terminal />
+                {/* Terminal Modal (Edged Away) */}
+                {terminalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="w-full max-w-5xl bg-[#1e293b] rounded-xl overflow-hidden border border-white/10 shadow-2xl flex flex-col h-[80vh]">
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0B1120]">
+                                <span className="font-mono text-sm text-slate-400">nacho-cli v1.0.0</span>
+                                <button 
+                                    onClick={() => setTerminalOpen(false)}
+                                    className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                    <span className="sr-only">Close</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <Terminal />
+                            </div>
                         </div>
                     </div>
                 )}

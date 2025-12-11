@@ -439,7 +439,55 @@ class NachoGameRuntime {
         this.gameType = '${gameType}';
         this.options = ${JSON.stringify(options)};
         this.wasmBase64 = "${wasmBase64}"; // Embedded Compiled Binary
+        
+        // Interactive State
+        this.appState = 'boot'; // boot, kernel, launcher, app
+        this.mouseX = 0;
+        this.mouseY = 0;
+        this.apps = [
+            { name: 'Settings', color: '#64748b' },
+            { name: 'Browser', color: '#3b82f6' },
+            { name: 'Camera', color: '#ef4444' },
+            { name: 'Gallery', color: '#eab308' },
+            { name: 'Play Store', color: '#22c55e' },
+            { name: 'Game', color: '#a855f7', isGame: true } // The actual transformed game
+        ];
+        
         this.init();
+        this.setupInput();
+    }
+
+    setupInput() {
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            // Scale mouse coordinates to canvas resolution
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            this.mouseX = (e.clientX - rect.left) * scaleX;
+            this.mouseY = (e.clientY - rect.top) * scaleY;
+        });
+
+        this.canvas.addEventListener('click', (e) => {
+            if (this.appState === 'launcher') {
+                // Check app clicks (Launcher Grid)
+                const phoneW = 320;
+                const phoneH = 640;
+                const x = (this.canvas.width - phoneW) / 2;
+                const y = (this.canvas.height - phoneH) / 2;
+                
+                // Simple 2x3 grid check
+                // ... (simplified logic for demo)
+                // Just launch app if clicked inside screen area
+                if (this.mouseX > x && this.mouseX < x + phoneW &&
+                    this.mouseY > y && this.mouseY < y + phoneH) {
+                        this.appState = 'app';
+                        console.log("Launching App...");
+                }
+            } else if (this.appState === 'app') {
+                // In-App Interactions
+                // ...
+            }
+        });
     }
 
     async init() {
@@ -548,10 +596,10 @@ class NachoGameRuntime {
         const x = (w - phoneW) / 2;
         const y = (h - phoneH) / 2;
 
-        // --- Simulated Boot Sequence ---
-        // Assuming time starts at 0, first 2 seconds = Boot Logo
-        // 2-5 seconds = Kernel Log
-        // 5+ seconds = "App Running"
+        // State Transition Logic
+        if (this.appState === 'boot' && time > 5) {
+            this.appState = 'launcher';
+        }
 
         ctx.save();
 
@@ -573,91 +621,134 @@ class NachoGameRuntime {
         ctx.fillStyle = '#000';
         ctx.fillRect(x + 10, y + 10, phoneW - 20, phoneH - 20);
 
-        if (time < 2) {
-            // [State: Boot Logo]
-            // Google/Android style simple boot
-            const alpha = Math.min(time, 1);
-            ctx.globalAlpha = alpha;
+        if (this.appState === 'boot') {
+            if (time < 2) {
+                // [State: Boot Logo]
+                const alpha = Math.min(time, 1);
+                ctx.globalAlpha = alpha;
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('NachoOS', x + phoneW/2, y + phoneH/2);
+                
+                ctx.font = '12px monospace';
+                ctx.fillStyle = '#888';
+                ctx.fillText('Powered by WASM', x + phoneW/2, y + phoneH/2 + 30);
             
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 24px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('NachoOS', x + phoneW/2, y + phoneH/2);
-            
-            ctx.font = '12px monospace';
-            ctx.fillStyle = '#888';
-            ctx.fillText('Powered by WASM', x + phoneW/2, y + phoneH/2 + 30);
-        
-        } else if (time < 5) {
-            // [State: Kernel Log]
-            ctx.fillStyle = '#22c55e';
-            ctx.font = '10px monospace';
-            ctx.textAlign = 'left';
-            
-            const logLines = [
-                '[    0.000000] Linux version 6.1.0-nacho (root@build) #1 SMP PREEMPT',
-                '[    0.012345] CPU: ARM64 Processor [411fd070] revision 0',
-                '[    0.024000] Machine model: Nacho Virtual Device',
-                '[    0.150000] Memory: 4096MB = 2048MB + 2048MB',
-                '[    0.420000] Init: systemd-udevd starting...',
-                '[    1.200000] Mounting /system read-only...',
-                '[    1.500000] Starting Zygote...',
-                '[    2.100000] D/AndroidRuntime: Calling main entry com.android.internal.os.ZygoteInit',
-                '[    2.500000] I/ActivityManager: Start proc ' + (this.options.packageName || 'com.example.game') + ' for activity',
-                '[    3.100000] D/OpenGLRenderer: RenderThread started',
-                '[    3.500000] I/Adreno-GSL: <gsl_ldd_control:549>: GSL initialized',
-            ];
-            
-            // Scroll logic
-            const visibleLines = Math.floor((time - 2) * 5); // 5 lines per second
-            const startY = y + 30;
-            
-            logLines.slice(0, visibleLines + 3).forEach((line, i) => {
-                 ctx.fillText(line, x + 20, startY + (i * 14));
-            });
-
-        } else {
-            // [State: App Running]
-            // Draw the "App" UI
-            
+            } else {
+                // [State: Kernel Log]
+                ctx.fillStyle = '#22c55e';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'left';
+                
+                const logLines = [
+                    '[    0.000000] Linux version 6.1.0-nacho (root@build) #1 SMP PREEMPT',
+                    '[    0.012345] CPU: ARM64 Processor [411fd070] revision 0',
+                    '[    0.024000] Machine model: Nacho Virtual Device',
+                    '[    0.150000] Memory: 4096MB = 2048MB + 2048MB',
+                    '[    0.420000] Init: systemd-udevd starting...',
+                    '[    1.200000] Mounting /system read-only...',
+                    '[    1.500000] Starting Zygote...',
+                    '[    2.100000] D/AndroidRuntime: Calling main entry com.android.internal.os.ZygoteInit',
+                    '[    2.500000] I/ActivityManager: Start proc ' + (this.options.packageName || 'com.example.game') + ' for activity',
+                    '[    3.100000] D/OpenGLRenderer: RenderThread started',
+                    '[    3.500000] I/Adreno-GSL: <gsl_ldd_control:549>: GSL initialized',
+                ];
+                
+                // Scroll logic
+                const visibleLines = Math.floor((time - 2) * 8); // Faster scroll
+                const startY = y + 30;
+                
+                logLines.slice(0, visibleLines + 3).forEach((line, i) => {
+                     ctx.fillText(line, x + 20, startY + (i * 14));
+                });
+            }
+        } else if (this.appState === 'launcher') {
+            // [State: Launcher]
             // Status Bar
-            ctx.fillStyle = '#3b82f6';
+            ctx.fillStyle = '#1e293b';
             ctx.fillRect(x + 10, y + 10, phoneW - 20, 24);
             ctx.fillStyle = '#fff';
             ctx.font = '10px sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('12:00', x + 20, y + 26);
             ctx.textAlign = 'right';
             ctx.fillText('100%', x + phoneW - 20, y + 26);
 
-            // App Content Area
+            // Wallpaper
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x + 10, y + 34, phoneW - 20, phoneH - 44);
+
+            // App Grid
+            const cols = 3;
+            const iconSize = 50;
+            const gap = 30;
+            const startX = x + 40;
+            const startGridY = y + 80;
+
+            this.apps.forEach((app, i) => {
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                const iconX = startX + (col * (iconSize + gap));
+                const iconY = startGridY + (row * (iconSize + gap + 20));
+
+                // Icon
+                ctx.fillStyle = app.color;
+                ctx.beginPath();
+                ctx.roundRect(iconX, iconY, iconSize, iconSize, 12);
+                ctx.fill();
+
+                // Label
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(app.name, iconX + iconSize/2, iconY + iconSize + 15);
+            });
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Tap to Launch', x + phoneW/2, y + phoneH - 50);
+
+        } else if (this.appState === 'app') {
+            // [State: App Running / Game]
+            // Draw the "App" UI - Interactive Canvas
+            
+            // Status Bar
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x + 10, y + 10, phoneW - 20, 24);
+            
+            // Game Area
             ctx.fillStyle = '#111';
             ctx.fillRect(x + 10, y + 34, phoneW - 20, phoneH - 44);
 
-            // Icon Pulse
-            const pulse = 1 + Math.sin(time * 3) * 0.05;
+            // Center: Bouncing "Game"
+            const cx = x + phoneW/2;
+            const cy = y + phoneH/2;
+            
+            // Interactive Element: Mouse Follower
+            const dx = this.mouseX - cx;
+            const dy = this.mouseY - cy;
+            const dist = Math.sqrt(dx*dx + dy*dy);
             
             ctx.fillStyle = '#3b82f6';
             ctx.beginPath();
-            ctx.arc(x + phoneW/2, y + 200, 40 * pulse, 0, Math.PI * 2);
+            ctx.arc(cx + Math.cos(time * 2) * 50, cy + Math.sin(time * 3) * 30, 20, 0, Math.PI * 2);
             ctx.fill();
 
             // Text
             ctx.fillStyle = '#fff';
             ctx.font = '16px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('Nacho Runtime (AOT Compiled)', x + phoneW/2, y + 280);
+            ctx.fillText('Running: ' + (this.options.packageName || 'Game'), cx, y + 100);
             
             ctx.fillStyle = '#4ade80';
             ctx.font = '12px monospace';
-            ctx.fillText('64-BIT WASM ACTIVE', x + phoneW/2, y + 310);
+            ctx.fillText('FPS: 60 | WASM: 64-bit', cx, y + 120);
             
             // Render Console Output from WASM if available (Mocking for now)
             ctx.fillStyle = '#888';
             ctx.font = '10px monospace';
-            ctx.fillText('> init_graphics_context() OK', x + phoneW/2, y + 340);
-            ctx.fillText('> load_assets() OK', x + phoneW/2, y + 355);
-            ctx.fillText('> starting_main_loop()...', x + phoneW/2, y + 370);
+            ctx.fillText('> Input Event: ' + dist.toFixed(0), cx, y + phoneH - 100);
         }
 
         ctx.restore();
