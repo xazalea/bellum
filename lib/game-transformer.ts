@@ -340,7 +340,7 @@ export class GameTransformer {
                 const instructions = (ir.blocks.get(ir.entryBlock)?.instructions || []) as unknown as IRInstruction[];
                 const wasm = compiler.compile(instructions);
                 // Return a copy of the buffer to match ArrayBuffer type expectation, stripping shared/resizeable flags if any
-                return wasm.buffer.slice(0);
+                return wasm.buffer.slice(0) as ArrayBuffer;
             } catch (e) {
                 console.warn("Lifting failed:", e);
                 // Fallthrough to default module
@@ -356,7 +356,7 @@ export class GameTransformer {
                 const instructions = (ir.blocks.get(ir.entryBlock)?.instructions || []) as unknown as IRInstruction[];
                 const wasm = compiler.compile(instructions);
                 // Return a copy of the buffer to match ArrayBuffer type expectation
-                return wasm.buffer.slice(0);
+                return wasm.buffer.slice(0) as ArrayBuffer;
             } catch (e) {
                 console.warn("ARM Lifting failed:", e);
             }
