@@ -9,7 +9,7 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: #0f1419;
+  background: #0B1120; /* Deep Dark Blue */
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;

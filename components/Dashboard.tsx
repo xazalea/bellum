@@ -1,3 +1,4 @@
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { nachoEngine } from '@/lib/nacho/engine';
@@ -9,107 +10,107 @@ import { firebaseService, signInAnonymous, UserGameData } from '@/lib/firebase/f
 import { gameTransformer } from '@/lib/game-transformer';
 import {
     Terminal as TerminalIcon,
-    LayoutGrid,
-    Cpu,
-    Zap,
-    Box,
-    Activity,
     Upload,
     Play,
-    Settings,
     User,
     LogIn,
     Gamepad2,
-    Download,
-    Star,
-    Clock,
-    HardDrive
+    Search,
+    Monitor
 } from 'lucide-react';
+import Image from 'next/image';
 
-// Helper for runtime labels
-const getRuintimeLabel = (type: string) => {
-    switch (type) {
-        case 'windows': return 'Win32/64 Runtime';
-        case 'xbox': return 'DirectX Container';
-        case 'playstation': return 'GNM Container';
-        case 'android': return 'APK Runtime';
-        case 'linux': return 'POSIX Environment';
-        default: return 'Universal Sandbox';
-    }
-};
+// --- Components ---
+
+const BorgCard = ({ game, onPlay }: { game: any, onPlay: (g: any) => void }) => (
+    <div className="group relative bg-[#1e293b] border border-white/5 rounded-xl overflow-hidden hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
+        {/* Cover Image Placeholder - would be an Image component in real app */}
+        <div className="aspect-[3/4] bg-slate-800 relative overflow-hidden">
+             {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0f1419] to-transparent opacity-60 z-10" />
+            
+            {/* Play Button Overlay */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 bg-black/40 backdrop-blur-[2px]">
+                <button 
+                    onClick={() => onPlay(game)}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-full font-bold transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2 shadow-xl"
+                >
+                    <Play size={16} fill="currentColor" /> Play
+                </button>
+            </div>
+
+            {/* Placeholder Icon if no image */}
+            <div className="absolute inset-0 flex items-center justify-center text-slate-600">
+                <Gamepad2 size={48} />
+            </div>
+        </div>
+
+        {/* Info */}
+        <div className="p-4 relative z-20">
+            <h3 className="font-bold text-white text-lg truncate">{game.name}</h3>
+            <p className="text-blue-400 text-xs font-medium uppercase tracking-wide mt-1">{game.type}</p>
+        </div>
+    </div>
+);
+
+const SectionHeader = ({ title }: { title: string }) => (
+    <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-2xl font-bold text-white">{title}</h2>
+        <div className="h-px bg-white/10 flex-1" />
+    </div>
+);
+
+// --- Main Dashboard ---
 
 export default function Dashboard() {
-    const [stats, setStats] = useState({ cpu: 0, ram: 0, gpu: 0, fps: 0 });
-    const [activeApps, setActiveApps] = useState<any[]>([]);
-    const [dragActive, setDragActive] = useState(false);
-    const [viewingAppId, setViewingAppId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'home' | 'my-games' | 'terminal'>('home');
-    const [userId, setUserId] = useState<string>('');
-    const [currentUser, setCurrentUser] = useState<any>(null);
-    const [userGames, setUserGames] = useState<UserGameData[]>([]);
+    const [activeApps, setActiveApps] = useState<any[]>([]);
+    const [viewingAppId, setViewingAppId] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [featuredGames] = useState([
-        { id: 'minecraft', name: 'Minecraft', type: 'windows', description: 'Build, explore, survive' },
-        { id: 'factorio', name: 'Factorio', type: 'windows', description: 'Build factories and automate' },
-        { id: 'among-us', name: 'Among Us', type: 'windows', description: 'Find the impostor among us' },
-        { id: 'rocket-league', name: 'Rocket League', type: 'windows', description: 'Soccer with cars and rockets' }
-    ]);
-    
+    const [userGames, setUserGames] = useState<UserGameData[]>([]);
+    const [dragActive, setDragActive] = useState(false);
     const viewerRef = useRef<HTMLDivElement>(null);
-    
-    // Initialize
+
+    // Mock Data
+    const featuredGames = [
+        { id: 'minecraft', name: 'Minecraft', type: 'windows' },
+        { id: 'factorio', name: 'Factorio', type: 'windows' },
+        { id: 'among-us', name: 'Among Us', type: 'windows' },
+        { id: 'rocket-league', name: 'Rocket League', type: 'windows' },
+        { id: 'stardew', name: 'Stardew Valley', type: 'windows' },
+        { id: 'terraria', name: 'Terraria', type: 'windows' },
+    ];
+
+    const newGames = [
+        { id: 'cyberpunk', name: 'Cyberpunk 2077', type: 'windows' },
+        { id: 'elden-ring', name: 'Elden Ring', type: 'windows' },
+        { id: 'hades', name: 'Hades', type: 'windows' },
+        { id: 'celeste', name: 'Celeste', type: 'windows' },
+    ];
+
     useEffect(() => {
         nachoEngine.boot().catch(console.error);
-        getFingerprint().then(setUserId);
-
-        // Firebase authentication
-        const initAuth = async () => {
-            const user = await signInAnonymous();
+        
+        // Auth Init
+        signInAnonymous().then(user => {
             if (user) {
-                setCurrentUser(user);
                 setIsAuthenticated(true);
-                const games = await firebaseService.loadUserGames();
-                setUserGames(games);
+                firebaseService.loadUserGames().then(setUserGames);
             }
-        };
-        initAuth();
+        });
 
+        // Polling active apps
         const interval = setInterval(() => {
-            setStats({
-                cpu: Math.round(Math.random() * 20 + 10),
-                ram: Math.round(Math.random() * 10 + 20),
-                gpu: Math.round(Math.random() * 30 + 5),
-                fps: Math.round(58 + Math.random() * 4)
-            });
             setActiveApps(vmManager.listVMs().filter(vm => vm.state.isRunning));
         }, 1000);
-
         return () => clearInterval(interval);
     }, []);
 
-    // Viewer Mount
-    useEffect(() => {
-        if (viewingAppId && viewerRef.current) {
-            const app = vmManager.getVM(viewingAppId);
-            if (app) app.mount(viewerRef.current).catch(console.error);
-        }
-    }, [viewingAppId]);
-
-    const handleFileDrop = async (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-        const files = Array.from(e.dataTransfer.files);
-        for (const file of files) await processFile(file);
-    };
-
+    // Game Launcher
     const handlePlay = async (game: any) => {
         try {
-            // Check if VM exists
             let vm = vmManager.getVM(game.id);
-            
             if (!vm) {
-                // Create new VM
                 console.log(`Creating VM for ${game.name}...`);
                 vm = await vmManager.createVM({
                     id: game.id,
@@ -119,31 +120,31 @@ export default function Dashboard() {
                     executionMode: 'game'
                 });
                 await vm.start();
-                setActiveApps(prev => {
-                    // Avoid duplicates
-                    if (prev.find(a => a.id === vm!.id)) return prev;
-                    return [...prev, vm!];
-                });
+                setActiveApps(prev => prev.find(a => a.id === vm!.id) ? prev : [...prev, vm!]);
             }
-            
             setViewingAppId(game.id);
         } catch (error) {
             console.error("Failed to start game:", error);
-            alert("Failed to start game runtime. See console for details.");
+            alert("Failed to start game runtime.");
         }
     };
 
+    // Viewer Mounter
+    useEffect(() => {
+        if (viewingAppId && viewerRef.current) {
+            const app = vmManager.getVM(viewingAppId);
+            if (app) app.mount(viewerRef.current).catch(console.error);
+        }
+    }, [viewingAppId]);
+
+    // File Handling
     const processFile = async (file: File) => {
         const ext = file.name.split('.').pop()?.toLowerCase();
         let type = VMType.CODE;
         if (ext === 'apk') type = VMType.ANDROID;
         else if (ext === 'exe') type = VMType.WINDOWS;
         else if (ext === 'iso') type = VMType.LINUX;
-        else if (ext === 'js' || ext === 'wasm') type = VMType.CODE;
 
-        console.log(`🎮 Transforming ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-
-        // Transform the game with extreme optimization
         const transformationResult = await gameTransformer.transformGame(file, {
             targetPlatform: 'wasm',
             compressionLevel: 'ultra',
@@ -153,349 +154,217 @@ export default function Dashboard() {
         });
 
         if (!transformationResult.success) {
-            console.error('❌ Game transformation failed:', transformationResult.error);
             alert(`Failed to transform game: ${transformationResult.error}`);
             return;
         }
 
         const id = `app-${Date.now()}`;
-
-        // Create VM with optimized game
         await vmManager.createVM({
-            id,
-            type,
-            name: file.name,
-            memory: 1024,
-            executionMode: 'game'
+            id, type, name: file.name, memory: 1024, executionMode: 'game'
         });
 
+        // Start immediately
         const vm = vmManager.getVM(id);
         if (vm) {
             await vm.start();
-
-            // Update active apps
             setActiveApps(prev => [...prev, vm]);
+            setViewingAppId(id); // Auto-open viewer
         }
 
-        // Save to Firebase if authenticated
         if (isAuthenticated) {
-            const gameData: UserGameData = {
-                id,
-                name: file.name,
-                type,
-                optimizedSize: transformationResult.optimizedSize,
-                lastPlayed: new Date(),
-                playtime: 0,
-                metadata: {
-                    originalSize: transformationResult.originalSize,
-                    compressionRatio: transformationResult.compressionRatio,
-                    webAppUrl: transformationResult.webAppUrl
-                }
-            };
-
-            await firebaseService.saveGameData(id, gameData);
-
-            // Upload optimized web app bundle
-            if (transformationResult.webAppUrl) {
-                const response = await fetch(transformationResult.webAppUrl);
-                const optimizedBlob = await response.blob();
-                const optimizedFile = new File([optimizedBlob], `${file.name}.optimized.html`, {
-                    type: 'text/html'
-                });
-                await firebaseService.uploadGameFile(id, optimizedFile);
-            }
-
-            // Refresh user games
-            const games = await firebaseService.loadUserGames();
-            setUserGames(games);
+            // Save metadata logic here...
+            firebaseService.saveGameData(id, {
+                id, name: file.name, type, optimizedSize: transformationResult.optimizedSize,
+                lastPlayed: new Date(), playtime: 0, metadata: {}
+            });
+            firebaseService.loadUserGames().then(setUserGames);
         }
+    };
 
-        console.log(`✅ Game transformed successfully!`);
-        console.log(`📊 Compression: ${(transformationResult.compressionRatio).toFixed(1)}%`);
-        console.log(`💾 Size reduced: ${(transformationResult.originalSize / 1024 / 1024).toFixed(2)}MB → ${(transformationResult.optimizedSize / 1024 / 1024).toFixed(2)}MB`);
+    const handleFileDrop = async (e: React.DragEvent) => {
+        e.preventDefault(); e.stopPropagation(); setDragActive(false);
+        if (e.dataTransfer.files[0]) await processFile(e.dataTransfer.files[0]);
     };
 
     return (
-        <div className="min-h-screen bg-[#0f1419] text-white">
-            {/* Header */}
-            <header className="border-b border-[#1e293b] bg-[#0f1419]/80 backdrop-blur-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center space-x-8">
-                            <div className="flex items-center space-x-2">
-                                <Gamepad2 className="w-8 h-8 text-[#3b82f6]" />
-                                <span className="text-xl font-bold text-white">borg</span>
+        <div className="min-h-screen bg-[#0B1120] text-slate-200 font-sans selection:bg-blue-500/30">
+            {/* --- Navbar --- */}
+            <nav className="fixed top-0 w-full z-40 bg-[#0B1120]/80 backdrop-blur-md border-b border-white/5 h-16">
+                <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+                    {/* Logo & Links */}
+                    <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-2 text-white font-bold text-xl tracking-tight">
+                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                                <Gamepad2 className="text-white" size={20} />
                             </div>
-                            <nav className="hidden md:flex space-x-8">
-                                <button
-                                    onClick={() => setActiveTab('home')}
-                                    className={`text-sm font-medium transition-colors ${
-                                        activeTab === 'home' ? 'text-[#3b82f6]' : 'text-gray-400 hover:text-white'
-                                    }`}
-                                >
-                                    Home
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('my-games')}
-                                    className={`text-sm font-medium transition-colors ${
-                                        activeTab === 'my-games' ? 'text-[#3b82f6]' : 'text-gray-400 hover:text-white'
-                                    }`}
-                                >
-                                    My Games
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('terminal')}
-                                    className={`text-sm font-medium transition-colors ${
-                                        activeTab === 'terminal' ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-white'
-                                    }`}
-                                >
-                                    Terminal
-                                </button>
-                            </nav>
+                            borg
                         </div>
-
-                        <div className="flex items-center space-x-4">
-                            {isAuthenticated ? (
-                                <div className="flex items-center space-x-2 text-sm text-gray-400">
-                                    <User className="w-4 h-4" />
-                                    <span>Anonymous User</span>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={async () => {
-                                        const user = await signInAnonymous();
-                                        if (user) {
-                                            setCurrentUser(user);
-                                            setIsAuthenticated(true);
-                                        }
-                                    }}
-                                    className="flex items-center space-x-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] rounded-lg text-sm font-medium transition-colors"
-                                >
-                                    <LogIn className="w-4 h-4" />
-                                    <span>Sign In</span>
-                                </button>
-                            )}
-
-                            {/* Performance Stats */}
-                            <div className="hidden md:flex items-center space-x-4 text-xs text-gray-400">
-                                <div className="flex items-center space-x-1">
-                                    <Cpu className="w-3 h-3" />
-                                    <span>{stats.cpu}%</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                    <Box className="w-3 h-3" />
-                                    <span>{stats.ram}%</span>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                    <Activity className="w-3 h-3 text-green-400" />
-                                    <span>{stats.fps} FPS</span>
-                                </div>
-                            </div>
+                        
+                        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+                            <button 
+                                onClick={() => setActiveTab('home')}
+                                className={`${activeTab === 'home' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
+                            >
+                                Home
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('my-games')}
+                                className={`${activeTab === 'my-games' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
+                            >
+                                My Games
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('terminal')}
+                                className={`${activeTab === 'terminal' ? 'text-white' : 'text-slate-400 hover:text-white'} transition-colors`}
+                            >
+                                Terminal
+                            </button>
                         </div>
                     </div>
-                </div>
-            </header>
 
-            {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {activeTab === 'home' && (
-                    <div className="space-y-12">
-                        {/* Hero Section */}
-                        <div className="text-center space-y-4">
-                            <h1 className="text-4xl md:text-6xl font-bold text-white">
-                                Play <span className="text-[#3b82f6]">Any Game</span> in Your Browser
-                            </h1>
-                            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-                                Transform Windows, Android, and Xbox games into web games with incredible speed.
-                                Optimized for local storage with Firebase account saving.
-                            </p>
+                    {/* Right Side */}
+                    <div className="flex items-center gap-4">
+                        <div className="hidden md:flex items-center bg-[#1e293b] rounded-full px-4 py-1.5 border border-white/5 focus-within:border-blue-500/50 transition-colors">
+                            <Search size={14} className="text-slate-500 mr-2" />
+                            <input 
+                                type="text" 
+                                placeholder="Search games..." 
+                                className="bg-transparent border-none outline-none text-sm text-white placeholder-slate-500 w-48"
+                            />
                         </div>
-
-                        {/* Upload Zone */}
-                        <div className="max-w-2xl mx-auto">
-                            <div
-                                className={`
-                                    relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 cursor-pointer
-                                    ${dragActive
-                                        ? 'border-[#3b82f6] bg-[#3b82f6]/10'
-                                        : 'border-gray-600 hover:border-gray-500 bg-[#1e293b]/50 hover:bg-[#1e293b]/70'
-                                    }
-                                `}
-                                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
-                                onDragLeave={() => setDragActive(false)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={handleFileDrop}
-                                onClick={() => document.getElementById('file-upload')?.click()}
-                            >
-                                <input
-                                    type="file" id="file-upload" multiple className="hidden"
-                                    onChange={(e) => e.target.files && Array.from(e.target.files).forEach(processFile)}
-                                />
-
-                                <div className="space-y-4">
-                                    <div className="w-16 h-16 mx-auto bg-[#3b82f6] rounded-full flex items-center justify-center">
-                                        <Upload className="w-8 h-8 text-white" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-semibold text-white">Upload Your Game</h3>
-                                        <p className="text-gray-400 mt-2">
-                                            Drag and drop or click to upload APK, EXE, ISO, or WASM files
-                                        </p>
-                                    </div>
-                                </div>
+                        
+                        {isAuthenticated ? (
+                            <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                                <User size={16} />
                             </div>
-                        </div>
+                        ) : (
+                            <button 
+                                onClick={() => signInAnonymous().then(u => u && setIsAuthenticated(true))}
+                                className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg transition-all"
+                            >
+                                Log In
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </nav>
 
-                        {/* Featured Games */}
-                        <div className="space-y-6">
-                            <h2 className="text-2xl font-bold text-white">Featured Games</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {featuredGames.map((game) => (
-                                    <div key={game.id} className="bg-[#1e293b] rounded-xl p-6 hover:bg-[#1e293b]/80 transition-colors group cursor-pointer">
-                                        <div className="w-12 h-12 bg-[#3b82f6] rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                            <Gamepad2 className="w-6 h-6 text-white" />
-                                        </div>
-                                        <h3 className="text-lg font-semibold text-white mb-2">{game.name}</h3>
-                                        <p className="text-gray-400 text-sm mb-4">{game.description}</p>
-                                        <button 
-                                            onClick={() => handlePlay(game)}
-                                            className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                                        >
-                                            <Play className="w-4 h-4" />
-                                            <span>Play Now</span>
-                                        </button>
-                                    </div>
+            {/* --- Main Content --- */}
+            <div className="pt-24 pb-12 px-4 max-w-7xl mx-auto min-h-screen">
+                
+                {activeTab === 'home' && (
+                    <div className="space-y-12 animate-in fade-in duration-500">
+                        {/* Most Popular */}
+                        <section>
+                            <SectionHeader title="Most Popular" />
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                {featuredGames.slice(0, 4).map(game => (
+                                    <BorgCard key={game.id} game={game} onPlay={handlePlay} />
                                 ))}
                             </div>
-                        </div>
+                        </section>
 
-                        {/* Running Games */}
-                        {activeApps.length > 0 && (
-                            <div className="space-y-6">
-                                <h2 className="text-2xl font-bold text-white">Currently Running</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {activeApps.map(app => (
-                                        <div key={app.id} className="bg-[#1e293b] rounded-xl p-4 flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-10 h-10 bg-[#3b82f6] rounded-lg flex items-center justify-center text-white font-bold">
-                                                    {app.config.name[0].toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="font-medium text-white">{app.config.name}</div>
-                                                    <div className="text-xs text-gray-400">{getRuintimeLabel(app.config.type)}</div>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => setViewingAppId(app.id)}
-                                                className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                                            >
-                                                Play
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
+                        {/* Newly Added */}
+                        <section>
+                            <SectionHeader title="Newly Added" />
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                {newGames.map(game => (
+                                    <BorgCard key={game.id} game={game} onPlay={handlePlay} />
+                                ))}
                             </div>
-                        )}
+                        </section>
+
+                        {/* All Games */}
+                        <section>
+                            <SectionHeader title="All Games" />
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                                {[...featuredGames, ...newGames].map(game => (
+                                    <BorgCard key={`all-${game.id}`} game={game} onPlay={handlePlay} />
+                                ))}
+                            </div>
+                        </section>
                     </div>
                 )}
 
                 {activeTab === 'my-games' && (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h1 className="text-3xl font-bold text-white">My Games</h1>
-                            {!isAuthenticated && (
-                                <div className="text-gray-400 text-sm">
-                                    Sign in to save and sync your games across devices
-                                </div>
-                            )}
+                    <div className="animate-in fade-in duration-500">
+                        <SectionHeader title="My Games Library" />
+                        
+                        {/* Upload Area */}
+                        <div 
+                            className={`
+                                mb-8 border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer group
+                                ${dragActive 
+                                    ? 'border-blue-500 bg-blue-500/10' 
+                                    : 'border-slate-700 hover:border-blue-500/50 bg-[#1e293b]/50'
+                                }
+                            `}
+                            onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                            onDragLeave={() => setDragActive(false)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={handleFileDrop}
+                            onClick={() => document.getElementById('file-upload')?.click()}
+                        >
+                            <input 
+                                type="file" 
+                                id="file-upload" 
+                                className="hidden" 
+                                multiple 
+                                onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
+                            />
+                            <div className="w-16 h-16 bg-blue-600/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                <Upload size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Upload a Game File</h3>
+                            <p className="text-slate-400">Drag & drop APK, EXE, or ISO files to transform and play</p>
                         </div>
 
+                        {/* User Games Grid */}
                         {userGames.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {userGames.map((game) => (
-                                    <div key={game.id} className="bg-[#1e293b] rounded-xl p-6 hover:bg-[#1e293b]/80 transition-colors">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="w-12 h-12 bg-[#3b82f6] rounded-lg flex items-center justify-center">
-                                                <Gamepad2 className="w-6 h-6 text-white" />
-                                            </div>
-                                            <div className="flex items-center space-x-2 text-xs text-gray-400">
-                                                <HardDrive className="w-3 h-3" />
-                                                <span>{(game.optimizedSize / 1024 / 1024).toFixed(1)}MB</span>
-                                            </div>
-                                        </div>
-
-                                        <h3 className="text-lg font-semibold text-white mb-2">{game.name}</h3>
-                                        <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
-                                            <div className="flex items-center space-x-1">
-                                                <Clock className="w-3 h-3" />
-                                                <span>{game.playtime}m played</span>
-                                            </div>
-                                            <div className="text-xs uppercase">{game.type}</div>
-                                        </div>
-
-                                        <button 
-                                            onClick={() => handlePlay(game)}
-                                            className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                                        >
-                                            <Play className="w-4 h-4" />
-                                            <span>Play</span>
-                                        </button>
-                                    </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                {userGames.map(game => (
+                                    <BorgCard key={game.id} game={game} onPlay={handlePlay} />
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12">
-                                <Gamepad2 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                                <h3 className="text-xl font-semibold text-white mb-2">No games yet</h3>
-                                <p className="text-gray-400 mb-6">Upload your first game to get started</p>
-                                <button
-                                    onClick={() => setActiveTab('home')}
-                                    className="bg-[#3b82f6] hover:bg-[#2563eb] text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                                >
-                                    Upload Game
-                                </button>
+                            <div className="text-center text-slate-500 py-12">
+                                <Gamepad2 size={48} className="mx-auto mb-4 opacity-50" />
+                                <p>No games in your library yet.</p>
                             </div>
                         )}
                     </div>
                 )}
 
                 {activeTab === 'terminal' && (
-                    <div className="space-y-6">
-                        <h1 className="text-3xl font-bold text-white">Terminal</h1>
-                        <div className="bg-[#1e293b] rounded-xl overflow-hidden">
+                    <div className="animate-in fade-in duration-500">
+                        <SectionHeader title="System Terminal" />
+                        <div className="bg-[#1e293b] rounded-xl overflow-hidden border border-white/10 h-[600px] shadow-2xl">
                             <Terminal />
                         </div>
                     </div>
                 )}
-            </main>
+            </div>
 
-            {/* Game Viewer Modal */}
+            {/* --- Game Viewer Overlay --- */}
             {viewingAppId && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="w-full max-w-6xl h-[80vh] bg-[#0f1419] border border-[#1e293b] rounded-xl overflow-hidden flex flex-col">
-                        <div className="h-14 border-b border-[#1e293b] flex items-center justify-between px-6 bg-[#1e293b]/50">
-                            <span className="font-medium text-white">Game Runtime</span>
-                            <button
-                                onClick={() => setViewingAppId(null)}
-                                className="text-gray-400 hover:text-white transition-colors"
-                            >
-                                ✕
-                            </button>
+                <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-300">
+                    <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 bg-[#0B1120]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                            <span className="font-bold text-white">Borg Runtime Environment</span>
                         </div>
-                        <div className="flex-1 relative" ref={viewerRef} />
+                        <button 
+                            onClick={() => setViewingAppId(null)}
+                            className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-4 py-1.5 rounded-lg text-sm font-bold transition-all"
+                        >
+                            Exit Game
+                        </button>
+                    </div>
+                    <div className="flex-1 relative bg-black" ref={viewerRef}>
+                        {/* The VM mounts here */}
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
-const StatCard = ({ icon, label, value, highlight = false }: { icon: any, label: string, value: string, highlight?: boolean }) => (
-    <div className={`p-4 rounded-xl border ${highlight ? 'border-green-500/30 bg-green-500/10' : 'border-white/5 bg-white/5'} backdrop-blur-sm flex items-center gap-3`}>
-        <div className={`${highlight ? 'text-green-400' : 'text-gray-400'}`}>{icon}</div>
-        <div>
-            <div className="text-xs text-gray-500 uppercase font-bold">{label}</div>
-            <div className={`font-mono font-medium ${highlight ? 'text-green-400' : 'text-white'}`}>{value}</div>
-        </div>
-    </div>
-);
