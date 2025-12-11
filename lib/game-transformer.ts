@@ -10,7 +10,7 @@ import JSZip from 'jszip';
 import { PEParser } from './transpiler/pe_parser';
 import { lifter } from './transpiler/lifter/lifter';
 import { WASMCompiler } from './transpiler/wasm_compiler';
-import { Arch } from './transpiler/lifter/types';
+import { Arch, IRInstruction } from './transpiler/lifter/types';
 import { DEXParser } from './transpiler/dex_parser';
 
 export interface GameTransformationOptions {
@@ -337,7 +337,8 @@ export class GameTransformer {
             // This is a complex operation; for this implementation we lift the entry block
             try {
                 const ir = await lifter.lift(new Uint8Array(exe.data), Arch.X86, optionalHeader.addressOfEntryPoint);
-                const wasm = compiler.compile(ir.blocks.get(ir.entryBlock)?.instructions || []);
+                const instructions = (ir.blocks.get(ir.entryBlock)?.instructions || []) as unknown as IRInstruction[];
+                const wasm = compiler.compile(instructions);
                 return wasm.buffer;
             } catch (e) {
                 console.warn("Lifting failed:", e);
@@ -351,7 +352,8 @@ export class GameTransformer {
             // Assume ARM native lib
             try {
                 const ir = await lifter.lift(new Uint8Array(lib.data), Arch.ARM, 0x1000); // Arbitrary entry for now
-                const wasm = compiler.compile(ir.blocks.get(ir.entryBlock)?.instructions || []);
+                const instructions = (ir.blocks.get(ir.entryBlock)?.instructions || []) as unknown as IRInstruction[];
+                const wasm = compiler.compile(instructions);
                 return wasm.buffer;
             } catch (e) {
                 console.warn("ARM Lifting failed:", e);

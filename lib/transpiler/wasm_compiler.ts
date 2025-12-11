@@ -3,7 +3,7 @@
  * Extended Support: SIMD, Locals, Linear Memory, Multithreading
  */
 
-import { IRInstruction, IROpcode } from './lifter'; // Now resolves via index.ts -> types.ts
+import { IRInstruction, IROpcode } from './lifter/types';
 
 export class WASMCompiler {
   // Internal buffers for section construction
