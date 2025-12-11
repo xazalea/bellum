@@ -339,7 +339,8 @@ export class GameTransformer {
                 const ir = await lifter.lift(new Uint8Array(exe.data), Arch.X86, optionalHeader.addressOfEntryPoint);
                 const instructions = (ir.blocks.get(ir.entryBlock)?.instructions || []) as unknown as IRInstruction[];
                 const wasm = compiler.compile(instructions);
-                return wasm.buffer;
+                // Return a copy of the buffer to match ArrayBuffer type expectation, stripping shared/resizeable flags if any
+                return wasm.buffer.slice(0);
             } catch (e) {
                 console.warn("Lifting failed:", e);
                 // Fallthrough to default module
@@ -354,7 +355,8 @@ export class GameTransformer {
                 const ir = await lifter.lift(new Uint8Array(lib.data), Arch.ARM, 0x1000); // Arbitrary entry for now
                 const instructions = (ir.blocks.get(ir.entryBlock)?.instructions || []) as unknown as IRInstruction[];
                 const wasm = compiler.compile(instructions);
-                return wasm.buffer;
+                // Return a copy of the buffer to match ArrayBuffer type expectation
+                return wasm.buffer.slice(0);
             } catch (e) {
                 console.warn("ARM Lifting failed:", e);
             }
