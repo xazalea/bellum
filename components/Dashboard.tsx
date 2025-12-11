@@ -7,7 +7,7 @@ import { vmManager } from '@/lib/vm/manager';
 import { VMType } from '@/lib/vm/types';
 import Terminal from './Terminal';
 import { getFingerprint } from '@/lib/tracking';
-import { firebaseService, signInAnonymous, UserGameData } from '@/lib/firebase/firebase';
+import { firebaseService, signInAnonymous, UserGameData, auth } from '@/lib/firebase/firebase';
 import { gameTransformer } from '@/lib/game-transformer';
 import { gameRepoService, GameRepository } from '@/lib/nacho/modules/game-repository';
 import JSZip from 'jszip';
@@ -106,7 +106,7 @@ export default function Dashboard() {
         });
         
         // Listen to auth state changes for real user persistence
-        const unsubscribe = firebaseService.auth.onAuthStateChanged((user) => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 setIsAuthenticated(true);
                 refreshUserGames();
