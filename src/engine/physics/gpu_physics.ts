@@ -7,7 +7,7 @@
  * 171. Offload physics to nearby devices.
  */
 
-import { webgpu } from '../../../nacho/engine/webgpu-context';
+import { webgpu } from '../../nacho/engine/webgpu-context';
 
 export class GpuPhysics {
     
@@ -56,7 +56,7 @@ export class GpuPhysics {
         
         const shaderModule = device.createShaderModule({ code: shaderCode });
         
-        const pipeline = await device.createComputePipelineAsync({
+        const pipeline = device.createComputePipeline({
             layout: 'auto',
             compute: { module: shaderModule, entryPoint: 'main' }
         });

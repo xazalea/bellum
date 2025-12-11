@@ -38,7 +38,7 @@ export class JitCompiler {
             code: wgsl
         });
 
-        const pipeline = await device.createComputePipelineAsync({
+        const pipeline = device.createComputePipeline({
             label: `Pipeline_${methodId}`,
             layout: 'auto',
             compute: {

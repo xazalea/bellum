@@ -45,7 +45,8 @@ export class WebGPUContext {
         
         this.context.configure({
             device: this.device,
-            format: navigator.gpu.getPreferredCanvasFormat(),
+            // navigator.gpu is guarded in initialize(); TS doesn't narrow across methods
+            format: navigator.gpu!.getPreferredCanvasFormat(),
             alphaMode: 'premultiplied'
         });
     }

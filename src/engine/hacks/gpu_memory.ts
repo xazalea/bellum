@@ -39,8 +39,7 @@ export class GpuMemoryManager {
         const texture = device.createTexture({
             size: { width, height },
             format: 'rgba8unorm',
-            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-            label: 'MemoryVisualizer'
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
         });
 
         device.queue.writeTexture(

@@ -48,8 +48,7 @@ export class SurfaceFlinger {
             surface.texture = device.createTexture({
                 size: { width: w, height: h },
                 format: 'bgra8unorm',
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-                label: `Surface:${name}`
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
             });
         }
         

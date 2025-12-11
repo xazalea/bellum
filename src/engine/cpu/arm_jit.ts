@@ -7,7 +7,7 @@
  * 59. Decode ARM instructions using lookup tables in shared buffers.
  */
 
-import { webgpu } from '../../../nacho/engine/webgpu-context';
+import { webgpu } from '../../nacho/engine/webgpu-context';
 
 export class ArmCpu {
     private registers = new Float64Array(32); // x0-x30 + sp

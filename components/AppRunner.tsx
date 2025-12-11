@@ -4,11 +4,16 @@ import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Maximize2, Minimize2, Power, RefreshCw, Mic, Volume2 } from 'lucide-react';
 
-export const AppRunner = () => {
+export interface AppRunnerProps {
+  filePath?: string;
+  onExit?: () => void;
+}
+
+export const AppRunner: React.FC<AppRunnerProps> = ({ filePath, onExit }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    // Initialize BellumOS / Runtime here
+    // Initialize NachoOS / Runtime here
     const canvas = canvasRef.current;
     if (canvas) {
         // Mock init
@@ -18,10 +23,15 @@ export const AppRunner = () => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.font = '20px monospace';
             ctx.fillStyle = '#0f0';
-            ctx.fillText('> BellumOS Runtime Initialized', 20, 40);
+            ctx.fillText('> NachoOS Runtime Initialized', 20, 40);
+            if (filePath) {
+              ctx.fillStyle = '#8b8b8b';
+              ctx.font = '14px monospace';
+              ctx.fillText(`file: ${filePath}`, 20, 66);
+            }
         }
     }
-  }, []);
+  }, [filePath]);
 
   return (
     <div className="fixed inset-0 bg-black z-40 flex flex-col">
@@ -59,7 +69,11 @@ export const AppRunner = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4"
             >
-                <button className="p-4 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-all hover:scale-110">
+                <button
+                    type="button"
+                    onClick={onExit}
+                    className="p-4 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-all hover:scale-110"
+                >
                     <Power size={20} className="text-red-400" />
                 </button>
                 <button className="p-4 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 transition-all hover:scale-110">

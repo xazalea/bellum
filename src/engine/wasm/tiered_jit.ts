@@ -17,7 +17,10 @@ export class TieredWasmJit {
      */
     async compileBaseline(id: string, code: Uint8Array): Promise<WebAssembly.Instance> {
         console.log(`[JIT] Tier 1 Compilation for ${id}`);
-        const wasmModule = await WebAssembly.compile(code);
+        // WebAssembly.compile expects an ArrayBuffer-backed BufferSource in typings
+        const copy = new Uint8Array(code.byteLength);
+        copy.set(code);
+        const wasmModule = await WebAssembly.compile(copy);
         this.baselineCache.set(id, wasmModule);
         return await WebAssembly.instantiate(wasmModule);
     }

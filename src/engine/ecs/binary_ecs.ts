@@ -59,6 +59,7 @@ export class BinaryECS {
     serialize(): ArrayBuffer {
         // Just dump the buffers
         // In real app, we might compress
-        return this.positions.buffer.slice(0, this.count * 12); 
+        // Avoid ArrayBuffer|SharedArrayBuffer typing ambiguity by copying the slice
+        return this.positions.slice(0, this.count * 3).buffer;
     }
 }

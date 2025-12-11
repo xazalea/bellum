@@ -26,7 +26,8 @@ export class AudioHAL {
 
     playSound(buffer: Float32Array) {
         const audioBuffer = this.context.createBuffer(1, buffer.length, 44100);
-        audioBuffer.copyToChannel(buffer, 0);
+        // copyToChannel expects Float32Array backed by ArrayBuffer in lib.dom typings
+        audioBuffer.copyToChannel(buffer as unknown as Float32Array<ArrayBuffer>, 0);
         
         const source = this.context.createBufferSource();
         source.buffer = audioBuffer;

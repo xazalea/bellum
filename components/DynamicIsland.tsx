@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, Cpu, Activity, Settings, X, Terminal, Globe, Maximize2 } from 'lucide-react';
+import { LayoutGrid, Activity, Settings, X, Terminal, Globe, Cpu } from 'lucide-react';
 
 interface DynamicIslandProps {
   activeTab: string;
@@ -38,7 +38,6 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
         className="bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden relative cursor-pointer"
         onClick={() => !isExpanded && setIsExpanded(true)}
       >
-        {/* Collapsed State Content */}
         {!isExpanded && (
           <motion.div 
             className="w-full h-full flex items-center justify-center gap-3 px-4"
@@ -46,13 +45,12 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
             animate={{ opacity: 1 }}
           >
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-sm font-semibold text-white/90">BellumOS</span>
+            <span className="text-sm font-semibold text-white/90">NachoOS</span>
             <div className="w-[1px] h-4 bg-white/20" />
             <Activity size={14} className="text-white/70" />
           </motion.div>
         )}
 
-        {/* Expanded State Content */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -61,7 +59,6 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
               exit={{ opacity: 0 }}
               className="p-6 w-full h-full flex flex-col"
             >
-              {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -75,7 +72,6 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                 </button>
               </div>
 
-              {/* Navigation Grid */}
               <div className="grid grid-cols-5 gap-2 mb-4">
                 {navItems.map((item) => (
                   <button
@@ -97,7 +93,6 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                 ))}
               </div>
 
-              {/* Quick Stats Footer */}
               <div className="mt-auto pt-4 border-t border-white/10 flex justify-between text-xs text-white/40 font-mono">
                 <span>CPU: 12%</span>
                 <span>MEM: 2.4GB</span>

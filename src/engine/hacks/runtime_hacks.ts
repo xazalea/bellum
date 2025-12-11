@@ -84,7 +84,7 @@ SwapFree:              0 kB
     getSystemProperty(key: string): string {
         const props: Record<string, string> = {
             'ro.build.version.sdk': '30',
-            'ro.product.model': 'Bellum Browser Device',
+            'ro.product.model': 'Nacho Browser Device',
             'ro.product.manufacturer': 'Nacho Corp',
             'ro.debuggable': '1'
         };

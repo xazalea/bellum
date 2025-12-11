@@ -24,7 +24,7 @@ export class VirtualFS {
 
     private initIndexedDB(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open("BellumDataPartition", 1);
+            const request = indexedDB.open("NachoDataPartition", 1);
             
             request.onerror = () => reject("Failed to open DB");
             
@@ -63,7 +63,14 @@ export class VirtualFS {
             const fileName = parts[parts.length - 1];
             const fileHandle = await currentDir.getFileHandle(fileName, { create: true });
             const writable = await fileHandle.createWritable();
-            await writable.write(data);
+            // OPFS write typings require ArrayBuffer-backed views (not SharedArrayBuffer)
+            if (data instanceof Blob) {
+                await writable.write(data);
+            } else {
+                const copy = new Uint8Array(data.byteLength);
+                copy.set(data);
+                await writable.write(copy);
+            }
             await writable.close();
             console.log(`[VFS] Wrote ${path} to OPFS`);
         } catch (e) {

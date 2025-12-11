@@ -7,8 +7,6 @@
  * 303. Emulate kernel32.dll in WASM.
  */
 
-import { VirtualFS } from '../../fs/virtual_fs';
-
 export interface Win32Syscall {
     id: number;
     name: string;

@@ -15,7 +15,7 @@ export const Dashboard = () => {
         className="flex justify-between items-end"
       >
         <div>
-            <h1 className="text-5xl font-bold mb-2 tracking-tight">Bellum<span className="text-white/40">OS</span></h1>
+            <h1 className="text-5xl font-bold mb-2 tracking-tight">Nacho<span className="text-white/40">OS</span></h1>
             <p className="text-xl text-white/60">Distributed Web Runtime Environment</p>
         </div>
         <div className="flex gap-4">

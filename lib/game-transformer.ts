@@ -1081,6 +1081,28 @@ new NachoGameRuntime();
 `;
   }
 
+  /**
+   * Convert ArrayBuffer/Uint8Array to base64 (build/runtime safe).
+   */
+  private arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+
+    // Node.js (build/server)
+    const g = globalThis as unknown as {
+      Buffer?: { from: (b: Uint8Array) => { toString: (enc: 'base64') => string } };
+    };
+    if (typeof g.Buffer !== 'undefined') {
+      return g.Buffer.from(bytes).toString('base64');
+    }
+
+    // Browser
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
   private generateCSS(gameType: VMType): string {
     return `
 * { margin: 0; padding: 0; box-sizing: border-box; }
