@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState, useEffect, useRef } from 'react';
 import { nachoEngine } from '@/lib/nacho/engine';
 import { clusterService } from '@/lib/nacho/modules/distributed-compute';
 import { vmManager } from '@/lib/vm/manager';
@@ -295,13 +296,13 @@ export default function Dashboard() {
                     {/* Right Side */}
                     <div className="flex items-center gap-4">
                         {/* Terminal Toggle */}
-                        <button
+                                <button
                             onClick={() => setTerminalOpen(true)}
                             className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                             title="Open Terminal"
-                        >
+                                >
                             <TerminalIcon size={20} />
-                        </button>
+                                </button>
                         <div className="hidden md:flex items-center bg-[#1e293b] rounded-full px-4 py-1.5 border border-white/5 focus-within:border-blue-500/50 transition-colors">
                             <Search size={14} className="text-slate-500 mr-2" />
                             <input 
@@ -464,7 +465,7 @@ export default function Dashboard() {
                         <div className="w-full max-w-5xl bg-[#1e293b] rounded-xl overflow-hidden border border-white/10 shadow-2xl flex flex-col h-[80vh]">
                             <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0B1120]">
                                 <span className="font-mono text-sm text-slate-400">nacho-cli v1.0.0</span>
-                                <button 
+                                <button
                                     onClick={() => setTerminalOpen(false)}
                                     className="text-slate-400 hover:text-white transition-colors"
                                 >
@@ -474,7 +475,7 @@ export default function Dashboard() {
                             </div>
                             <div className="flex-1 overflow-hidden">
                                 <Terminal />
-                            </div>
+                    </div>
                         </div>
                     </div>
                 )}
