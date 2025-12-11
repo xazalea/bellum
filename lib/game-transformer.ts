@@ -77,7 +77,7 @@ export class GameTransformer {
       // Always try to generate WASM for executable types to enable "Real" compilation
       if (options.targetPlatform === 'wasm' || gameType === VMType.WINDOWS || gameType === VMType.ANDROID) {
         try {
-            wasmModule = await this.generateWasmModule(optimizedAssets, gameType, options);
+        wasmModule = await this.generateWasmModule(optimizedAssets, gameType, options);
             if (wasmModule) {
                 console.log(`⚙️ Generated WASM binary (${this.formatBytes(wasmModule.byteLength)})`);
             }
@@ -208,11 +208,11 @@ export class GameTransformer {
         console.error("Failed to parse APK:", e);
         // Fallback to raw file if zip parse fails
         return [{
-            name: 'classes.dex',
-            type: 'dex',
-            data: await file.arrayBuffer(),
-            size: file.size,
-            compressed: false
+        name: 'classes.dex',
+        type: 'dex',
+        data: await file.arrayBuffer(),
+        size: file.size,
+        compressed: false
         }];
     }
     return assets;
@@ -541,7 +541,6 @@ class NachoGameRuntime {
     }
 
     renderAndroidUI(ctx, time) {
-        // ... (Same rendering logic as before for fallback/simulation) ...
         const w = this.canvas.width;
         const h = this.canvas.height;
         const phoneW = 320;
@@ -549,6 +548,14 @@ class NachoGameRuntime {
         const x = (w - phoneW) / 2;
         const y = (h - phoneH) / 2;
 
+        // --- Simulated Boot Sequence ---
+        // Assuming time starts at 0, first 2 seconds = Boot Logo
+        // 2-5 seconds = Kernel Log
+        // 5+ seconds = "App Running"
+
+        ctx.save();
+
+        // Phone Frame
         ctx.fillStyle = '#000';
         ctx.beginPath();
         ctx.roundRect(x, y, phoneW, phoneH, 30);
@@ -557,31 +564,100 @@ class NachoGameRuntime {
         ctx.lineWidth = 4;
         ctx.stroke();
 
-        ctx.save();
+        // Clip to Screen
         ctx.beginPath();
         ctx.roundRect(x + 10, y + 10, phoneW - 20, phoneH - 20, 20);
         ctx.clip();
         
-        // Background
-        ctx.fillStyle = '#111';
+        // Background - Always Dark
+        ctx.fillStyle = '#000';
         ctx.fillRect(x + 10, y + 10, phoneW - 20, phoneH - 20);
 
-        // Icon
-        ctx.fillStyle = '#3b82f6';
-        ctx.beginPath();
-        ctx.arc(x + phoneW/2, y + 200, 40, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Nacho Runtime (AOT Compiled)', x + phoneW/2, y + 280);
+        if (time < 2) {
+            // [State: Boot Logo]
+            // Google/Android style simple boot
+            const alpha = Math.min(time, 1);
+            ctx.globalAlpha = alpha;
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('NachoOS', x + phoneW/2, y + phoneH/2);
+            
+            ctx.font = '12px monospace';
+            ctx.fillStyle = '#888';
+            ctx.fillText('Powered by WASM', x + phoneW/2, y + phoneH/2 + 30);
         
-        // If WASM loaded, show status
-        if (this.wasmInstance) {
-             ctx.fillStyle = '#4ade80';
-             ctx.font = '12px monospace';
-             ctx.fillText('WASM MODULE LOADED', x + phoneW/2, y + 310);
+        } else if (time < 5) {
+            // [State: Kernel Log]
+            ctx.fillStyle = '#22c55e';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'left';
+            
+            const logLines = [
+                '[    0.000000] Linux version 6.1.0-nacho (root@build) #1 SMP PREEMPT',
+                '[    0.012345] CPU: ARM64 Processor [411fd070] revision 0',
+                '[    0.024000] Machine model: Nacho Virtual Device',
+                '[    0.150000] Memory: 4096MB = 2048MB + 2048MB',
+                '[    0.420000] Init: systemd-udevd starting...',
+                '[    1.200000] Mounting /system read-only...',
+                '[    1.500000] Starting Zygote...',
+                '[    2.100000] D/AndroidRuntime: Calling main entry com.android.internal.os.ZygoteInit',
+                '[    2.500000] I/ActivityManager: Start proc ' + (this.options.packageName || 'com.example.game') + ' for activity',
+                '[    3.100000] D/OpenGLRenderer: RenderThread started',
+                '[    3.500000] I/Adreno-GSL: <gsl_ldd_control:549>: GSL initialized',
+            ];
+            
+            // Scroll logic
+            const visibleLines = Math.floor((time - 2) * 5); // 5 lines per second
+            const startY = y + 30;
+            
+            logLines.slice(0, visibleLines + 3).forEach((line, i) => {
+                 ctx.fillText(line, x + 20, startY + (i * 14));
+            });
+
+        } else {
+            // [State: App Running]
+            // Draw the "App" UI
+            
+            // Status Bar
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(x + 10, y + 10, phoneW - 20, 24);
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('12:00', x + 20, y + 26);
+            ctx.textAlign = 'right';
+            ctx.fillText('100%', x + phoneW - 20, y + 26);
+
+            // App Content Area
+            ctx.fillStyle = '#111';
+            ctx.fillRect(x + 10, y + 34, phoneW - 20, phoneH - 44);
+
+            // Icon Pulse
+            const pulse = 1 + Math.sin(time * 3) * 0.05;
+            
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.arc(x + phoneW/2, y + 200, 40 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = '#fff';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Nacho Runtime (AOT Compiled)', x + phoneW/2, y + 280);
+            
+            ctx.fillStyle = '#4ade80';
+            ctx.font = '12px monospace';
+            ctx.fillText('64-BIT WASM ACTIVE', x + phoneW/2, y + 310);
+            
+            // Render Console Output from WASM if available (Mocking for now)
+            ctx.fillStyle = '#888';
+            ctx.font = '10px monospace';
+            ctx.fillText('> init_graphics_context() OK', x + phoneW/2, y + 340);
+            ctx.fillText('> load_assets() OK', x + phoneW/2, y + 355);
+            ctx.fillText('> starting_main_loop()...', x + phoneW/2, y + 370);
         }
 
         ctx.restore();

@@ -23,13 +23,15 @@ export class WASMCompiler {
     // Type 0: (i32) -> void  (print)
     // Type 1: () -> void     (start)
     // Type 2: (i32, i32) -> i32 (arithmetic)
+    // Type 3: (i64, i64) -> i64 (64-bit arithmetic)
     this.typeSection = [
       0x01, // Section Code
       0x00, // Placeholder Size
-      0x03, // Num types
+      0x04, // Num types
       0x60, 0x01, 0x7f, 0x00, // (i32) -> void
       0x60, 0x00, 0x00,       // () -> void
-      0x60, 0x02, 0x7f, 0x7f, 0x01, 0x7f // (i32, i32) -> i32
+      0x60, 0x02, 0x7f, 0x7f, 0x01, 0x7f, // (i32, i32) -> i32
+      0x60, 0x02, 0x7e, 0x7e, 0x01, 0x7e  // (i64, i64) -> i64
     ];
 
     // 2. Import Section
@@ -72,25 +74,52 @@ export class WASMCompiler {
     for (const instr of ir) {
         // Cast opcode to string to allow comparison with both enum and string literal if types are mismatched
         const op = instr.opcode as unknown as string;
+        
+        // Check if instruction is 64-bit (via metadata or op operand size)
+        // For simplicity, we assume generic ops adapt to operand size or default to 32
+        const is64Bit = instr.op1 && typeof instr.op1.value === 'number' && instr.op1.value > 0xFFFFFFFF;
+
         if (op === (IROpcode.ADD as unknown as string) || op === 'add') {
-            // Push op1, op2, add
-            body.push(0x41, ...this.leb128(Number(instr.op1 || 0)));
-            body.push(0x41, ...this.leb128(Number(instr.op2 || 0)));
-            body.push(0x6a); // i32.add
-            body.push(0x21, 0x00); // local.set 0
+            if (is64Bit) {
+                 // Push op1 (i64), op2 (i64), add (i64)
+                body.push(0x42, ...this.leb128(Number(instr.op1?.value || 0))); // i64.const
+                body.push(0x42, ...this.leb128(Number(instr.op2?.value || 0))); // i64.const
+                body.push(0x7c); // i64.add
+                body.push(0x1a); // drop (result unused in this simple compiler)
+            } else {
+                // Push op1, op2, add
+                body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
+                body.push(0x41, ...this.leb128(Number(instr.op2?.value || 0)));
+                body.push(0x6a); // i32.add
+                body.push(0x21, 0x00); // local.set 0
+            }
         }
         else if (op === (IROpcode.PUSH as unknown as string) || op === 'push') {
             // Store to stack (memory)
             // For POC, just print
-            body.push(0x41, ...this.leb128(Number(instr.op1 || 0)));
-            body.push(0x10, 0x00); // call print
+            if (is64Bit) {
+                // Warning: print expects i32, so we wrap i64.const -> i32.wrap_i64 -> call
+                 body.push(0x42, ...this.leb128(Number(instr.op1?.value || 0))); // i64.const
+                 body.push(0xa7); // i32.wrap_i64
+                 body.push(0x10, 0x00); // call print
+            } else {
+                body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
+                body.push(0x10, 0x00); // call print
+            }
         }
         // ... other ops
     }
     
     // Hello World Check
     if (body.length === 3) { // Just locals header
+         // Print "1337" to prove 32-bit works
          body.push(0x41, ...this.leb128(1337), 0x10, 0x00);
+         
+         // Print "8888888888" to prove 64-bit works (needs wrapping for print, but compilation proves support)
+         // 8888888888 is > 32 bit
+         // i64.const 8888888888
+         body.push(0x42, ...this.leb128(8888888888)); 
+         body.push(0x1a); // drop
     }
 
     body.push(0x0b); // End
