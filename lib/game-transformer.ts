@@ -331,13 +331,13 @@ export class GameTransformer {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${gameType.toUpperCase()} Game - borg</title>
+    <title>${gameType.toUpperCase()} Game - Nacho</title>
     <style>${this.generateCSS(gameType)}</style>
 </head>
 <body>
     <div id="game-container">
         <div id="loading-screen">
-            <div class="borg-spinner"></div>
+            <div class="nacho-spinner"></div>
             <p>Loading ${gameType} game...</p>
         </div>
         <canvas id="game-canvas" width="1280" height="720"></canvas>
@@ -349,8 +349,8 @@ export class GameTransformer {
 
   private generateJSRuntime(assets: GameAsset[], gameType: VMType, options: GameTransformationOptions): string {
     return `
-// borg Game Runtime v1.0
-class BorgGameRuntime {
+// Nacho Game Runtime v1.0
+class NachoGameRuntime {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
         this.loadingScreen = document.getElementById('loading-screen');
@@ -412,7 +412,7 @@ class BorgGameRuntime {
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
             ctx.fillStyle = '#3b82f6';
             ctx.font = '24px monospace';
-            ctx.fillText('borg Game Runtime', 50, 100);
+            ctx.fillText('Nacho Game Runtime', 50, 100);
             ctx.fillText('Game Type: ${gameType}', 50, 140);
             ctx.fillText('Status: Running', 50, 180);
         }
@@ -429,7 +429,7 @@ class BorgGameRuntime {
 }
 
 // Initialize runtime
-new BorgGameRuntime();
+new NachoGameRuntime();
 `;
   }
 
@@ -468,7 +468,7 @@ body {
     z-index: 1000;
 }
 
-.borg-spinner {
+.nacho-spinner {
     width: 50px;
     height: 50px;
     border: 4px solid #1e293b;

@@ -35,6 +35,20 @@ export class GenericVM extends BaseVM {
 
     async initializeEmulator(container: HTMLElement): Promise<void> {
         console.log(`[GenericVM] Initializing container for ${this.config.type}`);
+        
+        // If a Web App URL is provided (e.g. from Game Transformer), use it directly via iframe
+        if (this.config.customConfig?.webAppUrl) {
+            const iframe = document.createElement('iframe');
+            iframe.src = this.config.customConfig.webAppUrl;
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.backgroundColor = '#0f1419';
+            container.innerHTML = '';
+            container.appendChild(iframe);
+            return;
+        }
+
         // In a real implementation, this would attach the specific WASM runtime canvas
         if (this.canvas) {
             const ctx = this.canvas.getContext('2d');

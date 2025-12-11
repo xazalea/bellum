@@ -26,7 +26,7 @@ import Image from 'next/image';
 
 // --- Components ---
 
-const BorgCard = ({ game, onPlay, subtext }: { game: any, onPlay: (g: any) => void, subtext?: string }) => (
+const NachoCard = ({ game, onPlay, subtext }: { game: any, onPlay: (g: any) => void, subtext?: string }) => (
     <div className="group relative bg-[#1e293b] border border-white/5 rounded-xl overflow-hidden hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
         {/* Cover Image Placeholder */}
         <div className="aspect-[3/4] bg-slate-800 relative overflow-hidden flex items-center justify-center">
@@ -117,12 +117,15 @@ export default function Dashboard() {
             let vm = vmManager.getVM(game.id);
             if (!vm) {
                 console.log(`Creating VM for ${game.name}...`);
+                const customConfig = game.metadata?.webAppUrl ? { webAppUrl: game.metadata.webAppUrl } : undefined;
+                
                 vm = await vmManager.createVM({
                     id: game.id,
                     name: game.name,
                     type: (game.type as VMType) || VMType.WINDOWS,
                     memory: 1024,
-                    executionMode: 'game'
+                    executionMode: 'game',
+                    customConfig
                 });
                 await vm.start();
                 setActiveApps(prev => prev.find(a => a.id === vm!.id) ? prev : [...prev, vm!]);
@@ -174,8 +177,6 @@ export default function Dashboard() {
                 // Find icon files
                 const iconFiles = Object.keys(zip.files).filter(f => f.includes('ic_launcher') && f.endsWith('.png'));
                 if (iconFiles.length > 0) {
-                    // Sort by path length (heuristic: longer path often means deeper/specific density folder like mipmap-xxxhdpi)
-                    // Or check file size. Let's pick the largest file size to get best quality.
                     let bestIconFile = iconFiles[0];
                     let maxSize = 0;
                     
@@ -202,7 +203,8 @@ export default function Dashboard() {
 
         // 3. Create VM
         await vmManager.createVM({
-            id, type, name: file.name, memory: 1024, executionMode: 'game'
+            id, type, name: file.name, memory: 1024, executionMode: 'game',
+            customConfig: { webAppUrl: transformationResult.webAppUrl }
         });
 
         // Start immediately
@@ -217,7 +219,8 @@ export default function Dashboard() {
             // Save metadata logic here...
             await firebaseService.saveGameData(id, {
                 id, name: file.name, type, optimizedSize: transformationResult.optimizedSize,
-                lastPlayed: new Date(), playtime: 0, metadata: {},
+                lastPlayed: new Date(), playtime: 0, 
+                metadata: { webAppUrl: transformationResult.webAppUrl },
                 iconUrl
             });
             refreshUserGames();
@@ -240,7 +243,7 @@ export default function Dashboard() {
                             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                                 <Gamepad2 className="text-white" size={20} />
                             </div>
-                            borg
+                            nacho
                         </div>
                         
                         <div className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -339,7 +342,7 @@ export default function Dashboard() {
                                 <SectionHeader title="Your Recent Games" />
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                     {userGames.slice(0, 4).map(game => (
-                                        <BorgCard key={game.id} game={game} onPlay={handlePlay} />
+                                        <NachoCard key={game.id} game={game} onPlay={handlePlay} />
                                     ))}
                                 </div>
                             </section>
@@ -384,7 +387,7 @@ export default function Dashboard() {
                         {userGames.length > 0 ? (
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                 {userGames.map(game => (
-                                    <BorgCard key={game.id} game={game} onPlay={handlePlay} />
+                                    <NachoCard key={game.id} game={game} onPlay={handlePlay} />
                                 ))}
                             </div>
                         ) : (
@@ -412,7 +415,7 @@ export default function Dashboard() {
                     <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 bg-[#0B1120]">
                         <div className="flex items-center gap-3">
                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            <span className="font-bold text-white">Borg Runtime Environment</span>
+                            <span className="font-bold text-white">Nacho Runtime Environment</span>
                         </div>
                         <button 
                             onClick={() => setViewingAppId(null)}
