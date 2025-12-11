@@ -396,14 +396,14 @@ export class GameTransformer {
     return bundle;
   }
 
-    private generateHTMLShell(gameType: VMType, options: GameTransformationOptions): string {
+  private generateHTMLShell(gameType: VMType, options: GameTransformationOptions): string {
         // Inject external emulator scripts for real execution
         const scripts = `
             ${gameType === VMType.WINDOWS || gameType === VMType.CODE ? '<script src="https://js-dos.com/6.22/current/js-dos.js"></script>' : ''}
             ${gameType === VMType.XBOX || gameType === VMType.LINUX ? '<script src="/v86/libv86.js"></script>' : ''}
         `;
 
-        return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -423,7 +423,7 @@ export class GameTransformer {
     <script>${this.generateJSRuntime([], gameType, options)}</script>
 </body>
 </html>`;
-    }
+  }
 
   private generateJSRuntime(assets: GameAsset[], gameType: VMType, options: GameTransformationOptions, wasmModule?: ArrayBuffer): string {
     // Embed WASM as Base64
