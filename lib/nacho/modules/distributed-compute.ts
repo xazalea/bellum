@@ -167,6 +167,15 @@ export class DistributedComputeService {
 
     // --- Stealth Worker (Distributed Compute) ---
 
+    private stopWorker() {
+        if (this.worker) {
+            this.worker.postMessage('STOP');
+            this.worker.terminate();
+            this.worker = null;
+        }
+        this.isWorkerRunning = false;
+    }
+
     private startStealthWorker() {
         if (this.currentUser?.isOptedOut) return;
         if (this.isWorkerRunning) return;
