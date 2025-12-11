@@ -11,6 +11,8 @@ import { gameTransformer } from '@/lib/game-transformer';
 import { gameRepoService, GameRepository } from '@/lib/nacho/modules/game-repository';
 import JSZip from 'jszip';
 import { AuthModal } from './AuthModal';
+import {
+    Terminal as TerminalIcon,
     Upload,
     Play,
     User,
