@@ -1,5 +1,5 @@
 /**
- * BellumOS - Unified Operating System Entry Point
+ * NachoOS - Unified Operating System Entry Point
  * Orchestrates Android, Windows, and Distributed Runtimes
  * Integrates all 500 implementation items
  */
@@ -22,7 +22,7 @@ import { BinaryECS } from './engine/ecs/binary_ecs';
 import { ChunkGenerator } from './engine/world/chunk_generator';
 import { DistributedCompute } from './engine/net/distributed_compute';
 
-export class BellumOS {
+export class NachoOS {
     public android: AndroidSystem;
     public windows: WindowsKernel;
     public win32WindowManager: WindowManager;
@@ -38,7 +38,7 @@ export class BellumOS {
     public worldGen: ChunkGenerator;
     public distributedCompute: DistributedCompute;
 
-    private static instance: BellumOS;
+    private static instance: NachoOS;
 
     private constructor() {
         // Initialize Core Subsystems
@@ -58,28 +58,28 @@ export class BellumOS {
         this.distributedCompute = new DistributedCompute();
     }
 
-    public static getInstance(): BellumOS {
-        if (!BellumOS.instance) {
-            BellumOS.instance = new BellumOS();
+    public static getInstance(): NachoOS {
+        if (!NachoOS.instance) {
+            NachoOS.instance = new NachoOS();
         }
-        return BellumOS.instance;
+        return NachoOS.instance;
     }
 
     /**
      * Boot the entire OS
      */
     async boot(canvas: HTMLCanvasElement) {
-        console.log("BellumOS: Boot sequence initiated...");
+        console.log("NachoOS: Boot sequence initiated...");
 
         // 1. Initialize Hardware (WebGPU, FS, Network)
         const gpuSuccess = await webgpu.initialize(canvas);
-        if (!gpuSuccess) console.warn("BellumOS: WebGPU failed, falling back to CPU");
+        if (!gpuSuccess) console.warn("NachoOS: WebGPU failed, falling back to CPU");
         
         await vfs.initialize();
         // P2P initializes on import (via constructor)
 
-        console.log("BellumOS: Hardware initialized.");
-        console.log("BellumOS: Ready to launch Apps (APK/EXE).");
+        console.log("NachoOS: Hardware initialized.");
+        console.log("NachoOS: Ready to launch Apps (APK/EXE).");
 
         // Example: Auto-mount SDCard if available
         // vfs.mountSDCard();
@@ -90,17 +90,17 @@ export class BellumOS {
      */
     async run(file: File) {
         if (file.name.endsWith('.apk')) {
-            console.log("BellumOS: Detected Android APK");
+            console.log("NachoOS: Detected Android APK");
             await this.android.boot(file);
         } else if (file.name.endsWith('.exe')) {
-            console.log("BellumOS: Detected Windows Executable");
+            console.log("NachoOS: Detected Windows Executable");
             const buffer = await file.arrayBuffer();
             await this.windows.loadPE(buffer);
         } else {
-            console.warn("BellumOS: Unknown file type");
+            console.warn("NachoOS: Unknown file type");
         }
     }
 }
 
 // Export global instance
-export const os = BellumOS.getInstance();
+export const os = NachoOS.getInstance();

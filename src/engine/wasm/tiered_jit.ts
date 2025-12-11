@@ -17,9 +17,9 @@ export class TieredWasmJit {
      */
     async compileBaseline(id: string, code: Uint8Array): Promise<WebAssembly.Instance> {
         console.log(`[JIT] Tier 1 Compilation for ${id}`);
-        const module = await WebAssembly.compile(code);
-        this.baselineCache.set(id, module);
-        return await WebAssembly.instantiate(module);
+        const wasmModule = await WebAssembly.compile(code);
+        this.baselineCache.set(id, wasmModule);
+        return await WebAssembly.instantiate(wasmModule);
     }
 
     /**

@@ -134,9 +134,9 @@ export class AndroidRuntime {
     async compileDexToWGSL(dexBuffer: ArrayBuffer) {
         console.log("⚡ JIT: Compiling DEX bytecode to WebGPU Compute Shaders...");
         // [Checklist #3] Translate Dalvik -> WASM
-        const module = this.art.translateDalvikToWasm(new Uint8Array(dexBuffer));
+        const wasmModule = this.art.translateDalvikToWasm(new Uint8Array(dexBuffer));
         // [Checklist #5] Run Java on WASM
-        await WebAssembly.instantiate(module, { env: { memory: this.memory } });
+        await WebAssembly.instantiate(wasmModule, { env: { memory: this.memory } });
     }
 
     private startInterpreter() {
