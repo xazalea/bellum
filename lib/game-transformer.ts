@@ -161,7 +161,7 @@ export class GameTransformer {
     return dedupedAssets;
   }
 
-  private async extractAPKAssets(file: File): Promise<GameAsset[]> {
+    private async extractAPKAssets(file: File): Promise<GameAsset[]> {
     const assets: GameAsset[] = [];
     try {
         const zip = new JSZip();
@@ -202,6 +202,53 @@ export class GameTransformer {
                 size: data.byteLength,
                 compressed: false
              });
+        }
+
+        // Extract Resources (Images for UI Simulation)
+        const imageFiles = Object.keys(zipContent.files).filter(path => 
+            path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.webp')
+        );
+
+        // Heuristic: Find Icon and Splash
+        // Icon: typically contains 'ic_launcher'
+        // Splash: typically large file size, contains 'bg', 'splash', 'background'
+        
+        let iconPath = imageFiles.find(p => p.includes('ic_launcher'));
+        if (!iconPath && imageFiles.length > 0) iconPath = imageFiles[0];
+
+        if (iconPath) {
+             const data = await zipContent.files[iconPath].async('arraybuffer');
+             assets.push({
+                name: 'icon.png',
+                type: 'image',
+                data: data,
+                size: data.byteLength,
+                compressed: false
+             });
+        }
+
+        // Find potential splash/background images (largest images)
+        const sortedImages = [];
+        for (const path of imageFiles) {
+            if (path === iconPath) continue;
+            const file = zipContent.files[path];
+            // Only consider reasonably sized images (avoid tiny icons)
+            // but not too huge to crash browser memory
+            sortedImages.push({ path, size: (file as any)._data ? (file as any)._data.uncompressedSize : 0 });
+        }
+        sortedImages.sort((a, b) => b.size - a.size);
+
+        // Take top 3 images for assets
+        for (let i = 0; i < Math.min(3, sortedImages.length); i++) {
+            const path = sortedImages[i].path;
+            const data = await zipContent.files[path].async('arraybuffer');
+            assets.push({
+                name: `asset_${i}.png`,
+                type: 'image',
+                data: data,
+                size: data.byteLength,
+                compressed: false
+            });
         }
 
     } catch (e) {
@@ -425,7 +472,7 @@ export class GameTransformer {
 </html>`;
   }
 
-  private generateJSRuntime(assets: GameAsset[], gameType: VMType, options: GameTransformationOptions, wasmModule?: ArrayBuffer): string {
+    private generateJSRuntime(assets: GameAsset[], gameType: VMType, options: GameTransformationOptions, wasmModule?: ArrayBuffer): string {
     // Embed WASM as Base64
     let wasmBase64 = '';
     if (wasmModule) {
@@ -437,8 +484,17 @@ export class GameTransformer {
         wasmBase64 = btoa(binary);
     }
 
+    // Embed Assets (Icon, Splash)
+    const iconAsset = assets.find(a => a.name === 'icon.png');
+    const splashAssets = assets.filter(a => a.type === 'image' && a.name !== 'icon.png');
+    
+    const assetData: any = {
+        icon: iconAsset ? this.arrayBufferToBase64(iconAsset.data) : null,
+        images: splashAssets.map(a => this.arrayBufferToBase64(a.data))
+    };
+
     return `
-// Nacho Game Runtime v2.0 (Compiled)
+// Nacho Game Runtime v2.1 (Compiled + Assets)
 class NachoGameRuntime {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
@@ -446,7 +502,22 @@ class NachoGameRuntime {
         this.gameType = '${gameType}';
         this.options = ${JSON.stringify(options)};
         this.wasmBase64 = "${wasmBase64}"; // Embedded Compiled Binary
+        this.assets = ${JSON.stringify(assetData)};
         
+        // Load Images
+        this.loadedImages = {};
+        if (this.assets.icon) {
+            const img = new Image();
+            img.src = 'data:image/png;base64,' + this.assets.icon;
+            this.loadedImages.icon = img;
+        }
+        this.loadedImages.gallery = [];
+        this.assets.images.forEach(b64 => {
+            const img = new Image();
+            img.src = 'data:image/png;base64,' + b64;
+            this.loadedImages.gallery.push(img);
+        });
+
         // Interactive State
         this.appState = 'boot'; // boot, kernel, launcher, app
         this.mouseX = 0;
@@ -483,8 +554,6 @@ class NachoGameRuntime {
                 const y = (this.canvas.height - phoneH) / 2;
                 
                 // Simple 2x3 grid check
-                // ... (simplified logic for demo)
-                // Just launch app if clicked inside screen area
                 if (this.mouseX > x && this.mouseX < x + phoneW &&
                     this.mouseY > y && this.mouseY < y + phoneH) {
                         this.appState = 'app';
@@ -757,10 +826,19 @@ class NachoGameRuntime {
                 const iconY = startGridY + (row * (iconSize + gap + 20));
 
                 // Icon
-                ctx.fillStyle = app.color;
-                ctx.beginPath();
-                ctx.roundRect(iconX, iconY, iconSize, iconSize, 12);
-                ctx.fill();
+                if (app.isGame && this.loadedImages.icon) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect(iconX, iconY, iconSize, iconSize, 12);
+                    ctx.clip();
+                    ctx.drawImage(this.loadedImages.icon, iconX, iconY, iconSize, iconSize);
+                    ctx.restore();
+                } else {
+                    ctx.fillStyle = app.color;
+                    ctx.beginPath();
+                    ctx.roundRect(iconX, iconY, iconSize, iconSize, 12);
+                    ctx.fill();
+                }
 
                 // Label
                 ctx.fillStyle = '#fff';
@@ -776,17 +854,33 @@ class NachoGameRuntime {
 
         } else if (this.appState === 'app') {
             // [State: App Running / Game]
-            // Draw the "App" UI - Interactive Canvas
             
-            // Status Bar
-            ctx.fillStyle = '#000';
+            // Render Splash Screen if available
+            if (this.loadedImages.gallery && this.loadedImages.gallery.length > 0) {
+                 const splash = this.loadedImages.gallery[0];
+                 // Scale to fit cover
+                 const scale = Math.max(phoneW / splash.width, phoneH / splash.height);
+                 const sw = splash.width * scale;
+                 const sh = splash.height * scale;
+                 const sx = x + (phoneW - sw) / 2;
+                 const sy = y + (phoneH - sh) / 2;
+                 
+                 ctx.drawImage(splash, sx, sy, sw, sh);
+                 
+                 // Overlay for "Play" feel
+                 ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                 ctx.fillRect(x + 10, y + 10, phoneW - 20, phoneH - 20);
+            } else {
+                // Fallback to dark background
+                ctx.fillStyle = '#111';
+                ctx.fillRect(x + 10, y + 10, phoneW - 20, phoneH - 20);
+            }
+
+            // Status Bar (Transparent)
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
             ctx.fillRect(x + 10, y + 10, phoneW - 20, 24);
             
-            // Game Area
-            ctx.fillStyle = '#111';
-            ctx.fillRect(x + 10, y + 34, phoneW - 20, phoneH - 44);
-
-            // Center: Bouncing "Game"
+            // Center: Bouncing "Game" (Overlay)
             const cx = x + phoneW/2;
             const cy = y + phoneH/2;
             
@@ -802,6 +896,8 @@ class NachoGameRuntime {
 
             // Text
             ctx.fillStyle = '#fff';
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 4;
             ctx.font = '16px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('Running: ' + (this.options.packageName || 'Game'), cx, y + 100);
@@ -809,6 +905,8 @@ class NachoGameRuntime {
             ctx.fillStyle = '#4ade80';
             ctx.font = '12px monospace';
             ctx.fillText('FPS: 60 | WASM: 64-bit', cx, y + 120);
+            
+            ctx.shadowBlur = 0;
             
             // Render Console Output from WASM if available (Mocking for now)
             ctx.fillStyle = '#888';
@@ -869,6 +967,16 @@ class NachoGameRuntime {
 
     showError(message) {
         this.loadingScreen.innerHTML = \`<div style="color:red">\${message}</div>\`;
+    }
+    
+    arrayBufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
     }
 }
 
