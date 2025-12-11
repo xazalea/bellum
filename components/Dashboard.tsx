@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
 import { nachoEngine } from '@/lib/nacho/engine';
+import { clusterService } from '@/lib/nacho/modules/distributed-compute';
 import { vmManager } from '@/lib/vm/manager';
 import { VMType } from '@/lib/vm/types';
 import Terminal from './Terminal';
@@ -76,6 +76,12 @@ export default function Dashboard() {
     const [activeTab, setActiveTab] = useState<'home' | 'store' | 'my-games'>('home');
     const [activeApps, setActiveApps] = useState<any[]>([]);
     const [viewingAppId, setViewingAppId] = useState<string | null>(null);
+    
+    // Cluster Management: Pause compute when playing
+    useEffect(() => {
+        clusterService.setGamingMode(!!viewingAppId);
+    }, [viewingAppId]);
+
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userGames, setUserGames] = useState<UserGameData[]>([]);
     const [communityRepos, setCommunityRepos] = useState<GameRepository[]>([]);

