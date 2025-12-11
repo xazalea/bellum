@@ -396,14 +396,21 @@ export class GameTransformer {
     return bundle;
   }
 
-  private generateHTMLShell(gameType: VMType, options: GameTransformationOptions): string {
-    return `<!DOCTYPE html>
+    private generateHTMLShell(gameType: VMType, options: GameTransformationOptions): string {
+        // Inject external emulator scripts for real execution
+        const scripts = `
+            ${gameType === VMType.WINDOWS || gameType === VMType.CODE ? '<script src="https://js-dos.com/6.22/current/js-dos.js"></script>' : ''}
+            ${gameType === VMType.XBOX || gameType === VMType.LINUX ? '<script src="/v86/libv86.js"></script>' : ''}
+        `;
+
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${gameType.toUpperCase()} Game - Nacho</title>
     <style>${this.generateCSS(gameType)}</style>
+    ${scripts}
 </head>
 <body>
     <div id="game-container">
@@ -416,7 +423,7 @@ export class GameTransformer {
     <script>${this.generateJSRuntime([], gameType, options)}</script>
 </body>
 </html>`;
-  }
+    }
 
   private generateJSRuntime(assets: GameAsset[], gameType: VMType, options: GameTransformationOptions, wasmModule?: ArrayBuffer): string {
     // Embed WASM as Base64
@@ -500,8 +507,55 @@ class NachoGameRuntime {
             }
 
             // 2. Load compiled binary
-            if (this.wasmBase64) {
+            if (this.wasmBase64 && this.gameType === 'android') {
                 await this.loadWasm();
+            } else if (this.gameType === 'windows' || this.gameType === 'exe') {
+                // Initialize JS-DOS for real execution
+                if (typeof Dos !== 'undefined') {
+                    console.log("Starting JS-DOS...");
+                    const dosInstance = Dos(this.canvas, { 
+                        wdosboxUrl: 'https://js-dos.com/6.22/current/wdosbox.js',
+                        cycles: 'auto',
+                        autolock: false,
+                    });
+                    
+                    // Convert base64 WASM/Binary back to blob for mounting
+                    const binaryString = atob(this.wasmBase64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+
+                    await dosInstance.run(url);
+                    this.loadingScreen.style.display = 'none';
+                    return; // Take over control
+                }
+            } else if (this.gameType === 'xbox' || this.gameType === 'iso' || this.gameType === 'linux') {
+                // Initialize V86 for real execution
+                if (typeof V86Starter !== 'undefined') {
+                    console.log("Starting V86...");
+                    
+                    const binaryString = atob(this.wasmBase64);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                    const blob = new Blob([bytes]);
+                    const url = URL.createObjectURL(blob);
+
+                    window.v86 = new V86Starter({
+                        wasm_path: '/v86/v86.wasm',
+                        memory_size: 512 * 1024 * 1024,
+                        vga_memory_size: 8 * 1024 * 1024,
+                        screen_container: document.getElementById('game-container'),
+                        bios: { url: '/v86/bios/seabios.bin' },
+                        vga_bios: { url: '/v86/bios/vgabios.bin' },
+                        cdrom: { url: url },
+                        autostart: true,
+                    });
+                    
+                    this.loadingScreen.style.display = 'none';
+                    this.canvas.style.display = 'none'; // V86 creates its own screen
+                    return;
+                }
             } else {
                 console.warn("No compiled WASM binary found, running in simulation mode.");
             }
@@ -578,7 +632,8 @@ class NachoGameRuntime {
         if (this.gameType === 'android') {
             this.renderAndroidUI(ctx, time);
         } else if (this.gameType === 'windows' || this.gameType === 'exe') {
-            this.renderWindowsUI(ctx, time);
+            // JS-DOS handles rendering if active, otherwise show loading
+            if (typeof Dos === 'undefined') this.renderWindowsUI(ctx, time);
         } else {
             this.renderGenericUI(ctx, time);
         }

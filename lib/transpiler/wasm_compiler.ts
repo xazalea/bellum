@@ -87,12 +87,12 @@ export class WASMCompiler {
                 body.push(0x7c); // i64.add
                 body.push(0x1a); // drop (result unused in this simple compiler)
             } else {
-                // Push op1, op2, add
-                body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
-                body.push(0x41, ...this.leb128(Number(instr.op2?.value || 0)));
-                body.push(0x6a); // i32.add
-                body.push(0x21, 0x00); // local.set 0
-            }
+            // Push op1, op2, add
+            body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
+            body.push(0x41, ...this.leb128(Number(instr.op2?.value || 0)));
+            body.push(0x6a); // i32.add
+            body.push(0x21, 0x00); // local.set 0
+        }
         }
         else if (op === (IROpcode.PUSH as unknown as string) || op === 'push') {
             // Store to stack (memory)
@@ -103,8 +103,8 @@ export class WASMCompiler {
                  body.push(0xa7); // i32.wrap_i64
                  body.push(0x10, 0x00); // call print
             } else {
-                body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
-                body.push(0x10, 0x00); // call print
+            body.push(0x41, ...this.leb128(Number(instr.op1?.value || 0)));
+            body.push(0x10, 0x00); // call print
             }
         }
         // ... other ops
