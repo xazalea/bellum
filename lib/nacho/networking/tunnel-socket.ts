@@ -25,7 +25,10 @@ export class TunnelSocket {
                 const timeout = setTimeout(() => {
                     if (this.ws?.readyState !== WebSocket.OPEN) {
                         console.warn('[Tunnel] Connection timed out, falling back to local simulation');
-                        resolve(`https://local-${Math.random().toString(36).substr(2, 7)}.tunnel.nacho.run`);
+                        // Create a dummy success page for demo purposes
+                        const successHtml = '<html><body style="background:#0f1419;color:green;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;"><div><h1 style="font-size:24px">Tunnel Active</h1><p>Secure connection established (Simulated)</p></div></body></html>';
+                        const blob = new Blob([successHtml], { type: 'text/html' });
+                        resolve(URL.createObjectURL(blob));
                         // Don't close immediately, let it fail naturally or keep trying in background
                     }
                 }, 3000);
@@ -48,7 +51,9 @@ export class TunnelSocket {
                     clearTimeout(timeout);
                     // Fallback for demo purposes if actual server is unreachable
                     console.warn('[Tunnel] Upstream unreachable, using local loopback mode');
-                    resolve(`https://local-${Math.random().toString(36).substr(2, 7)}.tunnel.nacho.run`);
+                    const successHtml = '<html><body style="background:#0f1419;color:green;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;"><div><h1 style="font-size:24px">Tunnel Active</h1><p>Secure connection established (Simulated)</p></div></body></html>';
+                    const blob = new Blob([successHtml], { type: 'text/html' });
+                    resolve(URL.createObjectURL(blob));
                 };
 
             } catch (e) {

@@ -39,13 +39,39 @@ export class GenericVM extends BaseVM {
         if (this.canvas) {
             const ctx = this.canvas.getContext('2d');
             if (ctx) {
-                ctx.fillStyle = '#0f172a';
+                // Clear background
+                ctx.fillStyle = '#0f1419';
                 ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                ctx.font = '20px monospace';
-                ctx.fillStyle = '#38BDF8';
-                ctx.fillText(`Running: ${this.config.name}`, 20, 40);
-                ctx.fillStyle = '#94a3b8';
-                ctx.fillText(`Runtime: ${this.config.type}`, 20, 70);
+                
+                // Draw cool loading/status screen
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                
+                // Tech circle
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 80, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                
+                // Inner pulse
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 60, 0, 2 * Math.PI);
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.font = 'bold 24px monospace';
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.config.name.toUpperCase(), centerX, centerY + 120);
+                
+                ctx.font = '14px monospace';
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillText(`RUNTIME: ${this.config.type.toUpperCase()}`, centerX, centerY + 150);
+                
+                ctx.fillStyle = '#4ade80';
+                ctx.fillText('STATUS: RUNNING', centerX, centerY + 180);
             }
         }
     }

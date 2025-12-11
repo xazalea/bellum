@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import firebaseConfig from './config.json';
 
@@ -62,14 +62,15 @@ export class FirebaseService {
     if (!this.currentUser) return [];
 
     try {
-      const gamesRef = doc(db, 'users', this.currentUser.uid);
-      const gamesSnap = await getDoc(gamesRef);
+      const gamesRef = collection(db, 'users', this.currentUser.uid, 'games');
+      const gamesSnap = await getDocs(gamesRef);
 
-      if (gamesSnap.exists()) {
-        const data = gamesSnap.data();
-        return data.games || [];
-      }
-      return [];
+      const games: UserGameData[] = [];
+      gamesSnap.forEach((doc) => {
+        games.push(doc.data() as UserGameData);
+      });
+      
+      return games.filter(g => !(g as any).deleted);
     } catch (error) {
       console.error('Error loading user games:', error);
       return [];
