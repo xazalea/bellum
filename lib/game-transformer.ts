@@ -8,7 +8,7 @@ import { firebaseService } from './firebase/firebase';
 import { nachoEngine } from './nacho/engine';
 import JSZip from 'jszip';
 import { PEParser } from './transpiler/pe_parser';
-import { lifter } from './transpiler/lifter';
+import { lifter } from './transpiler/lifter/lifter';
 import { WASMCompiler } from './transpiler/wasm_compiler';
 import { Arch } from './transpiler/lifter/types';
 import { DEXParser } from './transpiler/dex_parser';
