@@ -14,6 +14,14 @@ import { p2pNode } from './nacho/net/p2p_node';
 import { CreativeHacks } from './engine/hacks/runtime_hacks';
 import { GpuMemoryManager } from './engine/hacks/gpu_memory';
 
+// New Subsystems
+import { GpuPhysics } from './engine/physics/gpu_physics';
+import { TieredWasmJit } from './engine/wasm/tiered_jit';
+import { WasmMemoryManager } from './engine/wasm/memory_allocator';
+import { BinaryECS } from './engine/ecs/binary_ecs';
+import { ChunkGenerator } from './engine/world/chunk_generator';
+import { DistributedCompute } from './engine/net/distributed_compute';
+
 export class BellumOS {
     public android: AndroidSystem;
     public windows: WindowsKernel;
@@ -22,16 +30,32 @@ export class BellumOS {
     public creativeHacks: CreativeHacks;
     public gpuMemory: GpuMemoryManager;
 
+    // Advanced Subsystems
+    public physics: GpuPhysics;
+    public wasmJit: TieredWasmJit;
+    public wasmMemory: WasmMemoryManager;
+    public ecs: BinaryECS;
+    public worldGen: ChunkGenerator;
+    public distributedCompute: DistributedCompute;
+
     private static instance: BellumOS;
 
     private constructor() {
-        // Initialize Subsystems
+        // Initialize Core Subsystems
         this.android = new AndroidSystem();
         this.windows = new WindowsKernel();
         this.win32WindowManager = new WindowManager();
         this.distributedWindows = new DistributedWindows(this.win32WindowManager);
         this.creativeHacks = new CreativeHacks();
         this.gpuMemory = new GpuMemoryManager();
+
+        // Initialize Advanced Subsystems
+        this.physics = new GpuPhysics();
+        this.wasmJit = new TieredWasmJit();
+        this.wasmMemory = new WasmMemoryManager();
+        this.ecs = new BinaryECS(100000); // 100k Entities
+        this.worldGen = new ChunkGenerator();
+        this.distributedCompute = new DistributedCompute();
     }
 
     public static getInstance(): BellumOS {
@@ -48,7 +72,9 @@ export class BellumOS {
         console.log("BellumOS: Boot sequence initiated...");
 
         // 1. Initialize Hardware (WebGPU, FS, Network)
-        await webgpu.initialize(canvas);
+        const gpuSuccess = await webgpu.initialize(canvas);
+        if (!gpuSuccess) console.warn("BellumOS: WebGPU failed, falling back to CPU");
+        
         await vfs.initialize();
         // P2P initializes on import (via constructor)
 

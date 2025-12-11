@@ -1,87 +1,113 @@
-'use client';
+"use client";
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutGrid, Globe, Terminal } from 'lucide-react';
+import { LayoutGrid, Cpu, Activity, Settings, X, Terminal, Globe, Maximize2 } from 'lucide-react';
 
-export function DynamicIsland() {
-  const pathname = usePathname();
-  const [isHovered, setIsHovered] = useState(false);
+interface DynamicIslandProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
 
-  const isExpanded = isHovered;
+export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabChange }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  const links = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { href: '/unblocker', label: 'Unblocker', icon: Globe },
+  const navItems = [
+    { id: 'home', icon: LayoutGrid, label: 'Home' },
+    { id: 'library', icon: Cpu, label: 'Library' },
+    { id: 'runner', icon: Terminal, label: 'Runner' },
+    { id: 'cluster', icon: Globe, label: 'Cluster' },
+    { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex justify-center">
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50">
       <motion.div
-        className="bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl rounded-full overflow-hidden"
-        initial={{ width: '140px', height: '48px' }}
-        animate={{ 
-          width: isExpanded ? '320px' : '140px',
-          height: '48px'
+        layout
+        initial={false}
+        animate={{
+          width: isExpanded ? 480 : 160,
+          height: isExpanded ? 220 : 44,
+          borderRadius: isExpanded ? 32 : 22,
         }}
-        onHoverStart={() => setIsHovered(true)}
-        onHoverEnd={() => setIsHovered(false)}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 30
+        }}
+        className="bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden relative cursor-pointer"
+        onClick={() => !isExpanded && setIsExpanded(true)}
       >
-        <div className="relative w-full h-full flex items-center justify-between px-2">
-          
-          {/* Logo State (Collapsed) */}
-          <AnimatePresence mode="wait">
-            {!isExpanded && (
-              <motion.div 
-                className="absolute inset-0 flex items-center justify-center gap-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <span className="font-bold text-white text-sm tracking-tighter">
-                  nacho<span className="text-blue-500">.</span>
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        {/* Collapsed State Content */}
+        {!isExpanded && (
+          <motion.div 
+            className="w-full h-full flex items-center justify-center gap-3 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-sm font-semibold text-white/90">BellumOS</span>
+            <div className="w-[1px] h-4 bg-white/20" />
+            <Activity size={14} className="text-white/70" />
+          </motion.div>
+        )}
 
-          {/* Expanded Menu State */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div 
-                className="absolute inset-0 flex items-center justify-center px-4 gap-6"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2, delay: 0.1 }}
-              >
-                {links.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = pathname === link.href;
-                  return (
-                    <Link 
-                      key={link.href} 
-                      href={link.href}
-                      className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-                        isActive ? 'text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      <Icon size={16} />
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        {/* Expanded State Content */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="p-6 w-full h-full flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="font-bold text-lg">System Active</span>
+                </div>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                  className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-        </div>
+              {/* Navigation Grid */}
+              <div className="grid grid-cols-5 gap-2 mb-4">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTabChange(item.id);
+                      setIsExpanded(false);
+                    }}
+                    className={`flex flex-col items-center gap-2 p-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-white text-black scale-105' 
+                        : 'text-white/60 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <item.icon size={20} />
+                    <span className="text-[10px] font-medium uppercase tracking-wider">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick Stats Footer */}
+              <div className="mt-auto pt-4 border-t border-white/10 flex justify-between text-xs text-white/40 font-mono">
+                <span>CPU: 12%</span>
+                <span>MEM: 2.4GB</span>
+                <span>GPU: 45%</span>
+                <span>NET: P2P</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
-}
-
+};

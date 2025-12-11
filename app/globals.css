@@ -4,96 +4,96 @@
 
 :root {
   --foreground-rgb: 255, 255, 255;
-  --background-rgb: 15, 20, 25;
+  --background-rgb: 2, 4, 8;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #0B1120; /* Deep Dark Blue */
+  color: #FFFFFF;
+  background: #020408; /* Bellum BG */
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: #0a0f1c;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3b82f6;
-  border-radius: 4px;
+  background: #1a2236;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
+  background: #FFFFFF;
 }
 
-/* Borg.games Style Utilities */
-.borg-card {
-  background: #1e293b;
-  border: 1px solid #334155;
+/* Bellum UI Components */
+.bellum-card {
+  background: #0a0f1c;
+  border: 1px solid #1a2236;
+  border-radius: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+.bellum-card:hover {
+  border-color: #FFFFFF;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.bellum-btn {
+  background: #FFFFFF;
+  color: #020408;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+  border: 1px solid #FFFFFF;
+}
+
+.bellum-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.bellum-btn-secondary {
+  background: transparent;
+  color: #FFFFFF;
+  border: 1px solid #1a2236;
+}
+
+.bellum-btn-secondary:hover {
+  border-color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bellum-input {
+  background: #0a0f1c;
+  border: 1px solid #1a2236;
+  color: white;
+  padding: 0.75rem 1rem;
   border-radius: 0.75rem;
-  transition: all 0.2s ease-in-out;
+  width: 100%;
+  transition: all 0.2s ease;
 }
 
-.borg-card:hover {
-  background: #334155;
-  border-color: #3b82f6;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1);
-}
-
-.borg-button-primary {
-  background: #3b82f6;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-medium: 0.875rem;
-  transition: all 0.2s ease-in-out;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.borg-button-primary:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.borg-input {
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: white;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease-in-out;
-}
-
-.borg-input:focus {
+.bellum-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
-/* Animation for game cards */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.game-card-enter {
-  animation: fadeInUp 0.3s ease-out;
+/* Animations */
+@keyframes island-expand {
+  0% { width: 120px; height: 36px; border-radius: 18px; }
+  100% { width: 400px; height: 200px; border-radius: 24px; }
 }
