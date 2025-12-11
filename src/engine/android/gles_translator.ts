@@ -3,42 +3,30 @@
  * Maps OpenGL ES 2.0/3.0 commands to WebGPU Render Passes
  */
 
+import { webgpu } from '../../nacho/engine/webgpu-context';
+
 export interface GLESCommand {
   type: string;
   args: any[];
 }
 
 export class GLESTranslator {
-  private device: GPUDevice | null = null;
   private commandQueue: GLESCommand[] = [];
   private renderPass: GPURenderPassEncoder | null = null;
+  private currentEncoder: GPUCommandEncoder | null = null;
 
   /**
-   * Initialize WebGPU device
+   * Initialize using the shared WebGPU context
    */
   async initialize(canvas: HTMLCanvasElement): Promise<void> {
-    if (!navigator.gpu) {
-      throw new Error('WebGPU not supported');
+    const success = await webgpu.initialize(canvas);
+    if (!success) {
+        throw new Error("Failed to initialize WebGPU context");
     }
+  }
 
-    const adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) {
-      throw new Error('Failed to get GPU adapter');
-    }
-
-    this.device = await adapter.requestDevice();
-    
-    // Configure canvas
-    const context = canvas.getContext('webgpu');
-    if (!context) {
-      throw new Error('Failed to get WebGPU context');
-    }
-
-    const format = navigator.gpu.getPreferredCanvasFormat();
-    context.configure({
-      device: this.device,
-      format,
-    });
+  private get device(): GPUDevice | null {
+      return webgpu.device;
   }
 
   /**
@@ -47,8 +35,9 @@ export class GLESTranslator {
   translateClear(mask: number): void {
     if (!this.device) return;
 
-    // Map GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, etc. to WebGPU clear
-    // This would be called during render pass creation
+    // In WebGPU, clear is part of the RenderPassDescriptor loadOp
+    // So this usually triggers a new render pass or updates the current one's descriptor
+    // For simplicity, we assume this starts a frame
   }
 
   /**
@@ -57,10 +46,9 @@ export class GLESTranslator {
   translateDrawArrays(mode: number, first: number, count: number): void {
     if (!this.renderPass) return;
 
-    // Map GL_TRIANGLES, GL_TRIANGLE_STRIP, etc. to WebGPU primitive topology
-    const topology = this.mapPrimitiveTopology(mode);
+    // In a real implementation, we would need to set the pipeline with the correct topology
+    // const topology = this.mapPrimitiveTopology(mode);
     
-    // Execute draw call
     this.renderPass.draw(count, 1, first, 0);
   }
 
@@ -70,7 +58,7 @@ export class GLESTranslator {
   translateDrawElements(mode: number, count: number, type: number, offset: number): void {
     if (!this.renderPass) return;
 
-    const topology = this.mapPrimitiveTopology(mode);
+    // const topology = this.mapPrimitiveTopology(mode);
     this.renderPass.drawIndexed(count, 1, offset, 0, 0);
   }
 
@@ -78,13 +66,11 @@ export class GLESTranslator {
    * Map OpenGL ES primitive modes to WebGPU topology
    */
   private mapPrimitiveTopology(glMode: number): GPUPrimitiveTopology {
-    // GL_TRIANGLES = 0x0004
-    // GL_TRIANGLE_STRIP = 0x0005
-    // GL_TRIANGLE_FAN = 0x0006
-    // GL_LINES = 0x0001
-    // GL_LINE_STRIP = 0x0003
-    // GL_POINTS = 0x0000
-
+    // GL_TRIANGLES = 0x0004 -> 'triangle-list'
+    // GL_TRIANGLE_STRIP = 0x0005 -> 'triangle-strip'
+    // GL_LINES = 0x0001 -> 'line-list'
+    // GL_LINE_STRIP = 0x0003 -> 'line-strip'
+    // GL_POINTS = 0x0000 -> 'point-list'
     switch (glMode) {
       case 0x0004: return 'triangle-list';
       case 0x0005: return 'triangle-strip';
@@ -98,36 +84,36 @@ export class GLESTranslator {
   /**
    * Begin render pass
    */
-  beginRenderPass(colorAttachment: GPURenderPassColorAttachment): void {
-    if (!this.device) return;
+  beginRenderPass(clearColor: GPUColor = { r: 0, g: 0, b: 0, a: 1 }): void {
+    if (!this.device || !webgpu.context) return;
 
-    // Create command encoder
-    const encoder = this.device.createCommandEncoder();
+    this.currentEncoder = this.device.createCommandEncoder();
     
-    // Create render pass descriptor
+    const textureView = webgpu.context.getCurrentTexture().createView();
+    
     const renderPassDescriptor: GPURenderPassDescriptor = {
-      colorAttachments: [colorAttachment],
+      colorAttachments: [{
+        view: textureView,
+        clearValue: clearColor,
+        loadOp: 'clear',
+        storeOp: 'store',
+      }],
     };
 
-    this.renderPass = encoder.beginRenderPass(renderPassDescriptor);
+    this.renderPass = this.currentEncoder.beginRenderPass(renderPassDescriptor);
   }
 
   /**
    * End render pass and submit
    */
   endRenderPass(): void {
-    if (!this.renderPass || !this.device) return;
+    if (!this.renderPass || !this.currentEncoder || !this.device) return;
 
     this.renderPass.end();
-    // Submit would happen in the main render loop
-  }
-
-  /**
-   * Translate glUniform* commands
-   */
-  translateUniform(location: number, value: any): void {
-    // Map to WebGPU bind group updates
-    // This would update the uniform buffer
+    this.device.queue.submit([this.currentEncoder.finish()]);
+    
+    this.renderPass = null;
+    this.currentEncoder = null;
   }
 
   /**
@@ -146,14 +132,12 @@ export class GLESTranslator {
   ): void {
     if (!this.device || !pixels) return;
 
-    // Create WebGPU texture from pixel data
     const texture = this.device.createTexture({
       size: { width, height },
       format: this.mapTextureFormat(internalformat),
-      usage: (GPUTextureUsage?.TEXTURE_BINDING || 4) | (GPUTextureUsage?.COPY_DST || 8),
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    // Upload pixel data
     this.device.queue.writeTexture(
       { texture },
       pixels,
@@ -166,14 +150,10 @@ export class GLESTranslator {
    * Map OpenGL ES texture formats to WebGPU formats
    */
   private mapTextureFormat(glFormat: number): GPUTextureFormat {
-    // GL_RGBA = 0x1908
-    // GL_RGB = 0x1907
-    // etc.
+    // Simplified mapping
     switch (glFormat) {
-      case 0x1908: return 'rgba8unorm';
-      case 0x1907: return 'rgb8unorm';
+      case 0x1908: return 'rgba8unorm'; // GL_RGBA
       default: return 'rgba8unorm';
     }
   }
 }
-

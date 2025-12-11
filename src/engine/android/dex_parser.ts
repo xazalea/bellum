@@ -100,15 +100,27 @@ export class DEXParser {
     const view = new DataView(this.data.buffer);
     
     // Get string data offset
-    const stringDataOff = view.getUint32(header.stringIdsOff + stringIdx * 4, true);
+    let stringDataOff = view.getUint32(header.stringIdsOff + stringIdx * 4, true);
     
-    // Read UTF-8 string (null-terminated)
+    // Read ULEB128 length (utf16 size) - skip it for now as we read until null
+    // But we need to skip the bytes of the ULEB128
+    let ulebBytes = 0;
+    let byte = 0;
+    do {
+        byte = this.data[stringDataOff++];
+        ulebBytes++;
+    } while ((byte & 0x80) !== 0);
+
+    // Read MUTF-8 string (null-terminated)
     let length = 0;
+    // Scan for null terminator
     while (this.data[stringDataOff + length] !== 0) {
       length++;
     }
     
     const decoder = new TextDecoder('utf-8');
+    // Note: This decodes as standard UTF-8. MUTF-8 has slight differences (null char, surrogate pairs)
+    // but for most class names it works fine.
     return decoder.decode(this.data.slice(stringDataOff, stringDataOff + length));
   }
 
