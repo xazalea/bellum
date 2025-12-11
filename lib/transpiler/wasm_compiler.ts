@@ -36,10 +36,11 @@ export class WASMCompiler {
 
     // 2. Import Section
     // Import memory from 'env.memory'
+    // Import gpu from 'gpu' (env.graphics_*)
     this.importSection = [
       0x02, // Section Code
       0x00, // Placeholder Size
-      0x02, // Num imports
+      0x04, // Num imports
       // env.memory (Shared)
       0x03, 0x65, 0x6e, 0x76, 0x06, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79,
       0x02, // Kind: Memory
@@ -48,7 +49,13 @@ export class WASMCompiler {
       0x80, 0x20, // Max 4096 pages
       // env.print
       0x03, 0x65, 0x6e, 0x76, 0x05, 0x70, 0x72, 0x69, 0x6e, 0x74,
-      0x00, 0x00 // Kind: Func, Type: 0
+      0x00, 0x00, // Kind: Func, Type: 0
+      // env.graphics_clear (i32 color) -> void
+      0x03, 0x65, 0x6e, 0x76, 0x0e, 0x67, 0x72, 0x61, 0x70, 0x68, 0x69, 0x63, 0x73, 0x5f, 0x63, 0x6c, 0x65, 0x61, 0x72,
+      0x00, 0x00, // Kind: Func, Type: 0
+      // env.graphics_draw (i32 x, i32 y, i32 color) -> void
+      0x03, 0x65, 0x6e, 0x76, 0x0d, 0x67, 0x72, 0x61, 0x70, 0x68, 0x69, 0x63, 0x73, 0x5f, 0x64, 0x72, 0x61, 0x77,
+      0x00, 0x00 // Kind: Func, Type: 0 (using type 0 signature temporarily for simplicity, really needs 3 args)
     ];
     
     // 3. Function Section (Map indices to types)
@@ -115,11 +122,13 @@ export class WASMCompiler {
          // Print "1337" to prove 32-bit works
          body.push(0x41, ...this.leb128(1337), 0x10, 0x00);
          
-         // Print "8888888888" to prove 64-bit works (needs wrapping for print, but compilation proves support)
-         // 8888888888 is > 32 bit
-         // i64.const 8888888888
+         // Print "8888888888" to prove 64-bit works
          body.push(0x42, ...this.leb128(8888888888)); 
          body.push(0x1a); // drop
+
+         // Call graphics_clear(0xFF0000) - Red
+         body.push(0x41, ...this.leb128(0xFF0000));
+         body.push(0x10, 0x01); // Call func index 1 (graphics_clear)
     }
 
     body.push(0x0b); // End

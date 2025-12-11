@@ -596,6 +596,14 @@ class NachoGameRuntime {
             env: {
                 memory: new WebAssembly.Memory({ initial: 256, maximum: 4096, shared: true }),
                 print: (val) => console.log("WASM Output:", val),
+                graphics_clear: (color) => {
+                    const ctx = this.canvas.getContext('2d');
+                    ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+                    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                },
+                graphics_draw: (x, y, color) => {
+                    // Placeholder for draw
+                },
                 abort: () => console.error("WASM Abort")
             }
         };
@@ -630,6 +638,8 @@ class NachoGameRuntime {
 
         // Render specific UI based on type
         if (this.gameType === 'android') {
+            // Check if WASM is running and wants to take over
+            // For now, we overlay the UI but allow WASM graphics if they happen
             this.renderAndroidUI(ctx, time);
         } else if (this.gameType === 'windows' || this.gameType === 'exe') {
             // JS-DOS handles rendering if active, otherwise show loading
