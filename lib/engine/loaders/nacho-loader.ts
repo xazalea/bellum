@@ -6,9 +6,10 @@
 import { puterClient } from '../../storage/hiberfile';
 import { PEParser } from '../../transpiler/pe_parser';
 import { DEXParser } from '../../transpiler/dex_parser';
-import { InstructionLifter, LifterContext } from '../../transpiler/lifter';
+import { InstructionLifter, LifterContext, IRInstruction } from '../../transpiler/lifter';
 import { Optimizer } from '../../transpiler/optimizer';
 import { WASMCompiler } from '../../transpiler/wasm_compiler';
+import { IRInstruction as StandardIRInstruction } from '../../transpiler/lifter/types';
 import { SyscallBridge } from '../../hle/syscall_bridge';
 import { PELoader } from '../../hle/pe_loader';
 import { FileType } from '../analyzers/binary-analyzer';
@@ -118,7 +119,7 @@ export class NachoLoader {
     // 4. Compile to WASM
     this.updateStatus('Compiling to WASM', 'Generating Binary...');
     const compiler = new WASMCompiler();
-    wasmBytes = compiler.compile(optimizedIR);
+    wasmBytes = compiler.compile(optimizedIR as unknown as StandardIRInstruction[]);
 
     // Add debug logging
     console.log('WASM Compiler Output:', {
