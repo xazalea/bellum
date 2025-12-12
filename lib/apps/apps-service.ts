@@ -55,3 +55,4 @@ export async function listInstalledApps(uid: string): Promise<InstalledApp[]> {
   return apps;
 }
 
+

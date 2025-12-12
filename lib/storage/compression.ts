@@ -34,3 +34,4 @@ export async function compressFileGzip(file: Blob): Promise<CompressionResult> {
     algorithm: 'gzip',
   };
 }
+

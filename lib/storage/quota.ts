@@ -9,3 +9,4 @@ export function formatBytes(bytes: number): string {
   if (bytes >= kb) return `${(bytes / kb).toFixed(0)} KB`;
   return `${bytes} B`;
 }
+

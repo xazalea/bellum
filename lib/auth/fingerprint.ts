@@ -10,3 +10,4 @@ export async function getDeviceFingerprintId(): Promise<string> {
   return res.visitorId;
 }
 
+

@@ -46,3 +46,4 @@ export async function deleteArchive(id: string): Promise<void> {
   await deleteDoc(doc(db, "archives", id));
 }
 
+
