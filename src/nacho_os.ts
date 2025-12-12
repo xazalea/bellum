@@ -102,5 +102,10 @@ export class NachoOS {
     }
 }
 
-// Export global instance
-export const os = NachoOS.getInstance();
+export function getNachoOS(): NachoOS | null {
+    if (typeof window === 'undefined') return null;
+    return NachoOS.getInstance();
+}
+
+// Export a stable handle for client code; null during SSR/prerender.
+export const os: NachoOS | null = getNachoOS();

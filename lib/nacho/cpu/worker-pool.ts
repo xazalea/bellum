@@ -17,6 +17,10 @@ export class WorkerPool {
     private activeJobs: Map<string, number> = new Map();
 
     private constructor() {
+        // SSR safety: never touch Worker during prerender.
+        if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+            return;
+        }
         // Initialize default pool
         const logicalCores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
         console.log(`[CPU] Initializing Worker Pool with ${logicalCores} logical cores`);
@@ -34,6 +38,7 @@ export class WorkerPool {
     }
 
     private spawnWorker(id: string, type: WorkerType) {
+        if (typeof Worker === 'undefined') return;
         // In a real app, this would load a dedicated worker script
         // For POC, we use a blob or placeholder
         
@@ -65,6 +70,7 @@ export class WorkerPool {
      * Dispatch a task to the least busy worker
      */
     dispatch(type: WorkerType, data: any) {
+        if (typeof window === 'undefined') return;
         // Simple load balancing
         let bestWorkerId = '';
         let minLoad = Infinity;
@@ -95,5 +101,5 @@ export class WorkerPool {
     }
 }
 
-export const cpuPool = WorkerPool.getInstance();
+export const cpuPool: WorkerPool | null = typeof window !== 'undefined' ? WorkerPool.getInstance() : null;
 

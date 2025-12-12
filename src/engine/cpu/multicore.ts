@@ -7,7 +7,7 @@
  */
 
 export class MulticoreSimulator {
-    private sharedMemory: SharedArrayBuffer;
+    private sharedMemory: SharedArrayBuffer | ArrayBuffer;
     private int32View: Int32Array;
     private workers: Worker[] = [];
 
@@ -17,6 +17,19 @@ export class MulticoreSimulator {
     // [2] = Active Core Count
     
     constructor(coreCount: number = 4) {
+        // SSR + non-COI safety: SharedArrayBuffer/Worker may be unavailable.
+        if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+            this.sharedMemory = new ArrayBuffer(1024 * 1024);
+            this.int32View = new Int32Array(this.sharedMemory);
+            return;
+        }
+
+        if (typeof SharedArrayBuffer === 'undefined') {
+            this.sharedMemory = new ArrayBuffer(1024 * 1024);
+            this.int32View = new Int32Array(this.sharedMemory);
+            return;
+        }
+
         this.sharedMemory = new SharedArrayBuffer(1024 * 1024); // 1MB Shared State
         this.int32View = new Int32Array(this.sharedMemory);
         
@@ -28,6 +41,7 @@ export class MulticoreSimulator {
     }
 
     private spawnCore(id: number) {
+        if (typeof Worker === 'undefined') return;
         const workerCode = `
             self.onmessage = (e) => {
                 const { id, memory } = e.data;

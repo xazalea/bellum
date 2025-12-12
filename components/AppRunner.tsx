@@ -58,6 +58,9 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       }
 
       setStatus('Booting NachoOS…');
+      if (!os) {
+        throw new Error('NachoOS is not available in this environment');
+      }
       await os.boot(canvas);
       if (cancelled) return;
 
