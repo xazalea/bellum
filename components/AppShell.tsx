@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // Start the engine in the background
-        nachoEngine.boot().catch(console.error);
+        nachoEngine?.boot().catch(console.error);
     }, []);
 
     const renderView = () => {

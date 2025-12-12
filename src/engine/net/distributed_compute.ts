@@ -14,6 +14,8 @@ export class DistributedCompute {
      * Offload Physics Task (Item 171)
      */
     async offloadPhysics(particles: Float32Array): Promise<Float32Array> {
+        const node = p2pNode;
+        if (!node) return particles;
         // Find best peer
         const peerId = this.findBestComputePeer();
         if (!peerId) return particles; // Fallback to local
@@ -28,9 +30,9 @@ export class DistributedCompute {
                 }
             };
             
-            p2pNode.onMessage(listener);
+            node.onMessage(listener);
             
-            p2pNode.send(peerId, {
+            node.send(peerId, {
                 type: 'PHYSICS_TASK',
                 payload: { taskId, data: Array.from(particles) } // TODO: Binary transfer
             });

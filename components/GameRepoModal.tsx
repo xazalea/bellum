@@ -21,7 +21,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
     const [newDesc, setNewDesc] = useState('');
     const [isPublic, setIsPublic] = useState(true);
 
-    const user = clusterService.getCurrentUser();
+    const user = clusterService?.getCurrentUser() ?? null;
 
     useEffect(() => {
         if (isOpen) {

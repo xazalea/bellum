@@ -70,7 +70,7 @@ export default function Terminal() {
             case 'status':
                 addLog('info', `System Status: ONLINE`);
                 addLog('info', `Active Service: ${activeService || 'None'}`);
-                addLog('info', `Fingerprint: ${localStorage.getItem('nacho_fingerprint') || 'Unknown'}`);
+                addLog('info', `Fingerprint: ${typeof window !== 'undefined' ? (localStorage.getItem('nacho_fingerprint') || 'Unknown') : 'n/a'}`);
                 break;
             case 'tunnel':
                 if (parts[1] === 'start') startService('tunnel');
@@ -113,6 +113,7 @@ export default function Terminal() {
             addLog('system', 'Initializing Secure Tunnel Handshake...');
             try {
                 addLog('info', 'Generating crypto keys for secure tunnel...');
+                if (!nachoEngine) throw new Error('Engine not available (SSR)');
                 const url = await nachoEngine.browserServer.tunnelService.start(3000);
                 setServiceUrl(url);
                 addLog('success', 'Tunnel established successfully!');
@@ -124,6 +125,7 @@ export default function Terminal() {
             addLog('system', 'Booting Local WebGPU LLM Container...');
             try {
                 addLog('info', 'Allocating GPU VRAM (WebGPU)...');
+                if (!nachoEngine) throw new Error('Engine not available (SSR)');
                 const model = await nachoEngine.browserServer.llmRunner.loadModel('Llama-3');
                 const url = 'http://localhost:8000';
                 setServiceUrl(url);
@@ -136,6 +138,7 @@ export default function Terminal() {
             addLog('system', 'Starting Static Web Server...');
             try {
                 addLog('info', 'Binding to port 8080...');
+                if (!nachoEngine) throw new Error('Engine not available (SSR)');
                 const res = await nachoEngine.browserServer.webServerRunner.start('./public');
                 setServiceUrl(res.url);
                 addLog('success', 'Web Server Online!');
@@ -147,6 +150,7 @@ export default function Terminal() {
             addLog('system', 'Initializing Minecraft Server Instance (JVM via WASM)...');
             try {
                 addLog('info', 'Starting JVM (Eaglercraft/Paper)...');
+                if (!nachoEngine) throw new Error('Engine not available (SSR)');
                 const res = await nachoEngine.browserServer.minecraftRunner.start('1.20.1');
                 setServiceUrl(res.ip);
                 addLog('success', 'Minecraft Server Started!');
@@ -160,6 +164,7 @@ export default function Terminal() {
             
             try {
                 // Call the REAL engine method
+                if (!nachoEngine) throw new Error('Engine not available (SSR)');
                 const result = await nachoEngine.browserServer.vncDesktopRunner.start('dorowu/ubuntu-desktop-lxde-vnc');
                 setServiceUrl(result.url);
                 addLog('success', 'Desktop Environment Ready!');

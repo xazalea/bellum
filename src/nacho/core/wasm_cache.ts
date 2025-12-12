@@ -13,12 +13,15 @@ export class WasmCache {
     }
 
     private initializeListeners() {
-        p2pNode.onMessage((msg, from) => {
+        const node = p2pNode;
+        if (!node) return;
+
+        node.onMessage((msg, from) => {
             if (msg.type === 'WASM_REQUEST') {
                 const hash = msg.payload.hash;
                 if (this.localCache.has(hash)) {
                     console.log(`[WasmCache] Serving WASM ${hash} to ${from}`);
-                    p2pNode.send(from, {
+                    node.send(from, {
                         type: 'WASM_RESPONSE',
                         payload: { hash, data: this.localCache.get(hash) } // Note: JSON stringify of ArrayBuffer needs handling
                     });
@@ -44,10 +47,12 @@ export class WasmCache {
         
         // 3. Ask Network
         console.log(`[WasmCache] Requesting WASM ${hash} from network...`);
-        p2pNode.broadcast({
-            type: 'WASM_REQUEST',
-            payload: { hash }
-        });
+        if (p2pNode) {
+            p2pNode.broadcast({
+                type: 'WASM_REQUEST',
+                payload: { hash }
+            });
+        }
 
         // For now, return null immediately as network is async and we don't have a promise map yet
         return null;

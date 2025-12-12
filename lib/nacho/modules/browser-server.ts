@@ -510,6 +510,7 @@ export class BrowserServerEngine {
             this.vncDesktopRunner.status = 'booting';
             
             // 1. Boot via Arsenic Hypervisor (High-Performance Synthetic Core)
+            if (!nachoEngine) throw new Error('Nacho engine is only available in the browser');
             const pid = await nachoEngine.arsenic.spawnSyntheticLinux();
             console.log(`☠️ Arsenic: Booted Synthetic Kernel (PID: ${pid})`);
 

@@ -17,13 +17,14 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
 
     useEffect(() => {
         if (isOpen) {
-            setUser(clusterService.getCurrentUser());
+            setUser(clusterService?.getCurrentUser() ?? null);
             setError('');
             setGeneratedCode('');
         }
     }, [isOpen]);
 
     const handleLogin = async () => {
+        if (!clusterService) { setError('Cluster service unavailable'); return; }
         const res = await clusterService.login(usernameInput);
         if (res.success) {
             setUser(clusterService.getCurrentUser());
@@ -34,6 +35,7 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
     };
 
     const handleRegister = async () => {
+        if (!clusterService) { setError('Cluster service unavailable'); return; }
         const res = await clusterService.register(usernameInput);
         if (res.success) {
             setUser(clusterService.getCurrentUser());
@@ -44,6 +46,7 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
     };
 
     const handleLinkDevice = async () => {
+        if (!clusterService) { setError('Cluster service unavailable'); return; }
         const success = await clusterService.linkDevice(linkCodeInput);
         if (success) {
             setUser(clusterService.getCurrentUser());
@@ -55,6 +58,7 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
 
     const generateCode = () => {
         try {
+            if (!clusterService) { setError('Cluster service unavailable'); return; }
             const code = clusterService.generateLinkCode();
             setGeneratedCode(code);
         } catch (e) {
@@ -63,6 +67,7 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
     };
 
     const toggleOptOut = (val: boolean) => {
+        if (!clusterService) { setError('Cluster service unavailable'); return; }
         clusterService.setOptOut(val);
         setUser({ ...user!, isOptedOut: val }); // Optimistic update
     };
@@ -138,7 +143,7 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
                             </div>
 
                             <button 
-                                onClick={() => { clusterService.logout(); setUser(null); }}
+                                onClick={() => { clusterService?.logout(); setUser(null); }}
                                 className="w-full py-2 text-sm text-red-400 hover:bg-red-900/10 rounded-lg transition-colors flex items-center justify-center gap-2"
                             >
                                 <LogOut size={16} />

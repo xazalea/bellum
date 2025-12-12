@@ -38,7 +38,6 @@ import { CompressionStabilityEngine } from './modules/hacking/entropy-compressio
 import { MicroOpsEngine } from './modules/hacking/micro-ops';
 import { BrowserServerEngine } from './modules/browser-server';
 import { ArsenicHypervisor } from '@/lib/arsenic/hypervisor';
-import { DistributedComputeService, clusterService } from './modules/distributed-compute';
 
 export enum ExecutionTier {
     INTERPRETER = 0,
@@ -85,7 +84,6 @@ export class NachoEngine {
     public microOps: MicroOpsEngine;
     public browserServer: BrowserServerEngine;
     public arsenic: ArsenicHypervisor;
-    public clusterService: DistributedComputeService;
 
     private constructor() {
         this.coreExecution = new CoreExecutionEngine();
@@ -107,7 +105,6 @@ export class NachoEngine {
         this.microOps = new MicroOpsEngine();
         this.browserServer = new BrowserServerEngine();
         this.arsenic = new ArsenicHypervisor();
-        this.clusterService = clusterService;
     }
 
     static getInstance(): NachoEngine {
@@ -232,4 +229,10 @@ export class NachoEngine {
     }
 }
 
-export const nachoEngine = NachoEngine.getInstance();
+export function getNachoEngine(): NachoEngine | null {
+    if (typeof window === 'undefined') return null;
+    return NachoEngine.getInstance();
+}
+
+// Export a stable handle for client code; null during SSR/prerender.
+export const nachoEngine: NachoEngine | null = getNachoEngine();

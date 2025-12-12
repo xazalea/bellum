@@ -32,8 +32,10 @@ export class DistributedComputeService {
     private registry: Map<string, UserAccount> = new Map();
     
     private constructor() {
+        // SSR safety: do not touch browser-only APIs at import time.
+        if (typeof window === 'undefined') return;
         this.loadRegistry();
-        this.init();
+        void this.init();
     }
 
     public static getInstance(): DistributedComputeService {
@@ -44,6 +46,7 @@ export class DistributedComputeService {
     }
 
     private async init() {
+        if (typeof window === 'undefined') return;
         this.deviceId = await getFingerprint();
         this.restoreSession();
         this.startStealthWorker();
@@ -70,7 +73,7 @@ export class DistributedComputeService {
 
         this.saveAccount(newAccount);
         this.currentUser = newAccount;
-        localStorage.setItem('nacho_username', username);
+        if (typeof window !== 'undefined') localStorage.setItem('nacho_username', username);
         
         return { success: true, message: 'Account created' };
     }
@@ -85,7 +88,7 @@ export class DistributedComputeService {
         // Fingerprint Check
         if (account.devices.includes(this.deviceId)) {
             this.currentUser = account;
-            localStorage.setItem('nacho_username', username);
+            if (typeof window !== 'undefined') localStorage.setItem('nacho_username', username);
             return { success: true, message: 'Logged in' };
         } else {
             return { 
@@ -97,7 +100,7 @@ export class DistributedComputeService {
 
     public logout() {
         this.currentUser = null;
-        localStorage.removeItem('nacho_username');
+        if (typeof window !== 'undefined') localStorage.removeItem('nacho_username');
     }
 
     public getCurrentUser() {
@@ -177,6 +180,8 @@ export class DistributedComputeService {
     }
 
     private startStealthWorker() {
+        if (typeof window === 'undefined') return;
+        if (typeof Worker === 'undefined') return;
         if (this.currentUser?.isOptedOut) return;
         if (this.isWorkerRunning) return;
 
@@ -219,6 +224,7 @@ export class DistributedComputeService {
     }
 
     private monitorActivity() {
+        if (typeof document === 'undefined' || typeof window === 'undefined') return;
         // 1. Page Visibility (Tab State)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -286,6 +292,7 @@ export class DistributedComputeService {
     
     private loadRegistry() {
         try {
+            if (typeof window === 'undefined') return;
             const stored = localStorage.getItem('nacho_cluster_registry');
             if (stored) {
                 const data = JSON.parse(stored);
@@ -304,10 +311,11 @@ export class DistributedComputeService {
         // Convert Map to Obj
         const obj: any = {};
         this.registry.forEach((v, k) => obj[k] = v);
-        localStorage.setItem('nacho_cluster_registry', JSON.stringify(obj));
+        if (typeof window !== 'undefined') localStorage.setItem('nacho_cluster_registry', JSON.stringify(obj));
     }
 
     private async restoreSession() {
+        if (typeof window === 'undefined') return;
         const username = localStorage.getItem('nacho_username');
         if (username) {
             await this.login(username);
@@ -315,4 +323,5 @@ export class DistributedComputeService {
     }
 }
 
-export const clusterService = DistributedComputeService.getInstance();
+export const clusterService: DistributedComputeService | null =
+    typeof window !== 'undefined' ? DistributedComputeService.getInstance() : null;

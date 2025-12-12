@@ -40,7 +40,7 @@ export class GameRepositoryService {
      * Requires User to be logged in via Distributed Compute Service (Cluster)
      */
     public async createRepository(name: string, description: string, isPublic: boolean = true): Promise<{ success: boolean; id?: string; message: string }> {
-        const user = clusterService.getCurrentUser();
+        const user = clusterService?.getCurrentUser() ?? null;
         const fingerprint = await getFingerprint();
 
         if (!user || !fingerprint) {
@@ -92,7 +92,7 @@ export class GameRepositoryService {
             // Allow owner to add
             // In a real app, we might check if user.devices includes repoData.ownerId for cross-device ownership
             // For now, simple direct check or username check
-            const user = clusterService.getCurrentUser();
+            const user = clusterService?.getCurrentUser() ?? null;
             if (repoData.ownerId !== fingerprint && repoData.ownerName !== user?.username) {
                 return { success: false, message: 'You do not own this repository' };
             }
@@ -131,7 +131,7 @@ export class GameRepositoryService {
      * Get my repositories
      */
     public async getMyRepositories(): Promise<GameRepository[]> {
-        const user = clusterService.getCurrentUser();
+        const user = clusterService?.getCurrentUser() ?? null;
         if (!user) return [];
 
         try {

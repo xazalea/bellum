@@ -17,7 +17,7 @@ export default function KeepalivePage() {
   useEffect(() => {
     (async () => {
       try {
-        await nachoEngine.boot();
+        await nachoEngine?.boot();
       } catch (e) {
         // Keepalive should never hard-crash the app; log only.
         console.warn("Keepalive boot failed:", e);
@@ -66,7 +66,7 @@ export default function KeepalivePage() {
 
     return () => {
       try {
-        nachoEngine.halt();
+        nachoEngine?.halt();
       } catch {
         // ignore
       }

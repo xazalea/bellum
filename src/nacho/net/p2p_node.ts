@@ -107,4 +107,4 @@ export class P2PNode {
     }
 }
 
-export const p2pNode = new P2PNode();
+export const p2pNode: P2PNode | null = typeof window !== 'undefined' ? new P2PNode() : null;

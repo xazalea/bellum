@@ -4,7 +4,7 @@
  */
 
 import { VMType } from './vm/types';
-import { nachoEngine } from './nacho/engine';
+import { getNachoEngine } from './nacho/engine';
 import JSZip from 'jszip';
 import { PEParser } from './transpiler/pe_parser';
 import { lifter } from './transpiler/lifter/lifter';
@@ -144,7 +144,9 @@ export class GameTransformer {
 
   private async extractGameAssets(file: File, gameType: VMType): Promise<GameAsset[]> {
     const assets: GameAsset[] = [];
-    const storageEngine = nachoEngine.storageCapacity;
+    const engine = getNachoEngine();
+    if (!engine) throw new Error('Nacho engine is only available in the browser');
+    const storageEngine = engine.storageCapacity;
 
     if (gameType === VMType.ANDROID) {
       assets.push(...await this.extractAPKAssets(file));
@@ -315,7 +317,9 @@ export class GameTransformer {
   }
 
   private async optimizeAssets(assets: GameAsset[], options: GameTransformationOptions): Promise<GameAsset[]> {
-    const storageEngine = nachoEngine.storageCapacity;
+    const engine = getNachoEngine();
+    if (!engine) throw new Error('Nacho engine is only available in the browser');
+    const storageEngine = engine.storageCapacity;
     const optimizedAssets: GameAsset[] = [];
 
     for (const asset of assets) {
@@ -433,7 +437,9 @@ export class GameTransformer {
   }
 
   private async finalOptimization(bundle: WebAppBundle, options: GameTransformationOptions): Promise<WebAppBundle> {
-    const storageEngine = nachoEngine.storageCapacity;
+    const engine = getNachoEngine();
+    if (!engine) throw new Error('Nacho engine is only available in the browser');
+    const storageEngine = engine.storageCapacity;
     if (options.compressionLevel === 'ultra') {
       storageEngine.stackedBinaryReduction.stack(new Uint8Array(await bundle.blob.arrayBuffer()));
       const dictionaries = this.extractDictionaries(bundle);

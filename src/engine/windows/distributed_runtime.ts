@@ -24,8 +24,10 @@ export class DistributedWindows {
     private initializeCluster() {
         // Simple leader election stub (Item 496)
         this.isClusterLeader = true; // For now, we are always leader
-        
-        p2pNode.onMessage((msg, from) => {
+        const node = p2pNode;
+        if (!node) return;
+
+        node.onMessage((msg, from) => {
             if (msg.type === 'REMOTE_GDI_DRAW') {
                 this.handleRemoteDraw(msg.payload);
             } else if (msg.type === 'OFFLOAD_TASK') {
@@ -54,6 +56,7 @@ export class DistributedWindows {
      */
     broadcastGdiCommand(cmd: any) {
         if (this.isClusterLeader) {
+            if (!p2pNode) return;
             p2pNode.broadcast({
                 type: 'REMOTE_GDI_DRAW',
                 payload: cmd
