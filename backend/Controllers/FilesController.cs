@@ -59,6 +59,44 @@ public class FilesController : ControllerBase
             return NotFound(new { error = e.Message });
         }
     }
+
+    [HttpPost("{fileId}/make-public")]
+    public IActionResult MakePublic([FromRoute] string fileId)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            _uploads.PromoteToPublic(userId, fileId);
+            return Ok(new { ok = true });
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            return Unauthorized(new { error = e.Message });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { error = e.Message });
+        }
+    }
+
+    [HttpDelete("{fileId}")]
+    public IActionResult Delete([FromRoute] string fileId)
+    {
+        try
+        {
+            var userId = RequireUserId();
+            _uploads.DeleteUserFile(userId, fileId);
+            return Ok(new { ok = true });
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            return Unauthorized(new { error = e.Message });
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new { error = e.Message });
+        }
+    }
 }
 
 

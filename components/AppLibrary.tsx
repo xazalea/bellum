@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Download, MoreVertical, Smartphone, Monitor, Play, Trash2 } from "lucide-react";
 import { authService } from "@/lib/firebase/auth-service";
-import { addInstalledApp, detectAppType, type InstalledApp, subscribeInstalledApps } from "@/lib/apps/apps-service";
+import { addInstalledApp, detectAppType, removeInstalledAppWithCleanup, type InstalledApp, subscribeInstalledApps } from "@/lib/apps/apps-service";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
 
 function formatBytes(bytes: number): string {
@@ -65,6 +65,7 @@ export function AppLibrary({
         name: displayName,
         originalName: file.name,
         type,
+        scope: "user",
         originalBytes: file.size,
         storedBytes: res.storedBytes,
         fileId: res.fileId,
@@ -189,7 +190,12 @@ export function AppLibrary({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // wired later: delete file from cluster + firestore doc
+                        if (!user) return;
+                        const ok = window.confirm(`Remove "${app.name}"?`);
+                        if (!ok) return;
+                        void removeInstalledAppWithCleanup(user.uid, app).catch((err: any) => {
+                          setError(err?.message || "Remove failed");
+                        });
                       }}
                       className="p-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-white/80"
                       title="Remove"

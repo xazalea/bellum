@@ -10,9 +10,9 @@ const config: Config = {
     extend: {
       colors: {
         nacho: {
-          bg: '#030A1A', // deeper navy-blue background
-          card: '#06102a',
-          card2: '#040d24',
+          bg: '#040D24', // deeper navy-blue background
+          card: '#061334',
+          card2: '#050f2b',
           border: 'rgba(255,255,255,0.14)',
           borderStrong: 'rgba(255,255,255,0.34)',
           white: '#FFFFFF',

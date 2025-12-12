@@ -9,6 +9,8 @@ export interface ClusterFileManifest {
   createdAtUnixMs: number;
 }
 
+export type ClusterFileScope = "user" | "public";
+
 function getClusterBase(): string {
   return (
     (typeof process !== "undefined" &&
@@ -41,10 +43,14 @@ async function gzipDecompressBytes(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await outBlob.arrayBuffer());
 }
 
-export async function fetchClusterManifest(fileId: string): Promise<ClusterFileManifest> {
+export async function fetchClusterManifest(
+  fileId: string,
+  scope: ClusterFileScope = "user"
+): Promise<ClusterFileManifest> {
   const base = getClusterBase();
   const headers = await getAuthHeaders();
-  const res = await fetch(`${base}/api/files/${fileId}/manifest`, { headers });
+  const path = scope === "public" ? `/api/public/files/${fileId}/manifest` : `/api/files/${fileId}/manifest`;
+  const res = await fetch(`${base}${path}`, { headers });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     throw new Error(`Manifest fetch failed (${res.status}): ${t}`);
@@ -56,18 +62,22 @@ export async function downloadClusterFile(
   fileId: string,
   opts: {
     compressedChunks?: boolean;
+    scope?: ClusterFileScope;
     onProgress?: (p: { chunkIndex: number; totalChunks: number }) => void;
   } = {}
 ): Promise<{ fileName: string; bytes: Uint8Array }> {
   const base = getClusterBase();
   const headers = await getAuthHeaders();
-  const manifest = await fetchClusterManifest(fileId);
+  const scope = opts.scope ?? "user";
+  const manifest = await fetchClusterManifest(fileId, scope);
+  const chunkBase =
+    scope === "public" ? `${base}/api/public/files/${fileId}/chunk` : `${base}/api/files/${fileId}/chunk`;
 
   const parts: Uint8Array[] = [];
   let totalLen = 0;
 
   for (let i = 0; i < manifest.totalChunks; i++) {
-    const res = await fetch(`${base}/api/files/${fileId}/chunk/${i}`, { headers });
+    const res = await fetch(`${chunkBase}/${i}`, { headers });
     if (!res.ok) {
       const t = await res.text().catch(() => "");
       throw new Error(`Chunk download failed (${res.status}) [${i}/${manifest.totalChunks}]: ${t}`);
@@ -89,4 +99,23 @@ export async function downloadClusterFile(
   return { fileName: manifest.fileName, bytes: merged };
 }
 
+export async function deleteClusterFile(fileId: string): Promise<void> {
+  const base = getClusterBase();
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${base}/api/files/${fileId}`, { method: "DELETE", headers });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Delete failed (${res.status}): ${t}`);
+  }
+}
+
+export async function promoteClusterFileToPublic(fileId: string): Promise<void> {
+  const base = getClusterBase();
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${base}/api/files/${fileId}/make-public`, { method: "POST", headers });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Make-public failed (${res.status}): ${t}`);
+  }
+}
 

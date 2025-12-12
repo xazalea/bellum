@@ -412,6 +412,7 @@ class PythonExecutor implements LanguageExecutor {
         (process.env as unknown as { NEXT_PUBLIC_PYODIDE_BASE_URL?: string })
           ?.NEXT_PUBLIC_PYODIDE_BASE_URL) ||
       '/pyodide/';
+    const jsdelivrBase = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/';
 
     // @ts-ignore - Pyodide loads globally
     if (typeof window !== 'undefined' && (window as any).loadPyodide) {
@@ -437,8 +438,9 @@ class PythonExecutor implements LanguageExecutor {
 
       // Load script
       const script = document.createElement('script');
-      // Self-hosted (no external CDNs). Provide pyodide under /pyodide/ (or set NEXT_PUBLIC_PYODIDE_BASE_URL).
-      script.src = `${baseURL.replace(/\/?$/, '/')}` + 'pyodide.js';
+      // Prefer self-hosted; fall back to jsDelivr when needed.
+      const localSrc = `${baseURL.replace(/\/?$/, '/')}` + 'pyodide.js';
+      script.src = localSrc;
       script.onload = async () => {
         try {
           // @ts-ignore
@@ -450,7 +452,22 @@ class PythonExecutor implements LanguageExecutor {
           reject(error);
         }
       };
-      script.onerror = () => reject(new Error('Failed to load Pyodide script'));
+      script.onerror = () => {
+        // Fallback to jsDelivr (optional accelerator)
+        const fallback = document.createElement('script');
+        fallback.src = jsdelivrBase + 'pyodide.js';
+        fallback.onload = async () => {
+          try {
+            // @ts-ignore
+            const pyodide = await loadPyodide({ indexURL: jsdelivrBase });
+            resolve(pyodide);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        fallback.onerror = () => reject(new Error('Failed to load Pyodide script'));
+        document.head.appendChild(fallback);
+      };
       document.head.appendChild(script);
     });
   }

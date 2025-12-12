@@ -15,7 +15,12 @@ export class V86Wrapper {
     }) {
         // Self-hosted only (no external CDNs).
         if (!(window as any).V86Starter) {
-            await this.loadScript('/v86/libv86.js');
+            try {
+                await this.loadScript('/v86/libv86.js');
+            } catch {
+                // Fallback to jsDelivr when needed.
+                await this.loadScript('https://cdn.jsdelivr.net/npm/v86@latest/build/libv86.js');
+            }
         }
 
         const V86Starter = (window as any).V86Starter;

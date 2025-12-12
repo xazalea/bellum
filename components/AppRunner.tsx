@@ -67,6 +67,7 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       if (!bytes) {
         const dl = await downloadClusterFile(appData.fileId, {
           compressedChunks: appData.compression === 'gzip-chunked',
+          scope: appData.scope ?? "user",
           onProgress: (p) => {
             setProgress(Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100));
           },

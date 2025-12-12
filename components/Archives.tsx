@@ -7,6 +7,7 @@ import { authService } from "@/lib/firebase/auth-service";
 import { detectAppType, addInstalledApp, type InstalledApp } from "@/lib/apps/apps-service";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
 import { publishArchive, subscribePublicArchives, type ArchiveEntry } from "@/lib/archives/archives-service";
+import { promoteClusterFileToPublic } from "@/lib/storage/chunked-download";
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -45,6 +46,9 @@ export function Archives() {
         onProgress: (p) => setProgress(Math.round((p.uploadedBytes / p.totalBytes) * 100)),
       });
 
+      // Make it accessible via public file endpoints.
+      await promoteClusterFileToPublic(res.fileId);
+
       const entry = {
         name: file.name.replace(/\.(apk|exe|msi)$/i, ""),
         originalName: file.name,
@@ -74,6 +78,7 @@ export function Archives() {
       name: item.name,
       originalName: item.originalName,
       type: item.type,
+      scope: "public",
       originalBytes: item.originalBytes,
       storedBytes: item.storedBytes,
       fileId: item.fileId,

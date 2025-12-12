@@ -9,6 +9,7 @@ public class UploadStorageService
 {
     private readonly ILogger<UploadStorageService> _logger;
     private readonly string _root;
+    private readonly string _publicRoot;
 
     // In-memory session registry (also persisted to disk per session).
     private readonly ConcurrentDictionary<string, UploadSession> _sessions = new();
@@ -20,7 +21,9 @@ public class UploadStorageService
     {
         _logger = logger;
         _root = Path.Combine(AppContext.BaseDirectory, "App_Data", "files");
+        _publicRoot = Path.Combine(AppContext.BaseDirectory, "App_Data", "public_files");
         Directory.CreateDirectory(_root);
+        Directory.CreateDirectory(_publicRoot);
     }
 
     public UploadInitResponse Init(string userId, UploadInitRequest req)
@@ -148,6 +151,46 @@ public class UploadStorageService
         return File.OpenRead(path);
     }
 
+    public FileManifest GetPublicManifest(string fileId)
+    {
+        var manifestPath = Path.Combine(GetPublicFileDir(fileId), "manifest.json");
+        if (!File.Exists(manifestPath)) throw new FileNotFoundException("Manifest not found");
+        var json = File.ReadAllText(manifestPath);
+        var manifest = JsonSerializer.Deserialize<FileManifest>(json);
+        if (manifest is null) throw new InvalidOperationException("Invalid manifest");
+        return manifest;
+    }
+
+    public Stream OpenPublicChunkRead(string fileId, int chunkIndex)
+    {
+        var path = Path.Combine(GetPublicFileDir(fileId), $"chunk_{chunkIndex:D6}.bin");
+        if (!File.Exists(path)) throw new FileNotFoundException("Chunk not found");
+        return File.OpenRead(path);
+    }
+
+    public void PromoteToPublic(string userId, string fileId)
+    {
+        var srcDir = GetFileDir(userId, fileId);
+        if (!Directory.Exists(srcDir)) throw new DirectoryNotFoundException("File not found");
+
+        var dstDir = GetPublicFileDir(fileId);
+        if (Directory.Exists(dstDir))
+        {
+            // Already public.
+            return;
+        }
+
+        Directory.CreateDirectory(dstDir);
+        CopyDirectory(srcDir, dstDir);
+    }
+
+    public void DeleteUserFile(string userId, string fileId)
+    {
+        var dir = GetFileDir(userId, fileId);
+        if (!Directory.Exists(dir)) return;
+        TryDeleteDirectory(dir);
+    }
+
     public long GetUserUsageBytes(string userId)
     {
         var userDir = Path.Combine(_root, userId);
@@ -200,6 +243,9 @@ public class UploadStorageService
     private string GetFileDir(string userId, string fileId) =>
         Path.Combine(_root, userId, fileId);
 
+    private string GetPublicFileDir(string fileId) =>
+        Path.Combine(_publicRoot, fileId);
+
     private static void TryDeleteDirectory(string dir)
     {
         try
@@ -207,6 +253,21 @@ public class UploadStorageService
             if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
         }
         catch { /* ignore */ }
+    }
+
+    private static void CopyDirectory(string sourceDir, string targetDir)
+    {
+        Directory.CreateDirectory(targetDir);
+        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.TopDirectoryOnly))
+        {
+            var name = Path.GetFileName(file);
+            File.Copy(file, Path.Combine(targetDir, name), overwrite: true);
+        }
+        foreach (var dir in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.TopDirectoryOnly))
+        {
+            var name = Path.GetFileName(dir);
+            CopyDirectory(dir, Path.Combine(targetDir, name));
+        }
     }
 
     private static async Task<string> ComputeSha256HexAsync(string path)

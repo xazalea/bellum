@@ -54,7 +54,7 @@ export class V86Loader {
 
       // Load v86 script
       const script = document.createElement('script');
-      // Self-hosted (no external CDNs). Provide this file via your cluster/server.
+      // Prefer self-hosted; fall back to jsDelivr when needed.
       script.src = '/v86/libv86.js';
       script.async = true;
       script.onload = () => {
@@ -76,7 +76,12 @@ export class V86Loader {
         }, 10000);
       };
       script.onerror = () => {
-        reject(new Error('Failed to load v86 script'));
+        const fallback = document.createElement('script');
+        fallback.src = 'https://cdn.jsdelivr.net/npm/v86@latest/build/libv86.js';
+        fallback.async = true;
+        fallback.onload = script.onload as any;
+        fallback.onerror = () => reject(new Error('Failed to load v86 script'));
+        document.head.appendChild(fallback);
       };
       document.head.appendChild(script);
     });

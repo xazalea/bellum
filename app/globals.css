@@ -4,13 +4,13 @@
 
 :root {
   --foreground-rgb: 255, 255, 255;
-  --background-rgb: 3, 10, 26;
-  --nacho-bg: #030A1A;
-  --nacho-card: #06102a;
-  --nacho-card-2: #040d24;
+  --background-rgb: 4, 13, 36;
+  --nacho-bg: #040D24;
+  --nacho-card: #061334;
+  --nacho-card-2: #050f2b;
   --nacho-border: rgba(255, 255, 255, 0.14);
   --nacho-border-strong: rgba(255, 255, 255, 0.34);
-  --nacho-outline: 2px;
+  --nacho-outline: 3px;
 }
 
 body {
@@ -20,6 +20,19 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 420px at 30% 10%, rgba(59,130,246,0.12), transparent 60%),
+    radial-gradient(700px 420px at 75% 15%, rgba(147,51,234,0.08), transparent 60%),
+    radial-gradient(900px 520px at 50% 90%, rgba(59,130,246,0.06), transparent 60%);
+  opacity: 1;
+  z-index: 0;
 }
 
 /* Custom Scrollbar */
