@@ -33,7 +33,8 @@ export class JSDOSLoader {
         }
 
         const script = document.createElement('script');
-        script.src = 'https://js-dos.com/cdn/js-dos-api.js'; // Example CDN
+        // Self-hosted (no external CDNs). Provide this file via your cluster/server.
+        script.src = '/js-dos/js-dos-api.js';
         document.head.appendChild(script);
 
         await new Promise<void>((resolve) => {

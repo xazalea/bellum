@@ -29,6 +29,8 @@ builder.Services.AddSingleton<FileProcessingService>();
 builder.Services.AddSingleton<StreamingService>();
 builder.Services.AddScoped<VMStateService>();
 builder.Services.AddSingleton<CodeCompilationService>();
+builder.Services.AddSingleton<UploadStorageService>();
+builder.Services.AddSingleton<ClusterPresenceService>();
 
 var app = builder.Build();
 

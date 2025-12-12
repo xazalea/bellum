@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { authService } from '@/lib/firebase/auth-service';
-import { X, Mail, Lock, User, LogIn } from 'lucide-react';
+import { X, User, LogIn, ShieldAlert } from 'lucide-react';
+import { signInUsername, signUpUsername, isCurrentDeviceTrusted, type NachoAuthResult } from '@/lib/auth/nacho-auth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -12,27 +12,33 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<Extract<NachoAuthResult, { status: 'challenge' }> | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setChallenge(null);
     setLoading(true);
 
     try {
+      let res: NachoAuthResult;
       if (mode === 'signin') {
-        await authService.signIn(email, password);
+        res = await signInUsername(username);
       } else {
-        await authService.signUp(email, password, displayName);
+        res = await signUpUsername(username);
       }
-      onAuthSuccess();
-      onClose();
+
+      if (res.status === 'ok') {
+        onAuthSuccess();
+        onClose();
+      } else {
+        setChallenge(res);
+      }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
     } finally {
@@ -40,31 +46,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleCheckApproved = async () => {
     setError(null);
     setLoading(true);
-
     try {
-      await authService.signInWithGoogle();
+      const ok = await isCurrentDeviceTrusted(username);
+      if (!ok) {
+        setError('Still pending. Approve the code from a trusted device, then check again.');
+        return;
+      }
       onAuthSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGuestSignIn = async () => {
-    setError(null);
-    setLoading(true);
-
-    try {
-      await authService.signInAnonymously();
-      onAuthSuccess();
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Guest sign-in failed');
+    } catch (e: any) {
+      setError(e?.message || 'Check failed');
     } finally {
       setLoading(false);
     }
@@ -88,8 +82,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
           </h2>
           <p className="text-gray-400">
             {mode === 'signin' 
-              ? 'Sign in to access your apps library' 
-              : 'Sign up to save your apps across devices'}
+              ? 'Sign in with your username (device fingerprint verified)' 
+              : 'Pick a unique username (no passwords)'}
           </p>
         </div>
 
@@ -102,52 +96,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'signup' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                <User size={16} className="inline mr-2" />
-                Display Name
-              </label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-                placeholder="Enter your name"
-                required={mode === 'signup'}
-              />
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <User size={16} className="inline mr-2" />
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
+              placeholder="e.g. rohan_01"
+              required
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <div className="text-xs text-white/40 mt-2">
+              3–20 chars: a-z, 0-9, underscore.
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <Mail size={16} className="inline mr-2" />
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-              placeholder="your@email.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <Lock size={16} className="inline mr-2" />
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-              placeholder="••••••••"
-              required
-              minLength={6}
-            />
           </div>
 
           <button
@@ -169,31 +136,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="my-6 flex items-center">
-          <div className="flex-1 border-t border-gray-700"></div>
-          <span className="px-4 text-gray-500 text-sm">OR</span>
-          <div className="flex-1 border-t border-gray-700"></div>
-        </div>
-
-        {/* Social Sign In */}
-        <div className="space-y-3">
-          <button
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            className="w-full bellum-btn bellum-btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Continue with Google
-          </button>
-
-          <button
-            onClick={handleGuestSignIn}
-            disabled={loading}
-            className="w-full bellum-btn bellum-btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Continue as Guest
-          </button>
-        </div>
+        {challenge && (
+          <div className="mt-6 bellum-card p-4 border-2 border-yellow-400/25 bg-yellow-500/10">
+            <div className="flex items-center gap-2 font-semibold text-yellow-100">
+              <ShieldAlert size={18} />
+              New device approval required
+            </div>
+            <div className="text-sm text-yellow-100/80 mt-2">
+              On a trusted device already logged in as <span className="font-mono">{challenge.username}</span>, open Settings and approve this code:
+            </div>
+            <div className="mt-3 text-center text-3xl font-mono font-bold tracking-widest text-white">
+              {challenge.code}
+            </div>
+            <div className="text-xs text-white/50 mt-2">
+              Expires in ~5 minutes.
+            </div>
+            <button
+              type="button"
+              onClick={handleCheckApproved}
+              disabled={loading}
+              className="mt-4 w-full bellum-btn bellum-btn-secondary disabled:opacity-50"
+            >
+              I approved it — check again
+            </button>
+          </div>
+        )}
 
         {/* Toggle Mode */}
         <div className="mt-6 text-center">

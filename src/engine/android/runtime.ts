@@ -105,7 +105,7 @@ export class AndroidRuntime {
     this.registerSyscall('close', async (args: any[]) => {
       const fd = args[0];
       if (this.openFiles.delete(fd)) {
-          return 0;
+      return 0;
       }
       return -1;
     });

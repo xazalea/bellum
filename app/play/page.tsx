@@ -9,12 +9,12 @@ import { AppRunner } from '@/components/AppRunner';
 function PlayContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const fileName = searchParams.get('file');
+  const appId = searchParams.get('appId');
 
-  if (!fileName) {
+  if (!appId) {
     return (
       <div className="flex items-center justify-center h-screen bg-black text-white">
-        No file selected.
+        No app selected.
       </div>
     );
   }
@@ -22,7 +22,7 @@ function PlayContent() {
   return (
     <div className="w-full h-full bg-black">
         <AppRunner 
-            filePath={fileName} 
+            appId={appId} 
             onExit={() => router.push('/dashboard')}
         />
     </div>

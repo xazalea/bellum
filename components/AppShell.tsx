@@ -10,10 +10,12 @@ import { ClusterPanel } from './ClusterPanel';
 import { SettingsPanel } from './Settings';
 import { AppRunner } from './AppRunner';
 import { nachoEngine } from '@/lib/nacho/engine';
+import { Archives } from './Archives';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [isBooted, setIsBooted] = useState(false);
-    const [activeTab, setActiveTab] = useState('home');
+    const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'cluster' | 'settings' | 'runner'>('home');
+    const [runnerAppId, setRunnerAppId] = useState<string | null>(null);
 
     useEffect(() => {
         // Start the engine in the background
@@ -23,15 +25,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const renderView = () => {
         switch (activeTab) {
             case 'home':
-                return <Dashboard />;
-            case 'library':
-                return <AppLibrary />;
+                return (
+                    <Dashboard
+                        onGoApps={() => setActiveTab('apps')}
+                        onOpenRunner={() => setActiveTab('runner')}
+                    />
+                );
+            case 'apps':
+                return (
+                    <AppLibrary
+                        onRunApp={(appId) => {
+                            setRunnerAppId(appId);
+                            setActiveTab('runner');
+                        }}
+                    />
+                );
             case 'cluster':
                 return <ClusterPanel />;
             case 'settings':
                 return <SettingsPanel />;
             case 'runner':
-                return <AppRunner />;
+                return (
+                    <AppRunner
+                        appId={runnerAppId ?? undefined}
+                        onExit={() => setActiveTab('home')}
+                    />
+                );
+            case 'archives':
+                return <Archives />;
             default:
                 return <Dashboard />;
         }
@@ -42,7 +63,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {!isBooted && <BootSequence onComplete={() => setIsBooted(true)} />}
             
             <div className={`min-h-screen transition-opacity duration-1000 ${isBooted ? 'opacity-100' : 'opacity-0'}`}>
-                <DynamicIsland activeTab={activeTab} onTabChange={setActiveTab} />
+                <DynamicIsland
+                    activeTab={activeTab}
+                    onTabChange={(t) => setActiveTab(t as any)}
+                    onOpenRunner={() => setActiveTab('runner')}
+                />
                 <main className="relative z-0">
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -50,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2 }}
+                            transition={{ duration: 0.25, ease: 'easeOut' }}
                         >
                             {renderView()}
                         </motion.div>

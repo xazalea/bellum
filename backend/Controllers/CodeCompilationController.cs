@@ -64,6 +64,21 @@ public class CodeCompilationController : ControllerBase
         }
     }
 
+    [HttpPost("compile/cpp")]
+    public async Task<IActionResult> CompileCpp([FromBody] CompileCodeRequest request)
+    {
+        try
+        {
+            var result = await _compilationService.CompileCppAsync(request.Code);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error compiling C++ code");
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
     [HttpGet("health")]
     public IActionResult Health()
     {

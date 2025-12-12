@@ -9,15 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bellum: {
-          bg: '#020408', // Nearly black-blue
-          card: '#0a0f1c', // Slightly lighter navy
-          border: '#1a2236',
-          highlight: '#FFFFFF', // Pure white
-          accent: '#FFFFFF',
-          text: '#FFFFFF',
-          muted: '#8899ac',
-        }
+        nacho: {
+          bg: '#030A1A', // deeper navy-blue background
+          card: '#06102a',
+          card2: '#040d24',
+          border: 'rgba(255,255,255,0.14)',
+          borderStrong: 'rgba(255,255,255,0.34)',
+          white: '#FFFFFF',
+          muted: '#9aa8bf',
+          blueGlow: 'rgba(59,130,246,0.35)',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

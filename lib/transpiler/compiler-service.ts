@@ -3,9 +3,6 @@
  * Uses Web Workers for non-blocking compilation.
  */
 
-import { WASMCompiler } from './wasm_compiler';
-import { InstructionLifter, IROpcode } from './lifter'; // Used for internal IR generation
-
 export class CompilerService {
     private static instance: CompilerService;
 
@@ -18,43 +15,36 @@ export class CompilerService {
 
     async compile(source: string, language: 'cpp' | 'haskell' | 'php'): Promise<Uint8Array> {
         console.log(`CompilerService: Compiling ${language} source...`);
-        
-        // In a full implementation, this would spawn a worker with clang-wasm / ghc-wasm.
-        // For this "RTX-Level" POC, we use our internal IR -> WASM pipeline
-        // to generate an executable binary that represents the logic.
-        
-        // 1. Parse Source to IR (Mock Parser)
-        // We simulate parsing the source code into our IR format.
-        const ir = this.mockParse(source, language);
-        
-        // 2. Optimize IR
-        // (Skipping explicit optimization step here as WASMCompiler handles some)
+        // No fake compilation: compilation must be done via the cluster/server compilation API.
+        // Set NEXT_PUBLIC_CLUSTER_SERVER_URL to point at your cluster backend (or run it same-origin).
+        const base =
+            (typeof process !== 'undefined' &&
+                (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })
+                    ?.NEXT_PUBLIC_CLUSTER_SERVER_URL) || '';
 
-        // 3. Generate WASM
-        const compiler = new WASMCompiler();
-        const wasmBytes = compiler.compile(ir);
-        
-        return wasmBytes;
+        if (language === 'cpp') {
+            const res = await fetch(`${base}/api/CodeCompilation/compile/cpp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: source })
+            });
+            if (!res.ok) {
+                throw new Error(`C++ compile failed (${res.status})`);
+            }
+            const json = await res.json();
+            if (!json?.success || typeof json.wasmBase64 !== 'string') {
+                throw new Error(json?.error || 'C++ compile failed');
+            }
+            const bin = atob(json.wasmBase64);
+            const out = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+            return out;
+        }
+
+        throw new Error(`No compiler backend configured for ${language}.`);
     }
 
-    private mockParse(source: string, language: string): any[] {
-        // Generate a simple IR that prints "Hello from [Lang]" 
-        // and does some computation based on the source length.
-        
-        const ir = [];
-        
-        // Pseudo-IR generation
-        // We will generate instructions that the WASMCompiler understands.
-        
-        // Basic "Hello World" IR
-        ir.push({ opcode: IROpcode.PUSH, op1: BigInt(1337), op2: BigInt(0), address: 0, size: 1 }); // PUSH 1337
-        ir.push({ opcode: IROpcode.PUSH, op1: BigInt(source.length), op2: BigInt(0), address: 1, size: 1 }); // PUSH len
-        // ADD currently in WASMCompiler takes op1 and op2 and pushes result, but stack machine usually pops.
-        // In our simplistic POC WASMCompiler, ADD takes immediates and pushes result.
-        ir.push({ opcode: IROpcode.ADD, op1: BigInt(1337), op2: BigInt(source.length), address: 2, size: 1 }); 
-        
-        return ir;
-    }
+    // Old mock parser removed (no fake compilation).
 }
 
 export const compilerService = CompilerService.getInstance();

@@ -54,7 +54,8 @@ export class V86Loader {
 
       // Load v86 script
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/gh/copy/v86@master/build/libv86.js';
+      // Self-hosted (no external CDNs). Provide this file via your cluster/server.
+      script.src = '/v86/libv86.js';
       script.async = true;
       script.onload = () => {
         // Wait for V86Starter to be available

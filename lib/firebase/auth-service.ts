@@ -12,6 +12,8 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './config';
+import { NACHO_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
+import { ensureNachoSettings } from '@/lib/cluster/settings';
 
 export interface UserProfile {
   uid: string;
@@ -21,6 +23,7 @@ export interface UserProfile {
   lastLogin: any;
   gamesLibrary: string[];
   storageUsed: number;
+  storageLimit: number;
 }
 
 class AuthService {
@@ -37,6 +40,7 @@ class AuthService {
         this.currentUser = user;
         if (user) {
           await this.updateUserProfile(user);
+          await ensureNachoSettings(user.uid);
         }
         this.listeners.forEach(listener => listener(user));
       });
@@ -62,7 +66,8 @@ class AuthService {
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
       gamesLibrary: [],
-      storageUsed: 0
+      storageUsed: 0,
+      storageLimit: NACHO_STORAGE_LIMIT_BYTES
     });
 
     return user;
@@ -87,7 +92,8 @@ class AuthService {
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
       gamesLibrary: [],
-      storageUsed: 0
+      storageUsed: 0,
+      storageLimit: NACHO_STORAGE_LIMIT_BYTES
     });
 
     return result.user;
@@ -133,8 +139,10 @@ class AuthService {
 
     if (userDoc.exists()) {
       // Update last login
+      const data = userDoc.data() as any;
       await updateDoc(userRef, {
-        lastLogin: serverTimestamp()
+        lastLogin: serverTimestamp(),
+        storageLimit: typeof data.storageLimit === 'number' ? data.storageLimit : NACHO_STORAGE_LIMIT_BYTES
       });
     } else {
       // Create profile if it doesn't exist
@@ -145,7 +153,8 @@ class AuthService {
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
         gamesLibrary: [],
-        storageUsed: 0
+        storageUsed: 0,
+        storageLimit: NACHO_STORAGE_LIMIT_BYTES
       });
     }
   }

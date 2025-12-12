@@ -1,10 +1,84 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Plus, Sliders, Smartphone, Monitor } from 'lucide-react';
+import { authService } from '@/lib/firebase/auth-service';
+import { subscribeInstalledApps, type InstalledApp } from '@/lib/apps/apps-service';
 
-export const Dashboard = () => {
+function formatBytes(bytes: number): string {
+  const gb = 1024 * 1024 * 1024;
+  if (bytes >= gb) return `${(bytes / gb).toFixed(2)} GB`;
+  const mb = 1024 * 1024;
+  if (bytes >= mb) return `${(bytes / mb).toFixed(0)} MB`;
+  return `${(bytes / 1024).toFixed(0)} KB`;
+}
+
+export const Dashboard = ({
+  onGoApps,
+  onOpenRunner,
+}: {
+  onGoApps?: () => void;
+  onOpenRunner?: () => void;
+}) => {
+  const user = authService.getCurrentUser();
+  const [apps, setApps] = useState<InstalledApp[]>([]);
+  const [peerCount, setPeerCount] = useState<number>(0);
+  const [heapUsed, setHeapUsed] = useState<number | null>(null);
+
+  const base = useMemo(() => {
+    return (
+      (typeof process !== 'undefined' &&
+        (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })
+          ?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
+      ''
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeInstalledApps(user.uid, setApps);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      try {
+        const token = await user.getIdToken().catch(() => null);
+        const res = await fetch(`${base}/api/cluster/peers`, {
+          headers: {
+            'X-Nacho-UserId': user.uid,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (!res.ok) return;
+        const peers = (await res.json()) as any[];
+        if (!stopped) setPeerCount(Array.isArray(peers) ? peers.length : 0);
+      } catch {
+        // ignore
+      }
+    };
+    void poll();
+    const t = window.setInterval(() => void poll(), 5000);
+    return () => {
+      stopped = true;
+      window.clearInterval(t);
+    };
+  }, [user, base]);
+
+  useEffect(() => {
+    const anyPerf = performance as any;
+    const t = window.setInterval(() => {
+      if (anyPerf?.memory?.usedJSHeapSize) setHeapUsed(anyPerf.memory.usedJSHeapSize);
+      else setHeapUsed(null);
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const storedBytes = apps.reduce((s, a) => s + (a.storedBytes || 0), 0);
+
   return (
     <div className="w-full max-w-7xl mx-auto p-8 pt-24 space-y-8">
       
@@ -19,11 +93,11 @@ export const Dashboard = () => {
             <p className="text-xl text-white/60">Distributed Web Runtime Environment</p>
         </div>
         <div className="flex gap-4">
-            <button className="bellum-btn flex items-center gap-2">
+            <button onClick={onOpenRunner} className="bellum-btn flex items-center gap-2">
                 <Play size={18} fill="currentColor" />
                 Launch App
             </button>
-            <button className="bellum-btn bellum-btn-secondary flex items-center gap-2">
+            <button onClick={onGoApps} className="bellum-btn bellum-btn-secondary flex items-center gap-2">
                 <Plus size={18} />
                 Install
             </button>
@@ -53,34 +127,30 @@ export const Dashboard = () => {
             <div className="grid grid-cols-4 gap-8">
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">WASM Heap</div>
-                    <div className="text-2xl font-mono">256 MB</div>
+                    <div className="text-2xl font-mono">{heapUsed ? formatBytes(heapUsed) : 'n/a'}</div>
                 </div>
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Peers</div>
-                    <div className="text-2xl font-mono">12 Nodes</div>
+                    <div className="text-2xl font-mono">{peerCount} Nodes</div>
                 </div>
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">GPU Compute</div>
-                    <div className="text-2xl font-mono">Idle</div>
+                    <div className="text-2xl font-mono">Online</div>
                 </div>
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Storage</div>
-                    <div className="text-2xl font-mono">OPFS</div>
+                    <div className="text-2xl font-mono">{formatBytes(storedBytes)}</div>
                 </div>
             </div>
         </div>
-        
+
         {/* Abstract Background Graphic */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </motion.div>
 
       {/* Quick Launch / Recent */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-            { title: "Minecraft PE", type: "Android", icon: Smartphone, color: "bg-green-500/20 text-green-400" },
-            { title: "Notepad++", type: "Windows", icon: Monitor, color: "bg-blue-500/20 text-blue-400" },
-            { title: "VS Code", type: "Web", icon: Sliders, color: "bg-purple-500/20 text-purple-400" },
-        ].map((app, i) => (
+        {apps.slice(0, 3).map((app, i) => (
             <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -88,12 +158,12 @@ export const Dashboard = () => {
                 transition={{ delay: 0.2 + (i * 0.1) }}
                 className="bellum-card p-6 flex items-center gap-4 cursor-pointer hover:bg-white/5"
             >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.color}`}>
-                    <app.icon size={24} />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.type === 'android' ? 'bg-green-500/20 text-green-400' : app.type === 'windows' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                    {app.type === 'android' ? <Smartphone size={24} /> : app.type === 'windows' ? <Monitor size={24} /> : <Sliders size={24} />}
                 </div>
                 <div>
-                    <h3 className="font-bold">{app.title}</h3>
-                    <p className="text-sm text-white/40">{app.type} • Local</p>
+                    <h3 className="font-bold">{app.name}</h3>
+                    <p className="text-sm text-white/40">{app.type.toUpperCase()} • Cluster</p>
                 </div>
                 <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                     <Play size={16} />

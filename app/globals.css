@@ -4,12 +4,18 @@
 
 :root {
   --foreground-rgb: 255, 255, 255;
-  --background-rgb: 2, 4, 8;
+  --background-rgb: 3, 10, 26;
+  --nacho-bg: #030A1A;
+  --nacho-card: #06102a;
+  --nacho-card-2: #040d24;
+  --nacho-border: rgba(255, 255, 255, 0.14);
+  --nacho-border-strong: rgba(255, 255, 255, 0.34);
+  --nacho-outline: 2px;
 }
 
 body {
   color: #FFFFFF;
-  background: #020408; /* Bellum BG */
+  background: var(--nacho-bg);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
@@ -23,11 +29,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0f1c;
+  background: var(--nacho-card-2);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1a2236;
+  background: rgba(255, 255, 255, 0.16);
   border-radius: 3px;
 }
 
@@ -35,18 +41,20 @@ body {
   background: #FFFFFF;
 }
 
-/* Bellum UI Components */
+/* Nacho UI Components */
 .bellum-card {
-  background: #0a0f1c;
-  border: 1px solid #1a2236;
+  background: linear-gradient(180deg, rgba(10, 18, 50, 0.72), rgba(4, 13, 36, 0.72));
+  border: var(--nacho-outline) solid var(--nacho-border);
   border-radius: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
 }
 
 .bellum-card:hover {
-  border-color: #FFFFFF;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+  border-color: var(--nacho-border-strong);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 24px rgba(59, 130, 246, 0.10);
   transform: translateY(-2px);
 }
 
@@ -57,7 +65,7 @@ body {
   padding: 0.75rem 1.5rem;
   border-radius: 9999px;
   transition: all 0.2s ease;
-  border: 1px solid #FFFFFF;
+  border: var(--nacho-outline) solid #FFFFFF;
 }
 
 .bellum-btn:hover {
@@ -68,17 +76,17 @@ body {
 .bellum-btn-secondary {
   background: transparent;
   color: #FFFFFF;
-  border: 1px solid #1a2236;
+  border: var(--nacho-outline) solid var(--nacho-border);
 }
 
 .bellum-btn-secondary:hover {
-  border-color: #FFFFFF;
+  border-color: var(--nacho-border-strong);
   background: rgba(255, 255, 255, 0.05);
 }
 
 .bellum-input {
-  background: #0a0f1c;
-  border: 1px solid #1a2236;
+  background: var(--nacho-card-2);
+  border: var(--nacho-outline) solid var(--nacho-border);
   color: white;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
@@ -88,8 +96,10 @@ body {
 
 .bellum-input:focus {
   outline: none;
-  border-color: #FFFFFF;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.80);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.10),
+    0 0 0 6px rgba(59, 130, 246, 0.12);
 }
 
 /* Animations */

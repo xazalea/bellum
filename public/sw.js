@@ -3,9 +3,9 @@
  * Implements cache-first strategy for optimal performance
  */
 
-const CACHE_NAME = 'bellum-v1';
-const RUNTIME_CACHE = 'bellum-runtime-v1';
-const STATIC_CACHE = 'bellum-static-v1';
+const CACHE_NAME = 'nacho-v1';
+const RUNTIME_CACHE = 'nacho-runtime-v1';
+const STATIC_CACHE = 'nacho-static-v1';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -48,12 +48,6 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Materialization API
-  if (url.pathname.startsWith('/_nacho/materialize/')) {
-      event.respondWith(handleMaterialization(event.request));
-      return;
-  }
-  
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
@@ -79,6 +73,24 @@ self.addEventListener('fetch', (event) => {
     } else {
         event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
     }
+  }
+});
+
+// Cluster participation (best-effort background): client toggles it via postMessage.
+let CLUSTER_ENABLED = true;
+
+self.addEventListener('message', (event) => {
+  const msg = event.data || {};
+  if (msg.type === 'NACHO_CLUSTER_SET') {
+    CLUSTER_ENABLED = !!msg.enabled;
+  }
+});
+
+// Periodic Sync: best-effort keepalive / prefetch (if supported)
+self.addEventListener('periodicsync', (event) => {
+  if (!CLUSTER_ENABLED) return;
+  if (event.tag === 'nacho-cluster-heartbeat') {
+    event.waitUntil(Promise.resolve());
   }
 });
 
@@ -145,28 +157,4 @@ async function staleWhileRevalidate(request, cacheName) {
   return cached || fetchPromise;
 }
 
-/**
- * Handle On-Demand Materialization
- * Generates resources via ServiceWorker compute instead of fetching from server
- */
-async function handleMaterialization(request) {
-    const url = new URL(request.url);
-    
-    // Mock generation logic
-    // In a real scenario, this would use WASM or JS logic to generate textures/geometry
-    // "Materializing" a requested asset from procedural rules.
-    
-    const data = new Float32Array(1024 * 1024); // 1MB dummy data
-    for(let i=0; i<data.length; i++) data[i] = Math.random();
-    
-    // Return as a binary stream
-    const blob = new Blob([data], { type: 'application/octet-stream' });
-    const response = new Response(blob, {
-        headers: {
-            'X-Nacho-Materialized': 'true',
-            'Cache-Control': 'public, max-age=3600'
-        }
-    });
-    
-    return response;
-}
+// Note: Removed previous dummy “materialization” endpoint.

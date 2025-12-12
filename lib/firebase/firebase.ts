@@ -1,14 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import firebaseConfig from './config.json';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 
 // Authentication
 export const signInAnonymous = async (): Promise<User | null> => {
@@ -75,21 +73,6 @@ export class FirebaseService {
     } catch (error) {
       console.error('Error loading user games:', error);
       return [];
-    }
-  }
-
-  // Upload optimized game file
-  async uploadGameFile(gameId: string, file: File): Promise<string | null> {
-    if (!this.currentUser) return null;
-
-    try {
-      const storageRef = ref(storage, `users/${this.currentUser.uid}/games/${gameId}/${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      return downloadURL;
-    } catch (error) {
-      console.error('Error uploading game file:', error);
-      return null;
     }
   }
 

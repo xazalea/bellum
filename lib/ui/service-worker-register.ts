@@ -13,6 +13,19 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       scope: '/',
     });
 
+    // Best-effort periodic sync (background participation) where supported
+    // @ts-ignore
+    if (registration && (registration as any).periodicSync) {
+      try {
+        // @ts-ignore
+        await (registration as any).periodicSync.register('nacho-cluster-heartbeat', {
+          minInterval: 6 * 60 * 60 * 1000, // 6h
+        });
+      } catch (e) {
+        // Not supported or permission denied
+      }
+    }
+
     // Check for updates
     registration.addEventListener('updatefound', () => {
       const newWorker = registration.installing;

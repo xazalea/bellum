@@ -13,15 +13,15 @@ export class V86Wrapper {
         wasm_path: string,
         memory_size: number
     }) {
-        // Dynamically load the V86 library from a CDN if not present
+        // Self-hosted only (no external CDNs).
         if (!(window as any).V86Starter) {
-            await this.loadScript('https://unpkg.com/v86@latest/build/libv86.js');
+            await this.loadScript('/v86/libv86.js');
         }
 
         const V86Starter = (window as any).V86Starter;
         
         this.instance = new V86Starter({
-            wasm_path: config.wasm_path || 'https://unpkg.com/v86@latest/build/v86.wasm',
+            wasm_path: config.wasm_path || '/v86/v86.wasm',
             memory_size: config.memory_size || 512 * 1024 * 1024,
             vga_memory_size: 8 * 1024 * 1024,
             bios: { url: config.bios.url },

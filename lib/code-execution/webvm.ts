@@ -407,10 +407,16 @@ class PythonExecutor implements LanguageExecutor {
   }
 
   private async loadPyodide(): Promise<any> {
+    const baseURL =
+      (typeof process !== 'undefined' &&
+        (process.env as unknown as { NEXT_PUBLIC_PYODIDE_BASE_URL?: string })
+          ?.NEXT_PUBLIC_PYODIDE_BASE_URL) ||
+      '/pyodide/';
+
     // @ts-ignore - Pyodide loads globally
     if (typeof window !== 'undefined' && (window as any).loadPyodide) {
       return await (window as any).loadPyodide({
-        indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
+        indexURL: baseURL,
       });
     }
 
@@ -424,19 +430,20 @@ class PythonExecutor implements LanguageExecutor {
       // Check if already loaded
       if ((window as any).loadPyodide) {
         resolve((window as any).loadPyodide({
-          indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
+          indexURL: baseURL,
         }));
         return;
       }
 
       // Load script
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+      // Self-hosted (no external CDNs). Provide pyodide under /pyodide/ (or set NEXT_PUBLIC_PYODIDE_BASE_URL).
+      script.src = `${baseURL.replace(/\/?$/, '/')}` + 'pyodide.js';
       script.onload = async () => {
         try {
           // @ts-ignore
           const pyodide = await loadPyodide({
-            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
+            indexURL: baseURL,
           });
           resolve(pyodide);
         } catch (error) {

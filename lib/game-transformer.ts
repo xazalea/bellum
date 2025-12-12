@@ -4,7 +4,6 @@
  */
 
 import { VMType } from './vm/types';
-import { firebaseService } from './firebase/firebase';
 import { nachoEngine } from './nacho/engine';
 import JSZip from 'jszip';
 import { PEParser } from './transpiler/pe_parser';
@@ -444,11 +443,9 @@ export class GameTransformer {
   }
 
   private generateHTMLShell(gameType: VMType, options: GameTransformationOptions): string {
-        // Inject external emulator scripts for real execution
-        const scripts = `
-            ${gameType === VMType.WINDOWS || gameType === VMType.CODE ? '<script src="https://js-dos.com/6.22/current/js-dos.js"></script>' : ''}
-            ${gameType === VMType.XBOX || gameType === VMType.LINUX ? '<script src="/v86/libv86.js"></script>' : ''}
-        `;
+        // No external hosting/CDNs: emulators must be self-hosted (cluster/server).
+        // If you want v86/js-dos support, provide scripts locally and load them from your own origin.
+        const scripts = ``;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -739,11 +736,7 @@ class NachoGameRuntime {
                 // Initialize JS-DOS for real execution if available
                 if (typeof Dos !== 'undefined') {
                     console.log("Starting JS-DOS Legacy Layer...");
-                    const dosInstance = Dos(this.canvas, { 
-                        wdosboxUrl: 'https://js-dos.com/6.22/current/wdosbox.js',
-                        cycles: 'auto',
-                        autolock: false,
-                    });
+                    const dosInstance = Dos(this.canvas, { cycles: 'auto', autolock: false });
                     
                     const binaryString = atob(this.wasmBase64);
                     const bytes = new Uint8Array(binaryString.length);
