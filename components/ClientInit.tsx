@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { authService } from '@/lib/firebase/auth-service';
 import { onSettings } from '@/lib/cluster/settings';
+import { ensureKursor } from '@/lib/ui/kursor';
 
 /**
  * Client-side initialization
@@ -10,6 +11,9 @@ import { onSettings } from '@/lib/cluster/settings';
  */
 export function ClientInit() {
   useEffect(() => {
+    // Custom cursor (Kursor)
+    ensureKursor().catch(() => {});
+
     const ensureKeepaliveFrame = (enabled: boolean) => {
       const id = 'nacho-cluster-keepalive';
       const existing = document.getElementById(id) as HTMLIFrameElement | null;

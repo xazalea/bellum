@@ -159,13 +159,15 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
 
               <div className="grid grid-cols-5 gap-2 mb-3">
                 {navItems.map((item) => (
-                  <button
+                  <motion.button
                     key={item.id}
                     type="button"
                     onClick={() => {
                       onTabChange(item.id);
                       setIsExpanded(false);
                     }}
+                    whileHover={{ y: -2, scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
                     className={`flex flex-col items-center gap-2 p-2 rounded-2xl border-2 transition-all active:scale-[0.98] ${
                       activeTab === item.id
                         ? 'bg-white text-black border-white'
@@ -174,7 +176,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                   >
                     <item.icon size={18} />
                     <span className="text-[10px] font-semibold uppercase tracking-wider">{item.label}</span>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
 

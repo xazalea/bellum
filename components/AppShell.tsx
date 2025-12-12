@@ -72,10 +72,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeTab}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                            initial={{ opacity: 0, y: 18, scale: 0.985, filter: 'blur(14px)' }}
+                            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                            exit={{ opacity: 0, y: -10, scale: 0.99, filter: 'blur(12px)' }}
+                            transition={{ type: 'spring', stiffness: 260, damping: 26, mass: 0.9 }}
                         >
                             {renderView()}
                         </motion.div>
