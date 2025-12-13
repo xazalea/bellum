@@ -1,19 +1,7 @@
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  User,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInAnonymously,
-  setPersistence,
-  browserLocalPersistence
-} from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from './config';
+import { db } from './config';
 import { NACHO_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
-import { ensureNachoSettings } from '@/lib/cluster/settings';
 
 export interface UserProfile {
   uid: string;
@@ -31,23 +19,6 @@ export type AuthDiagnostics = {
   code?: string;
   message?: string;
 };
-
-function toFirebaseCode(e: any): string | undefined {
-  const c = e?.code;
-  return typeof c === 'string' ? c : undefined;
-}
-
-function isAuthMisconfigured(code?: string): boolean {
-  // Common misconfig cases:
-  // - Anonymous / Email not enabled
-  // - Auth not set up for the project / wrong key + project pairing
-  return (
-    code === 'auth/configuration-not-found' ||
-    code === 'auth/operation-not-allowed' ||
-    code === 'auth/invalid-api-key' ||
-    code === 'auth/project-not-found'
-  );
-}
 
 function ensureLocalUid(): string {
   if (typeof window === 'undefined') return 'local-guest';
@@ -80,36 +51,14 @@ class AuthService {
   private diagnosticsListeners: ((d: AuthDiagnostics) => void)[] = [];
 
   constructor() {
+    // IMPORTANT: This project’s primary identity model is username + device fingerprint.
+    // We intentionally DO NOT depend on Firebase Authentication providers (including anonymous).
+    //
+    // A stable per-device session id is used as the “uid” for Firestore document paths.
+    // Security must be enforced via server-side APIs OR open Firestore rules (dev-only).
     if (typeof window !== 'undefined') {
-      // Guard: config.ts only initializes in browser; if something went wrong,
-      // avoid throwing during app bootstrap and surface a clear diagnostics banner.
-      if (!auth) {
-        this.setDiagnostics({
-          unavailable: true,
-          code: 'auth/not-initialized',
-          message: 'Firebase Auth is not initialized. Check your Firebase config.',
-        });
-        // Fall back to a local guest session so the UI can still load.
-        this.currentUser = makeLocalGuestUser();
-        queueMicrotask(() => this.listeners.forEach((l) => l(this.currentUser)));
-        return;
-      }
-
-      // Enable persistence
-      setPersistence(auth, browserLocalPersistence).catch((e) => {
-        // Non-fatal; do not block app.
-        console.warn('Auth persistence not available:', e);
-      });
-
-      // Listen to auth state changes
-      onAuthStateChanged(auth, async (user) => {
-        this.currentUser = user;
-        if (user) {
-          await this.updateUserProfile(user);
-          await ensureNachoSettings(user.uid);
-        }
-        this.listeners.forEach(listener => listener(user));
-      });
+      this.currentUser = makeLocalGuestUser();
+      queueMicrotask(() => this.listeners.forEach((l) => l(this.currentUser)));
     }
   }
 
@@ -133,98 +82,58 @@ class AuthService {
 
   // Sign in with email/password
   async signIn(email: string, password: string): Promise<User> {
-    if (!auth) throw new Error('Firebase Auth is not initialized.');
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return result.user;
+    throw new Error('Email/password sign-in is not supported in username+fingerprint mode.');
   }
 
   // Sign up with email/password
   async signUp(email: string, password: string, displayName?: string): Promise<User> {
-    if (!auth) throw new Error('Firebase Auth is not initialized.');
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    const user = result.user;
-
-    // Create user profile in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
-      uid: user.uid,
-      email: user.email,
-      displayName: displayName || null,
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
-      gamesLibrary: [],
-      storageUsed: 0,
-      storageLimit: NACHO_STORAGE_LIMIT_BYTES
-    });
-
-    return user;
+    throw new Error('Email/password sign-up is not supported in username+fingerprint mode.');
   }
 
   // Sign in with Google
   async signInWithGoogle(): Promise<User> {
-    if (!auth) throw new Error('Firebase Auth is not initialized.');
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
+    throw new Error('Google sign-in is not supported in username+fingerprint mode.');
   }
 
-  // Sign in anonymously for guest access
+  // Ensure a local session exists.
+  // (Name kept for compatibility with existing call sites.)
   async signInAnonymously(): Promise<User> {
-    if (!auth) {
-      this.setDiagnostics({
-        unavailable: true,
-        code: 'auth/not-initialized',
-        message:
-          'Firebase Auth is not initialized. Add a Firebase web app config and restart the dev server.',
-      });
-      const local = makeLocalGuestUser();
-      this.currentUser = local;
-      this.listeners.forEach((l) => l(local));
-      return local;
-    }
-
+    const local = this.currentUser ?? makeLocalGuestUser();
+    this.currentUser = local;
+    // Create user profile (best-effort; requires permissive rules or server-side writes).
     try {
-      const result = await signInAnonymously(auth);
-      this.setDiagnostics({ unavailable: false });
-
-      // Create anonymous user profile (best-effort).
-      try {
-        await setDoc(doc(db, 'users', result.user.uid), {
-          uid: result.user.uid,
+      await setDoc(
+        doc(db, 'users', local.uid),
+        {
+          uid: local.uid,
           email: null,
           displayName: 'Guest User',
           createdAt: serverTimestamp(),
           lastLogin: serverTimestamp(),
           gamesLibrary: [],
           storageUsed: 0,
-          storageLimit: NACHO_STORAGE_LIMIT_BYTES
-        });
-      } catch {
-        // ignore (rules may require auth / quota)
-      }
-
-      return result.user;
-    } catch (e: any) {
-      const code = toFirebaseCode(e);
-      if (isAuthMisconfigured(code)) {
-        this.setDiagnostics({
-          unavailable: true,
-          code,
-          message:
-            'Firebase Auth is not configured for this project. Enable Authentication providers (at least Anonymous) in Firebase Console → Authentication → Sign-in method.',
-        });
-        const local = makeLocalGuestUser();
-        this.currentUser = local;
-        this.listeners.forEach((l) => l(local));
-        return local;
-      }
-      throw e;
+          storageLimit: NACHO_STORAGE_LIMIT_BYTES,
+        },
+        { merge: true },
+      );
+    } catch {
+      // ignore
     }
+    this.listeners.forEach((l) => l(local));
+    return local;
   }
 
   // Sign out
   async signOut(): Promise<void> {
-    if (!auth) return;
-    await firebaseSignOut(auth);
+    // Local-only auth: clearing local “uid” is equivalent to sign-out.
+    try {
+      if (typeof window !== 'undefined') window.localStorage.removeItem('nacho_local_uid');
+    } catch {
+      // ignore
+    }
+    const local = makeLocalGuestUser();
+    this.currentUser = local;
+    this.listeners.forEach((l) => l(local));
   }
 
   // Get current user
@@ -258,7 +167,6 @@ class AuthService {
 
   // Update user profile
   private async updateUserProfile(user: User): Promise<void> {
-    if (!db) return;
     const userRef = doc(db, 'users', user.uid);
     const userDoc = await getDoc(userRef);
 

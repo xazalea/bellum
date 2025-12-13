@@ -15,16 +15,8 @@ export function ClientInit() {
     // Custom cursor (Kursor)
     ensureKursor().catch(() => {});
 
-    // Guest access: ensure there is a Firebase session, but DO NOT race
-    // against an existing persisted login (avoid accidentally switching to guest).
-    let resolvedFirstAuthState = false;
-    const unsubGuest = authService.onAuthStateChange((u) => {
-      if (resolvedFirstAuthState) return;
-      resolvedFirstAuthState = true;
-      if (!u) {
-        authService.signInAnonymously().catch(() => {});
-      }
-    });
+    // Ensure a local session exists (username+fingerprint auth does not use Firebase Auth providers).
+    authService.signInAnonymously().catch(() => {});
 
     const ensureKeepaliveFrame = (enabled: boolean) => {
       const id = 'nacho-cluster-keepalive';
@@ -87,7 +79,6 @@ export function ClientInit() {
     return () => {
       unsubSettings?.();
       unsubAuth();
-      unsubGuest();
       ensureKeepaliveFrame(false);
     };
   }, []);
