@@ -92,13 +92,13 @@ export default function ClusterAccountModal({ isOpen, onClose }: ClusterAccountM
                     {user ? (
                         // Logged In View
                         <div className="space-y-6">
-                            <div className="flex items-center gap-4 p-4 bg-purple-900/20 border border-purple-500/20 rounded-xl">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-xl font-bold text-white">
+                            <div className="flex items-center gap-4 p-4 bg-sky-200/10 border-2 border-sky-200/15 rounded-xl">
+                                <div className="w-12 h-12 rounded-full bg-white/5 border-2 border-sky-200/20 flex items-center justify-center text-xl font-bold text-white">
                                     {user.username[0].toUpperCase()}
                                 </div>
                                 <div>
                                     <div className="text-white font-medium">{user.username}</div>
-                                    <div className="text-xs text-purple-300">Verified Device</div>
+                                    <div className="text-xs text-white/60">Verified device</div>
                                 </div>
                             </div>
 

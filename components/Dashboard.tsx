@@ -25,6 +25,7 @@ export const Dashboard = ({
   const [apps, setApps] = useState<InstalledApp[]>([]);
   const [peerCount, setPeerCount] = useState<number>(0);
   const [heapUsed, setHeapUsed] = useState<number | null>(null);
+  const [clusterStatus, setClusterStatus] = useState<'connecting' | 'online' | 'offline'>('connecting');
 
   const base = useMemo(() => {
     return (
@@ -46,18 +47,31 @@ export const Dashboard = ({
     const poll = async () => {
       if (stopped) return;
       try {
+        setClusterStatus((s) => (s === 'online' ? 'online' : 'connecting'));
         const token = await user.getIdToken().catch(() => null);
-        const res = await fetch(`${base}/api/cluster/peers`, {
-          headers: {
-            'X-Nacho-UserId': user.uid,
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        if (!res.ok) return;
-        const peers = (await res.json()) as any[];
-        if (!stopped) setPeerCount(Array.isArray(peers) ? peers.length : 0);
+        const bases = base ? [base, ''] : [''];
+        let peers: any[] | null = null;
+        for (const b of bases) {
+          const res = await fetch(`${b}/api/cluster/peers`, {
+            headers: {
+              'X-Nacho-UserId': user.uid,
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+          if (!res.ok) continue;
+          peers = (await res.json()) as any[];
+          break;
+        }
+        if (!peers) {
+          setClusterStatus('offline');
+          return;
+        }
+        if (!stopped) {
+          setPeerCount(Array.isArray(peers) ? peers.length : 0);
+          setClusterStatus('online');
+        }
       } catch {
-        // ignore
+        setClusterStatus('offline');
       }
     };
     void poll();
@@ -90,16 +104,17 @@ export const Dashboard = ({
       >
         <div>
             <h1 className="text-5xl font-bold mb-2 tracking-tight">Nacho<span className="text-white/40">OS</span></h1>
-            <p className="text-xl text-white/60">Distributed Web Runtime Environment</p>
+            <p className="text-xl text-white/60">Run apps in your browser (Windows + Android)</p>
+            <p className="text-sm text-white/40 mt-1">New here? Start with “Install an app”, then “Run an app”.</p>
         </div>
         <div className="flex gap-4">
             <button onClick={onOpenRunner} className="bellum-btn flex items-center gap-2">
                 <Play size={18} fill="currentColor" />
-                Launch App
+                Run an app
                                 </button>
             <button onClick={onGoApps} className="bellum-btn bellum-btn-secondary flex items-center gap-2">
                 <Plus size={18} />
-                Install
+                Install an app
                                 </button>
                         </div>
       </motion.div>
@@ -122,6 +137,16 @@ export const Dashboard = ({
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                     Running • 60 FPS
                             </div>
+                <div className="text-xs text-white/45 mt-2">
+                  Cluster:{" "}
+                  {clusterStatus === 'online' ? (
+                    <span className="text-emerald-200">online</span>
+                  ) : clusterStatus === 'connecting' ? (
+                    <span className="text-amber-200">connecting…</span>
+                  ) : (
+                    <span className="text-rose-200">offline</span>
+                  )}
+                </div>
                         </div>
 
             <div className="grid grid-cols-4 gap-8">
@@ -145,7 +170,7 @@ export const Dashboard = ({
                     </div>
 
         {/* Abstract Background Graphic */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-0 bg-sky-200/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </motion.div>
 
       {/* Quick Launch / Recent */}

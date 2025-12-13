@@ -37,24 +37,28 @@ export default function KeepalivePage() {
       if (stopped) return;
       const user = authService.getCurrentUser();
       if (!user) return;
-      const base = getClusterBase();
       try {
         const deviceId = await getDeviceFingerprintId();
         const token = await user.getIdToken().catch(() => null);
-        await fetch(`${base}/api/cluster/heartbeat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Nacho-UserId": user.uid,
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            deviceId,
-            userAgent: navigator.userAgent,
-            label: navigator.platform,
-            load: null,
-          }),
-        });
+        const base = getClusterBase();
+        const bases = base ? [base, ""] : [""];
+        for (const b of bases) {
+          const res = await fetch(`${b}/api/cluster/heartbeat`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Nacho-UserId": user.uid,
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              deviceId,
+              userAgent: navigator.userAgent,
+              label: navigator.platform,
+              load: null,
+            }),
+          });
+          if (res.ok) break;
+        }
       } catch (e) {
         // best-effort
       }

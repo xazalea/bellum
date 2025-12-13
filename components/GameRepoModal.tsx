@@ -204,7 +204,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
                                     selectedRepo.games.map(game => (
                                         <div key={game.id} className="bg-white/5 border border-white/5 p-4 rounded-xl flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold">
+                                                <div className="w-10 h-10 rounded-lg bg-sky-200/10 border-2 border-sky-200/20 flex items-center justify-center text-white font-bold">
                                                     {game.type.slice(0, 3).toUpperCase()}
                                                 </div>
                                                 <div>
@@ -214,7 +214,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
                                             </div>
                                             <button 
                                                 onClick={() => handleInstallGame(game)}
-                                                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white text-sm font-medium flex items-center gap-2"
+                                                className="px-4 py-2 bg-sky-200/15 hover:bg-sky-200/25 border-2 border-sky-200/20 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors"
                                             >
                                                 <Download size={16} />
                                                 Install
@@ -238,10 +238,10 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
 const RepoCard = ({ repo, onClick }: { repo: GameRepository, onClick: () => void }) => (
     <div 
         onClick={onClick}
-        className="bg-white/5 border border-white/5 hover:border-purple-500/50 hover:bg-white/10 p-4 rounded-xl cursor-pointer transition-all group"
+        className="bg-white/5 border-2 border-white/10 hover:border-sky-200/25 hover:bg-white/10 p-4 rounded-xl cursor-pointer transition-all group"
     >
         <div className="flex items-start justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-white font-bold group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">
+            <div className="w-10 h-10 rounded-lg bg-white/5 border-2 border-white/10 flex items-center justify-center text-white font-bold transition-colors">
                 <FolderPlus size={20} />
             </div>
             {repo.isPublic ? <Globe size={16} className="text-gray-500" /> : <Lock size={16} className="text-gray-500" />}

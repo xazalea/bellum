@@ -16,11 +16,11 @@ export function GameCard({ id, name, type, onPlay, onDelete, className }: GameCa
   return (
     <div className={twMerge(
       "group relative flex flex-col items-center justify-center p-6 rounded-2xl transition-all duration-300",
-      "bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-800/80 hover:shadow-xl hover:shadow-blue-900/10",
+      "bg-slate-900/50 border-2 border-sky-200/10 hover:border-sky-200/25 hover:bg-slate-800/80 hover:shadow-xl hover:shadow-sky-200/10",
       className
     )}>
       {/* Icon Placeholder */}
-      <div className="w-16 h-16 mb-4 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+      <div className="w-16 h-16 mb-4 rounded-xl bg-sky-200/10 border-2 border-sky-200/20 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
         {name.charAt(0).toUpperCase()}
       </div>
 
@@ -30,10 +30,10 @@ export function GameCard({ id, name, type, onPlay, onDelete, className }: GameCa
       <div className="flex gap-2 w-full">
         <button 
           onClick={onPlay}
-          className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-white text-slate-900 font-medium hover:bg-blue-50 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-white text-slate-900 font-medium hover:bg-sky-50 transition-colors"
         >
           <Play size={16} className="fill-current" />
-          Play
+          Run
         </button>
         {onDelete && (
             <button 

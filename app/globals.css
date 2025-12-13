@@ -22,33 +22,31 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Hide the native cursor everywhere (we render our own). */
-html, body, * {
+/* Only hide the native cursor when the custom cursor is enabled.
+   This prevents "laggy cursor" reports on low-end devices. */
+html.kursor-enabled,
+html.kursor-enabled body,
+html.kursor-enabled * {
   cursor: none !important;
 }
 
-/* Kursor: invert against the background using blend mode.
-   White cursor + mix-blend-mode:difference => "inverts whatever it's over". */
-.kursor,
-.kursor * {
-  mix-blend-mode: difference !important;
-}
-
-/* Make sure the cursor itself is bright (so difference works). */
+/* Custom cursor: keep it lightweight (avoid blend-mode repaints). */
 .kursor,
 .kursor--1,
 .kursor--2,
 .kursorChild,
 .kursorChild * {
-  background: #ffffff !important;
-  border-color: #ffffff !important;
-  color: #ffffff !important;
+  background: rgba(236, 245, 255, 0.95) !important; /* pastel */
+  border-color: rgba(147, 197, 253, 0.95) !important; /* pastel blue */
+  color: rgba(236, 245, 255, 0.95) !important;
 }
 
 /* Keep cursor overlay from blocking clicks. */
 .kursor,
 .kursorChild {
   pointer-events: none !important;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 body::before {
@@ -56,11 +54,9 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(900px 420px at 30% 10%, rgba(59,130,246,0.12), transparent 60%),
-    radial-gradient(700px 420px at 75% 15%, rgba(147,51,234,0.08), transparent 60%),
-    radial-gradient(900px 520px at 50% 90%, rgba(59,130,246,0.06), transparent 60%);
-  opacity: 1;
+  /* Less gradients: a single soft wash. */
+  background: radial-gradient(900px 520px at 45% 15%, rgba(147, 197, 253, 0.10), transparent 62%);
+  opacity: 0.9;
   z-index: 0;
 }
 
@@ -85,8 +81,8 @@ body::before {
 
 /* Nacho UI Components */
 .bellum-card {
-  background: linear-gradient(180deg, rgba(10, 18, 50, 0.72), rgba(4, 13, 36, 0.72));
-  border: var(--nacho-outline) solid var(--nacho-border);
+  background: rgba(6, 19, 52, 0.78);
+  border: var(--nacho-outline) solid rgba(147, 197, 253, 0.22); /* bolder + pastel */
   border-radius: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
@@ -95,11 +91,10 @@ body::before {
 }
 
 .bellum-card:hover {
-  border-color: var(--nacho-border-strong);
+  border-color: rgba(147, 197, 253, 0.38);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 34px rgba(59, 130, 246, 0.14),
-    0 0 54px rgba(147, 51, 234, 0.08);
+    0 0 34px rgba(147, 197, 253, 0.14);
   transform: translateY(-3px) scale(1.01);
 }
 

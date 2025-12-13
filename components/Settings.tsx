@@ -22,6 +22,7 @@ export const SettingsPanel = () => {
   const [storageUsed, setStorageUsed] = useState<number>(0);
   const [otpCode, setOtpCode] = useState<string>('');
   const [otpStatus, setOtpStatus] = useState<string | null>(null);
+  const [cursorPref, setCursorPref] = useState<'custom' | 'native'>('native');
   const user = authService.getCurrentUser();
   const username = getCachedUsername();
 
@@ -43,11 +44,32 @@ export const SettingsPanel = () => {
     return () => unsub();
   }, [user]);
 
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem('nacho.cursor');
+      setCursorPref(v === 'custom' ? 'custom' : 'native');
+    } catch {
+      setCursorPref('native');
+    }
+  }, []);
+
   const toggleCluster = async () => {
     if (!user) return;
     const next = !settings.clusterParticipation;
     await setClusterParticipation(user.uid, next);
     setSettings((s) => ({ ...s, clusterParticipation: next }));
+  };
+
+  const toggleCursor = () => {
+    const next = cursorPref === 'custom' ? 'native' : 'custom';
+    setCursorPref(next);
+    try {
+      window.localStorage.setItem('nacho.cursor', next);
+    } catch {
+      // ignore
+    }
+    // Cursor is bootstrapped at app start; reload to apply immediately.
+    window.location.reload();
   };
 
   return (
@@ -120,6 +142,41 @@ export const SettingsPanel = () => {
             </div>
           </div>
 
+          {/* Cursor */}
+          <div className="space-y-4 pt-6 border-t border-white/10">
+            <h4 className="text-xs uppercase tracking-widest text-white/40 font-bold">Cursor</h4>
+            <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border-2 border-white/10 hover:border-white/25 transition-colors">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 w-10 h-10 rounded-xl border-2 border-white/10 bg-white/5 flex items-center justify-center">
+                  <Shield size={18} className="text-white" />
+                </div>
+                <div>
+                  <div className="font-semibold">Custom cursor</div>
+                  <div className="text-xs text-white/50">
+                    If your cursor feels laggy, keep this off (native cursor is fastest).
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleCursor}
+                className={`w-14 h-7 rounded-full border-2 transition-all ${
+                  cursorPref === 'custom'
+                    ? 'bg-sky-200/40 border-sky-200/40'
+                    : 'bg-white/5 border-white/20'
+                }`}
+                aria-pressed={cursorPref === 'custom'}
+              >
+                <span
+                  className={`block w-5 h-5 rounded-full bg-white transition-transform ${
+                    cursorPref === 'custom' ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
           {/* Storage (functional display) */}
           <div className="space-y-4 pt-6 border-t border-white/10">
             <h4 className="text-xs uppercase tracking-widest text-white/40 font-bold">Storage</h4>
@@ -145,13 +202,13 @@ export const SettingsPanel = () => {
 
           {/* Pro / Advanced Mode */}
           <div className="pt-6 border-t border-white/10">
-            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/20 p-6 rounded-xl border-2 border-white/10">
+            <div className="bg-white/5 p-6 rounded-xl border-2 border-sky-200/15">
               <div className="flex items-center gap-3 mb-2">
-                <Shield size={20} className="text-blue-300" />
-                <h4 className="font-bold text-blue-100">Pro Mode</h4>
+                <Shield size={20} className="text-sky-200" />
+                <h4 className="font-bold text-white">Advanced mode</h4>
               </div>
-              <p className="text-sm text-blue-200/60 mb-4">
-                Experimental features (unsafe optimizations). Requires cluster participation.
+              <p className="text-sm text-white/55 mb-4">
+                Extra options for power users. If anything feels confusing, you can ignore this section.
               </p>
               <button className="bellum-btn text-sm py-2 px-4">Enable Advanced Features</button>
             </div>

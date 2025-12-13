@@ -18,6 +18,29 @@ declare global {
 const KURSOR_CSS = "https://cdn.jsdelivr.net/gh/lusaxweb/Kursor/dist/kursor.css";
 const KURSOR_JS = "https://cdn.jsdelivr.net/gh/lusaxweb/Kursor/dist/kursor.js";
 
+function shouldEnableCustomCursor(): boolean {
+  // Keep cursor fast by default on low-end devices / accessibility prefs.
+  if (typeof window === "undefined") return false;
+  try {
+    const pref = window.localStorage?.getItem("nacho.cursor");
+    if (pref === "native") return false;
+    if (pref === "custom") {
+      // Allow override, but still respect coarse pointer and reduced motion.
+      if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
+      if (window.matchMedia?.("(pointer: coarse)")?.matches) return false;
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
+  if (window.matchMedia?.("(pointer: coarse)")?.matches) return false;
+  const nav = navigator as any;
+  const cores = typeof nav?.hardwareConcurrency === "number" ? nav.hardwareConcurrency : 4;
+  const mem = typeof nav?.deviceMemory === "number" ? nav.deviceMemory : 8;
+  return cores >= 4 && mem >= 4;
+}
+
 function ensureStylesheet(href: string, id: string) {
   if (document.getElementById(id)) return;
   const link = document.createElement("link");
@@ -59,6 +82,7 @@ function markInteractive(root: ParentNode) {
 export async function ensureKursor(): Promise<void> {
   if (typeof window === "undefined") return;
   if (window.__nachoKursorInstance) return;
+  if (!shouldEnableCustomCursor()) return;
 
   ensureStylesheet(KURSOR_CSS, "nacho-kursor-css");
   await loadScript(KURSOR_JS, "nacho-kursor-js");
@@ -69,6 +93,9 @@ export async function ensureKursor(): Promise<void> {
   window.__nachoKursorInstance = new window.kursor({
     type: 1,
   });
+
+  // Only hide the native cursor once we have a custom cursor instance.
+  document.documentElement.classList.add("kursor-enabled");
 
   // Make interactive elements trigger hover visuals.
   markInteractive(document);
