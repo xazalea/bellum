@@ -52,7 +52,8 @@ export default function FabricPage() {
     });
   }, []);
 
-  const schedulerStats = useMemo(() => fabricScheduler.getStats(), [signalOut, kvResult]);
+  // Cheap to compute; avoids hook dep lint warnings in prod builds.
+  const schedulerStats = fabricScheduler.getStats();
 
   const copy = async (text: string) => {
     try {
@@ -183,7 +184,12 @@ export default function FabricPage() {
           id: "codegen",
           scope: "compile",
           descriptor: { stage: "codegen", target: "wasm-toy-v1" },
-          compute: async (inputs) => ({ wasmIR: `push ${inputs.ast?.[1] ?? 0}; push ${inputs.ast?.[2] ?? 0}; add;` })
+          compute: async (inputs) => {
+            const ast = Array.isArray((inputs as any).ast) ? ((inputs as any).ast as any[]) : [];
+            const a = typeof ast[1] === "number" ? ast[1] : 0;
+            const b = typeof ast[2] === "number" ? ast[2] : 0;
+            return { wasmIR: `push ${a}; push ${b}; add;` };
+          }
         },
         {
           id: "link",

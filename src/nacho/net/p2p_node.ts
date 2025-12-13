@@ -42,14 +42,14 @@ export class P2PNode {
         this.peers.set(remoteId, pc);
 
         pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                this.onSignalCallbacks.forEach(cb => cb({
-                    type: 'candidate',
-                    from: this.id,
-                    to: remoteId,
-                    candidate: event.candidate.toJSON()
-                }));
-            }
+            const cand = event.candidate;
+            if (!cand) return;
+            this.onSignalCallbacks.forEach(cb => cb({
+                type: 'candidate',
+                from: this.id,
+                to: remoteId,
+                candidate: cand.toJSON()
+            }));
         };
 
         if (offer) {

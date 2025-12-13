@@ -7,14 +7,15 @@ export interface SpeculativeCandidate<Request> {
   probability: number; // 0..1
 }
 
-// Generic speculative executor: precomputes likely transitions during idle time.
-export class SpeculativeExecutor<State, Request, Response> {
+// Speculative executor: precomputes likely transitions during idle time.
+// Note: The method is generic so the exported singleton remains type-safe.
+export class SpeculativeExecutor {
   constructor(private memo: SemanticMemoStore = semanticMemo) {}
 
-  speculate(
+  speculate<State, Request, Response>(
     machine: DeterministicStateMachine<State, Request, Response>,
     candidates: SpeculativeCandidate<Request>[]
-  ) {
+  ): void {
     const head = machine.getHead();
 
     for (const c of candidates) {
