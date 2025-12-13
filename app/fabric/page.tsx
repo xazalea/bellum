@@ -26,6 +26,7 @@ export default function FabricPage() {
 
   // Service hosting
   const [kvAddress, setKvAddress] = useState<string | null>(null);
+  const [targetAddress, setTargetAddress] = useState<string>("");
   const [kvKey, setKvKey] = useState<string>("hello");
   const [kvValue, setKvValue] = useState<string>("world");
   const [kvResult, setKvResult] = useState<string>("");
@@ -121,6 +122,7 @@ export default function FabricPage() {
     });
 
     setKvAddress(handle.address);
+    setTargetAddress(handle.address);
     setKvResult(`Hosted kv at ${handle.address}`);
 
     // Temporal amplification: speculate likely futures
@@ -131,8 +133,8 @@ export default function FabricPage() {
   };
 
   const callKv = async (req: KvReq) => {
-    if (!kvAddress) return;
-    const res = await fabricRuntime.call<KvReq, KvRes>(kvAddress, req);
+    if (!targetAddress) return;
+    const res = await fabricRuntime.call<KvReq, KvRes>(targetAddress, req);
     setKvResult(JSON.stringify(res, null, 2));
   };
 
@@ -227,6 +229,13 @@ export default function FabricPage() {
         </div>
 
         <div className="text-xs font-mono text-white/60">address: {kvAddress ?? "(not hosted)"}</div>
+        <div className="text-xs text-white/50">target (local or remote):</div>
+        <input
+          className="bg-black/30 border border-white/10 rounded px-3 py-2 text-xs text-white/80 font-mono"
+          value={targetAddress}
+          onChange={(e) => setTargetAddress(e.target.value)}
+          placeholder="fabric://<serviceId>"
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <input
@@ -245,21 +254,21 @@ export default function FabricPage() {
             <button
               className="px-3 py-2 text-xs rounded bg-white/10 hover:bg-white/15 text-white"
               onClick={() => callKv({ op: "set", key: kvKey, value: kvValue })}
-              disabled={!kvAddress}
+              disabled={!targetAddress}
             >
               set
             </button>
             <button
               className="px-3 py-2 text-xs rounded bg-white/10 hover:bg-white/15 text-white"
               onClick={() => callKv({ op: "get", key: kvKey })}
-              disabled={!kvAddress}
+              disabled={!targetAddress}
             >
               get
             </button>
             <button
               className="px-3 py-2 text-xs rounded bg-white/10 hover:bg-white/15 text-white"
               onClick={() => callKv({ op: "keys" })}
-              disabled={!kvAddress}
+              disabled={!targetAddress}
             >
               keys
             </button>
