@@ -1,6 +1,4 @@
 import type { User } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from './config';
 import { NACHO_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
 
 export interface UserProfile {
@@ -100,25 +98,6 @@ class AuthService {
   async signInAnonymously(): Promise<User> {
     const local = this.currentUser ?? makeLocalGuestUser();
     this.currentUser = local;
-    // Create user profile (best-effort; requires permissive rules or server-side writes).
-    try {
-      await setDoc(
-        doc(db, 'users', local.uid),
-        {
-          uid: local.uid,
-          email: null,
-          displayName: 'Guest User',
-          createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp(),
-          gamesLibrary: [],
-          storageUsed: 0,
-          storageLimit: NACHO_STORAGE_LIMIT_BYTES,
-        },
-        { merge: true },
-      );
-    } catch {
-      // ignore
-    }
     this.listeners.forEach((l) => l(local));
     return local;
   }
@@ -155,67 +134,62 @@ class AuthService {
 
   // Get user profile from Firestore
   async getUserProfile(uid: string): Promise<UserProfile | null> {
-    if (!db) return null;
-    const docRef = doc(db, 'users', uid);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      return docSnap.data() as UserProfile;
+    // Client no longer reads Firestore directly (rules are locked down).
+    // Keep a local-only placeholder so callers can degrade gracefully.
+    try {
+      const key = `nacho_profile_${uid}`;
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+      if (!raw) return null;
+      const j = JSON.parse(raw) as Partial<UserProfile>;
+      return {
+        uid,
+        email: null,
+        displayName: j.displayName ?? 'Guest User',
+        createdAt: j.createdAt ?? null,
+        lastLogin: j.lastLogin ?? null,
+        gamesLibrary: Array.isArray(j.gamesLibrary) ? (j.gamesLibrary as any) : [],
+        storageUsed: typeof j.storageUsed === 'number' ? j.storageUsed : 0,
+        storageLimit: typeof j.storageLimit === 'number' ? j.storageLimit : NACHO_STORAGE_LIMIT_BYTES,
+      };
+    } catch {
+      return null;
     }
-    return null;
   }
 
   // Update user profile
   private async updateUserProfile(user: User): Promise<void> {
-    const userRef = doc(db, 'users', user.uid);
-    const userDoc = await getDoc(userRef);
-
-    if (userDoc.exists()) {
-      // Update last login
-      const data = userDoc.data() as any;
-      await updateDoc(userRef, {
-        lastLogin: serverTimestamp(),
-        storageLimit: typeof data.storageLimit === 'number' ? data.storageLimit : NACHO_STORAGE_LIMIT_BYTES
-      });
-    } else {
-      // Create profile if it doesn't exist
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp(),
-        gamesLibrary: [],
-        storageUsed: 0,
-        storageLimit: NACHO_STORAGE_LIMIT_BYTES
-      });
-    }
+    // No-op (server owns persistence).
   }
 
   // Add game to user's library
   async addGameToLibrary(gameId: string): Promise<void> {
     if (!this.currentUser) throw new Error('No user signed in');
-    if (!db) throw new Error('Firestore not initialized');
-    
-    const userRef = doc(db, 'users', this.currentUser.uid);
-    const profile = await this.getUserProfile(this.currentUser.uid);
-    
-    if (profile && !profile.gamesLibrary.includes(gameId)) {
-      await updateDoc(userRef, {
-        gamesLibrary: [...profile.gamesLibrary, gameId]
-      });
-    }
+    // Not supported in local-only mode.
+    void gameId;
   }
 
   // Update storage usage
   async updateStorageUsage(bytes: number): Promise<void> {
     if (!this.currentUser) throw new Error('No user signed in');
-    if (!db) throw new Error('Firestore not initialized');
-    
-    const userRef = doc(db, 'users', this.currentUser.uid);
-    await updateDoc(userRef, {
-      storageUsed: bytes
-    });
+    // Local-only cache for UI hints.
+    try {
+      const uid = this.currentUser.uid;
+      const key = `nacho_profile_${uid}`;
+      const profile = (await this.getUserProfile(uid)) || {
+        uid,
+        email: null,
+        displayName: 'Guest User',
+        createdAt: null,
+        lastLogin: null,
+        gamesLibrary: [],
+        storageUsed: 0,
+        storageLimit: NACHO_STORAGE_LIMIT_BYTES,
+      };
+      const next = { ...profile, storageUsed: bytes };
+      if (typeof window !== 'undefined') window.localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
   }
 }
 

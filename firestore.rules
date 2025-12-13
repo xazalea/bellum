@@ -19,67 +19,11 @@ service cloud.firestore {
 
     // --- Rules ---
     //
-    // NOTE:
-    // This project’s current identity model is username + device fingerprint (no Firebase Auth providers).
-    // That means Firestore access must either:
-    // - be proxied through server-side APIs (recommended), OR
-    // - use permissive rules (dev-only; insecure and spoofable).
-
-    // Username + fingerprint auth data (DEV-ONLY permissive rules)
-    match /accounts/{username} {
-      allow read, create, update: if true;
-      allow delete: if false;
-
-      match /challenges/{challengeId} {
-        allow read, create, update: if true;
-        allow delete: if false;
-      }
-    }
-
-    // Per-device/per-user data (DEV-ONLY permissive rules)
-    match /users/{uid} {
-      allow read, create, update: if true;
-      allow delete: if false;
-
-      match /{document=**} {
-        allow read, create, update: if true;
-        allow delete: if false;
-      }
-    }
-
-    // Social graph (DEV-ONLY permissive rules)
-    match /friend_requests/{id} {
-      allow read, create, update: if true;
-      allow delete: if false;
-    }
-
-    match /friendships/{id} {
-      allow read, create, update: if true;
-      allow delete: if false;
-    }
-
-    // Archives (DEV-ONLY permissive rules)
-    match /archives/{id} {
-      allow read, create, update: if true;
-      allow delete: if false;
-    }
-
-    // Game repositories (existing validation)
-    match /game_repositories/{repoId} {
-      // Allow reading if the repository is public
-      allow read: if resource.data.isPublic == true;
-
-      // DEV-ONLY: allow reading for app usability without Firebase Auth
-      allow read: if true;
-
-      // Allow creation if the data schema is valid
-      allow create: if isValidRepository();
-
-      // Allow updates if the schema remains valid
-      allow update: if isValidRepository();
-
-      // Prevent deletion for safety (unless you want to allow it)
-      allow delete: if false;
+    // SECURITY MODE:
+    // All client direct access is denied. The app must use server-side APIs
+    // (Next.js route handlers + Firebase Admin) for all Firestore reads/writes.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

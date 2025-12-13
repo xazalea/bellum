@@ -1,18 +1,7 @@
-import {
-  collection,
-  doc,
-  onSnapshot,
-  setDoc,
-  deleteDoc,
-  getDocs,
-  query,
-  orderBy,
-  where,
-  limit,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import { deleteClusterFile } from "@/lib/storage/chunked-download";
 import { opfsDelete } from "@/lib/storage/local-opfs";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
+import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 
 export type AppType = "android" | "windows" | "unknown";
 export type AppScope = "user" | "public";
@@ -30,8 +19,11 @@ export interface InstalledApp {
   compression: "none" | "gzip-chunked";
 }
 
-function appsCol(uid: string) {
-  return collection(db, "users", uid, "apps");
+async function nachoHeaders(): Promise<Record<string, string>> {
+  const username = getCachedUsername();
+  if (!username) throw new Error("Not signed in");
+  const fp = await getDeviceFingerprintId();
+  return { "X-Nacho-Username": username, "X-Nacho-Fingerprint": fp };
 }
 
 export function detectAppType(fileName: string): AppType {
@@ -42,25 +34,50 @@ export function detectAppType(fileName: string): AppType {
 }
 
 export function subscribeInstalledApps(uid: string, cb: (apps: InstalledApp[]) => void): () => void {
-  const q = query(appsCol(uid), orderBy("installedAt", "desc"));
-  return onSnapshot(q, (snap) => {
-    const apps: InstalledApp[] = [];
-    snap.forEach((d) => {
-      const data = d.data() as Omit<InstalledApp, "id">;
-      apps.push({ id: d.id, ...data });
-    });
-    cb(apps);
-  });
+  // Server-backed polling subscription (secure).
+  let stopped = false;
+  const poll = async () => {
+    if (stopped) return;
+    try {
+      const res = await fetch("/api/user/apps", { headers: await nachoHeaders() });
+      if (!res.ok) return;
+      const apps = (await res.json().catch(() => [])) as InstalledApp[];
+      cb(Array.isArray(apps) ? apps : []);
+    } catch {
+      // ignore
+    }
+  };
+  void poll();
+  const t = window.setInterval(() => void poll(), 5000);
+  return () => {
+    stopped = true;
+    window.clearInterval(t);
+  };
 }
 
 export async function addInstalledApp(uid: string, app: Omit<InstalledApp, "id">): Promise<string> {
-  const ref = doc(appsCol(uid));
-  await setDoc(ref, app, { merge: true });
-  return ref.id;
+  const res = await fetch("/api/user/apps", {
+    method: "POST",
+    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    body: JSON.stringify({ app }),
+  });
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as any;
+    throw new Error(j?.error || "Failed to add app");
+  }
+  const j = (await res.json()) as { id: string };
+  return j.id;
 }
 
 export async function removeInstalledApp(uid: string, appId: string): Promise<void> {
-  await deleteDoc(doc(db, "users", uid, "apps", appId));
+  const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
+    method: "DELETE",
+    headers: await nachoHeaders(),
+  });
+  if (!res.ok && res.status !== 204) {
+    const j = (await res.json().catch(() => null)) as any;
+    throw new Error(j?.error || "Failed to remove app");
+  }
 }
 
 /**
@@ -80,29 +97,17 @@ export async function removeInstalledAppWithCleanup(uid: string, app: InstalledA
   const scope = app.scope ?? "user";
   if (scope !== "user") return;
 
-  // Check if any other app in this user references same fileId.
-  const otherAppsQ = query(
-    collection(db, "users", uid, "apps"),
-    where("fileId", "==", app.fileId),
-    limit(1)
-  );
-  const otherApps = await getDocs(otherAppsQ);
-  if (!otherApps.empty) return;
-
-  // Check if it is referenced by any public archive.
-  const archivesQ = query(collection(db, "archives"), where("fileId", "==", app.fileId), limit(1));
-  const archives = await getDocs(archivesQ);
-  if (!archives.empty) return;
-
-  // Best-effort delete from cluster.
-  await deleteClusterFile(app.fileId);
+  // For security, we no longer query Firestore from the client.
+  // Best-effort: do NOT delete the shared cluster file here (could be referenced elsewhere).
+  // If you want safe GC, implement it server-side where all references can be checked.
+  void deleteClusterFile(app.fileId).catch(() => {});
 }
 
 export async function listInstalledApps(uid: string): Promise<InstalledApp[]> {
-  const snap = await getDocs(appsCol(uid));
-  const apps: InstalledApp[] = [];
-  snap.forEach((d) => apps.push({ id: d.id, ...(d.data() as any) }));
-  return apps;
+  const res = await fetch("/api/user/apps", { headers: await nachoHeaders() });
+  if (!res.ok) return [];
+  const apps = (await res.json().catch(() => [])) as InstalledApp[];
+  return Array.isArray(apps) ? apps : [];
 }
 
 

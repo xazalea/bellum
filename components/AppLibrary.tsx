@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Download, Link as LinkIcon, ExternalLink, MoreVertical, Smartphone, Monitor, Play, Trash2 } from "lucide-react";
-import { authService } from "@/lib/firebase/auth-service";
 import { addInstalledApp, detectAppType, removeInstalledAppWithCleanup, type InstalledApp, subscribeInstalledApps } from "@/lib/apps/apps-service";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
 
 type FeaturedGame = {
   id: string;
@@ -41,19 +41,19 @@ export function AppLibrary({
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const user = authService.getCurrentUser();
+  const username = getCachedUsername();
 
   useEffect(() => {
-    if (!user) return;
-    return subscribeInstalledApps(user.uid, setApps);
-  }, [user]);
+    if (!username) return;
+    return subscribeInstalledApps(username, setApps);
+  }, [username]);
 
   const installedCount = apps.length;
 
   const handlePick = () => inputRef.current?.click();
 
   const handleInstall = async (file: File) => {
-    if (!user) {
+    if (!username) {
       setError("Sign in required to install apps.");
       return;
     }
@@ -85,7 +85,7 @@ export function AppLibrary({
         compression: "gzip-chunked",
       };
 
-      await addInstalledApp(user.uid, app);
+      await addInstalledApp(username, app);
       setInstallProgress(100);
     } catch (e: any) {
       setError(e?.message || "Install failed");
@@ -96,7 +96,7 @@ export function AppLibrary({
   };
 
   const handleInstallFromUrl = async () => {
-    if (!user) {
+    if (!username) {
       setError("Sign in required to install apps.");
       return;
     }
@@ -482,10 +482,10 @@ export function AppLibrary({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!user) return;
+                        if (!username) return;
                         const ok = window.confirm(`Remove "${app.name}"?`);
                         if (!ok) return;
-                        void removeInstalledAppWithCleanup(user.uid, app).catch((err: any) => {
+                        void removeInstalledAppWithCleanup(username, app).catch((err: any) => {
                           setError(err?.message || "Remove failed");
                         });
                       }}

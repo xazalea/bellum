@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { nachoEngine } from "@/lib/nacho/engine";
-import { authService } from "@/lib/firebase/auth-service";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
 import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 
 /**
@@ -35,11 +35,10 @@ export default function KeepalivePage() {
 
     const tick = async () => {
       if (stopped) return;
-      const user = authService.getCurrentUser();
-      if (!user) return;
+      const username = getCachedUsername();
+      if (!username) return;
       try {
         const deviceId = await getDeviceFingerprintId();
-        const token = await user.getIdToken().catch(() => null);
         const base = getClusterBase();
         const bases = base ? [base, ""] : [""];
         for (const b of bases) {
@@ -47,8 +46,7 @@ export default function KeepalivePage() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Nacho-UserId": user.uid,
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              "X-Nacho-UserId": username,
             },
             body: JSON.stringify({
               deviceId,

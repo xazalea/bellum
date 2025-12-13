@@ -1,4 +1,5 @@
-import { authService } from "@/lib/firebase/auth-service";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
+import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 
 export interface ClusterFileManifest {
   fileId: string;
@@ -21,14 +22,10 @@ function getClusterBase(): string {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const user = authService.getCurrentUser();
-  if (!user) return {};
-  try {
-    const token = await user.getIdToken();
-    return { Authorization: `Bearer ${token}`, "X-Nacho-UserId": user.uid };
-  } catch {
-    return { "X-Nacho-UserId": user.uid };
-  }
+  const username = getCachedUsername();
+  if (!username) return {};
+  const fp = await getDeviceFingerprintId();
+  return { "X-Nacho-UserId": username, "X-Nacho-Fingerprint": fp };
 }
 
 async function gzipDecompressBytes(bytes: Uint8Array): Promise<Uint8Array> {

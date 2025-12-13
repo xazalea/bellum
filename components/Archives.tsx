@@ -3,11 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Globe, PackagePlus } from "lucide-react";
-import { authService } from "@/lib/firebase/auth-service";
 import { detectAppType, addInstalledApp, type InstalledApp } from "@/lib/apps/apps-service";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
 import { publishArchive, subscribePublicArchives, type ArchiveEntry } from "@/lib/archives/archives-service";
 import { promoteClusterFileToPublic } from "@/lib/storage/chunked-download";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -20,7 +20,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function Archives() {
-  const user = authService.getCurrentUser();
+  const username = getCachedUsername();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [items, setItems] = useState<ArchiveEntry[]>([]);
@@ -33,7 +33,7 @@ export function Archives() {
   }, []);
 
   const publishFile = async (file: File) => {
-    if (!user) {
+    if (!username) {
       setError("Sign in required to publish archives.");
       return;
     }
@@ -56,7 +56,7 @@ export function Archives() {
         fileId: res.fileId,
         originalBytes: file.size,
         storedBytes: res.storedBytes,
-        publisherUid: user.uid,
+        publisherUid: username,
         compression: "gzip-chunked" as const,
       };
       await publishArchive(entry);
@@ -70,7 +70,7 @@ export function Archives() {
   };
 
   const addToApps = async (item: ArchiveEntry) => {
-    if (!user) {
+    if (!username) {
       setError("Sign in required to add to Apps.");
       return;
     }
@@ -85,7 +85,7 @@ export function Archives() {
       installedAt: Date.now(),
       compression: item.compression,
     };
-    await addInstalledApp(user.uid, app);
+    await addInstalledApp(username, app);
   };
 
   return (

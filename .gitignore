@@ -37,6 +37,7 @@ next-env.d.ts
 
 # npm
 .npmrc.local
+/.npm-cache/
 
 # Large Asset Directories
 **/assets/games/

@@ -1,5 +1,6 @@
-import { authService } from "@/lib/firebase/auth-service";
 import { NACHO_STORAGE_LIMIT_BYTES } from "@/lib/storage/quota";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
+import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 
 export interface ChunkedUploadInit {
   fileName: string;
@@ -34,14 +35,11 @@ function getClusterBase(): string {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const user = authService.getCurrentUser();
-  if (!user) return {};
-  try {
-    const token = await user.getIdToken();
-    return { Authorization: `Bearer ${token}`, "X-Nacho-UserId": user.uid };
-  } catch {
-    return { "X-Nacho-UserId": user.uid };
-  }
+  const username = getCachedUsername();
+  if (!username) return {};
+  // For labeling / grouping only (Telegram routes are server-side; auth is enforced elsewhere).
+  const fp = await getDeviceFingerprintId();
+  return { "X-Nacho-UserId": username, "X-Nacho-Fingerprint": fp };
 }
 
 async function sha256Hex(data: ArrayBuffer | Uint8Array): Promise<string> {
@@ -93,16 +91,13 @@ export async function chunkedUploadFile(
   } = {}
 ): Promise<ChunkedUploadResult> {
   const base = getClusterBase();
-  const user = authService.getCurrentUser();
-  if (!user) throw new Error("Not authenticated");
+  const username = getCachedUsername();
+  if (!username) throw new Error("Sign in required");
 
   // Best-effort: enforce cloud quota client-side (6GB) for Telegram-backed storage.
-  const profile = await authService.getUserProfile(user.uid).catch(() => null);
-  const used = profile?.storageUsed ?? 0;
-  const limit = profile?.storageLimit ?? NACHO_STORAGE_LIMIT_BYTES;
-  if (used + file.size > limit) {
-    throw new Error(`Quota exceeded. Remaining bytes: ${Math.max(0, limit - used)}`);
-  }
+  // NOTE: quota tracking used to rely on client Firestore. With locked rules, we skip per-user tracking here.
+  // Keep a simple hard cap so uploads don’t explode storage.
+  if (file.size > NACHO_STORAGE_LIMIT_BYTES) throw new Error("File too large for cloud storage quota");
 
   const chunkBytes = opts.chunkBytes ?? 32 * 1024 * 1024;
   const totalChunks = Math.ceil(file.size / chunkBytes);
@@ -135,7 +130,7 @@ export async function chunkedUploadFile(
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",
-          "X-Nacho-UserId": user.uid,
+          "X-Nacho-UserId": username,
           "X-File-Name": file.name,
           "X-Upload-Id": uploadId,
           "X-Chunk-Index": String(i),
@@ -157,7 +152,7 @@ export async function chunkedUploadFile(
 
     const manRes = await fetch(`/api/telegram/manifest`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Nacho-UserId": user.uid },
+      headers: { "Content-Type": "application/json", "X-Nacho-UserId": username },
       body: JSON.stringify({
         fileName: file.name,
         totalBytes: file.size,
@@ -173,13 +168,6 @@ export async function chunkedUploadFile(
       throw new Error(`Manifest store failed (${manRes.status}): ${t}`);
     }
     const manJson = (await manRes.json()) as { fileId: string };
-
-    // Best-effort: update user profile usage so UI reflects cloud usage.
-    try {
-      await authService.updateStorageUsage(used + storedBytes);
-    } catch {
-      // ignore
-    }
 
     return { uploadId, fileId: manJson.fileId, totalChunks, storedBytes };
   }

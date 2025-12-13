@@ -1,15 +1,5 @@
-import { db } from "@/lib/firebase/config";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-} from "firebase/firestore";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
+import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 
 export interface ArchiveEntry {
   id: string;
@@ -24,26 +14,57 @@ export interface ArchiveEntry {
   compression: "none" | "gzip-chunked";
 }
 
-function archivesCol() {
-  return collection(db, "archives");
+async function headersIfSignedIn(): Promise<Record<string, string>> {
+  const username = getCachedUsername();
+  if (!username) throw new Error("Not signed in");
+  const fp = await getDeviceFingerprintId();
+  return { "X-Nacho-Username": username, "X-Nacho-Fingerprint": fp };
 }
 
 export function subscribePublicArchives(cb: (items: ArchiveEntry[]) => void): () => void {
-  const q = query(archivesCol(), orderBy("publishedAt", "desc"));
-  return onSnapshot(q, (snap) => {
-    const out: ArchiveEntry[] = [];
-    snap.forEach((d) => out.push({ id: d.id, ...(d.data() as any) }));
-    cb(out);
-  });
+  let stopped = false;
+  const poll = async () => {
+    if (stopped) return;
+    try {
+      const res = await fetch("/api/archives");
+      if (!res.ok) return;
+      const items = (await res.json().catch(() => [])) as ArchiveEntry[];
+      cb(Array.isArray(items) ? items : []);
+    } catch {
+      // ignore
+    }
+  };
+  void poll();
+  const t = window.setInterval(() => void poll(), 5000);
+  return () => {
+    stopped = true;
+    window.clearInterval(t);
+  };
 }
 
 export async function publishArchive(entry: Omit<ArchiveEntry, "id" | "publishedAt">): Promise<string> {
-  const ref = await addDoc(archivesCol(), { ...entry, publishedAt: serverTimestamp() });
-  return ref.id;
+  const res = await fetch("/api/archives", {
+    method: "POST",
+    headers: { ...(await headersIfSignedIn()), "Content-Type": "application/json" },
+    body: JSON.stringify({ entry }),
+  });
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as any;
+    throw new Error(j?.error || "Publish failed");
+  }
+  const j = (await res.json()) as { id: string };
+  return j.id;
 }
 
 export async function deleteArchive(id: string): Promise<void> {
-  await deleteDoc(doc(db, "archives", id));
+  const res = await fetch(`/api/archives/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: await headersIfSignedIn(),
+  });
+  if (!res.ok && res.status !== 204) {
+    const j = (await res.json().catch(() => null)) as any;
+    throw new Error(j?.error || "Delete failed");
+  }
 }
 
 

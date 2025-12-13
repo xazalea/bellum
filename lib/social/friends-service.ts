@@ -1,15 +1,5 @@
-import { db } from "@/lib/firebase/config";
-import {
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+import { getCachedUsername } from "@/lib/auth/nacho-auth";
+import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 
 export type FriendRequestStatus = "pending" | "accepted" | "declined";
 
@@ -36,88 +26,90 @@ function normalizeUsername(input: string): string {
   return u;
 }
 
-function requestId(from: string, to: string) {
-  return `${from}__${to}`;
-}
-
-function friendshipId(a: string, b: string) {
-  const [x, y] = [a, b].sort();
-  return `${x}__${y}`;
-}
-
-function requestsCol() {
-  return collection(db, "friend_requests");
-}
-
-function friendshipsCol() {
-  return collection(db, "friendships");
+async function nachoHeaders(): Promise<Record<string, string>> {
+  const username = getCachedUsername();
+  if (!username) throw new Error("Not signed in");
+  const fp = await getDeviceFingerprintId();
+  return { "X-Nacho-Username": username, "X-Nacho-Fingerprint": fp };
 }
 
 export async function sendFriendRequest(fromInput: string, toInput: string): Promise<void> {
-  const from = normalizeUsername(fromInput);
   const to = normalizeUsername(toInput);
-  if (from === to) throw new Error("You can't friend yourself.");
-
-  // Idempotent: one pending request per (from,to).
-  const ref = doc(db, "friend_requests", requestId(from, to));
-  await setDoc(
-    ref,
-    {
-      from,
-      to,
-      status: "pending" as const,
-      createdAt: serverTimestamp(),
-    },
-    { merge: false },
-  );
+  const res = await fetch("/api/user/friends", {
+    method: "POST",
+    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "send", to }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const j = (await res.json().catch(() => null)) as any;
+    throw new Error(j?.error || "Failed to send request");
+  }
 }
 
 export async function acceptFriendRequest(req: FriendRequest): Promise<void> {
-  const from = normalizeUsername(req.from);
-  const to = normalizeUsername(req.to);
-
-  // Create friendship doc (idempotent by sorted pair).
-  const fRef = doc(db, "friendships", friendshipId(from, to));
-  await setDoc(
-    fRef,
-    {
-      users: [from, to].sort() as [string, string],
-      createdAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-
-  const rRef = doc(db, "friend_requests", req.id);
-  await updateDoc(rRef, { status: "accepted", resolvedAt: serverTimestamp() });
+  const res = await fetch("/api/user/friends", {
+    method: "POST",
+    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "accept", requestId: req.id }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const j = (await res.json().catch(() => null)) as any;
+    throw new Error(j?.error || "Failed to accept request");
+  }
 }
 
 export async function declineFriendRequest(req: FriendRequest): Promise<void> {
-  const rRef = doc(db, "friend_requests", req.id);
-  await updateDoc(rRef, { status: "declined", resolvedAt: serverTimestamp() });
+  const res = await fetch("/api/user/friends", {
+    method: "POST",
+    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "decline", requestId: req.id }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const j = (await res.json().catch(() => null)) as any;
+    throw new Error(j?.error || "Failed to decline request");
+  }
 }
 
 export function subscribeIncomingFriendRequests(usernameInput: string, cb: (items: FriendRequest[]) => void): () => void {
-  const username = normalizeUsername(usernameInput);
-  const q = query(
-    requestsCol(),
-    where("to", "==", username),
-    where("status", "==", "pending"),
-    orderBy("createdAt", "desc"),
-  );
-  return onSnapshot(q, (snap) => {
-    const out: FriendRequest[] = [];
-    snap.forEach((d) => out.push({ id: d.id, ...(d.data() as any) }));
-    cb(out);
-  });
+  // Server-backed polling subscription. `usernameInput` is kept for compatibility.
+  let stopped = false;
+  const poll = async () => {
+    if (stopped) return;
+    try {
+      const res = await fetch("/api/user/friends", { headers: await nachoHeaders() });
+      if (!res.ok) return;
+      const j = (await res.json().catch(() => null)) as { incoming?: FriendRequest[] } | null;
+      cb(Array.isArray(j?.incoming) ? j!.incoming! : []);
+    } catch {
+      // ignore
+    }
+  };
+  void poll();
+  const t = window.setInterval(() => void poll(), 5000);
+  return () => {
+    stopped = true;
+    window.clearInterval(t);
+  };
 }
 
 export function subscribeFriends(usernameInput: string, cb: (items: Friendship[]) => void): () => void {
-  const username = normalizeUsername(usernameInput);
-  const q = query(friendshipsCol(), where("users", "array-contains", username), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snap) => {
-    const out: Friendship[] = [];
-    snap.forEach((d) => out.push({ id: d.id, ...(d.data() as any) }));
-    cb(out);
-  });
+  let stopped = false;
+  const poll = async () => {
+    if (stopped) return;
+    try {
+      const res = await fetch("/api/user/friends", { headers: await nachoHeaders() });
+      if (!res.ok) return;
+      const j = (await res.json().catch(() => null)) as { friends?: Friendship[] } | null;
+      cb(Array.isArray(j?.friends) ? j!.friends! : []);
+    } catch {
+      // ignore
+    }
+  };
+  void poll();
+  const t = window.setInterval(() => void poll(), 5000);
+  return () => {
+    stopped = true;
+    window.clearInterval(t);
+  };
 }
 

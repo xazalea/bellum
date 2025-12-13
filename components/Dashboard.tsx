@@ -3,8 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Plus, Sliders, Smartphone, Monitor } from 'lucide-react';
-import { authService } from '@/lib/firebase/auth-service';
 import { subscribeInstalledApps, type InstalledApp } from '@/lib/apps/apps-service';
+import { getCachedUsername } from '@/lib/auth/nacho-auth';
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -21,7 +21,7 @@ export const Dashboard = ({
   onGoApps?: () => void;
   onOpenRunner?: () => void;
 }) => {
-  const user = authService.getCurrentUser();
+  const username = getCachedUsername();
   const [apps, setApps] = useState<InstalledApp[]>([]);
   const [peerCount, setPeerCount] = useState<number>(0);
   const [heapUsed, setHeapUsed] = useState<number | null>(null);
@@ -37,25 +37,23 @@ export const Dashboard = ({
     }, []);
 
   useEffect(() => {
-    if (!user) return;
-    return subscribeInstalledApps(user.uid, setApps);
-  }, [user]);
+    if (!username) return;
+    return subscribeInstalledApps(username, setApps);
+  }, [username]);
 
     useEffect(() => {
-    if (!user) return;
+    if (!username) return;
     let stopped = false;
     const poll = async () => {
       if (stopped) return;
       try {
         setClusterStatus((s) => (s === 'online' ? 'online' : 'connecting'));
-        const token = await user.getIdToken().catch(() => null);
         const bases = base ? [base, ''] : [''];
         let peers: any[] | null = null;
         for (const b of bases) {
           const res = await fetch(`${b}/api/cluster/peers`, {
             headers: {
-              'X-Nacho-UserId': user.uid,
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              'X-Nacho-UserId': username,
             },
           });
           if (!res.ok) continue;
@@ -80,7 +78,7 @@ export const Dashboard = ({
       stopped = true;
       window.clearInterval(t);
     };
-  }, [user, base]);
+  }, [username, base]);
 
   useEffect(() => {
     const anyPerf = performance as any;

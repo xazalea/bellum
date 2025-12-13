@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { gameRepoService, GameRepository, GameEntry } from '@/lib/nacho/modules/game-repository';
-import { clusterService } from '@/lib/nacho/modules/distributed-compute';
 import { X, FolderPlus, Gamepad2, Globe, Lock, Download, Share2 } from 'lucide-react';
 import { vmManager } from '@/lib/vm/manager';
 import { VMType } from '@/lib/vm/types';
+import { getCachedUsername } from '@/lib/auth/nacho-auth';
 
 interface GameRepoModalProps {
     isOpen: boolean;
@@ -21,7 +21,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
     const [newDesc, setNewDesc] = useState('');
     const [isPublic, setIsPublic] = useState(true);
 
-    const user = clusterService?.getCurrentUser() ?? null;
+    const username = getCachedUsername();
 
     useEffect(() => {
         if (isOpen) {
@@ -33,7 +33,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
     const loadRepos = async () => {
         const publicRepos = await gameRepoService.getPublicRepositories();
         setRepos(publicRepos);
-        if (user) {
+        if (username) {
             const mine = await gameRepoService.getMyRepositories();
             setMyRepos(mine);
         }
@@ -80,7 +80,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
                             >
                                 Browse
                             </button>
-                            {user && (
+                            {username && (
                                 <button 
                                     onClick={() => setView('create')}
                                     className={`px-3 py-1 rounded text-xs font-medium transition-colors ${view === 'create' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
@@ -100,7 +100,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
                     {view === 'browse' && (
                         <div className="space-y-8">
                             {/* My Repos */}
-                            {user && myRepos.length > 0 && (
+                            {username && myRepos.length > 0 && (
                                 <div>
                                     <h3 className="text-sm font-bold text-gray-400 uppercase mb-4">My Repositories</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -192,7 +192,7 @@ export default function GameRepoModal({ isOpen, onClose }: GameRepoModalProps) {
                                         <span>{selectedRepo.games.length} Games</span>
                                     </div>
                                 </div>
-                                {user && selectedRepo.ownerName === user.username && (
+                                {username && selectedRepo.ownerName === username && (
                                     <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm font-medium">
                                         + Add Game
                                     </button>

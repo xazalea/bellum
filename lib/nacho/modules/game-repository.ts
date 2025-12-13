@@ -1,7 +1,5 @@
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { getCachedUsername } from '@/lib/auth/nacho-auth';
 import { getFingerprint } from '@/lib/tracking';
-import { clusterService } from './distributed-compute';
 
 export interface GameRepository {
     id?: string;
@@ -40,16 +38,11 @@ export class GameRepositoryService {
      * Requires User to be logged in via Distributed Compute Service (Cluster)
      */
     public async createRepository(name: string, description: string, isPublic: boolean = true): Promise<{ success: boolean; id?: string; message: string }> {
-        const user = clusterService?.getCurrentUser() ?? null;
         const fingerprint = await getFingerprint();
+        const username = getCachedUsername();
 
-        if (!user || !fingerprint) {
+        if (!username || !fingerprint) {
             return { success: false, message: 'Must be logged in to create a repository' };
-        }
-
-        // Verify identity match (User must own the device fingerprint)
-        if (!user.devices.includes(fingerprint)) {
-            return { success: false, message: 'Device authorization failed' };
         }
 
         try {
@@ -57,14 +50,26 @@ export class GameRepositoryService {
                 name,
                 description,
                 ownerId: fingerprint, // Owner is identified by their primary fingerprint
-                ownerName: user.username,
+                ownerName: username,
                 games: [],
                 isPublic,
                 createdAt: Date.now()
             };
-
-            const docRef = await addDoc(collection(db, 'game_repositories'), repoData);
-            return { success: true, id: docRef.id, message: 'Repository created' };
+            const res = await fetch('/api/game-repositories', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Nacho-Username': username,
+                    'X-Nacho-Fingerprint': fingerprint,
+                },
+                body: JSON.stringify({ repo: repoData }),
+            });
+            if (!res.ok) {
+                const j = await res.json().catch(() => null) as any;
+                return { success: false, message: j?.error || 'Failed to create repository' };
+            }
+            const j = await res.json() as { id: string };
+            return { success: true, id: j.id, message: 'Repository created' };
         } catch (e) {
             console.error('Error creating repo:', e);
             return { success: false, message: 'Failed to create repository' };
@@ -79,28 +84,21 @@ export class GameRepositoryService {
         if (!fingerprint) return { success: false, message: 'Authentication failed' };
 
         try {
-            // Check ownership
-            const repoRef = doc(db, 'game_repositories', repoId);
-            const repoSnap = await getDoc(repoRef);
-
-            if (!repoSnap.exists()) {
-                return { success: false, message: 'Repository not found' };
-            }
-
-            const repoData = repoSnap.data() as GameRepository;
-            
-            // Allow owner to add
-            // In a real app, we might check if user.devices includes repoData.ownerId for cross-device ownership
-            // For now, simple direct check or username check
-            const user = clusterService?.getCurrentUser() ?? null;
-            if (repoData.ownerId !== fingerprint && repoData.ownerName !== user?.username) {
-                return { success: false, message: 'You do not own this repository' };
-            }
-
-            await updateDoc(repoRef, {
-                games: arrayUnion(game)
+            const username = getCachedUsername();
+            if (!username) return { success: false, message: 'Login required' };
+            const res = await fetch(`/api/game-repositories/${encodeURIComponent(repoId)}/games`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Nacho-Username': username,
+                    'X-Nacho-Fingerprint': fingerprint,
+                },
+                body: JSON.stringify({ game }),
             });
-
+            if (!res.ok) {
+                const j = await res.json().catch(() => null) as any;
+                return { success: false, message: j?.error || 'Failed to add game' };
+            }
             return { success: true, message: 'Game added to repository' };
         } catch (e) {
             console.error('Error adding game:', e);
@@ -114,13 +112,10 @@ export class GameRepositoryService {
      */
     public async getPublicRepositories(): Promise<GameRepository[]> {
         try {
-            const q = query(collection(db, 'game_repositories'), where('isPublic', '==', true));
-            const querySnapshot = await getDocs(q);
-            
-            return querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as GameRepository));
+            const res = await fetch('/api/game-repositories');
+            if (!res.ok) return [];
+            const items = await res.json().catch(() => []) as GameRepository[];
+            return Array.isArray(items) ? items : [];
         } catch (e) {
             console.error('Error fetching repos:', e);
             return [];
@@ -131,18 +126,20 @@ export class GameRepositoryService {
      * Get my repositories
      */
     public async getMyRepositories(): Promise<GameRepository[]> {
-        const user = clusterService?.getCurrentUser() ?? null;
-        if (!user) return [];
+        const username = getCachedUsername();
+        const fingerprint = await getFingerprint();
+        if (!username || !fingerprint) return [];
 
         try {
-            // Fetch by username to allow multi-device access
-            const q = query(collection(db, 'game_repositories'), where('ownerName', '==', user.username));
-            const querySnapshot = await getDocs(q);
-            
-            return querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as GameRepository));
+            const res = await fetch('/api/game-repositories/mine', {
+                headers: {
+                    'X-Nacho-Username': username,
+                    'X-Nacho-Fingerprint': fingerprint,
+                }
+            });
+            if (!res.ok) return [];
+            const items = await res.json().catch(() => []) as GameRepository[];
+            return Array.isArray(items) ? items : [];
         } catch (e) {
             console.error('Error fetching my repos:', e);
             return [];

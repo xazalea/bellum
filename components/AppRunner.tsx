@@ -4,12 +4,12 @@ import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Maximize2, Minimize2, Power, RefreshCw, Mic, Volume2 } from 'lucide-react';
 import { authService } from '@/lib/firebase/auth-service';
-import { db } from '@/lib/firebase/config';
-import { doc, getDoc } from 'firebase/firestore';
 import { downloadClusterFile } from '@/lib/storage/chunked-download';
 import { os } from '@/src/nacho_os';
 import type { InstalledApp } from '@/lib/apps/apps-service';
 import { opfsReadBytes, opfsWriteBytes } from '@/lib/storage/local-opfs';
+import { getCachedUsername } from '@/lib/auth/nacho-auth';
+import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 
 export interface AppRunnerProps {
   appId?: string;
@@ -41,13 +41,20 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       }
 
       setStatus('Loading metadata…');
-      const ref = doc(db, 'users', user.uid, 'apps', appId);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        setStatus('App not found');
+      const username = getCachedUsername();
+      if (!username) {
+        setStatus('Sign in required');
         return;
       }
-      const appData = { id: snap.id, ...(snap.data() as any) } as InstalledApp;
+      const fp = await getDeviceFingerprintId();
+      const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
+        headers: { 'X-Nacho-Username': username, 'X-Nacho-Fingerprint': fp },
+      });
+      if (!res.ok) {
+        setStatus(res.status === 403 ? 'Device not trusted' : 'App not found');
+        return;
+      }
+      const appData = (await res.json()) as InstalledApp;
       if (cancelled) return;
       setApp(appData);
 

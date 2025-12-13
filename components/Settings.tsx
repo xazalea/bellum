@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Settings as SettingsIcon, Shield, Database, Wifi, Cpu, Code, Network } from 'lucide-react';
-import { authService } from '@/lib/firebase/auth-service';
 import { onSettings, setClusterParticipation, type NachoUserSettings } from '@/lib/cluster/settings';
 import { NACHO_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
 import { approveLoginCode, getCachedUsername } from '@/lib/auth/nacho-auth';
@@ -19,11 +18,10 @@ function formatBytes(bytes: number): string {
 export const SettingsPanel = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState<NachoUserSettings>({ clusterParticipation: true });
-  const [storageUsed, setStorageUsed] = useState<number>(0);
+  const [storageUsed, setStorageUsed] = useState<number | null>(null);
   const [otpCode, setOtpCode] = useState<string>('');
   const [otpStatus, setOtpStatus] = useState<string | null>(null);
   const [cursorPref, setCursorPref] = useState<'custom' | 'native'>('native');
-  const user = authService.getCurrentUser();
   const username = getCachedUsername();
 
   const tabs = useMemo(() => [
@@ -36,13 +34,9 @@ export const SettingsPanel = () => {
 
   useEffect(() => {
     let unsub = () => {};
-    if (user) {
-      unsub = onSettings(user.uid, setSettings);
-      // Pull current storage usage from profile
-      authService.getUserProfile(user.uid).then((p) => setStorageUsed(p?.storageUsed ?? 0));
-    }
+    if (username) unsub = onSettings(username, setSettings);
     return () => unsub();
-  }, [user]);
+  }, [username]);
 
   useEffect(() => {
     try {
@@ -54,9 +48,9 @@ export const SettingsPanel = () => {
   }, []);
 
   const toggleCluster = async () => {
-    if (!user) return;
+    if (!username) return;
     const next = !settings.clusterParticipation;
-    await setClusterParticipation(user.uid, next);
+    await setClusterParticipation(username, next);
     setSettings((s) => ({ ...s, clusterParticipation: next }));
   };
 
@@ -184,17 +178,23 @@ export const SettingsPanel = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <div className="font-semibold">Quota</div>
-                  <div className="text-xs text-white/50">Per-user limit is enforced at upload time.</div>
+                  <div className="text-xs text-white/50">Cloud quota is enforced at upload time.</div>
                 </div>
                 <div className="text-right font-mono text-sm">
-                  <div>{formatBytes(storageUsed)} / {formatBytes(NACHO_STORAGE_LIMIT_BYTES)}</div>
-                  <div className="text-white/40">remaining {formatBytes(Math.max(0, NACHO_STORAGE_LIMIT_BYTES - storageUsed))}</div>
+                  <div>
+                    {storageUsed === null ? 'n/a' : formatBytes(storageUsed)} / {formatBytes(NACHO_STORAGE_LIMIT_BYTES)}
+                  </div>
+                  <div className="text-white/40">
+                    {storageUsed === null
+                      ? 'sign in to track usage'
+                      : `remaining ${formatBytes(Math.max(0, NACHO_STORAGE_LIMIT_BYTES - storageUsed))}`}
+                  </div>
                 </div>
               </div>
               <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
                 <div
                   className="h-full bg-blue-500"
-                  style={{ width: `${Math.min(100, (storageUsed / NACHO_STORAGE_LIMIT_BYTES) * 100)}%` }}
+                  style={{ width: `${storageUsed === null ? 0 : Math.min(100, (storageUsed / NACHO_STORAGE_LIMIT_BYTES) * 100)}%` }}
                 />
               </div>
             </div>

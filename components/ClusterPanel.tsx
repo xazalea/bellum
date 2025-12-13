@@ -3,11 +3,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Network, Zap, Cpu, Share2, Shield, Activity } from 'lucide-react';
-import { authService } from '@/lib/firebase/auth-service';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
+import { getCachedUsername } from '@/lib/auth/nacho-auth';
 
 export const ClusterPanel = () => {
-  const user = authService.getCurrentUser();
+  const username = getCachedUsername();
   const [peers, setPeers] = useState<Array<{
     userId: string;
     deviceId: string;
@@ -34,21 +34,19 @@ export const ClusterPanel = () => {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!username) return;
     let stopped = false;
 
     const poll = async () => {
       if (stopped) return;
       try {
         setStatus((s) => (s === 'online' ? 'online' : 'connecting'));
-        const token = await user.getIdToken().catch(() => null);
         const bases = base ? [base, ''] : [''];
         let json: any[] | null = null;
         for (const b of bases) {
           const res = await fetch(`${b}/api/cluster/peers`, {
             headers: {
-              'X-Nacho-UserId': user.uid,
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              'X-Nacho-UserId': username,
             },
           });
           if (!res.ok) continue;
@@ -75,7 +73,7 @@ export const ClusterPanel = () => {
       stopped = true;
       window.clearInterval(t);
     };
-  }, [user, base]);
+  }, [username, base]);
 
   const onlineCount = peers.length;
 
@@ -118,7 +116,7 @@ export const ClusterPanel = () => {
             </div>
         </div>
 
-        {!user && (
+        {!username && (
           <div className="bellum-card p-6 mb-8 border-2 border-white/10">
             <div className="text-white/80 font-semibold">Sign in to see your devices here.</div>
             <div className="text-white/50 text-sm mt-1">
@@ -126,7 +124,7 @@ export const ClusterPanel = () => {
             </div>
           </div>
         )}
-        {user && onlineCount === 0 && (
+        {username && onlineCount === 0 && (
           <div className="bellum-card p-6 mb-8 border-2 border-white/10">
             <div className="text-white/80 font-semibold">No active nodes yet</div>
             <div className="text-white/50 text-sm mt-1">
