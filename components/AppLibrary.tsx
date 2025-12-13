@@ -94,19 +94,63 @@ export function AppLibrary({
     setInstallProgress(0);
     try {
       const url = new URL(urlInput.trim());
-      const res = await fetch(url.toString(), { method: "GET" });
-      if (!res.ok) throw new Error(`Download failed (${res.status})`);
+      // Many download links (like Softonic post-download pages) trigger a browser download
+      // but cannot be fetched due to CORS. Prefer "download then pick file" flow.
+      const triggerDownload = () => {
+        const a = document.createElement("a");
+        a.href = url.toString();
+        a.target = "_blank";
+        a.rel = "noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      };
 
-      const ct = res.headers.get("content-type") || "";
-      if (ct.includes("text/html")) {
+      const showPicker =
+        typeof window !== "undefined" &&
+        "showOpenFilePicker" in window &&
+        typeof (window as any).showOpenFilePicker === "function";
+
+      // If the URL is same-origin, try direct fetch first (fast path).
+      if (url.origin === window.location.origin) {
+        const res = await fetch(url.toString(), { method: "GET" });
+        if (!res.ok) throw new Error(`Download failed (${res.status})`);
+        const ct = res.headers.get("content-type") || "";
+        const guessedName = decodeURIComponent(url.pathname.split("/").pop() || "download.bin");
+        const bytes = await res.arrayBuffer();
+        const file = new File([bytes], guessedName, { type: ct || "application/octet-stream" });
+        await handleInstall(file);
+        return;
+      }
+
+      // Otherwise: start browser download and ask user to pick it from Downloads.
+      triggerDownload();
+      setInstallProgress(15);
+
+      if (!showPicker) {
         throw new Error(
-          "That URL returned a web page (HTML), not a direct .apk/.exe file. Open it in a new tab, download the file, then use Install (local file).",
+          "Download started in a new tab. When it finishes, click Install and choose the file from your Downloads folder.",
         );
       }
 
-      const guessedName = decodeURIComponent(url.pathname.split("/").pop() || "download.bin");
-      const bytes = await res.arrayBuffer();
-      const file = new File([bytes], guessedName, { type: ct || "application/octet-stream" });
+      setInstallProgress(25);
+      const picker = (window as any).showOpenFilePicker as (opts: any) => Promise<any[]>;
+      const handles = await picker({
+        multiple: false,
+        // Chromium supports starting in Downloads.
+        startIn: "downloads",
+        types: [
+          {
+            description: "Apps",
+            accept: {
+              "application/octet-stream": [".apk", ".exe", ".msi", ".xapk"],
+            },
+          },
+        ],
+        excludeAcceptAllOption: true,
+      });
+      const file = await handles[0].getFile();
+      setInstallProgress(40);
       await handleInstall(file);
     } catch (e: any) {
       setError(e?.message || "Install from URL failed");
@@ -184,12 +228,12 @@ export function AppLibrary({
             </div>
             <input
               className="bellum-input"
-              placeholder="https://… direct .apk/.exe/.msi URL (CORS must allow)"
+              placeholder="https://… (download link or direct file)"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
             />
             <div className="text-xs text-white/35 mt-2">
-              Tip: many “download pages” return HTML; those can’t be imported directly.
+              Tip: if the link triggers a browser download, we’ll ask you to pick the downloaded file from Downloads.
             </div>
           </div>
           <button
@@ -197,7 +241,7 @@ export function AppLibrary({
             onClick={() => void handleInstallFromUrl()}
             className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm w-full md:w-auto"
           >
-            Download & Install
+            Download → Pick → Install
           </button>
         </div>
       </div>
@@ -230,17 +274,17 @@ export function AppLibrary({
                     void handleInstallFromUrl();
                   }}
                   className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2"
-                  title="Attempt direct import (works only if the URL is a direct file + CORS allows it)"
+                  title="Start download, then pick the file to install"
                 >
                   <Download size={14} />
-                  Try install
+                  Download & pick
                 </button>
               </div>
             </div>
           ))}
         </div>
         <div className="text-xs text-white/35 mt-3">
-          Note: these are third‑party download pages. If “Try install” fails, use “Open”, download the file, then Install (local file).
+          Note: these are third‑party download pages. We’ll open the download and then prompt you to pick the file from Downloads.
         </div>
       </div>
 
