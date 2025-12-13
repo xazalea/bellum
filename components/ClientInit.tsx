@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { authService } from '@/lib/firebase/auth-service';
 import { onSettings } from '@/lib/cluster/settings';
 import { ensureKursor } from '@/lib/ui/kursor';
+import { hyperRuntime } from '@/lib/performance/hyper-runtime';
 
 /**
  * Client-side initialization
@@ -67,6 +68,14 @@ export function ClientInit() {
     // Preload critical assets
     if ('requestIdleCallback' in window) {
       requestIdleCallback(() => {
+        // Warm runtime helpers early (GPU/audio/worker/idle queue).
+        hyperRuntime.ensureInitialized().catch(() => {});
+
+        // Warm Fabric (semantic memo index + CAS path) early for better perceived speed.
+        import('@/lib/fabric/runtime')
+          .then(({ fabricRuntime }) => fabricRuntime.initialize())
+          .catch(() => {});
+
         // Preload ISO files in background
         import('@/lib/assets/iso-loader').then(({ ISOLoader }) => {
           ISOLoader.preloadISO('android-x86-9.0-r2').catch(console.warn);

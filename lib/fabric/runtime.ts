@@ -4,6 +4,7 @@ import { DeterministicStateMachine, ReducerFn } from "./state_machine";
 import { fabricMesh } from "./mesh";
 import { speculativeExecutor, SpeculativeCandidate } from "./speculative";
 import { semanticMemo } from "./memo";
+import { fabricGraph, GraphSpec, GraphRunResult } from "./graph";
 
 export interface FabricServiceHandle<State, Request, Response> {
   serviceId: string;
@@ -65,6 +66,15 @@ export class FabricRuntime {
     return Array.from(this.services.values()).map((s) => ({ serviceId: s.serviceId, serviceName: s.serviceName, address: s.address }));
   }
 
+  listKnownServices(): { serviceId: string; serviceName: string; address: string; nodeId: string }[] {
+    return fabricMesh.getServices().map((s) => ({
+      serviceId: s.serviceId,
+      serviceName: s.serviceName,
+      address: `fabric://${s.serviceId}`,
+      nodeId: s.nodeId
+    }));
+  }
+
   // Register a deterministic service as a state machine.
   async hostService<State, Request, Response>(args: {
     serviceName: string;
@@ -113,6 +123,20 @@ export class FabricRuntime {
     return res as Response;
   }
 
+  // Convenience for beginners: call by service name (routes to most recently seen ad).
+  async callByName<Request, Response>(serviceName: string, request: Request): Promise<{ address: string; response: Response }> {
+    await this.initialize();
+    // Prefer local hosted service by name if available.
+    for (const s of this.services.values()) {
+      if (s.serviceName === serviceName) {
+        const response = (await s.machine.apply(request)).response as Response;
+        return { address: s.address, response };
+      }
+    }
+    const { address, response } = await fabricMesh.rpcCallByName(serviceName, request);
+    return { address, response: response as Response };
+  }
+
   // Temporal compute amplification: speculative precompute of likely next requests.
   speculate<State, Request, Response>(handle: FabricServiceHandle<State, Request, Response>, candidates: SpeculativeCandidate<Request>[]) {
     speculativeExecutor.speculate(handle.machine, candidates);
@@ -126,6 +150,17 @@ export class FabricRuntime {
     if (existing) return existing;
     const output = await compute();
     return semanticMemo.memoizeJSON(scope, descriptor, output);
+  }
+
+  // General-purpose compute fabric primitive: a deterministic DAG with semantic dedup.
+  async runGraph(spec: GraphSpec): Promise<GraphRunResult> {
+    await this.initialize();
+    return fabricGraph.run(spec);
+  }
+
+  // Temporal compute amplification for graphs.
+  precomputeGraph(spec: GraphSpec, utility = 0.6) {
+    fabricGraph.precompute(spec, utility);
   }
 }
 

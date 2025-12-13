@@ -78,6 +78,12 @@ export class FabricMesh {
     return Array.from(this.services.values()).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
   }
 
+  // Simple router: pick most recently seen service by name.
+  resolveServiceByName(serviceName: string): FabricServiceAd | null {
+    const candidates = this.getServices().filter((s) => s.serviceName === serviceName);
+    return candidates[0] ?? null;
+  }
+
   // For debug/UX: map a WebRTC peerId to the peer-reported fabric nodeId.
   getPeerNodeId(peerId: string): string | null {
     return this.peerNodeIds.get(peerId) ?? null;
@@ -125,6 +131,13 @@ export class FabricMesh {
     const res = await resP;
     if (!res.ok) throw new Error(res.error || "RPC error");
     return res.response;
+  }
+
+  async rpcCallByName(serviceName: string, request: unknown): Promise<{ address: string; response: unknown }> {
+    const ad = this.resolveServiceByName(serviceName);
+    if (!ad) throw new Error(`No service named ${serviceName}`);
+    const response = await this.rpcCall(ad.serviceId, request);
+    return { address: `fabric://${ad.serviceId}`, response };
   }
 
   // Called by runtime to respond to a specific peer.
