@@ -42,12 +42,12 @@ public class FilesController : ControllerBase
     }
 
     [HttpGet("{fileId}/chunk/{n:int}")]
-    public IActionResult Chunk([FromRoute] string fileId, [FromRoute] int n)
+    public async Task<IActionResult> Chunk([FromRoute] string fileId, [FromRoute] int n)
     {
         try
         {
             var userId = RequireUserId();
-            var stream = _uploads.OpenChunkRead(userId, fileId, n);
+            var stream = await _uploads.OpenChunkReadAsync(userId, fileId, n);
             return File(stream, "application/octet-stream", enableRangeProcessing: true);
         }
         catch (UnauthorizedAccessException e)

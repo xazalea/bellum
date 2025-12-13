@@ -1,4 +1,5 @@
 import { authService } from "@/lib/firebase/auth-service";
+import { NACHO_STORAGE_LIMIT_BYTES } from "@/lib/storage/quota";
 
 export interface ChunkedUploadInit {
   fileName: string;
@@ -67,6 +68,17 @@ async function gzipCompressBlob(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await compressedBlob.arrayBuffer());
 }
 
+async function isTelegramEnabled(): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/telegram/status`, { cache: "no-store" });
+    if (!res.ok) return false;
+    const j = (await res.json()) as { enabled?: boolean };
+    return !!j.enabled;
+  } catch {
+    return false;
+  }
+}
+
 export async function chunkedUploadFile(
   file: File,
   opts: {
@@ -84,10 +96,94 @@ export async function chunkedUploadFile(
   const user = authService.getCurrentUser();
   if (!user) throw new Error("Not authenticated");
 
+  // Best-effort: enforce cloud quota client-side (6GB) for Telegram-backed storage.
+  const profile = await authService.getUserProfile(user.uid).catch(() => null);
+  const used = profile?.storageUsed ?? 0;
+  const limit = profile?.storageLimit ?? NACHO_STORAGE_LIMIT_BYTES;
+  if (used + file.size > limit) {
+    throw new Error(`Quota exceeded. Remaining bytes: ${Math.max(0, limit - used)}`);
+  }
+
   const chunkBytes = opts.chunkBytes ?? 32 * 1024 * 1024;
   const totalChunks = Math.ceil(file.size / chunkBytes);
 
   const headers = await getAuthHeaders();
+
+  // If no external cluster base is configured and Telegram is enabled on this deployment,
+  // use Telegram-backed storage routes hosted alongside the Vercel site.
+  const useTelegram = !base && (await isTelegramEnabled());
+  if (useTelegram) {
+    const uploadId = crypto.randomUUID();
+    const chunks: Array<{ index: number; telegramFileId: string; sizeBytes: number }> = [];
+    let uploadedBytes = 0;
+    let storedBytes = 0;
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * chunkBytes;
+      const end = Math.min(file.size, start + chunkBytes);
+      const chunk = file.slice(start, end);
+
+      const payload = opts.compressChunks
+        ? await gzipCompressBlob(chunk)
+        : new Uint8Array(await chunk.arrayBuffer());
+
+      // Ensure ArrayBuffer-backed bytes for fetch BodyInit typing.
+      const sendBytes = new Uint8Array(payload.byteLength);
+      sendBytes.set(payload);
+
+      const res = await fetch(`/api/telegram/upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "X-Nacho-UserId": user.uid,
+          "X-File-Name": file.name,
+          "X-Upload-Id": uploadId,
+          "X-Chunk-Index": String(i),
+          "X-Chunk-Total": String(totalChunks),
+        },
+        body: sendBytes.buffer,
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`Telegram chunk upload failed (${res.status}) [${i}/${totalChunks}]: ${t}`);
+      }
+      const j = (await res.json()) as { fileId: string };
+      chunks.push({ index: i, telegramFileId: j.fileId, sizeBytes: sendBytes.byteLength });
+
+      uploadedBytes += end - start;
+      storedBytes += sendBytes.byteLength;
+      opts.onProgress?.({ chunkIndex: i, totalChunks, uploadedBytes, totalBytes: file.size });
+    }
+
+    const manRes = await fetch(`/api/telegram/manifest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Nacho-UserId": user.uid },
+      body: JSON.stringify({
+        fileName: file.name,
+        totalBytes: file.size,
+        chunkBytes,
+        totalChunks,
+        createdAtUnixMs: Date.now(),
+        storedBytes,
+        chunks,
+      }),
+    });
+    if (!manRes.ok) {
+      const t = await manRes.text().catch(() => "");
+      throw new Error(`Manifest store failed (${manRes.status}): ${t}`);
+    }
+    const manJson = (await manRes.json()) as { fileId: string };
+
+    // Best-effort: update user profile usage so UI reflects cloud usage.
+    try {
+      await authService.updateStorageUsage(used + storedBytes);
+    } catch {
+      // ignore
+    }
+
+    return { uploadId, fileId: manJson.fileId, totalChunks, storedBytes };
+  }
+
   const initBody: ChunkedUploadInit = {
     fileName: file.name,
     totalBytes: file.size,

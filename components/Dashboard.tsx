@@ -33,14 +33,14 @@ export const Dashboard = ({
           ?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
       ''
     );
-  }, []);
+    }, []);
 
   useEffect(() => {
     if (!user) return;
     return subscribeInstalledApps(user.uid, setApps);
   }, [user]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (!user) return;
     let stopped = false;
     const poll = async () => {
@@ -79,7 +79,7 @@ export const Dashboard = ({
 
   const storedBytes = apps.reduce((s, a) => s + (a.storedBytes || 0), 0);
 
-  return (
+    return (
     <div className="w-full max-w-7xl mx-auto p-8 pt-24 space-y-8">
       
       {/* Welcome Section */}
@@ -96,12 +96,12 @@ export const Dashboard = ({
             <button onClick={onOpenRunner} className="bellum-btn flex items-center gap-2">
                 <Play size={18} fill="currentColor" />
                 Launch App
-            </button>
+                                </button>
             <button onClick={onGoApps} className="bellum-btn bellum-btn-secondary flex items-center gap-2">
                 <Plus size={18} />
                 Install
-            </button>
-        </div>
+                                </button>
+                        </div>
       </motion.div>
 
       {/* Stats / Hero Card */}
@@ -113,36 +113,36 @@ export const Dashboard = ({
       >
         <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
             <Monitor size={120} />
-        </div>
-        
+                        </div>
+
         <div className="relative z-10 h-full flex flex-col justify-between">
             <div>
                 <h2 className="text-2xl font-bold mb-1">System Status</h2>
                 <div className="flex gap-2 items-center text-green-400 text-sm font-mono">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                     Running • 60 FPS
-                </div>
-            </div>
-            
+                            </div>
+                        </div>
+
             <div className="grid grid-cols-4 gap-8">
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">WASM Heap</div>
                     <div className="text-2xl font-mono">{heapUsed ? formatBytes(heapUsed) : 'n/a'}</div>
-                </div>
+                                </div>
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Peers</div>
                     <div className="text-2xl font-mono">{peerCount} Nodes</div>
-                </div>
+                                </div>
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">GPU Compute</div>
                     <div className="text-2xl font-mono">Online</div>
-                </div>
+                    </div>
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Storage</div>
                     <div className="text-2xl font-mono">{formatBytes(storedBytes)}</div>
-                </div>
-            </div>
-        </div>
+                    </div>
+                        </div>
+                    </div>
 
         {/* Abstract Background Graphic */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -160,11 +160,11 @@ export const Dashboard = ({
             >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.type === 'android' ? 'bg-green-500/20 text-green-400' : app.type === 'windows' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
                     {app.type === 'android' ? <Smartphone size={24} /> : app.type === 'windows' ? <Monitor size={24} /> : <Sliders size={24} />}
-                </div>
+                        </div>
                 <div>
                     <h3 className="font-bold">{app.name}</h3>
                     <p className="text-sm text-white/40">{app.type.toUpperCase()} • Cluster</p>
-                </div>
+                    </div>
                 <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                     <Play size={16} />
                 </div>
@@ -172,6 +172,6 @@ export const Dashboard = ({
         ))}
       </div>
 
-    </div>
-  );
+        </div>
+    );
 };

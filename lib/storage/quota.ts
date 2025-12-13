@@ -1,4 +1,5 @@
-export const NACHO_STORAGE_LIMIT_BYTES = 7 * 1024 * 1024 * 1024; // 7GB per user
+// Cloud storage quota (cluster/Telegram-backed). Local/browser storage (OPFS) is not quota-limited.
+export const NACHO_STORAGE_LIMIT_BYTES = 6 * 1024 * 1024 * 1024; // 6GB per user
 
 export function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;

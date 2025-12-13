@@ -7,6 +7,17 @@ import { authService } from "@/lib/firebase/auth-service";
 import { addInstalledApp, detectAppType, removeInstalledAppWithCleanup, type InstalledApp, subscribeInstalledApps } from "@/lib/apps/apps-service";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
 
+type FeaturedGame = {
+  id: string;
+  name: string;
+  platform: "android" | "windows";
+  source:
+    | { kind: "fdroid"; packageName: string }
+    | { kind: "url"; url: string; label?: string };
+  homepage?: string;
+  note?: string;
+};
+
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
   if (bytes >= gb) return `${(bytes / gb).toFixed(2)} GB`;
@@ -160,27 +171,120 @@ export function AppLibrary({
     }
   };
 
-  const officialApps = useMemo(
+  const featuredGames = useMemo<FeaturedGame[]>(
     () => [
+      // ---- Windows (reliable, updatable official sources) ----
       {
-        name: "Roblox (Android)",
-        url: "https://en.softonic.com/download/roblox/android/post-download?dt=internalDownload",
+        id: "openttd-win",
+        name: "OpenTTD",
+        platform: "windows",
+        source: { kind: "url", url: "https://www.openttd.org/downloads/openttd-releases/latest", label: "OpenTTD downloads" },
+        homepage: "https://www.openttd.org/",
       },
       {
-        name: "Minecraft: Bedrock Edition (Android)",
-        url: "https://en.softonic.com/download/minecraft/android/post-download?dt=landingDownload",
+        id: "0ad-win",
+        name: "0 A.D.",
+        platform: "windows",
+        source: { kind: "url", url: "https://play0ad.com/download/", label: "0 A.D. downloads" },
+        homepage: "https://play0ad.com/",
       },
       {
-        name: "Brawl Stars (Android)",
-        url: "https://en.softonic.com/download/brawl-stars/android/post-download/v/55.211?dt=internalDownload",
+        id: "stk-win",
+        name: "SuperTuxKart",
+        platform: "windows",
+        source: { kind: "url", url: "https://supertuxkart.github.io/stk-website/Download", label: "SuperTuxKart downloads" },
+        homepage: "https://supertuxkart.net/",
       },
       {
-        name: "Fortnite (Android)",
-        url: "https://en.softonic.com/download/fortnite/android/post-download/v/35.10.0-42471790-android?dt=internalDownload",
+        id: "warzone2100-win",
+        name: "Warzone 2100",
+        platform: "windows",
+        source: { kind: "url", url: "https://wz2100.net/", label: "Warzone 2100 downloads" },
+        homepage: "https://wz2100.net/",
       },
+      {
+        id: "openra-win",
+        name: "OpenRA",
+        platform: "windows",
+        source: { kind: "url", url: "https://www.openra.net/download/", label: "OpenRA downloads" },
+        homepage: "https://www.openra.net/",
+      },
+      {
+        id: "endless-sky-win",
+        name: "Endless Sky",
+        platform: "windows",
+        source: { kind: "url", url: "https://github.com/endless-sky/endless-sky/releases/latest", label: "GitHub releases" },
+        homepage: "https://endless-sky.github.io/",
+      },
+
+      // ---- Android (reliable, updatable via F-Droid) ----
+      { id: "stk-and", name: "SuperTuxKart", platform: "android", source: { kind: "fdroid", packageName: "org.supertuxkart.stk" }, homepage: "https://supertuxkart.net/" },
+      { id: "mindustry-and", name: "Mindustry", platform: "android", source: { kind: "fdroid", packageName: "io.anuke.mindustry" } },
+      { id: "unciv-and", name: "Unciv", platform: "android", source: { kind: "fdroid", packageName: "com.unciv.app" } },
+      { id: "andors-trail-and", name: "Andor's Trail", platform: "android", source: { kind: "fdroid", packageName: "com.gpl.rpg.AndorsTrail" } },
+      { id: "aaaaxy-and", name: "AAAAXY", platform: "android", source: { kind: "fdroid", packageName: "io.github.divverent.aaaaxy" } },
+      { id: "wesnoth-and", name: "The Battle for Wesnoth", platform: "android", source: { kind: "fdroid", packageName: "org.wesnoth.Wesnoth" } },
+      { id: "openttd-and", name: "OpenTTD", platform: "android", source: { kind: "fdroid", packageName: "org.openttd.fdroid" }, homepage: "https://www.openttd.org/" },
+      { id: "opensudoku-and", name: "OpenSudoku", platform: "android", source: { kind: "fdroid", packageName: "org.moire.opensudoku" } },
+      { id: "pixel-wheels-and", name: "Pixel Wheels", platform: "android", source: { kind: "fdroid", packageName: "com.agateau.tinywheels.android" } },
+      { id: "cdda-and", name: "Cataclysm: DDA", platform: "android", source: { kind: "fdroid", packageName: "com.cdda.ben" } },
+      { id: "dcss-and", name: "Dungeon Crawl Stone Soup", platform: "android", source: { kind: "fdroid", packageName: "org.develz.crawl" } },
+      { id: "frozenbubble-and", name: "Frozen Bubble", platform: "android", source: { kind: "fdroid", packageName: "org.jfedor.frozenbubble" } },
+      { id: "2048-and", name: "2048 Open Fun Game", platform: "android", source: { kind: "fdroid", packageName: "org.andstatus.game2048" } },
+      { id: "flowit-and", name: "Flowit", platform: "android", source: { kind: "fdroid", packageName: "com.bytehamster.flowitgame" } },
+      { id: "freebloks-and", name: "Freebloks", platform: "android", source: { kind: "fdroid", packageName: "de.saschahlusiak.freebloks" } },
+      { id: "freecell-and", name: "FreeCell4", platform: "android", source: { kind: "fdroid", packageName: "org.lufebe16.freecell" } },
+      { id: "droidfish-and", name: "DroidFish (Chess)", platform: "android", source: { kind: "fdroid", packageName: "org.petero.droidfish" } },
+      { id: "anuto-and", name: "Anuto TD", platform: "android", source: { kind: "fdroid", packageName: "ch.logixisland.anuto" } },
+      { id: "lichess-and", name: "lichess", platform: "android", source: { kind: "fdroid", packageName: "org.lichess.mobileapp.free" } },
+      { id: "endless-mobile-and", name: "Endless Sky (mobile)", platform: "android", source: { kind: "fdroid", packageName: "com.github.thewierdnut.endless_mobile" } },
+      { id: "yapd-and", name: "Yet Another Pixel Dungeon", platform: "android", source: { kind: "fdroid", packageName: "com.github.cirrial.yetanotherpixeldungeon" } },
+      { id: "opentyrian-and", name: "OpenTyrian", platform: "android", source: { kind: "fdroid", packageName: "com.opentyrian.android" } },
+      { id: "sgtpuzzles-and", name: "Simon Tatham's Puzzles", platform: "android", source: { kind: "fdroid", packageName: "name.boyle.chris.sgtpuzzles" } },
+      { id: "luanti-and", name: "Luanti (Minetest)", platform: "android", source: { kind: "fdroid", packageName: "net.minetest.minetest" } },
+      { id: "freeminer-and", name: "Freeminer", platform: "android", source: { kind: "fdroid", packageName: "org.freeminer.freeminer" } },
     ],
     [],
   );
+
+  const resolveFdroidDirectApk = async (packageName: string): Promise<string> => {
+    const res = await fetch(`https://f-droid.org/api/v1/packages/${encodeURIComponent(packageName)}`, { method: "GET" });
+    if (!res.ok) throw new Error(`F-Droid lookup failed (${res.status})`);
+    const data = (await res.json()) as any;
+    const pkgs = Array.isArray(data?.packages) ? data.packages : [];
+    const suggested = typeof data?.suggestedVersionCode === "number" ? data.suggestedVersionCode : null;
+
+    const pick =
+      (suggested !== null && pkgs.find((p: any) => p?.versionCode === suggested)) ||
+      pkgs[0] ||
+      null;
+    if (!pick) throw new Error("F-Droid did not return any APKs for that package.");
+
+    // Best-effort: find an apkName-like field containing ".apk"
+    const apkName =
+      (typeof pick.apkName === "string" && pick.apkName.endsWith(".apk") && pick.apkName) ||
+      (typeof pick.apkName === "string" && pick.apkName) ||
+      (Object.values(pick).find((v) => typeof v === "string" && (v as string).endsWith(".apk")) as string | undefined);
+
+    if (!apkName) throw new Error("Could not locate APK filename from F-Droid metadata.");
+    return `https://f-droid.org/repo/${encodeURIComponent(apkName)}`;
+  };
+
+  const installFeatured = async (g: FeaturedGame) => {
+    try {
+      setError(null);
+      if (g.source.kind === "url") {
+        setUrlInput(g.source.url);
+        await handleInstallFromUrl();
+        return;
+      }
+      const url = await resolveFdroidDirectApk(g.source.packageName);
+      setUrlInput(url);
+      await handleInstallFromUrl();
+    } catch (e: any) {
+      setError(e?.message || "Failed to start install");
+    }
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto p-8 pt-24 min-h-screen">
@@ -246,45 +350,64 @@ export function AppLibrary({
         </div>
       </div>
 
-      {/* Official apps (links) */}
+      {/* Featured games (reliable + updatable sources) */}
       <div className="bellum-card p-6 mb-8 border-2 border-white/10">
-        <div className="text-sm font-bold text-white/90 mb-4 inline-flex items-center gap-2">
+        <div className="text-sm font-bold text-white/90 mb-1 inline-flex items-center gap-2">
           <ExternalLink size={16} className="text-purple-300" />
-          Official apps
+          Featured games (auto-updating sources)
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {officialApps.map((a) => (
-            <div key={a.url} className="bg-white/5 border-2 border-white/10 rounded-xl p-4 flex flex-col gap-3">
-              <div className="font-bold text-white">{a.name}</div>
-              <div className="text-[11px] text-white/40 font-mono break-all">{a.url}</div>
-              <div className="flex gap-2 mt-auto">
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2"
+        <div className="text-xs text-white/35 mb-4">
+          Android games are resolved via F-Droid metadata; Windows games link to official download pages.
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {featuredGames.map((g) => (
+            <div key={g.id} className="bg-white/5 border-2 border-white/10 rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-bold text-white">{g.name}</div>
+                <div
+                  className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full border-2 ${
+                    g.platform === "android"
+                      ? "border-green-400/30 text-green-300 bg-green-500/10"
+                      : "border-blue-400/30 text-blue-300 bg-blue-500/10"
+                  }`}
                 >
-                  <ExternalLink size={14} />
-                  Open
-                </a>
+                  {g.platform}
+                </div>
+              </div>
+
+              {g.note && <div className="text-[11px] text-white/45">{g.note}</div>}
+
+              <div className="text-[11px] text-white/35 font-mono break-all">
+                {g.source.kind === "fdroid"
+                  ? `F-Droid: ${g.source.packageName}`
+                  : g.source.url}
+              </div>
+
+              <div className="flex gap-2 mt-auto">
+                {(g.homepage || (g.source.kind === "fdroid" ? `https://f-droid.org/en/packages/${g.source.packageName}/` : g.source.url)) && (
+                  <a
+                    href={g.homepage || (g.source.kind === "fdroid" ? `https://f-droid.org/en/packages/${g.source.packageName}/` : g.source.url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2"
+                  >
+                    <ExternalLink size={14} />
+                    Open
+                  </a>
+                )}
                 <button
                   type="button"
-                  onClick={() => {
-                    setUrlInput(a.url);
-                    void handleInstallFromUrl();
-                  }}
+                  onClick={() => void installFeatured(g)}
                   className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2"
-                  title="Start download, then pick the file to install"
+                  title="Download then pick the file to install"
                 >
                   <Download size={14} />
-                  Download & pick
+                  Install
                 </button>
               </div>
             </div>
           ))}
-        </div>
-        <div className="text-xs text-white/35 mt-3">
-          Note: these are third‑party download pages. We’ll open the download and then prompt you to pick the file from Downloads.
         </div>
       </div>
 

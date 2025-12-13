@@ -23,13 +23,24 @@ public record UploadCompleteResponse(
     long TotalStoredBytes
 );
 
+public record ChunkLocator(
+    int Index,
+    long SizeBytes,
+    string? Sha256Hex,
+    string? TelegramFileId,
+    int? TelegramMessageId
+);
+
 public record FileManifest(
     string FileId,
     string FileName,
     long TotalBytes,
     int ChunkBytes,
     int TotalChunks,
-    long CreatedAtUnixMs
+    long CreatedAtUnixMs,
+    long StoredBytes = 0,
+    string StorageBackend = "disk",
+    ChunkLocator[]? Chunks = null
 );
 
 

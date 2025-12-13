@@ -28,11 +28,11 @@ public class PublicFilesController : ControllerBase
     }
 
     [HttpGet("{fileId}/chunk/{n:int}")]
-    public IActionResult Chunk([FromRoute] string fileId, [FromRoute] int n)
+    public async Task<IActionResult> Chunk([FromRoute] string fileId, [FromRoute] int n)
     {
         try
         {
-            var stream = _uploads.OpenPublicChunkRead(fileId, n);
+            var stream = await _uploads.OpenPublicChunkReadAsync(fileId, n);
             return File(stream, "application/octet-stream", enableRangeProcessing: true);
         }
         catch (Exception e)
