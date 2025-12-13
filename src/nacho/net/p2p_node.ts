@@ -7,11 +7,17 @@ export interface PeerMessage {
     payload: any;
 }
 
+export type P2PSignal =
+    | { type: 'offer', from: string, to: string, sdp: RTCSessionDescriptionInit }
+    | { type: 'answer', from: string, to: string, sdp: RTCSessionDescriptionInit }
+    | { type: 'candidate', from: string, to: string, candidate: RTCIceCandidateInit };
+
 export class P2PNode {
     private id: string;
     private peers: Map<string, RTCPeerConnection> = new Map();
     private dataChannels: Map<string, RTCDataChannel> = new Map();
     private onMessageCallbacks: ((msg: PeerMessage, from: string) => void)[] = [];
+    private onSignalCallbacks: ((signal: P2PSignal) => void)[] = [];
 
     constructor() {
         this.id = crypto.randomUUID();
@@ -37,8 +43,12 @@ export class P2PNode {
 
         pc.onicecandidate = (event) => {
             if (event.candidate) {
-                // Send candidate to remote peer via signaling
-                // console.log(`[AetherNet] New ICE candidate for ${remoteId}`);
+                this.onSignalCallbacks.forEach(cb => cb({
+                    type: 'candidate',
+                    from: this.id,
+                    to: remoteId,
+                    candidate: event.candidate.toJSON()
+                }));
             }
         };
 
@@ -60,7 +70,27 @@ export class P2PNode {
 
             const newOffer = await pc.createOffer();
             await pc.setLocalDescription(newOffer);
+            this.onSignalCallbacks.forEach(cb => cb({ type: 'offer', from: this.id, to: remoteId, sdp: newOffer }));
             return newOffer;
+        }
+    }
+
+    /**
+     * Finalize an offerer connection by applying the remote answer.
+     */
+    public async acceptAnswer(remoteId: string, answer: RTCSessionDescriptionInit): Promise<void> {
+        const pc = this.peers.get(remoteId);
+        if (!pc) throw new Error(`No peer connection for ${remoteId}`);
+        await pc.setRemoteDescription(answer);
+    }
+
+    public async addIceCandidate(remoteId: string, candidate: RTCIceCandidateInit): Promise<void> {
+        const pc = this.peers.get(remoteId);
+        if (!pc) throw new Error(`No peer connection for ${remoteId}`);
+        try {
+            await pc.addIceCandidate(candidate);
+        } catch (e) {
+            console.warn(`[AetherNet] Failed to add ICE candidate for ${remoteId}`, e);
         }
     }
 
@@ -88,6 +118,10 @@ export class P2PNode {
 
     public onMessage(callback: (msg: PeerMessage, from: string) => void) {
         this.onMessageCallbacks.push(callback);
+    }
+
+    public onSignal(callback: (signal: P2PSignal) => void) {
+        this.onSignalCallbacks.push(callback);
     }
 
     public broadcast(msg: PeerMessage) {
