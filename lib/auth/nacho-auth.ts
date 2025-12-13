@@ -64,6 +64,10 @@ export async function signUpUsername(usernameInput: string): Promise<NachoAuthRe
   const username = normalizeUsername(usernameInput);
 
   // Ensure Firebase session exists (anonymous is fine).
+  const diag = authService.getDiagnostics();
+  if (diag.unavailable) {
+    throw new Error(diag.message || "Firebase Auth is not configured.");
+  }
   await authService.signInAnonymously();
   const user = authService.getCurrentUser();
   if (!user) throw new Error("Auth session not available");
@@ -91,6 +95,10 @@ export async function signUpUsername(usernameInput: string): Promise<NachoAuthRe
 export async function signInUsername(usernameInput: string): Promise<NachoAuthResult> {
   const username = normalizeUsername(usernameInput);
 
+  const diag = authService.getDiagnostics();
+  if (diag.unavailable) {
+    throw new Error(diag.message || "Firebase Auth is not configured.");
+  }
   await authService.signInAnonymously();
   const user = authService.getCurrentUser();
   if (!user) throw new Error("Auth session not available");
@@ -133,6 +141,10 @@ export async function approveLoginCode(usernameInput: string, code: string): Pro
   if (!/^\d{6}$/.test(normalizedCode)) throw new Error("Enter a 6-digit code.");
 
   // Must be on a trusted session.
+  const diag = authService.getDiagnostics();
+  if (diag.unavailable) {
+    throw new Error(diag.message || "Firebase Auth is not configured.");
+  }
   await authService.signInAnonymously();
   const user = authService.getCurrentUser();
   if (!user) throw new Error("Auth session not available");
@@ -186,6 +198,8 @@ export async function approveLoginCode(usernameInput: string, code: string): Pro
 
 export async function isCurrentDeviceTrusted(usernameInput: string): Promise<boolean> {
   const username = normalizeUsername(usernameInput);
+  const diag = authService.getDiagnostics();
+  if (diag.unavailable) return false;
   await authService.signInAnonymously();
   const user = authService.getCurrentUser();
   if (!user) return false;
