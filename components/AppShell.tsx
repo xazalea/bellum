@@ -11,10 +11,11 @@ import { SettingsPanel } from './Settings';
 import { AppRunner } from './AppRunner';
 import { nachoEngine } from '@/lib/nacho/engine';
 import { Archives } from './Archives';
+import { AccountPanel } from './Account';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [isBooted, setIsBooted] = useState(false);
-    const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'cluster' | 'settings' | 'runner'>('home');
+    const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'account' | 'cluster' | 'settings' | 'runner'>('home');
     const [runnerAppId, setRunnerAppId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -53,6 +54,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 );
             case 'archives':
                 return <Archives />;
+            case 'account':
+                return <AccountPanel />;
             default:
                 return <Dashboard />;
         }

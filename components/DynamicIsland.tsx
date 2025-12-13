@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, Activity, Settings, X, Terminal, Globe, Boxes } from 'lucide-react';
+import { LayoutGrid, Activity, Settings, X, Terminal, Globe, Boxes, User } from 'lucide-react';
 
 interface DynamicIslandProps {
   activeTab: string;
@@ -82,6 +82,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
     { id: 'home', icon: LayoutGrid, label: 'Home' },
     { id: 'apps', icon: Boxes, label: 'Apps' },
     { id: 'archives', icon: Globe, label: 'Archives' },
+    { id: 'account', icon: User, label: 'Account' },
     { id: 'cluster', icon: Activity, label: 'Cluster' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ], []);
@@ -157,7 +158,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                 </div>
               </div>
 
-              <div className="grid grid-cols-5 gap-2 mb-3">
+              <div className="grid grid-cols-6 gap-2 mb-3">
                 {navItems.map((item) => (
                   <motion.button
                     key={item.id}

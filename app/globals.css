@@ -22,6 +22,35 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Hide the native cursor everywhere (we render our own). */
+html, body, * {
+  cursor: none !important;
+}
+
+/* Kursor: invert against the background using blend mode.
+   White cursor + mix-blend-mode:difference => "inverts whatever it's over". */
+.kursor,
+.kursor * {
+  mix-blend-mode: difference !important;
+}
+
+/* Make sure the cursor itself is bright (so difference works). */
+.kursor,
+.kursor--1,
+.kursor--2,
+.kursorChild,
+.kursorChild * {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+/* Keep cursor overlay from blocking clicks. */
+.kursor,
+.kursorChild {
+  pointer-events: none !important;
+}
+
 body::before {
   content: "";
   position: fixed;

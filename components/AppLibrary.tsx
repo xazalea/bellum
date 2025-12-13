@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Download, MoreVertical, Smartphone, Monitor, Play, Trash2 } from "lucide-react";
+import { Download, Link as LinkIcon, ExternalLink, MoreVertical, Smartphone, Monitor, Play, Trash2 } from "lucide-react";
 import { authService } from "@/lib/firebase/auth-service";
 import { addInstalledApp, detectAppType, removeInstalledAppWithCleanup, type InstalledApp, subscribeInstalledApps } from "@/lib/apps/apps-service";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
@@ -26,6 +26,7 @@ export function AppLibrary({
   const [isInstalling, setIsInstalling] = useState(false);
   const [installProgress, setInstallProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState<string>("");
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -83,6 +84,60 @@ export function AppLibrary({
     }
   };
 
+  const handleInstallFromUrl = async () => {
+    if (!user) {
+      setError("Sign in required to install apps.");
+      return;
+    }
+    setError(null);
+    setIsInstalling(true);
+    setInstallProgress(0);
+    try {
+      const url = new URL(urlInput.trim());
+      const res = await fetch(url.toString(), { method: "GET" });
+      if (!res.ok) throw new Error(`Download failed (${res.status})`);
+
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("text/html")) {
+        throw new Error(
+          "That URL returned a web page (HTML), not a direct .apk/.exe file. Open it in a new tab, download the file, then use Install (local file).",
+        );
+      }
+
+      const guessedName = decodeURIComponent(url.pathname.split("/").pop() || "download.bin");
+      const bytes = await res.arrayBuffer();
+      const file = new File([bytes], guessedName, { type: ct || "application/octet-stream" });
+      await handleInstall(file);
+    } catch (e: any) {
+      setError(e?.message || "Install from URL failed");
+    } finally {
+      setIsInstalling(false);
+      setTimeout(() => setInstallProgress(0), 700);
+    }
+  };
+
+  const officialApps = useMemo(
+    () => [
+      {
+        name: "Roblox (Android)",
+        url: "https://en.softonic.com/download/roblox/android/post-download?dt=internalDownload",
+      },
+      {
+        name: "Minecraft: Bedrock Edition (Android)",
+        url: "https://en.softonic.com/download/minecraft/android/post-download?dt=landingDownload",
+      },
+      {
+        name: "Brawl Stars (Android)",
+        url: "https://en.softonic.com/download/brawl-stars/android/post-download/v/55.211?dt=internalDownload",
+      },
+      {
+        name: "Fortnite (Android)",
+        url: "https://en.softonic.com/download/fortnite/android/post-download/v/35.10.0-42471790-android?dt=internalDownload",
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="w-full max-w-7xl mx-auto p-8 pt-24 min-h-screen">
       
@@ -116,6 +171,76 @@ export function AppLibrary({
               Install
             </span>
           </button>
+        </div>
+      </div>
+
+      {/* Install from URL */}
+      <div className="bellum-card p-6 mb-6 border-2 border-white/10">
+        <div className="flex items-center justify-between gap-4 flex-col md:flex-row">
+          <div className="w-full">
+            <div className="text-sm font-bold text-white/90 mb-2 inline-flex items-center gap-2">
+              <LinkIcon size={16} className="text-blue-300" />
+              Install from URL
+            </div>
+            <input
+              className="bellum-input"
+              placeholder="https://… direct .apk/.exe/.msi URL (CORS must allow)"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+            />
+            <div className="text-xs text-white/35 mt-2">
+              Tip: many “download pages” return HTML; those can’t be imported directly.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleInstallFromUrl()}
+            className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm w-full md:w-auto"
+          >
+            Download & Install
+          </button>
+        </div>
+      </div>
+
+      {/* Official apps (links) */}
+      <div className="bellum-card p-6 mb-8 border-2 border-white/10">
+        <div className="text-sm font-bold text-white/90 mb-4 inline-flex items-center gap-2">
+          <ExternalLink size={16} className="text-purple-300" />
+          Official apps
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {officialApps.map((a) => (
+            <div key={a.url} className="bg-white/5 border-2 border-white/10 rounded-xl p-4 flex flex-col gap-3">
+              <div className="font-bold text-white">{a.name}</div>
+              <div className="text-[11px] text-white/40 font-mono break-all">{a.url}</div>
+              <div className="flex gap-2 mt-auto">
+                <a
+                  href={a.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2"
+                >
+                  <ExternalLink size={14} />
+                  Open
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUrlInput(a.url);
+                    void handleInstallFromUrl();
+                  }}
+                  className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2"
+                  title="Attempt direct import (works only if the URL is a direct file + CORS allows it)"
+                >
+                  <Download size={14} />
+                  Try install
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="text-xs text-white/35 mt-3">
+          Note: these are third‑party download pages. If “Try install” fails, use “Open”, download the file, then Install (local file).
         </div>
       </div>
 
