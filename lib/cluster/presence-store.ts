@@ -4,6 +4,11 @@ export type ClusterPeer = {
   userAgent?: string | null;
   label?: string | null;
   load?: number | null;
+  // Best-effort self-reported link metrics (for routing / scheduling decisions).
+  uplinkKbps?: number | null;
+  downlinkKbps?: number | null;
+  // Optional capability flags, e.g. ["ingress", "storage", "gpu"].
+  caps?: string[] | null;
   lastSeenUnixMs: number;
 };
 

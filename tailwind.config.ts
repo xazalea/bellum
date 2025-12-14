@@ -10,14 +10,25 @@ const config: Config = {
     extend: {
       colors: {
         nacho: {
-          bg: '#040D24', // deeper navy-blue background
-          card: '#061334',
-          card2: '#050f2b',
-          border: 'rgba(255,255,255,0.14)',
-          borderStrong: 'rgba(255,255,255,0.34)',
-          white: '#FFFFFF',
-          muted: '#9aa8bf',
-          blueGlow: 'rgba(59,130,246,0.35)',
+          // Catppuccin Frappe-inspired palette
+          crust: '#232634',
+          mantle: '#292c3c',
+          base: '#303446',
+          surface0: '#414559',
+          surface1: '#51576d',
+          surface2: '#626880',
+          text: '#c6d0f5',
+          subtext0: '#a5adce',
+          subtext1: '#b5bfe2',
+          blue: '#8caaee',
+          lavender: '#babbf1',
+          sky: '#99d1db',
+          teal: '#81c8be',
+          green: '#a6d189',
+          yellow: '#e5c890',
+          peach: '#ef9f76',
+          red: '#e78284',
+          pink: '#f4b8e4',
         },
       },
       fontFamily: {

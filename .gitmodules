@@ -1,0 +1,18 @@
+[submodule "vendor/cherri"]
+	path = vendor/cherri
+	url = https://github.com/x8rr/cherri.git
+[submodule "vendor/staticbackend-core"]
+	path = vendor/staticbackend-core
+	url = https://github.com/staticbackendhq/core.git
+[submodule "vendor/undb"]
+	path = vendor/undb
+	url = https://github.com/undb-io/undb.git
+[submodule "vendor/end"]
+	path = vendor/end
+	url = https://github.com/desenmeng/end.git
+[submodule "vendor/open-saas"]
+	path = vendor/open-saas
+	url = https://github.com/wasp-lang/open-saas.git
+[submodule "vendor/vercel"]
+	path = vendor/vercel
+	url = https://github.com/vercel/vercel.git

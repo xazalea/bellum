@@ -1,19 +1,13 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: 'Nacho Unblocker',
-  description: 'Access the web freely with Nacho Unblocker.',
+  title: 'Unblocker',
+  description: 'Unblocker experience.',
 };
 
 export default function UnblockerPage() {
-  return (
-    <div className="fixed inset-0 bg-black z-50">
-      <iframe 
-        src="/unblocker/index.html"
-        className="w-full h-full border-0"
-        allowFullScreen
-        title="Nacho Unblocker"
-      />
-    </div>
-  );
+  // We serve the unblocker UI as static assets under /public/unblocker.
+  // This route simply forwards to the static entrypoint.
+  redirect('/unblocker/index.html?launch=1');
 }

@@ -37,6 +37,7 @@
     "lib/arsenic/src",
     "lib/arsenic/assets",
     "lib/arsenic/games",
+    "vendor",
     "public/unblocker",
     "public/optimizers",
     "public/arsenic"

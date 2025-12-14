@@ -153,6 +153,101 @@ const nextConfig = {
           },
         ],
       },
+      // Cherri (Unblocker) loads several cross-origin CDN scripts/styles by design.
+      // COEP/COOP would block them. We scope-disable isolation for those paths only.
+      {
+        source: '/unblocker/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          // Cherri is a pinned snapshot; cache aggressively.
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // Absolute-path buckets used by Cherri (rewritten to /unblocker/*).
+      // Cache aggressively + allow cross-origin subresources (no COEP/COOP isolation).
+      {
+        source: '/assets/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/styles/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/homework/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/stores/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/fa/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/baremux/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // HTML entrypoints should revalidate, but still allow CDN subresources.
+      {
+        source: '/start.html',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        source: '/newtab.html',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
+        source: '/404.html',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      // Service workers MUST update promptly.
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
       {
         source: '/v86/:path*',
         headers: [
@@ -162,6 +257,24 @@ const nextConfig = {
            }
         ]
       }
+    ];
+  },
+
+  // Rewrites to host Cherri under /unblocker while keeping absolute asset paths.
+  // Cherri uses absolute URLs like /assets/*, /pages/*, /stores/*, /sw.js, etc.
+  async rewrites() {
+    return [
+      { source: '/assets/:path*', destination: '/unblocker/assets/:path*' },
+      { source: '/styles/:path*', destination: '/unblocker/styles/:path*' },
+      { source: '/pages/:path*', destination: '/unblocker/pages/:path*' },
+      { source: '/homework/:path*', destination: '/unblocker/homework/:path*' },
+      { source: '/stores/:path*', destination: '/unblocker/stores/:path*' },
+      { source: '/baremux/:path*', destination: '/unblocker/baremux/:path*' },
+      { source: '/fa/:path*', destination: '/unblocker/fa/:path*' },
+      { source: '/sw.js', destination: '/unblocker/sw.js' },
+      { source: '/start.html', destination: '/unblocker/start.html' },
+      { source: '/newtab.html', destination: '/unblocker/newtab.html' },
+      { source: '/404.html', destination: '/unblocker/404.html' },
     ];
   },
   

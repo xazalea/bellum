@@ -17,6 +17,7 @@ export class P2PNode {
     private peers: Map<string, RTCPeerConnection> = new Map();
     private dataChannels: Map<string, RTCDataChannel> = new Map();
     private onMessageCallbacks: ((msg: PeerMessage, from: string) => void)[] = [];
+    private onRawCallbacks: ((data: ArrayBuffer, from: string) => void)[] = [];
     private onSignalCallbacks: ((signal: P2PSignal) => void)[] = [];
 
     constructor() {
@@ -102,12 +103,33 @@ export class P2PNode {
             this.broadcast({ type: 'HELLO', payload: { from: this.id } });
         };
 
-        channel.onmessage = (event) => {
+        channel.onmessage = async (event) => {
+            // DataChannels can deliver string, Blob, ArrayBuffer.
+            const d: any = (event as any).data;
+
+            if (typeof d === 'string') {
+                try {
+                    const msg = JSON.parse(d) as PeerMessage;
+                    this.handleMessage(msg, remoteId);
+                } catch (e) {
+                    console.error("Failed to parse P2P message", e);
+                }
+                return;
+            }
+
             try {
-                const msg = JSON.parse(event.data) as PeerMessage;
-                this.handleMessage(msg, remoteId);
+                let buf: ArrayBuffer;
+                if (d instanceof ArrayBuffer) {
+                    buf = d;
+                } else if (d && typeof d.arrayBuffer === 'function') {
+                    buf = await d.arrayBuffer();
+                } else {
+                    // Unknown payload type; ignore.
+                    return;
+                }
+                this.onRawCallbacks.forEach(cb => cb(buf, remoteId));
             } catch (e) {
-                console.error("Failed to parse P2P message", e);
+                console.warn("[AetherNet] Failed to handle raw message", e);
             }
         };
     }
@@ -118,6 +140,10 @@ export class P2PNode {
 
     public onMessage(callback: (msg: PeerMessage, from: string) => void) {
         this.onMessageCallbacks.push(callback);
+    }
+
+    public onRawMessage(callback: (data: ArrayBuffer, from: string) => void) {
+        this.onRawCallbacks.push(callback);
     }
 
     public onSignal(callback: (signal: P2PSignal) => void) {
@@ -137,6 +163,13 @@ export class P2PNode {
         const channel = this.dataChannels.get(peerId);
         if (channel && channel.readyState === 'open') {
             channel.send(JSON.stringify(msg));
+        }
+    }
+
+    public sendRaw(peerId: string, data: ArrayBuffer) {
+        const channel = this.dataChannels.get(peerId);
+        if (channel && channel.readyState === 'open') {
+            channel.send(data);
         }
     }
 }

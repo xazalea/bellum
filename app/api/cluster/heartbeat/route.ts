@@ -8,6 +8,9 @@ type Body = {
   userAgent?: string | null;
   label?: string | null;
   load?: number | null;
+  uplinkKbps?: number | null;
+  downlinkKbps?: number | null;
+  caps?: string[] | null;
 };
 
 const ACTIVE_WINDOW_MS = 60_000;
@@ -32,6 +35,9 @@ export async function POST(req: Request) {
     userAgent: typeof body.userAgent === 'string' ? body.userAgent : null,
     label: typeof body.label === 'string' ? body.label : null,
     load: typeof body.load === 'number' ? body.load : null,
+    uplinkKbps: typeof body.uplinkKbps === 'number' ? body.uplinkKbps : null,
+    downlinkKbps: typeof body.downlinkKbps === 'number' ? body.downlinkKbps : null,
+    caps: Array.isArray(body.caps) ? body.caps.map((x) => String(x)).slice(0, 32) : null,
   });
   prunePeers(ACTIVE_WINDOW_MS);
 

@@ -3,18 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-rgb: 4, 13, 36;
-  --nacho-bg: #040D24;
-  --nacho-card: #061334;
-  --nacho-card-2: #050f2b;
-  --nacho-border: rgba(255, 255, 255, 0.14);
-  --nacho-border-strong: rgba(255, 255, 255, 0.34);
+  /* Catppuccin Frappe-inspired palette */
+  --foreground-rgb: 198, 208, 245; /* text */
+  --background-rgb: 48, 52, 70; /* base */
+  --nacho-bg: #232634; /* crust */
+  --nacho-card: #303446; /* base */
+  --nacho-card-2: #292c3c; /* mantle */
+  --nacho-border: rgba(186, 187, 241, 0.18); /* lavender */
+  --nacho-border-strong: rgba(140, 170, 238, 0.34); /* blue */
   --nacho-outline: 3px;
 }
 
 body {
-  color: #FFFFFF;
+  color: rgb(var(--foreground-rgb));
   background: var(--nacho-bg);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -36,9 +37,9 @@ html.kursor-enabled * {
 .kursor--2,
 .kursorChild,
 .kursorChild * {
-  background: rgba(236, 245, 255, 0.95) !important; /* pastel */
-  border-color: rgba(147, 197, 253, 0.95) !important; /* pastel blue */
-  color: rgba(236, 245, 255, 0.95) !important;
+  background: rgba(198, 208, 245, 0.95) !important; /* text */
+  border-color: rgba(140, 170, 238, 0.95) !important; /* blue */
+  color: rgba(198, 208, 245, 0.95) !important;
 }
 
 /* Keep cursor overlay from blocking clicks. */
@@ -55,7 +56,7 @@ body::before {
   inset: 0;
   pointer-events: none;
   /* Less gradients: a single soft wash. */
-  background: radial-gradient(900px 520px at 45% 15%, rgba(147, 197, 253, 0.10), transparent 62%);
+  background: radial-gradient(900px 520px at 45% 15%, rgba(140, 170, 238, 0.10), transparent 62%);
   opacity: 0.9;
   z-index: 0;
 }
@@ -81,8 +82,8 @@ body::before {
 
 /* Nacho UI Components */
 .bellum-card {
-  background: rgba(6, 19, 52, 0.78);
-  border: var(--nacho-outline) solid rgba(147, 197, 253, 0.22); /* bolder + pastel */
+  background: rgba(48, 52, 70, 0.78); /* base */
+  border: var(--nacho-outline) solid var(--nacho-border);
   border-radius: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
@@ -91,10 +92,10 @@ body::before {
 }
 
 .bellum-card:hover {
-  border-color: rgba(147, 197, 253, 0.38);
+  border-color: var(--nacho-border-strong);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 34px rgba(147, 197, 253, 0.14);
+    0 0 34px rgba(140, 170, 238, 0.14);
   transform: translateY(-3px) scale(1.01);
 }
 
@@ -110,7 +111,7 @@ body::before {
 
 .bellum-btn:hover {
   transform: translateY(-1px) scale(1.04);
-  box-shadow: 0 0 18px rgba(255, 255, 255, 0.28), 0 0 30px rgba(59, 130, 246, 0.18);
+  box-shadow: 0 0 18px rgba(198, 208, 245, 0.14), 0 0 30px rgba(140, 170, 238, 0.16);
 }
 
 .bellum-btn:active,
@@ -120,7 +121,7 @@ body::before {
 
 .bellum-btn-secondary {
   background: transparent;
-  color: #FFFFFF;
+  color: rgb(var(--foreground-rgb));
   border: var(--nacho-outline) solid var(--nacho-border);
 }
 
@@ -132,7 +133,7 @@ body::before {
 .bellum-input {
   background: var(--nacho-card-2);
   border: var(--nacho-outline) solid var(--nacho-border);
-  color: white;
+  color: rgb(var(--foreground-rgb));
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
   width: 100%;

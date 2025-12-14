@@ -1,13 +1,26 @@
-// This file overwrites the stock UV config.js
+(() => {
+    let uvPfx = "/uv/";
+    // check if config is loaded in context of service worker or not
+    let loc = self.location.pathname.includes(uvPfx)
+        ? self.location.pathname.substring(
+              0,
+              self.location.pathname.indexOf(uvPfx),
+          )
+        : self.location.pathname.substring(
+              0,
+              self.location.pathname.lastIndexOf("/"),
+          );
 
-self.__uv$config = {
-  prefix: "/service/uv/",
-  bare: "/bare/",
-  encodeUrl: Ultraviolet.codec.xor.encode,
-  decodeUrl: Ultraviolet.codec.xor.decode,
-  handler: "/uv/uv.handler.js",
-  client: "/uv/uv.client.js",
-  bundle: "/uv/uv.bundle.js",
-  config: "/uv/uv.config.js",
-  sw: "/uv/uv.sw.js",
-};
+    self.__uv$config = {
+        prefix: "/uv/service/",
+        encodeUrl: Ultraviolet.codec.xor.encode,
+        decodeUrl: Ultraviolet.codec.xor.decode,
+        handler: loc + uvPfx + "uv.handler.js",
+        client: loc + uvPfx + "uv.client.js",
+        bundle: loc + uvPfx + "uv.bundle.js",
+        config: loc + uvPfx + "uv.config.js",
+        sw: loc + uvPfx + "uv.sw.js",
+        stockSW: loc + uvPfx + "sw.js",
+        loc: loc,
+    };
+})();
