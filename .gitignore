@@ -43,3 +43,6 @@ next-env.d.ts
 **/assets/games/
 lib/arsenic/public/assets/games/
 public/unblocker/assets/games/
+
+# Cherri full-site snapshot is generated from vendor/cherri (submodule)
+public/unblocker/

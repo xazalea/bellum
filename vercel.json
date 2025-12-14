@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "installCommand": "git submodule update --init --recursive && npm install",
   "framework": "nextjs",
   "regions": ["iad1"],
   "headers": [

@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/sync-cherri.js",
     "dev": "next dev",
+    "prebuild": "node scripts/sync-cherri.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "node scripts/copy-optimizers.js"
+    "postinstall": "node scripts/copy-optimizers.js && node scripts/sync-cherri.js"
   },
   "dependencies": {
     "@fingerprintjs/fingerprintjs": "^4.2.1",

@@ -1,2 +1,0 @@
-# Boxing-Random
-Boxing Random
