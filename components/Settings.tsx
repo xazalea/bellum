@@ -21,6 +21,7 @@ export const SettingsPanel = () => {
   const [storageUsed, setStorageUsed] = useState<number | null>(null);
   const [cursorPref, setCursorPref] = useState<'custom' | 'native'>('native');
   const [user, setUser] = useState(() => authService.getCurrentUser());
+  const userUid = user?.uid ?? null;
 
   const tabs = useMemo(() => [
     { id: 'general', label: 'General', icon: SettingsIcon },
@@ -36,9 +37,9 @@ export const SettingsPanel = () => {
 
   useEffect(() => {
     let unsub = () => {};
-    if (user) unsub = onSettings(user.uid, setSettings);
+    if (userUid) unsub = onSettings(userUid, setSettings);
     return () => unsub();
-  }, [user?.uid]);
+  }, [userUid]);
 
   useEffect(() => {
     try {

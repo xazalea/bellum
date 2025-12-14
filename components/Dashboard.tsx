@@ -22,6 +22,7 @@ export const Dashboard = ({
   onOpenRunner?: () => void;
 }) => {
   const [user, setUser] = useState(() => authService.getCurrentUser());
+  const userUid = user?.uid ?? null;
   const [apps, setApps] = useState<InstalledApp[]>([]);
   const [peerCount, setPeerCount] = useState<number>(0);
   const [heapUsed, setHeapUsed] = useState<number | null>(null);
@@ -39,15 +40,15 @@ export const Dashboard = ({
   useEffect(() => authService.onAuthStateChange(setUser), []);
 
   useEffect(() => {
-    if (!user) {
+    if (!userUid) {
       setApps([]);
       return;
     }
-    return subscribeInstalledApps(user.uid, setApps);
-  }, [user?.uid]);
+    return subscribeInstalledApps(userUid, setApps);
+  }, [userUid]);
 
     useEffect(() => {
-    if (!user) return;
+    if (!userUid) return;
     let stopped = false;
     const poll = async () => {
       if (stopped) return;
@@ -79,7 +80,7 @@ export const Dashboard = ({
       stopped = true;
       window.clearInterval(t);
     };
-  }, [user?.uid, base]);
+  }, [userUid, base]);
 
   useEffect(() => {
     const anyPerf = performance as any;

@@ -16,6 +16,7 @@ import {
 
 export function AccountPanel() {
   const [user, setUser] = useState(() => authService.getCurrentUser());
+  const userUid = user?.uid ?? null;
   const [profile, setProfile] = useState<{ handle: string | null } | null>(null);
   const [handleInput, setHandleInput] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
@@ -31,7 +32,7 @@ export function AccountPanel() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!userUid) {
       setIncoming([]);
       setFriends([]);
       return;
@@ -42,12 +43,12 @@ export function AccountPanel() {
       unsubIn();
       unsubFriends();
     };
-  }, [user?.uid]);
+  }, [userUid]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user) {
+      if (!userUid) {
         setProfile(null);
         setHandleInput("");
         return;
@@ -67,7 +68,7 @@ export function AccountPanel() {
     return () => {
       cancelled = true;
     };
-  }, [user?.uid]);
+  }, [userUid]);
 
   const friendNames = useMemo(() => {
     return friends

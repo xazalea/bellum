@@ -17,7 +17,7 @@ import { XFabricPanel } from './XFabric';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [isBooted, setIsBooted] = useState(false);
-    const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'account' | 'cluster' | 'settings' | 'runner' | 'xfabric'>('home');
+    const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'account' | 'cluster' | 'settings' | 'runner' | 'fabrik'>('home');
     const [runnerAppId, setRunnerAppId] = useState<string | null>(null);
     const pathname = usePathname();
 
@@ -63,7 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 return <Archives />;
             case 'account':
                 return <AccountPanel />;
-            case 'xfabric':
+            case 'fabrik':
                 return <XFabricPanel />;
             default:
                 return <Dashboard />;

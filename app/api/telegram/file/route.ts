@@ -22,8 +22,12 @@ export async function GET(req: Request) {
     if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });
 
     const bytes = await telegramDownloadFileBytes({ token, fileId });
+    // Ensure ArrayBuffer-backed payload for Response typings (avoid ArrayBufferLike/SharedArrayBuffer complaints).
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    const body: ArrayBuffer = copy.buffer;
     // Stream bytes through
-    return new Response(bytes, {
+    return new Response(body, {
       status: 200,
       headers: {
         "Content-Type": "application/octet-stream",

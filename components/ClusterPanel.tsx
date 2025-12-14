@@ -8,6 +8,7 @@ import { authService } from '@/lib/firebase/auth-service';
 
 export const ClusterPanel = () => {
   const [user, setUser] = useState(() => authService.getCurrentUser());
+  const userUid = user?.uid ?? null;
   const [peers, setPeers] = useState<Array<{
     userId: string;
     deviceId: string;
@@ -38,7 +39,7 @@ export const ClusterPanel = () => {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userUid) return;
     let stopped = false;
 
     const poll = async () => {
@@ -73,7 +74,7 @@ export const ClusterPanel = () => {
       stopped = true;
       window.clearInterval(t);
     };
-  }, [user?.uid, base]);
+  }, [userUid, base]);
 
   const onlineCount = peers.length;
 

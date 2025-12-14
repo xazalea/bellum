@@ -42,18 +42,19 @@ export function AppLibrary({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [user, setUser] = useState(() => authService.getCurrentUser());
+  const userUid = user?.uid ?? null;
 
   useEffect(() => {
     return authService.onAuthStateChange(setUser);
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!userUid) {
       setApps([]);
       return;
     }
-    return subscribeInstalledApps(user.uid, setApps);
-  }, [user?.uid]);
+    return subscribeInstalledApps(userUid, setApps);
+  }, [userUid]);
 
   const installedCount = apps.length;
 

@@ -49,7 +49,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
       { id: 'home', icon: LayoutGrid, label: 'Home' },
       { id: 'apps', icon: Boxes, label: 'Apps' },
       { id: 'runner', icon: Terminal, label: 'Run' },
-      { id: 'xfabric', icon: Sparkles, label: 'XFabric' },
+      { id: 'fabrik', icon: Sparkles, label: 'Fabrik' },
     ],
     [],
   );

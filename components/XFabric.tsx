@@ -28,8 +28,10 @@ type ListedSite = { id: string; domain: string | null; createdAt: number; bundle
 type NavKey = "overview" | "projects" | "deploy" | "domains" | "analytics" | "settings";
 
 // Vercel-style A record target. Override per-deployment with:
-// NEXT_PUBLIC_XFABRIC_A_RECORD_TARGET=1.2.3.4
-const XFABRIC_A_RECORD_TARGET = process.env.NEXT_PUBLIC_XFABRIC_A_RECORD_TARGET || "136.61.15.136";
+// NEXT_PUBLIC_FABRIK_A_RECORD_TARGET=1.2.3.4
+// (Legacy: NEXT_PUBLIC_XFABRIC_A_RECORD_TARGET)
+const FABRIK_A_RECORD_TARGET =
+  process.env.NEXT_PUBLIC_FABRIK_A_RECORD_TARGET || process.env.NEXT_PUBLIC_XFABRIC_A_RECORD_TARGET || "136.61.15.136";
 
 function normalizeGitHubRepoUrl(raw: string): { owner: string; repo: string; url: string } {
   const s = raw.trim();
@@ -74,13 +76,13 @@ function DnsARecordCallout() {
     <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-4">
       <div className="text-xs uppercase tracking-widest text-white/40 font-bold">DNS (Vercel-style)</div>
       <div className="text-sm text-white/70 mt-2">
-        Set an <span className="font-mono text-white/85">A</span> record to point your domain at XFabric:
+        Set an <span className="font-mono text-white/85">A</span> record to point your domain at Fabrik:
       </div>
       <div className="mt-3 grid grid-cols-1 md:grid-cols-[140px_1fr] gap-2 text-sm">
         <div className="text-white/45 font-mono">A name</div>
         <div className="text-white/85 font-mono">@</div>
         <div className="text-white/45 font-mono">A value</div>
-        <div className="text-white/85 font-mono">{XFABRIC_A_RECORD_TARGET}</div>
+        <div className="text-white/85 font-mono">{FABRIK_A_RECORD_TARGET}</div>
       </div>
       <div className="text-xs text-white/40 mt-3">
         On FreeDNS this is usually the <span className="font-mono">A</span> record for the root of your subdomain.
@@ -89,7 +91,7 @@ function DnsARecordCallout() {
   );
 }
 
-export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hosting" }) {
+export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting" }) {
   const initial: NavKey = initialTab === "hosting" ? "deploy" : "overview";
   const [nav, setNav] = useState<NavKey>(initial);
 
@@ -119,7 +121,7 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
     setSitesError(null);
     setSitesLoading(true);
     try {
-      const res = await fetch("/api/xfabric/sites", {
+      const res = await fetch("/api/fabrik/sites", {
         cache: "no-store",
       });
       if (!res.ok) {
@@ -151,8 +153,8 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
                 <Sparkles className="text-[rgb(186,187,241)]" />
               </div>
               <div className="min-w-0">
-                <div className="font-extrabold text-white tracking-tight">XFabric</div>
-                <div className="text-xs text-white/45 truncate">WebFabric dashboard</div>
+                <div className="font-extrabold text-white tracking-tight">Fabrik</div>
+                <div className="text-xs text-white/45 truncate">Hosting dashboard</div>
               </div>
             </div>
 
@@ -188,7 +190,7 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <div className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-                  {navItems.find((n) => n.key === nav)?.label ?? "XFabric"}
+                  {navItems.find((n) => n.key === nav)?.label ?? "Fabrik"}
                 </div>
                 <div className="text-sm text-white/55 mt-1">Telegram-backed storage + distributed edge compute across your cluster.</div>
               </div>
@@ -244,6 +246,9 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
     </div>
   );
 }
+
+// Backwards-compatible export for older imports.
+export const XFabricPanel = FabrikPanel;
 
 function OverviewDashboard({ sites, loading, onGoDeploy }: { sites: ListedSite[]; loading: boolean; onGoDeploy: () => void }) {
   return (
@@ -312,7 +317,7 @@ function ProjectsView({
     setErr(null);
     setBusyId(id);
     try {
-      const res = await fetch(`/api/xfabric/sites/${encodeURIComponent(id)}`, { method: "DELETE" });
+      const res = await fetch(`/api/fabrik/sites/${encodeURIComponent(id)}`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) {
         const j = (await res.json().catch(() => null)) as any;
         throw new Error(j?.error || `Delete failed (${res.status})`);
@@ -417,7 +422,7 @@ function DeployView({
         onProgress: (p) => setProgress(Math.round((p.uploadedBytes / p.totalBytes) * 100)),
       });
 
-      const res = await fetch("/api/xfabric/sites", {
+      const res = await fetch("/api/fabrik/sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain: domain.trim() || undefined, bundleFileId: up.fileId }),
@@ -565,7 +570,7 @@ function DomainsView({
     setBusyId(id);
     try {
       const domain = (drafts[id] ?? "").trim();
-      const res = await fetch(`/api/xfabric/sites/${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/fabrik/sites/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain: domain || null }),
