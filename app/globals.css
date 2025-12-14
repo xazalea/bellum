@@ -96,7 +96,7 @@ body::before {
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08),
     0 0 34px rgba(140, 170, 238, 0.14);
-  transform: translateY(-3px) scale(1.01);
+  transform: translateY(-2px) scale(1.005);
 }
 
 .bellum-btn {
@@ -146,6 +146,18 @@ body::before {
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.10),
     0 0 0 6px rgba(59, 130, 246, 0.12);
+}
+
+/* Consistent focus rings (keyboard users) */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.12),
+    0 0 0 6px rgba(140, 170, 238, 0.16);
 }
 
 /* Animations */

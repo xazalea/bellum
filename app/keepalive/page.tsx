@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { nachoEngine } from "@/lib/nacho/engine";
-import { getCachedUsername } from "@/lib/auth/nacho-auth";
 import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
+import { authService } from "@/lib/firebase/auth-service";
 
 /**
  * Cluster keepalive page.
@@ -35,9 +35,9 @@ export default function KeepalivePage() {
 
     const tick = async () => {
       if (stopped) return;
-      const username = getCachedUsername();
-      if (!username) return;
       try {
+        // Ensure a session exists so heartbeat calls are authenticated.
+        if (!authService.getCurrentUser()) await authService.signInAnonymously();
         const deviceId = await getDeviceFingerprintId();
         const base = getClusterBase();
         const bases = base ? [base, ""] : [""];
@@ -46,7 +46,6 @@ export default function KeepalivePage() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-Nacho-UserId": username,
             },
             body: JSON.stringify({
               deviceId,

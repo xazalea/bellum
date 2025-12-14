@@ -1,6 +1,3 @@
-import { getCachedUsername } from "@/lib/auth/nacho-auth";
-import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
-
 export type FriendRequestStatus = "pending" | "accepted" | "declined";
 
 export interface FriendRequest {
@@ -18,26 +15,20 @@ export interface Friendship {
   createdAt: any;
 }
 
-function normalizeUsername(input: string): string {
+function normalizeHandle(input: string): string {
   const u = input.trim().toLowerCase();
   if (!/^[a-z0-9_]{3,20}$/.test(u)) {
-    throw new Error("Username must be 3–20 chars: a-z, 0-9, underscore.");
+    throw new Error("Handle must be 3–20 chars: a-z, 0-9, underscore.");
   }
   return u;
 }
 
-async function nachoHeaders(): Promise<Record<string, string>> {
-  const username = getCachedUsername();
-  if (!username) throw new Error("Not signed in");
-  const fp = await getDeviceFingerprintId();
-  return { "X-Nacho-Username": username, "X-Nacho-Fingerprint": fp };
-}
-
 export async function sendFriendRequest(fromInput: string, toInput: string): Promise<void> {
-  const to = normalizeUsername(toInput);
+  void fromInput;
+  const to = normalizeHandle(toInput);
   const res = await fetch("/api/user/friends", {
     method: "POST",
-    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "send", to }),
   });
   if (!res.ok && res.status !== 204) {
@@ -49,7 +40,7 @@ export async function sendFriendRequest(fromInput: string, toInput: string): Pro
 export async function acceptFriendRequest(req: FriendRequest): Promise<void> {
   const res = await fetch("/api/user/friends", {
     method: "POST",
-    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "accept", requestId: req.id }),
   });
   if (!res.ok && res.status !== 204) {
@@ -61,7 +52,7 @@ export async function acceptFriendRequest(req: FriendRequest): Promise<void> {
 export async function declineFriendRequest(req: FriendRequest): Promise<void> {
   const res = await fetch("/api/user/friends", {
     method: "POST",
-    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "decline", requestId: req.id }),
   });
   if (!res.ok && res.status !== 204) {
@@ -72,11 +63,12 @@ export async function declineFriendRequest(req: FriendRequest): Promise<void> {
 
 export function subscribeIncomingFriendRequests(usernameInput: string, cb: (items: FriendRequest[]) => void): () => void {
   // Server-backed polling subscription. `usernameInput` is kept for compatibility.
+  void usernameInput;
   let stopped = false;
   const poll = async () => {
     if (stopped) return;
     try {
-      const res = await fetch("/api/user/friends", { headers: await nachoHeaders() });
+      const res = await fetch("/api/user/friends", { cache: "no-store" });
       if (!res.ok) return;
       const j = (await res.json().catch(() => null)) as { incoming?: FriendRequest[] } | null;
       cb(Array.isArray(j?.incoming) ? j!.incoming! : []);
@@ -93,11 +85,12 @@ export function subscribeIncomingFriendRequests(usernameInput: string, cb: (item
 }
 
 export function subscribeFriends(usernameInput: string, cb: (items: Friendship[]) => void): () => void {
+  void usernameInput;
   let stopped = false;
   const poll = async () => {
     if (stopped) return;
     try {
-      const res = await fetch("/api/user/friends", { headers: await nachoHeaders() });
+      const res = await fetch("/api/user/friends", { cache: "no-store" });
       if (!res.ok) return;
       const j = (await res.json().catch(() => null)) as { friends?: Friendship[] } | null;
       cb(Array.isArray(j?.friends) ? j!.friends! : []);

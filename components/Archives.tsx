@@ -7,7 +7,7 @@ import { detectAppType, addInstalledApp, type InstalledApp } from "@/lib/apps/ap
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
 import { publishArchive, subscribePublicArchives, type ArchiveEntry } from "@/lib/archives/archives-service";
 import { promoteClusterFileToPublic } from "@/lib/storage/chunked-download";
-import { getCachedUsername } from "@/lib/auth/nacho-auth";
+import { authService } from "@/lib/firebase/auth-service";
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -20,7 +20,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function Archives() {
-  const username = getCachedUsername();
+  const [user, setUser] = useState(() => authService.getCurrentUser());
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [items, setItems] = useState<ArchiveEntry[]>([]);
@@ -32,8 +32,10 @@ export function Archives() {
     return subscribePublicArchives(setItems);
   }, []);
 
+  useEffect(() => authService.onAuthStateChange(setUser), []);
+
   const publishFile = async (file: File) => {
-    if (!username) {
+    if (!user) {
       setError("Sign in required to publish archives.");
       return;
     }
@@ -56,7 +58,6 @@ export function Archives() {
         fileId: res.fileId,
         originalBytes: file.size,
         storedBytes: res.storedBytes,
-        publisherUid: username,
         compression: "gzip-chunked" as const,
       };
       await publishArchive(entry);
@@ -70,7 +71,7 @@ export function Archives() {
   };
 
   const addToApps = async (item: ArchiveEntry) => {
-    if (!username) {
+    if (!user) {
       setError("Sign in required to add to Apps.");
       return;
     }
@@ -85,7 +86,7 @@ export function Archives() {
       installedAt: Date.now(),
       compression: item.compression,
     };
-    await addInstalledApp(username, app);
+    await addInstalledApp(user.uid, app);
   };
 
   return (

@@ -1,5 +1,4 @@
-import { getCachedUsername } from "@/lib/auth/nacho-auth";
-import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
+import { authService } from "@/lib/firebase/auth-service";
 
 export interface ClusterFileManifest {
   fileId: string;
@@ -22,10 +21,10 @@ function getClusterBase(): string {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const username = getCachedUsername();
-  if (!username) return {};
-  const fp = await getDeviceFingerprintId();
-  return { "X-Nacho-UserId": username, "X-Nacho-Fingerprint": fp };
+  const user = authService.getCurrentUser();
+  if (!user) return {};
+  // Legacy header name kept for compatibility with external cluster server.
+  return { "X-Nacho-UserId": user.uid };
 }
 
 async function gzipDecompressBytes(bytes: Uint8Array): Promise<Uint8Array> {

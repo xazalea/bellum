@@ -1,46 +1,29 @@
+import { adminDb } from "@/app/api/user/_util";
+import { verifySessionCookieFromRequest } from "@/lib/server/session";
+import { requireTelegramBotToken, telegramDownloadFileBytes } from "@/lib/server/telegram";
+import { rateLimit } from "@/lib/server/security";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type TelegramGetFileResponse = {
-  ok: boolean;
-  result?: {
-    file_path?: string;
-  };
-  description?: string;
-};
-
-function requireToken() {
-  const token = process.env.TELEGRAM_BOT_TOKEN || "";
-  if (!token) throw new Error("Telegram bot token not configured.");
-  return token;
-}
-
 export async function GET(req: Request) {
   try {
-    const token = requireToken();
+    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    rateLimit(req, { scope: "telegram_file", limit: 600, windowMs: 60_000, key: uid });
+    const token = requireTelegramBotToken();
     const { searchParams } = new URL(req.url);
     const fileId = searchParams.get("file_id") || "";
     if (!fileId) return Response.json({ error: "file_id required" }, { status: 400 });
 
-    const metaUrl = `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(fileId)}`;
-    const metaRes = await fetch(metaUrl, { method: "GET" });
-    const metaJson = (await metaRes.json().catch(() => null)) as TelegramGetFileResponse | null;
-    if (!metaRes.ok || !metaJson?.ok) {
-      const msg = metaJson?.description || `Telegram getFile failed (${metaRes.status})`;
-      return Response.json({ error: msg }, { status: 500 });
-    }
-    const filePath = metaJson.result?.file_path;
-    if (!filePath) return Response.json({ error: "Telegram file_path missing" }, { status: 500 });
+    // Enforce ownership.
+    const snap = await adminDb().collection("telegram_files").doc(fileId).get();
+    if (!snap.exists) return Response.json({ error: "not_found" }, { status: 404 });
+    const meta = snap.data() as any;
+    if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });
 
-    const dlUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-    const fileRes = await fetch(dlUrl, { method: "GET" });
-    if (!fileRes.ok) {
-      const t = await fileRes.text().catch(() => "");
-      return Response.json({ error: `Telegram download failed (${fileRes.status}): ${t}` }, { status: 500 });
-    }
-
+    const bytes = await telegramDownloadFileBytes({ token, fileId });
     // Stream bytes through
-    return new Response(fileRes.body, {
+    return new Response(bytes, {
       status: 200,
       headers: {
         "Content-Type": "application/octet-stream",
@@ -49,7 +32,9 @@ export async function GET(req: Request) {
       },
     });
   } catch (e: any) {
-    return Response.json({ error: e?.message || "Telegram download failed" }, { status: 500 });
+    const msg = e?.message || "Telegram download failed";
+    const status = msg.includes("unauthenticated") ? 401 : 500;
+    return Response.json({ error: msg }, { status });
   }
 }
 

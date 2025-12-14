@@ -20,8 +20,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
-import { getCachedUsername } from "@/lib/auth/nacho-auth";
-import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
+import { authService } from "@/lib/firebase/auth-service";
 
 type CreatedSite = { id: string; domain: string | null; createdAt: number };
 type ListedSite = { id: string; domain: string | null; createdAt: number; bundleFileId: string };
@@ -94,7 +93,8 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
   const initial: NavKey = initialTab === "hosting" ? "deploy" : "overview";
   const [nav, setNav] = useState<NavKey>(initial);
 
-  const username = getCachedUsername();
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  useEffect(() => authService.onAuthStateChange(setUser), []);
 
   const [sites, setSites] = useState<ListedSite[]>([]);
   const [sitesLoading, setSitesLoading] = useState(false);
@@ -119,14 +119,12 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
     setSitesError(null);
     setSitesLoading(true);
     try {
-      if (!username) throw new Error("Sign in required.");
-      const fp = await getDeviceFingerprintId();
       const res = await fetch("/api/xfabric/sites", {
-        headers: { "X-Nacho-Username": username, "X-Nacho-Fingerprint": fp },
+        cache: "no-store",
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => null)) as any;
-        throw new Error(j?.error || `Failed to load sites (${res.status})`);
+        throw new Error(j?.error || (res.status === 401 ? "Sign in required." : `Failed to load sites (${res.status})`));
       }
       const j = (await res.json()) as { sites?: ListedSite[] };
       setSites(Array.isArray(j?.sites) ? j.sites : []);
@@ -140,13 +138,13 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
   useEffect(() => {
     void refreshSites();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username]);
+  }, [user?.uid]);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 pt-24 pb-10">
       <div className="bellum-card border-2 border-white/10 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-          {/* Sidebar (Cloudflare-ish) */}
+          {/* Sidebar */}
           <div className="p-5 border-b lg:border-b-0 lg:border-r border-white/10 bg-white/5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-white/5 border-2 border-white/10 flex items-center justify-center">
@@ -185,7 +183,7 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
             </div>
           </div>
 
-          {/* Main (Vercel-ish) */}
+          {/* Main */}
           <div className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
@@ -218,19 +216,25 @@ export function XFabricPanel({ initialTab }: { initialTab?: "overview" | "hostin
                 <OverviewDashboard sites={sites} loading={sitesLoading} onGoDeploy={() => setNav("deploy")} />
               )}
               {nav === "projects" && (
-                <ProjectsView sites={sites} loading={sitesLoading} origin={origin} onGoDeploy={() => setNav("deploy")} />
+                <ProjectsView
+                  sites={sites}
+                  loading={sitesLoading}
+                  origin={origin}
+                  onGoDeploy={() => setNav("deploy")}
+                  onSitesChanged={() => void refreshSites()}
+                />
               )}
               {nav === "deploy" && (
                 <DeployView
                   origin={origin}
-                  username={username}
+                  signedIn={!!user}
                   onDeployed={async () => {
                     await refreshSites();
                     setNav("projects");
                   }}
                 />
               )}
-              {nav === "domains" && <DomainsView sites={sites} loading={sitesLoading} />}
+              {nav === "domains" && <DomainsView sites={sites} loading={sitesLoading} onSitesChanged={() => void refreshSites()} />}
               {nav === "analytics" && <AnalyticsView sites={sites} loading={sitesLoading} />}
               {nav === "settings" && <SettingsView />}
             </div>
@@ -255,23 +259,23 @@ function OverviewDashboard({ sites, loading, onGoDeploy }: { sites: ListedSite[]
         <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
           <div className="font-extrabold text-white flex items-center gap-2">
             <Server size={16} className="text-white/70" />
-            Minecraft hosting (showcase)
+            Static web hosting
           </div>
-          <div className="text-sm text-white/55 mt-2">Orchestrate workloads, persist worlds, and stream state across nodes.</div>
+          <div className="text-sm text-white/55 mt-2">Upload a zip (or import a GitHub repo zip) and serve it from your deployment.</div>
         </div>
         <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
           <div className="font-extrabold text-white flex items-center gap-2">
             <Globe size={16} className="text-white/70" />
-            Proxy hosting
+            Custom domains
           </div>
-          <div className="text-sm text-white/55 mt-2">Route to services with policy-aware controls (Cloudflare-ish).</div>
+          <div className="text-sm text-white/55 mt-2">Attach a domain to any deployment (DNS A record) and manage it per project.</div>
         </div>
         <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
           <div className="font-extrabold text-white flex items-center gap-2">
             <Shield size={16} className="text-white/70" />
-            Zero-trust identity
+            Server-verified auth
           </div>
-          <div className="text-sm text-white/55 mt-2">Device-trust headers gate writes; cluster membership is auditable.</div>
+          <div className="text-sm text-white/55 mt-2">All reads/writes go through server APIs with Firebase Admin verification.</div>
         </div>
       </div>
 
@@ -293,14 +297,37 @@ function ProjectsView({
   loading,
   origin,
   onGoDeploy,
+  onSitesChanged,
 }: {
   sites: ListedSite[];
   loading: boolean;
   origin: string;
   onGoDeploy: () => void;
+  onSitesChanged: () => void;
 }) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const deleteSite = async (id: string) => {
+    setErr(null);
+    setBusyId(id);
+    try {
+      const res = await fetch(`/api/xfabric/sites/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 204) {
+        const j = (await res.json().catch(() => null)) as any;
+        throw new Error(j?.error || `Delete failed (${res.status})`);
+      }
+      onSitesChanged();
+    } catch (e: any) {
+      setErr(e?.message || "Delete failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {err && <div className="text-sm text-red-200 bg-red-500/10 border-2 border-red-400/20 rounded-xl p-3">{err}</div>}
       <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-4 flex items-center justify-between gap-3">
         <div className="text-sm text-white/60">{loading ? "Loading…" : sites.length ? "Your deployments (latest first)." : "No deployments yet."}</div>
         <button
@@ -312,22 +339,42 @@ function ProjectsView({
       </div>
 
       <div className="rounded-2xl border-2 border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[1fr_220px_140px] bg-white/5 border-b border-white/10 px-4 py-3 text-xs uppercase tracking-widest text-white/40 font-bold">
+        <div className="grid grid-cols-[1fr_220px_160px_140px] bg-white/5 border-b border-white/10 px-4 py-3 text-xs uppercase tracking-widest text-white/40 font-bold">
           <div>Project</div>
           <div>Domain</div>
-          <div>Open</div>
+          <div>Requests</div>
+          <div>Actions</div>
         </div>
         <div className="divide-y divide-white/10">
           {sites.map((s) => (
-            <div key={s.id} className="grid grid-cols-[1fr_220px_140px] px-4 py-3 items-center">
+            <div key={s.id} className="grid grid-cols-[1fr_220px_160px_140px] px-4 py-3 items-center">
               <div className="min-w-0">
                 <div className="font-extrabold text-white truncate">{s.id}</div>
                 <div className="text-xs text-white/45 font-mono">created: {new Date(s.createdAt).toLocaleString()}</div>
               </div>
               <div className="text-sm text-white/70 truncate font-mono">{s.domain || "—"}</div>
-              <a className="inline-flex items-center gap-2 text-sm font-bold text-white/80 hover:text-white" href={`${origin}/host/${s.id}/`} target="_blank" rel="noreferrer">
-                Preview <ExternalLink size={14} />
-              </a>
+              <div className="text-sm text-white/70 font-mono">
+                {typeof (s as any)?.stats?.totalRequests === "number" ? String((s as any).stats.totalRequests) : "—"}
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <a
+                  className="inline-flex items-center gap-2 text-sm font-bold text-white/80 hover:text-white"
+                  href={`${origin}/host/${s.id}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Preview <ExternalLink size={14} />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void deleteSite(s.id)}
+                  disabled={busyId === s.id}
+                  className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 transition-all text-xs font-bold disabled:opacity-50"
+                  title="Delete deployment"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
           {!loading && sites.length === 0 && <div className="px-4 py-10 text-center text-white/45">No projects yet.</div>}
@@ -339,11 +386,11 @@ function ProjectsView({
 
 function DeployView({
   origin,
-  username,
+  signedIn,
   onDeployed,
 }: {
   origin: string;
-  username: string | null;
+  signedIn: boolean;
   onDeployed: () => Promise<void>;
 }) {
   const [domain, setDomain] = useState("");
@@ -362,7 +409,7 @@ function DeployView({
     setBusy(true);
     setProgress(0);
     try {
-      if (!username) throw new Error("Sign in required (create a username in Account). ");
+      if (!signedIn) throw new Error("Sign in required.");
 
       const up = await chunkedUploadFile(bundle, {
         chunkBytes: 32 * 1024 * 1024,
@@ -370,15 +417,14 @@ function DeployView({
         onProgress: (p) => setProgress(Math.round((p.uploadedBytes / p.totalBytes) * 100)),
       });
 
-      const fp = await getDeviceFingerprintId();
       const res = await fetch("/api/xfabric/sites", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Nacho-Username": username, "X-Nacho-Fingerprint": fp },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ domain: domain.trim() || undefined, bundleFileId: up.fileId }),
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => null)) as any;
-        throw new Error(j?.error || `Create failed (${res.status})`);
+        throw new Error(j?.error || (res.status === 401 ? "Sign in required." : `Create failed (${res.status})`));
       }
       const j = (await res.json()) as CreatedSite;
       setCreated(j);
@@ -396,7 +442,7 @@ function DeployView({
     setBusy(true);
     setProgress(0);
     try {
-      if (!username) throw new Error("Sign in required (create a username in Account). ");
+      if (!signedIn) throw new Error("Sign in required.");
       const { owner, repo } = normalizeGitHubRepoUrl(repoUrl);
       const zip = githubZipUrl(owner, repo, repoBranch.trim() || "main");
       const res = await fetch(zip, { cache: "no-store" });
@@ -454,7 +500,6 @@ function DeployView({
               Import & Deploy
             </button>
           </div>
-          <div className="text-xs text-white/40 mt-2">Note: GitHub-only for now (GitLab/Bitbucket next).</div>
         </div>
 
         {busy && <div className="mt-4 text-xs text-white/60 font-mono">uploading… {progress}%</div>}
@@ -502,16 +547,67 @@ function DeployView({
   );
 }
 
-function DomainsView({ sites, loading }: { sites: ListedSite[]; loading: boolean }) {
-  const domains = sites.filter((s) => !!s.domain).map((s) => s.domain as string);
+function DomainsView({
+  sites,
+  loading,
+  onSitesChanged,
+}: {
+  sites: ListedSite[];
+  loading: boolean;
+  onSitesChanged: () => void;
+}) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  const saveDomain = async (id: string) => {
+    setErr(null);
+    setBusyId(id);
+    try {
+      const domain = (drafts[id] ?? "").trim();
+      const res = await fetch(`/api/xfabric/sites/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: domain || null }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => null)) as any;
+        throw new Error(j?.error || `Update failed (${res.status})`);
+      }
+      await onSitesChanged();
+    } catch (e: any) {
+      setErr(e?.message || "Update failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
       <div className="font-extrabold text-white">Domains</div>
-      <div className="text-sm text-white/55 mt-2">{loading ? "Loading…" : domains.length ? "Domains connected to your deployments:" : "No domains connected yet."}</div>
-      <div className="mt-4 space-y-2">
-        {domains.map((d) => (
-          <div key={d} className="px-3 py-2 rounded-xl border-2 border-white/10 bg-black/20 font-mono text-sm text-white/80">
-            {d}
+      <div className="text-sm text-white/55 mt-2">{loading ? "Loading…" : sites.length ? "Edit domains per deployment:" : "No deployments yet."}</div>
+      {err && <div className="mt-4 text-sm text-red-200 bg-red-500/10 border-2 border-red-400/20 rounded-xl p-3">{err}</div>}
+      <div className="mt-4 space-y-3">
+        {sites.map((s) => (
+          <div key={s.id} className="rounded-2xl border-2 border-white/10 bg-black/20 p-4">
+            <div className="font-bold text-white">{s.id}</div>
+            <div className="text-xs text-white/45 font-mono mt-1">current: {s.domain || "—"}</div>
+            <div className="mt-3 flex gap-2">
+              <input
+                className="bellum-input flex-1"
+                placeholder="example.com (optional)"
+                value={drafts[s.id] ?? s.domain ?? ""}
+                onChange={(e) => setDrafts((p) => ({ ...p, [s.id]: e.target.value }))}
+              />
+              <button
+                type="button"
+                disabled={busyId === s.id}
+                onClick={() => void saveDomain(s.id)}
+                className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -527,14 +623,35 @@ function DomainsView({ sites, loading }: { sites: ListedSite[]; loading: boolean
 }
 
 function AnalyticsView({ sites, loading }: { sites: ListedSite[]; loading: boolean }) {
+  const total = sites.reduce((s, x: any) => s + (typeof x?.stats?.totalRequests === "number" ? x.stats.totalRequests : 0), 0);
   return (
     <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
       <div className="font-extrabold text-white">Analytics</div>
-      <div className="text-sm text-white/55 mt-2">Coming next: request volume, edge cache hit-rate, cluster bandwidth, and per-project receipts.</div>
+      <div className="text-sm text-white/55 mt-2">Per-deployment request counters (best-effort, updated on every served request).</div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-        <StatCard icon={Activity} label="Projects" value={loading ? "…" : String(sites.length)} />
-        <StatCard icon={BarChart3} label="Cache hit" value="—" />
-        <StatCard icon={Cpu} label="Edge CPU" value="—" />
+        <StatCard icon={Boxes} label="Projects" value={loading ? "…" : String(sites.length)} />
+        <StatCard icon={Activity} label="Requests" value={loading ? "…" : String(total)} />
+        <StatCard icon={BarChart3} label="Last activity" value={loading ? "…" : (sites.some((x: any) => x?.stats?.lastRequestAt) ? "tracked" : "—")} />
+      </div>
+
+      <div className="mt-6 rounded-2xl border-2 border-white/10 overflow-hidden">
+        <div className="grid grid-cols-[1fr_180px_240px] bg-white/5 border-b border-white/10 px-4 py-3 text-xs uppercase tracking-widest text-white/40 font-bold">
+          <div>Project</div>
+          <div>Requests</div>
+          <div>Last request</div>
+        </div>
+        <div className="divide-y divide-white/10">
+          {sites.map((s: any) => (
+            <div key={s.id} className="grid grid-cols-[1fr_180px_240px] px-4 py-3 items-center">
+              <div className="font-bold text-white truncate">{s.id}</div>
+              <div className="text-sm text-white/70 font-mono">{typeof s?.stats?.totalRequests === "number" ? String(s.stats.totalRequests) : "—"}</div>
+              <div className="text-sm text-white/70 font-mono">
+                {typeof s?.stats?.lastRequestAt === "number" ? new Date(s.stats.lastRequestAt).toLocaleString() : "—"}
+              </div>
+            </div>
+          ))}
+          {!loading && sites.length === 0 && <div className="px-4 py-10 text-center text-white/45">No projects yet.</div>}
+        </div>
       </div>
     </div>
   );
@@ -544,7 +661,9 @@ function SettingsView() {
   return (
     <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
       <div className="font-extrabold text-white">XFabric settings</div>
-      <div className="text-sm text-white/55 mt-2">Coming next: cluster role toggles (ingress/storage/compute), bandwidth caps, and per-project auth.</div>
+      <div className="text-sm text-white/55 mt-2">
+        This product currently exposes per-project settings in the Projects/Domains tabs. Authentication and account settings live in the Account page.
+      </div>
     </div>
   );
 }

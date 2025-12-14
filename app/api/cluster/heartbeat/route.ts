@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prunePeers, upsertPeer } from '@/lib/cluster/presence-store';
+import { verifySessionCookieFromRequest } from '@/lib/server/session';
+import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
@@ -16,8 +18,14 @@ type Body = {
 const ACTIVE_WINDOW_MS = 60_000;
 
 export async function POST(req: Request) {
-  const userId = req.headers.get('X-Nacho-UserId') || '';
-  if (!userId) return NextResponse.json({ error: 'missing_user' }, { status: 401 });
+  requireSameOrigin(req);
+  let uid = '';
+  try {
+    uid = (await verifySessionCookieFromRequest(req)).uid;
+  } catch {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  }
+  rateLimit(req, { scope: 'cluster_heartbeat', limit: 600, windowMs: 60_000, key: uid });
 
   let body: Body = {};
   try {
@@ -30,7 +38,7 @@ export async function POST(req: Request) {
   if (!deviceId) return NextResponse.json({ error: 'missing_device' }, { status: 400 });
 
   upsertPeer({
-    userId,
+    userId: uid,
     deviceId,
     userAgent: typeof body.userAgent === 'string' ? body.userAgent : null,
     label: typeof body.label === 'string' ? body.label : null,

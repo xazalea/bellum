@@ -1,12 +1,11 @@
-import { getCachedUsername } from '@/lib/auth/nacho-auth';
-import { getFingerprint } from '@/lib/tracking';
+import { authService } from '@/lib/firebase/auth-service';
 
 export interface GameRepository {
     id?: string;
     name: string;
     description: string;
-    ownerId: string; // Fingerprint ID
-    ownerName: string; // Username
+    ownerUid?: string;
+    ownerName?: string | null;
     games: GameEntry[];
     isPublic: boolean;
     createdAt: number;
@@ -38,10 +37,8 @@ export class GameRepositoryService {
      * Requires User to be logged in via Distributed Compute Service (Cluster)
      */
     public async createRepository(name: string, description: string, isPublic: boolean = true): Promise<{ success: boolean; id?: string; message: string }> {
-        const fingerprint = await getFingerprint();
-        const username = getCachedUsername();
-
-        if (!username || !fingerprint) {
+        const user = authService.getCurrentUser();
+        if (!user) {
             return { success: false, message: 'Must be logged in to create a repository' };
         }
 
@@ -49,8 +46,6 @@ export class GameRepositoryService {
             const repoData: GameRepository = {
                 name,
                 description,
-                ownerId: fingerprint, // Owner is identified by their primary fingerprint
-                ownerName: username,
                 games: [],
                 isPublic,
                 createdAt: Date.now()
@@ -59,8 +54,6 @@ export class GameRepositoryService {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Nacho-Username': username,
-                    'X-Nacho-Fingerprint': fingerprint,
                 },
                 body: JSON.stringify({ repo: repoData }),
             });
@@ -80,18 +73,14 @@ export class GameRepositoryService {
      * Add a game to a repository
      */
     public async addGameToRepo(repoId: string, game: GameEntry): Promise<{ success: boolean; message: string }> {
-        const fingerprint = await getFingerprint();
-        if (!fingerprint) return { success: false, message: 'Authentication failed' };
+        const user = authService.getCurrentUser();
+        if (!user) return { success: false, message: 'Authentication failed' };
 
         try {
-            const username = getCachedUsername();
-            if (!username) return { success: false, message: 'Login required' };
             const res = await fetch(`/api/game-repositories/${encodeURIComponent(repoId)}/games`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Nacho-Username': username,
-                    'X-Nacho-Fingerprint': fingerprint,
                 },
                 body: JSON.stringify({ game }),
             });
@@ -126,16 +115,12 @@ export class GameRepositoryService {
      * Get my repositories
      */
     public async getMyRepositories(): Promise<GameRepository[]> {
-        const username = getCachedUsername();
-        const fingerprint = await getFingerprint();
-        if (!username || !fingerprint) return [];
+        const user = authService.getCurrentUser();
+        if (!user) return [];
 
         try {
             const res = await fetch('/api/game-repositories/mine', {
-                headers: {
-                    'X-Nacho-Username': username,
-                    'X-Nacho-Fingerprint': fingerprint,
-                }
+                cache: 'no-store',
             });
             if (!res.ok) return [];
             const items = await res.json().catch(() => []) as GameRepository[];

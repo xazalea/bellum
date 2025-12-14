@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { adminDb, jsonError, requireTrustedUser } from '@/app/api/user/_util';
+import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
+import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
@@ -17,12 +18,12 @@ type InstalledApp = {
 
 export async function GET(req: Request) {
   try {
-    const { username } = await requireTrustedUser(req);
+    const { uid } = await requireAuthedUser(req);
     const db = adminDb();
 
     const snap = await db
       .collection('users')
-      .doc(username)
+      .doc(uid)
       .collection('apps')
       .orderBy('installedAt', 'desc')
       .get();
@@ -30,24 +31,26 @@ export async function GET(req: Request) {
     const apps = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     return NextResponse.json(apps, { status: 200 });
   } catch (e: any) {
-    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+    return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { username } = await requireTrustedUser(req);
+    requireSameOrigin(req);
+    const { uid } = await requireAuthedUser(req);
+    rateLimit(req, { scope: 'user_apps_write', limit: 120, windowMs: 60_000, key: uid });
     const body = (await req.json().catch(() => ({}))) as { app?: InstalledApp };
     const app = body.app as InstalledApp | undefined;
     if (!app) throw new Error('Missing app');
     if (!app.fileId || !app.name) throw new Error('Invalid app');
 
     const db = adminDb();
-    const ref = db.collection('users').doc(username).collection('apps').doc();
+    const ref = db.collection('users').doc(uid).collection('apps').doc();
     await ref.set(app, { merge: true });
     return NextResponse.json({ id: ref.id }, { status: 200 });
   } catch (e: any) {
-    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+    return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
 

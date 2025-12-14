@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { adminDb, jsonError } from '@/app/api/user/_util';
-import { isCurrentDeviceTrusted, normalizeUsername, requireFingerprint } from '@/lib/server/nacho-auth';
+import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
+import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
@@ -17,10 +17,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const fingerprint = requireFingerprint(req);
-    const username = normalizeUsername(req.headers.get('X-Nacho-Username') || '');
-    const ok = await isCurrentDeviceTrusted(username, fingerprint);
-    if (!ok) throw new Error('Device not trusted for that username');
+    requireSameOrigin(req);
+    const { uid, name } = await requireAuthedUser(req);
+    rateLimit(req, { scope: 'game_repos_create', limit: 60, windowMs: 60_000, key: uid });
 
     const body = (await req.json().catch(() => ({}))) as any;
     const repo = body.repo as any;
@@ -29,13 +28,13 @@ export async function POST(req: Request) {
     const db = adminDb();
     const ref = await db.collection('game_repositories').add({
       ...repo,
-      ownerName: username,
-      ownerId: fingerprint,
+      ownerUid: uid,
+      ownerName: typeof name === 'string' && name ? name : null,
       createdAt: typeof repo.createdAt === 'number' ? repo.createdAt : Date.now(),
     });
     return NextResponse.json({ id: ref.id }, { status: 200 });
   } catch (e: any) {
-    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+    return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
 

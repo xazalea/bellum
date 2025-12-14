@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { verifySessionCookieFromRequest } from '@/lib/server/session';
+import { rateLimit } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +22,12 @@ function pickClientIp(req: Request): string | null {
 }
 
 export async function GET(req: Request) {
+  try {
+    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    rateLimit(req, { scope: 'ip_debug', limit: 60, windowMs: 60_000, key: uid });
+  } catch {
+    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  }
   const ip = pickClientIp(req);
   return NextResponse.json(
     {

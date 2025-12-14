@@ -1,3 +1,8 @@
+import { adminDb } from "@/app/api/user/_util";
+import { verifySessionCookieFromRequest } from "@/lib/server/session";
+import { requireTelegramBotToken, requireTelegramStorageChatId, telegramDownloadFileBytes, telegramSendDocument } from "@/lib/server/telegram";
+import { rateLimit, requireSameOrigin } from "@/lib/server/security";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -13,52 +18,6 @@ type TelegramManifest = {
   chunks: ManifestChunk[];
 };
 
-type TelegramSendDocumentResponse = {
-  ok: boolean;
-  result?: {
-    message_id: number;
-    document?: { file_id: string };
-  };
-  description?: string;
-};
-
-function requireTelegramConfig() {
-  const token = process.env.TELEGRAM_BOT_TOKEN || "";
-  const chatId = process.env.TELEGRAM_STORAGE_CHAT_ID || "";
-  if (!token || !chatId) {
-    throw new Error("Telegram storage not configured (missing env vars).");
-  }
-  return { token, chatId };
-}
-
-async function sendDocument(opts: {
-  token: string;
-  chatId: string;
-  caption: string;
-  filename: string;
-  bytes: Uint8Array;
-}) {
-  const url = `https://api.telegram.org/bot${opts.token}/sendDocument`;
-  const form = new FormData();
-  form.set("chat_id", opts.chatId);
-  form.set("caption", opts.caption);
-  // Ensure ArrayBuffer-backed payload (BlobPart typings exclude SharedArrayBuffer).
-  const copy = new Uint8Array(opts.bytes.byteLength);
-  copy.set(opts.bytes);
-  form.set("document", new File([copy.buffer], opts.filename, { type: "application/json" }));
-
-  const res = await fetch(url, { method: "POST", body: form });
-  const json = (await res.json().catch(() => null)) as TelegramSendDocumentResponse | null;
-  if (!res.ok || !json?.ok) {
-    const msg = json?.description || `Telegram sendDocument failed (${res.status})`;
-    throw new Error(msg);
-  }
-  const fileId = json.result?.document?.file_id;
-  const messageId = json.result?.message_id;
-  if (!fileId || typeof messageId !== "number") throw new Error("Telegram response missing file_id/message_id");
-  return { fileId, messageId };
-}
-
 /**
  * Stores and retrieves file manifests in Telegram itself.
  *
@@ -67,8 +26,11 @@ async function sendDocument(opts: {
  */
 export async function POST(req: Request) {
   try {
-    const { token, chatId } = requireTelegramConfig();
-    const userId = req.headers.get("X-Nacho-UserId") || "anon";
+    requireSameOrigin(req);
+    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    rateLimit(req, { scope: "telegram_manifest_store", limit: 60, windowMs: 60_000, key: uid });
+    const token = requireTelegramBotToken();
+    const chatId = requireTelegramStorageChatId();
 
     const body = (await req.json()) as Partial<TelegramManifest>;
     if (!body.fileName || typeof body.totalBytes !== "number" || !Array.isArray(body.chunks)) {
@@ -92,13 +54,32 @@ export async function POST(req: Request) {
 
     const bytes = new TextEncoder().encode(JSON.stringify(manifest));
     const safeName = String(manifest.fileName).replace(/[^\w.\-()+ ]+/g, "_").slice(0, 80) || "file";
-    const caption = `nacho:${userId}:manifest:${safeName}:${manifest.totalChunks}chunks:${manifest.storedBytes}bytes`;
+    const caption = `bellum:${uid}:manifest:${safeName}:${manifest.totalChunks}chunks:${manifest.storedBytes}bytes`;
     const filename = `nacho_manifest_${crypto.randomUUID()}_${safeName}.json`;
 
-    const { fileId, messageId } = await sendDocument({ token, chatId, caption, filename, bytes });
+    const { fileId, messageId } = await telegramSendDocument({ token, chatId, caption, filename, bytes, mimeType: "application/json" });
+
+    await adminDb()
+      .collection("telegram_files")
+      .doc(fileId)
+      .set(
+        {
+          ownerUid: uid,
+          kind: "manifest",
+          fileName: manifest.fileName,
+          totalBytes: manifest.totalBytes,
+          totalChunks: manifest.totalChunks,
+          storedBytes: manifest.storedBytes,
+          createdAt: Date.now(),
+        },
+        { merge: true },
+      );
+
     return Response.json({ fileId, messageId });
   } catch (e: any) {
-    return Response.json({ error: e?.message || "Manifest store failed" }, { status: 500 });
+    const msg = e?.message || "Manifest store failed";
+    const status = msg.includes("unauthenticated") ? 401 : 500;
+    return Response.json({ error: msg }, { status });
   }
 }
 
@@ -108,20 +89,22 @@ export async function GET(req: Request) {
     const fileId = searchParams.get("fileId") || "";
     if (!fileId) return Response.json({ error: "fileId required" }, { status: 400 });
 
-    const res = await fetch(`${new URL(req.url).origin}/api/telegram/file?file_id=${encodeURIComponent(fileId)}`, {
-      method: "GET",
-      headers: { Accept: "application/octet-stream" },
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      return Response.json({ error: `Manifest download failed (${res.status}): ${t}` }, { status: 500 });
-    }
-    const text = await res.text();
+    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    rateLimit(req, { scope: "telegram_manifest_fetch", limit: 240, windowMs: 60_000, key: uid });
+    const snap = await adminDb().collection("telegram_files").doc(fileId).get();
+    if (!snap.exists) return Response.json({ error: "not_found" }, { status: 404 });
+    const meta = snap.data() as any;
+    if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });
+
+    const token = requireTelegramBotToken();
+    const bytes = await telegramDownloadFileBytes({ token, fileId });
+    const text = new TextDecoder().decode(bytes);
     const json = JSON.parse(text);
-    return Response.json(json);
+    return Response.json(json, { status: 200 });
   } catch (e: any) {
-    return Response.json({ error: e?.message || "Manifest fetch failed" }, { status: 500 });
+    const msg = e?.message || "Manifest fetch failed";
+    const status = msg.includes("unauthenticated") ? 401 : 500;
+    return Response.json({ error: msg }, { status });
   }
 }
 

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Plus, Sliders, Smartphone, Monitor } from 'lucide-react';
 import { subscribeInstalledApps, type InstalledApp } from '@/lib/apps/apps-service';
-import { getCachedUsername } from '@/lib/auth/nacho-auth';
+import { authService } from '@/lib/firebase/auth-service';
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -21,7 +21,7 @@ export const Dashboard = ({
   onGoApps?: () => void;
   onOpenRunner?: () => void;
 }) => {
-  const username = getCachedUsername();
+  const [user, setUser] = useState(() => authService.getCurrentUser());
   const [apps, setApps] = useState<InstalledApp[]>([]);
   const [peerCount, setPeerCount] = useState<number>(0);
   const [heapUsed, setHeapUsed] = useState<number | null>(null);
@@ -36,13 +36,18 @@ export const Dashboard = ({
     );
     }, []);
 
+  useEffect(() => authService.onAuthStateChange(setUser), []);
+
   useEffect(() => {
-    if (!username) return;
-    return subscribeInstalledApps(username, setApps);
-  }, [username]);
+    if (!user) {
+      setApps([]);
+      return;
+    }
+    return subscribeInstalledApps(user.uid, setApps);
+  }, [user?.uid]);
 
     useEffect(() => {
-    if (!username) return;
+    if (!user) return;
     let stopped = false;
     const poll = async () => {
       if (stopped) return;
@@ -51,11 +56,7 @@ export const Dashboard = ({
         const bases = base ? [base, ''] : [''];
         let peers: any[] | null = null;
         for (const b of bases) {
-          const res = await fetch(`${b}/api/cluster/peers`, {
-            headers: {
-              'X-Nacho-UserId': username,
-            },
-          });
+          const res = await fetch(`${b}/api/cluster/peers`, { cache: 'no-store' });
           if (!res.ok) continue;
           peers = (await res.json()) as any[];
           break;
@@ -73,19 +74,19 @@ export const Dashboard = ({
       }
     };
     void poll();
-    const t = window.setInterval(() => void poll(), 5000);
+    const t = window.setInterval(() => void poll(), 8000);
     return () => {
       stopped = true;
       window.clearInterval(t);
     };
-  }, [username, base]);
+  }, [user?.uid, base]);
 
   useEffect(() => {
     const anyPerf = performance as any;
     const t = window.setInterval(() => {
       if (anyPerf?.memory?.usedJSHeapSize) setHeapUsed(anyPerf.memory.usedJSHeapSize);
       else setHeapUsed(null);
-    }, 1000);
+    }, 2500);
     return () => window.clearInterval(t);
   }, []);
 
@@ -131,10 +132,10 @@ export const Dashboard = ({
         <div className="relative z-10 h-full flex flex-col justify-between">
             <div>
                 <h2 className="text-2xl font-bold mb-1">System Status</h2>
-                <div className="flex gap-2 items-center text-green-400 text-sm font-mono">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                    Running • 60 FPS
-                            </div>
+                <div className="flex gap-2 items-center text-white/70 text-sm font-mono">
+                    <span className={`w-2 h-2 rounded-full ${user ? 'bg-emerald-400 animate-pulse' : 'bg-white/30'}`} />
+                    {user ? 'Signed in' : 'Not signed in'}
+                </div>
                 <div className="text-xs text-white/45 mt-2">
                   Cluster:{" "}
                   {clusterStatus === 'online' ? (
@@ -157,8 +158,8 @@ export const Dashboard = ({
                     <div className="text-2xl font-mono">{peerCount} Nodes</div>
                                 </div>
                 <div>
-                    <div className="text-white/40 text-xs uppercase tracking-widest mb-1">GPU Compute</div>
-                    <div className="text-2xl font-mono">Online</div>
+                    <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Apps</div>
+                    <div className="text-2xl font-mono">{apps.length}</div>
                     </div>
                 <div>
                     <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Storage</div>
@@ -179,7 +180,8 @@ export const Dashboard = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + (i * 0.1) }}
-                className="bellum-card p-6 flex items-center gap-4 cursor-pointer hover:bg-white/5"
+                className="bellum-card group p-6 flex items-center gap-4 cursor-pointer hover:bg-white/5"
+                onClick={() => onOpenRunner?.()}
             >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.type === 'android' ? 'bg-green-500/20 text-green-400' : app.type === 'windows' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
                     {app.type === 'android' ? <Smartphone size={24} /> : app.type === 'windows' ? <Monitor size={24} /> : <Sliders size={24} />}

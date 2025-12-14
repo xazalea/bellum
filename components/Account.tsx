@@ -2,16 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { User, Users, UserPlus, Check, X, Shield, KeyRound, LogOut } from "lucide-react";
+import { User, Users, UserPlus, Check, X, Shield, LogIn, LogOut, AtSign } from "lucide-react";
 import { authService } from "@/lib/firebase/auth-service";
-import {
-  approveLoginCode,
-  getCachedUsername,
-  isCurrentDeviceTrusted,
-  setCachedUsername,
-  signInUsername,
-  signUpUsername,
-} from "@/lib/auth/nacho-auth";
 import {
   acceptFriendRequest,
   declineFriendRequest,
@@ -23,108 +15,76 @@ import {
 } from "@/lib/social/friends-service";
 
 export function AccountPanel() {
-  const user = authService.getCurrentUser();
-  const [username, setUsername] = useState<string | null>(() => getCachedUsername());
-  const [trusted, setTrusted] = useState<boolean | null>(null);
-
-  const [usernameInput, setUsernameInput] = useState("");
-  const [otpInput, setOtpInput] = useState("");
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  const [profile, setProfile] = useState<{ handle: string | null } | null>(null);
+  const [handleInput, setHandleInput] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
 
-  const [friendUsername, setFriendUsername] = useState("");
+  const [friendHandle, setFriendHandle] = useState("");
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Friendship[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    // keep username state synced across tabs
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "nacho_username") setUsername(getCachedUsername());
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    return authService.onAuthStateChange(setUser);
   }, []);
 
   useEffect(() => {
-    if (!username) return;
-    const unsubIn = subscribeIncomingFriendRequests(username, setIncoming);
-    const unsubFriends = subscribeFriends(username, setFriends);
+    if (!user) {
+      setIncoming([]);
+      setFriends([]);
+      return;
+    }
+    const unsubIn = subscribeIncomingFriendRequests("me", setIncoming);
+    const unsubFriends = subscribeFriends("me", setFriends);
     return () => {
       unsubIn();
       unsubFriends();
     };
-  }, [username]);
+  }, [user?.uid]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!username) {
-        setTrusted(null);
+      if (!user) {
+        setProfile(null);
+        setHandleInput("");
         return;
       }
       try {
-        const ok = await isCurrentDeviceTrusted(username);
-        if (!cancelled) setTrusted(ok);
-      } catch {
-        if (!cancelled) setTrusted(false);
+        const res = await fetch("/api/user/profile", { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status === 401 ? "Sign in required" : `Failed to load profile (${res.status})`);
+        const j = (await res.json()) as { handle?: string | null };
+        if (cancelled) return;
+        const handle = typeof j?.handle === "string" ? j.handle : null;
+        setProfile({ handle });
+        setHandleInput(handle || "");
+      } catch (e: any) {
+        if (!cancelled) setProfile({ handle: null });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [user?.uid]);
 
   const friendNames = useMemo(() => {
-    if (!username) return [];
     return friends
-      .map((f) => f.users.find((u) => u !== username) || "")
-      .filter(Boolean)
+      .map((f) => (Array.isArray((f as any).handles) ? (f as any).handles : (f.users as any)))
+      .flat()
+      .filter((x: any) => typeof x === "string" && x)
+      .filter((x: any) => x !== profile?.handle)
       .sort();
-  }, [friends, username]);
+  }, [friends, profile?.handle]);
 
-  const refreshUsername = () => {
-    const u = getCachedUsername();
-    setUsername(u);
-    if (!u) setTrusted(null);
-  };
-
-  const doSignUp = async () => {
+  const doSignInGoogle = async () => {
     setBusy(true);
     setError(null);
     setAuthMessage(null);
     try {
-      const res = await signUpUsername(usernameInput);
-      if (res.status === "ok") {
-        setAuthMessage(`Username set: ${res.username}`);
-        setUsernameInput("");
-        refreshUsername();
-      } else {
-        // Sign-up currently never returns challenge, but keep for completeness.
-        setAuthMessage(`Challenge created: ${res.code} (expires soon)`);
-      }
-    } catch (e: any) {
-      setError(e?.message || "Sign up failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const doSignIn = async () => {
-    setBusy(true);
-    setError(null);
-    setAuthMessage(null);
-    try {
-      const res = await signInUsername(usernameInput);
-      if (res.status === "ok") {
-        setAuthMessage(`Signed in: ${res.username}`);
-        setUsernameInput("");
-        refreshUsername();
-      } else {
-        setAuthMessage(
-          `New device detected. Ask a trusted device to approve code: ${res.code} (expires in ~5 min)`,
-        );
-      }
+      await authService.signInWithGoogle();
+      setAuthMessage("Signed in.");
     } catch (e: any) {
       setError(e?.message || "Sign in failed");
     } finally {
@@ -132,41 +92,75 @@ export function AccountPanel() {
     }
   };
 
-  const doApprove = async () => {
-    if (!username) {
-      setError("Set your username first.");
+  const doSignInGuest = async () => {
+    setBusy(true);
+    setError(null);
+    setAuthMessage(null);
+    try {
+      await authService.signInAnonymously();
+      setAuthMessage("Signed in as guest.");
+    } catch (e: any) {
+      setError(e?.message || "Guest sign in failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doSignOut = async () => {
+    setBusy(true);
+    setError(null);
+    setAuthMessage(null);
+    try {
+      await authService.signOut();
+      setAuthMessage("Signed out.");
+    } catch (e: any) {
+      setError(e?.message || "Sign out failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveHandle = async () => {
+    if (!user) {
+      setError("Sign in required.");
       return;
     }
     setBusy(true);
     setError(null);
     setAuthMessage(null);
     try {
-      await approveLoginCode(username, otpInput);
-      setAuthMessage("Approved. The new device is now trusted.");
-      setOtpInput("");
+      const res = await fetch("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: handleInput.trim() || null }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => null)) as any;
+        throw new Error(j?.error || `Save failed (${res.status})`);
+      }
+      setProfile({ handle: handleInput.trim() ? handleInput.trim().toLowerCase() : null });
+      setAuthMessage("Profile updated.");
     } catch (e: any) {
-      setError(e?.message || "Approval failed");
+      setError(e?.message || "Failed to update profile");
     } finally {
       setBusy(false);
     }
   };
 
-  const doSignOutUsername = () => {
-    setCachedUsername(null);
-    refreshUsername();
-    setAuthMessage("Signed out (username cleared on this device).");
-  };
-
   const doSend = async () => {
-    if (!username) {
-      setError("Create/sign-in to a username to use friends.");
+    if (!user) {
+      setError("Sign in required to use friends.");
+      return;
+    }
+    if (!profile?.handle) {
+      setError("Set your handle first.");
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      await sendFriendRequest(username, friendUsername);
-      setFriendUsername("");
+      await sendFriendRequest(profile.handle, friendHandle);
+      setFriendHandle("");
     } catch (e: any) {
       setError(e?.message || "Failed to send request");
     } finally {
@@ -183,29 +177,16 @@ export function AccountPanel() {
             Account
           </h2>
           <p className="text-white/40">
-            {username ? (
-              <>
-                signed in as <span className="text-white/80 font-mono">{username}</span>
-              </>
+            {user ? (
+              <span className="text-white/70">signed in</span>
             ) : (
-              "guest mode (no username set)"
+              <span className="text-white/70">not signed in</span>
             )}
           </p>
           <p className="text-white/30 text-xs font-mono mt-1">
-            session: {user ? `${user.uid.slice(0, 8)}…` : "loading…"}
+            uid: {user ? `${user.uid.slice(0, 10)}…` : "—"}
           </p>
-          {username && (
-            <p className="text-white/30 text-xs font-mono mt-1">
-              device trust:{" "}
-              {trusted === null ? (
-                "checking…"
-              ) : trusted ? (
-                <span className="text-green-300">trusted</span>
-              ) : (
-                <span className="text-yellow-300">not trusted</span>
-              )}
-            </p>
-          )}
+          <p className="text-white/30 text-xs font-mono mt-1">handle: {profile?.handle ? profile.handle : "—"}</p>
         </div>
       </div>
 
@@ -225,67 +206,56 @@ export function AccountPanel() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bellum-card p-6 lg:col-span-2">
           <div className="flex items-center gap-3 mb-4">
             <Shield className="text-cyan-300" />
-            <div className="font-bold text-lg">Username security (no password)</div>
-            {username && (
-              <button
-                type="button"
-                onClick={doSignOutUsername}
-                className="ml-auto px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2"
-              >
-                <LogOut size={14} />
-                Sign out username
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              className="bellum-input md:col-span-2"
-              placeholder="username (a-z, 0-9, _)"
-              value={usernameInput}
-              onChange={(e) => setUsernameInput(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void doSignIn()}
-                className="flex-1 px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm"
-              >
-                Sign in
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void doSignUp()}
-                className="flex-1 px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm"
-              >
-                Create
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <input
-              className="bellum-input md:col-span-2"
-              placeholder="6-digit approval code (from trusted device)"
-              value={otpInput}
-              onChange={(e) => setOtpInput(e.target.value)}
-            />
+            <div className="font-bold text-lg">Authentication</div>
             <button
               type="button"
-              disabled={busy || !username}
-              onClick={() => void doApprove()}
-              className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm inline-flex items-center justify-center gap-2"
-              title={!username ? "Set your username first" : "Approve a new device login"}
+              onClick={() => void doSignOut()}
+              disabled={busy || !user}
+              className="ml-auto px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 text-xs font-bold inline-flex items-center gap-2 disabled:opacity-50"
             >
-              <KeyRound size={16} />
-              Approve
+              <LogOut size={14} />
+              Sign out
             </button>
           </div>
 
-          <div className="text-xs text-white/35 mt-3">
-            You can play/install as a guest (anonymous session). Usernames are only needed for social features like friends.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void doSignInGoogle()}
+              className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <LogIn size={16} />
+              Sign in with Google
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void doSignInGuest()}
+              className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <User size={16} />
+              Continue as guest
+            </button>
+          </div>
+
+          <div className="mt-6 rounded-xl border-2 border-white/10 bg-white/5 p-4">
+            <div className="flex items-center gap-2 font-bold text-white">
+              <AtSign size={16} className="text-white/70" />
+              Your handle (for friends)
+            </div>
+            <div className="text-xs text-white/45 mt-1">Pick a unique handle: a-z, 0-9, underscore (3–20 chars).</div>
+            <div className="mt-3 flex gap-2">
+              <input className="bellum-input flex-1" placeholder="handle" value={handleInput} onChange={(e) => setHandleInput(e.target.value)} />
+              <button
+                type="button"
+                disabled={busy || !user}
+                onClick={() => void saveHandle()}
+                className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </motion.div>
 
@@ -298,9 +268,9 @@ export function AccountPanel() {
           <div className="flex gap-3">
             <input
               className="bellum-input"
-              placeholder="friend username"
-              value={friendUsername}
-              onChange={(e) => setFriendUsername(e.target.value)}
+              placeholder="friend handle"
+              value={friendHandle}
+              onChange={(e) => setFriendHandle(e.target.value)}
             />
             <button
               type="button"
@@ -312,9 +282,9 @@ export function AccountPanel() {
             </button>
           </div>
 
-          {!username && (
+          {!user && (
             <div className="text-xs text-white/40 mt-3">
-              To use friends, set a username in Settings → Security (or the login modal) and come back.
+              Sign in and set a handle to use friends.
             </div>
           )}
         </motion.div>

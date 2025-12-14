@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { adminDb, jsonError } from '@/app/api/user/_util';
-import { isCurrentDeviceTrusted, normalizeUsername, requireFingerprint } from '@/lib/server/nacho-auth';
+import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
+import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
@@ -17,11 +17,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const fingerprint = requireFingerprint(req);
-    const usernameRaw = req.headers.get('X-Nacho-Username') || '';
-    const username = normalizeUsername(usernameRaw);
-    const ok = await isCurrentDeviceTrusted(username, fingerprint);
-    if (!ok) throw new Error('Device not trusted for that username');
+    requireSameOrigin(req);
+    const { uid } = await requireAuthedUser(req);
+    rateLimit(req, { scope: 'archives_publish', limit: 60, windowMs: 60_000, key: uid });
 
     const body = (await req.json().catch(() => ({}))) as any;
     const entry = body.entry as any;
@@ -31,12 +29,12 @@ export async function POST(req: Request) {
     const now = Date.now();
     const ref = await db.collection('archives').add({
       ...entry,
-      publisherUid: username,
+      publisherUid: uid,
       publishedAt: now,
     });
     return NextResponse.json({ id: ref.id }, { status: 200 });
   } catch (e: any) {
-    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+    return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
 

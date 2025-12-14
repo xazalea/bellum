@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import AdmZip from 'adm-zip';
 import { adminDb } from '@/app/api/user/_util';
+import { requireTelegramBotToken, telegramDownloadFileBytes } from '@/lib/server/telegram';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type SiteRecord = {
-  ownerUsername: string;
+  ownerUid: string;
   domain: string;
   bundleFileId: string; // Telegram manifest file_id (from /api/telegram/manifest)
   createdAt: number;
@@ -57,25 +59,18 @@ async function downloadTelegramManifest(origin: string, fileId: string): Promise
   const cached = manifestCache.get(fileId);
   if (cached && cached.expiresAt > Date.now()) return cached.manifest;
 
-  const res = await fetch(`${origin}/api/telegram/manifest?fileId=${encodeURIComponent(fileId)}`, {
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    const t = await res.text().catch(() => '');
-    throw new Error(`Manifest download failed (${res.status}): ${t}`);
-  }
-  const manifest = (await res.json()) as TelegramManifest;
+  const token = requireTelegramBotToken();
+  const bytes = await telegramDownloadFileBytes({ token, fileId });
+  const text = new TextDecoder().decode(bytes);
+  const manifest = JSON.parse(text) as TelegramManifest;
   manifestCache.set(fileId, { manifest, expiresAt: Date.now() + MANIFEST_TTL_MS });
   return manifest;
 }
 
 async function downloadTelegramFile(origin: string, fileId: string): Promise<Uint8Array> {
-  const res = await fetch(`${origin}/api/telegram/file?file_id=${encodeURIComponent(fileId)}`, { cache: 'no-store' });
-  if (!res.ok) {
-    const t = await res.text().catch(() => '');
-    throw new Error(`Chunk download failed (${res.status}): ${t}`);
-  }
-  return new Uint8Array(await res.arrayBuffer());
+  void origin;
+  const token = requireTelegramBotToken();
+  return await telegramDownloadFileBytes({ token, fileId });
 }
 
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, idx: number) => Promise<R>): Promise<R[]> {
@@ -129,10 +124,24 @@ export async function GET(req: Request, ctx: { params: { siteId: string; path?: 
     if (!siteId) return NextResponse.json({ error: 'missing_siteId' }, { status: 400 });
 
     const db = adminDb();
-    const snap = await db.collection('xfabric_sites').doc(siteId).get();
+    const siteRef = db.collection('xfabric_sites').doc(siteId);
+    const snap = await siteRef.get();
     if (!snap.exists) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     const site = snap.data() as SiteRecord;
     if (!site?.bundleFileId) return NextResponse.json({ error: 'invalid_site' }, { status: 500 });
+
+    // Best-effort analytics (do not block serving on failures).
+    void siteRef
+      .set(
+        {
+          stats: {
+            totalRequests: FieldValue.increment(1),
+            lastRequestAt: Date.now(),
+          },
+        },
+        { merge: true },
+      )
+      .catch(() => {});
 
     const origin = new URL(req.url).origin;
     pruneCaches();

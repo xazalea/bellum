@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
-import { adminDb, jsonError } from '@/app/api/user/_util';
-import { isCurrentDeviceTrusted, normalizeUsername, requireFingerprint } from '@/lib/server/nacho-auth';
+import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
+import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request, ctx: { params: { repoId: string } }) {
   try {
-    const fingerprint = requireFingerprint(req);
-    const username = normalizeUsername(req.headers.get('X-Nacho-Username') || '');
-    const ok = await isCurrentDeviceTrusted(username, fingerprint);
-    if (!ok) throw new Error('Device not trusted for that username');
+    requireSameOrigin(req);
+    const { uid } = await requireAuthedUser(req);
+    rateLimit(req, { scope: 'game_repos_add_game', limit: 300, windowMs: 60_000, key: uid });
 
     const body = (await req.json().catch(() => ({}))) as any;
     const game = body.game as any;
@@ -20,7 +19,7 @@ export async function POST(req: Request, ctx: { params: { repoId: string } }) {
     const snap = await repoRef.get();
     if (!snap.exists) throw new Error('Repository not found');
     const repo = snap.data() as any;
-    if (repo?.ownerName !== username && repo?.ownerId !== fingerprint) throw new Error('You do not own this repository');
+    if (repo?.ownerUid !== uid) throw new Error('You do not own this repository');
 
     const games = Array.isArray(repo?.games) ? repo.games : [];
     games.push(game);
@@ -28,7 +27,7 @@ export async function POST(req: Request, ctx: { params: { repoId: string } }) {
 
     return new NextResponse(null, { status: 204 });
   } catch (e: any) {
-    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+    return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
 

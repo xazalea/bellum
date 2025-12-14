@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, User, LogIn, ShieldAlert } from 'lucide-react';
-import { signInUsername, signUpUsername, isCurrentDeviceTrusted, type NachoAuthResult } from '@/lib/auth/nacho-auth';
+import { X, LogIn, User } from 'lucide-react';
+import { authService } from '@/lib/firebase/auth-service';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -11,54 +11,34 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuccess }) => {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [challenge, setChallenge] = useState<Extract<NachoAuthResult, { status: 'challenge' }> | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogle = async () => {
     setError(null);
-    setChallenge(null);
     setLoading(true);
-
     try {
-      let res: NachoAuthResult;
-      if (mode === 'signin') {
-        res = await signInUsername(username);
-      } else {
-        res = await signUpUsername(username);
-      }
-
-      if (res.status === 'ok') {
-        onAuthSuccess();
-        onClose();
-      } else {
-        setChallenge(res);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      await authService.signInWithGoogle();
+      onAuthSuccess();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || 'Google sign-in failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCheckApproved = async () => {
+  const handleGuest = async () => {
     setError(null);
     setLoading(true);
     try {
-      const ok = await isCurrentDeviceTrusted(username);
-      if (!ok) {
-        setError('Still pending. Approve the code from a trusted device, then check again.');
-        return;
-      }
+      await authService.signInAnonymously();
       onAuthSuccess();
       onClose();
     } catch (e: any) {
-      setError(e?.message || 'Check failed');
+      setError(e?.message || 'Guest sign-in failed');
     } finally {
       setLoading(false);
     }
@@ -78,12 +58,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-white mb-2">
-            {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
+            Sign in
           </h2>
           <p className="text-gray-400">
-            {mode === 'signin' 
-              ? 'Sign in with your username (device fingerprint verified)' 
-              : 'Pick a unique username (no passwords)'}
+            Sign in to unlock hosting, storage, and social features.
           </p>
         </div>
 
@@ -94,84 +72,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <User size={16} className="inline mr-2" />
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-              placeholder="e.g. rohan_01"
-              required
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-            <div className="text-xs text-white/40 mt-2">
-              3–20 chars: a-z, 0-9, underscore.
-            </div>
-          </div>
-
+        <div className="space-y-3">
           <button
-            type="submit"
+            type="button"
             disabled={loading}
+            onClick={() => void handleGoogle()}
             className="w-full bellum-btn disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black mr-2"></div>
-                Processing...
-              </div>
-            ) : (
-              <>
-                <LogIn size={18} className="inline mr-2" />
-                {mode === 'signin' ? 'Sign In' : 'Create Account'}
-              </>
-            )}
+            <LogIn size={18} className="inline mr-2" />
+            Continue with Google
           </button>
-        </form>
-
-        {challenge && (
-          <div className="mt-6 bellum-card p-4 border-2 border-yellow-400/25 bg-yellow-500/10">
-            <div className="flex items-center gap-2 font-semibold text-yellow-100">
-              <ShieldAlert size={18} />
-              New device approval required
-            </div>
-            <div className="text-sm text-yellow-100/80 mt-2">
-              On a trusted device already logged in as <span className="font-mono">{challenge.username}</span>, open Settings and approve this code:
-            </div>
-            <div className="mt-3 text-center text-3xl font-mono font-bold tracking-widest text-white">
-              {challenge.code}
-            </div>
-            <div className="text-xs text-white/50 mt-2">
-              Expires in ~5 minutes.
-            </div>
-            <button
-              type="button"
-              onClick={handleCheckApproved}
-              disabled={loading}
-              className="mt-4 w-full bellum-btn bellum-btn-secondary disabled:opacity-50"
-            >
-              I approved it — check again
-            </button>
-          </div>
-        )}
-
-        {/* Toggle Mode */}
-        <div className="mt-6 text-center">
           <button
-            onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
-            className="text-white/70 hover:text-white transition-colors text-sm"
+            type="button"
+            disabled={loading}
+            onClick={() => void handleGuest()}
+            className="w-full px-4 py-3 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transition-colors text-white font-semibold disabled:opacity-50"
           >
-            {mode === 'signin' 
-              ? "Don't have an account? Sign up" 
-              : 'Already have an account? Sign in'}
+            <User size={18} className="inline mr-2" />
+            Continue as guest
           </button>
+          <div className="text-xs text-white/40">
+            Guest accounts are real Firebase anonymous accounts (server-verified). You can upgrade later by signing in with Google on the same device.
+          </div>
         </div>
       </div>
     </div>

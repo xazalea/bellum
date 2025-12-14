@@ -2,17 +2,13 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/server/firebase-admin';
-import { isCurrentDeviceTrusted, normalizeUsername, requireFingerprint } from '@/lib/server/nacho-auth';
+import { verifySessionCookieFromRequest } from '@/lib/server/session';
 
 export const runtime = 'nodejs';
 
-export async function requireTrustedUser(req: Request): Promise<{ username: string; fingerprint: string }> {
-  const fingerprint = requireFingerprint(req);
-  const usernameRaw = req.headers.get('X-Nacho-Username') || '';
-  const username = normalizeUsername(usernameRaw);
-  const ok = await isCurrentDeviceTrusted(username, fingerprint);
-  if (!ok) throw new Error('Device not trusted for that username');
-  return { username, fingerprint };
+export async function requireAuthedUser(req: Request): Promise<{ uid: string; email?: string; name?: string }> {
+  const u = await verifySessionCookieFromRequest(req);
+  return { uid: u.uid, email: u.email, name: u.name };
 }
 
 export function adminDb() {

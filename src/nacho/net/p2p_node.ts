@@ -58,6 +58,7 @@ export class P2PNode {
             await pc.setRemoteDescription(offer);
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
+            this.onSignalCallbacks.forEach(cb => cb({ type: 'answer', from: this.id, to: remoteId, sdp: answer }));
             
             pc.ondatachannel = (event) => {
                 this.setupDataChannel(remoteId, event.channel);

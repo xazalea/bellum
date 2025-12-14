@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Settings as SettingsIcon, Shield, Database, Wifi, Cpu, Code, Network } from 'lucide-react';
 import { onSettings, setClusterParticipation, type NachoUserSettings } from '@/lib/cluster/settings';
 import { NACHO_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
-import { approveLoginCode, getCachedUsername } from '@/lib/auth/nacho-auth';
+import { authService } from '@/lib/firebase/auth-service';
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -19,10 +19,8 @@ export const SettingsPanel = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState<NachoUserSettings>({ clusterParticipation: true });
   const [storageUsed, setStorageUsed] = useState<number | null>(null);
-  const [otpCode, setOtpCode] = useState<string>('');
-  const [otpStatus, setOtpStatus] = useState<string | null>(null);
   const [cursorPref, setCursorPref] = useState<'custom' | 'native'>('native');
-  const username = getCachedUsername();
+  const [user, setUser] = useState(() => authService.getCurrentUser());
 
   const tabs = useMemo(() => [
     { id: 'general', label: 'General', icon: SettingsIcon },
@@ -33,10 +31,14 @@ export const SettingsPanel = () => {
   ], []);
 
   useEffect(() => {
+    return authService.onAuthStateChange(setUser);
+  }, []);
+
+  useEffect(() => {
     let unsub = () => {};
-    if (username) unsub = onSettings(username, setSettings);
+    if (user) unsub = onSettings(user.uid, setSettings);
     return () => unsub();
-  }, [username]);
+  }, [user?.uid]);
 
   useEffect(() => {
     try {
@@ -48,9 +50,9 @@ export const SettingsPanel = () => {
   }, []);
 
   const toggleCluster = async () => {
-    if (!username) return;
+    if (!user) return;
     const next = !settings.clusterParticipation;
-    await setClusterParticipation(username, next);
+    await setClusterParticipation(user.uid, next);
     setSettings((s) => ({ ...s, clusterParticipation: next }));
   };
 
@@ -186,7 +188,7 @@ export const SettingsPanel = () => {
                   </div>
                   <div className="text-white/40">
                     {storageUsed === null
-                      ? 'sign in to track usage'
+                      ? 'usage tracking coming soon'
                       : `remaining ${formatBytes(Math.max(0, NACHO_STORAGE_LIMIT_BYTES - storageUsed))}`}
                   </div>
                 </div>
@@ -200,55 +202,9 @@ export const SettingsPanel = () => {
             </div>
           </div>
 
-          {/* Pro / Advanced Mode */}
           <div className="pt-6 border-t border-white/10">
-            <div className="bg-white/5 p-6 rounded-xl border-2 border-sky-200/15">
-              <div className="flex items-center gap-3 mb-2">
-                <Shield size={20} className="text-sky-200" />
-                <h4 className="font-bold text-white">Advanced mode</h4>
-              </div>
-              <p className="text-sm text-white/55 mb-4">
-                Extra options for power users. If anything feels confusing, you can ignore this section.
-              </p>
-              <button className="bellum-btn text-sm py-2 px-4">Enable Advanced Features</button>
-            </div>
-          </div>
-
-          {/* Security: OTP approval for new devices */}
-          <div className="pt-6 border-t border-white/10">
-            <h4 className="text-xs uppercase tracking-widest text-white/40 font-bold mb-3">Security</h4>
-            <div className="p-4 bg-white/5 rounded-xl border-2 border-white/10 space-y-3">
-              <div className="text-sm text-white/70">
-                Approve a new device login for <span className="font-mono text-white">{username ?? '—'}</span> by entering the 6‑digit code shown on the new device.
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder="123456"
-                  className="bellum-input flex-1 py-2 px-3 font-mono"
-                  inputMode="numeric"
-                />
-                <button
-                  type="button"
-                  disabled={!username || !otpCode || otpCode.trim().length < 6}
-                  onClick={async () => {
-                    try {
-                      setOtpStatus(null);
-                      if (!username) throw new Error('No username in this session.');
-                      await approveLoginCode(username, otpCode);
-                      setOtpStatus('Approved.');
-                      setOtpCode('');
-                    } catch (e: any) {
-                      setOtpStatus(e?.message || 'Approval failed.');
-                    }
-                  }}
-                  className="bellum-btn-secondary px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 disabled:opacity-50"
-                >
-                  Approve
-                </button>
-              </div>
-              {otpStatus && <div className="text-xs text-white/60">{otpStatus}</div>}
+            <div className="text-xs text-white/45">
+              Tip: account/profile settings live in the Account tab. These settings are device-local or server-backed and apply immediately.
             </div>
           </div>
         </div>

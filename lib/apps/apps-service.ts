@@ -1,7 +1,5 @@
 import { deleteClusterFile } from "@/lib/storage/chunked-download";
 import { opfsDelete } from "@/lib/storage/local-opfs";
-import { getCachedUsername } from "@/lib/auth/nacho-auth";
-import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 
 export type AppType = "android" | "windows" | "unknown";
 export type AppScope = "user" | "public";
@@ -19,13 +17,6 @@ export interface InstalledApp {
   compression: "none" | "gzip-chunked";
 }
 
-async function nachoHeaders(): Promise<Record<string, string>> {
-  const username = getCachedUsername();
-  if (!username) throw new Error("Not signed in");
-  const fp = await getDeviceFingerprintId();
-  return { "X-Nacho-Username": username, "X-Nacho-Fingerprint": fp };
-}
-
 export function detectAppType(fileName: string): AppType {
   const n = fileName.toLowerCase();
   if (n.endsWith(".apk")) return "android";
@@ -35,11 +26,12 @@ export function detectAppType(fileName: string): AppType {
 
 export function subscribeInstalledApps(uid: string, cb: (apps: InstalledApp[]) => void): () => void {
   // Server-backed polling subscription (secure).
+  void uid;
   let stopped = false;
   const poll = async () => {
     if (stopped) return;
     try {
-      const res = await fetch("/api/user/apps", { headers: await nachoHeaders() });
+      const res = await fetch("/api/user/apps", { cache: "no-store" });
       if (!res.ok) return;
       const apps = (await res.json().catch(() => [])) as InstalledApp[];
       cb(Array.isArray(apps) ? apps : []);
@@ -56,9 +48,10 @@ export function subscribeInstalledApps(uid: string, cb: (apps: InstalledApp[]) =
 }
 
 export async function addInstalledApp(uid: string, app: Omit<InstalledApp, "id">): Promise<string> {
+  void uid;
   const res = await fetch("/api/user/apps", {
     method: "POST",
-    headers: { ...(await nachoHeaders()), "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ app }),
   });
   if (!res.ok) {
@@ -70,9 +63,10 @@ export async function addInstalledApp(uid: string, app: Omit<InstalledApp, "id">
 }
 
 export async function removeInstalledApp(uid: string, appId: string): Promise<void> {
+  void uid;
   const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
     method: "DELETE",
-    headers: await nachoHeaders(),
+    cache: "no-store",
   });
   if (!res.ok && res.status !== 204) {
     const j = (await res.json().catch(() => null)) as any;
@@ -104,7 +98,8 @@ export async function removeInstalledAppWithCleanup(uid: string, app: InstalledA
 }
 
 export async function listInstalledApps(uid: string): Promise<InstalledApp[]> {
-  const res = await fetch("/api/user/apps", { headers: await nachoHeaders() });
+  void uid;
+  const res = await fetch("/api/user/apps", { cache: "no-store" });
   if (!res.ok) return [];
   const apps = (await res.json().catch(() => [])) as InstalledApp[];
   return Array.isArray(apps) ? apps : [];

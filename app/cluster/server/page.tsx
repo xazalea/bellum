@@ -4,14 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { authService } from "@/lib/firebase/auth-service";
 import { nachoEngine } from "@/lib/nacho/engine";
 
-type TelegramStatus = { enabled: boolean; hasToken: boolean; hasChatId: boolean };
+type TelegramStatus = { enabled: boolean };
 
 export default function ClusterServerPage() {
   const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
   const [engineStatus, setEngineStatus] = useState<"idle" | "booting" | "online" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const uid = authService.getCurrentUser()?.uid ?? null;
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  useEffect(() => authService.onAuthStateChange(setUser), []);
+  const uid = user?.uid ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -21,7 +23,7 @@ export default function ClusterServerPage() {
         const j = (await res.json().catch(() => null)) as TelegramStatus | null;
         if (!cancelled) setTelegram(j);
       } catch {
-        if (!cancelled) setTelegram({ enabled: false, hasToken: false, hasChatId: false });
+        if (!cancelled) setTelegram({ enabled: false });
       }
     })();
     return () => {
@@ -51,7 +53,6 @@ export default function ClusterServerPage() {
   const telegramLabel = useMemo(() => {
     if (!telegram) return "checking…";
     if (telegram.enabled) return "enabled";
-    if (telegram.hasToken || telegram.hasChatId) return "misconfigured";
     return "disabled";
   }, [telegram]);
 

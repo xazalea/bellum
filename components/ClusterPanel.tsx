@@ -4,10 +4,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Network, Zap, Cpu, Share2, Shield, Activity } from 'lucide-react';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
-import { getCachedUsername } from '@/lib/auth/nacho-auth';
+import { authService } from '@/lib/firebase/auth-service';
 
 export const ClusterPanel = () => {
-  const username = getCachedUsername();
+  const [user, setUser] = useState(() => authService.getCurrentUser());
   const [peers, setPeers] = useState<Array<{
     userId: string;
     deviceId: string;
@@ -34,7 +34,11 @@ export const ClusterPanel = () => {
   }, []);
 
   useEffect(() => {
-    if (!username) return;
+    return authService.onAuthStateChange(setUser);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
     let stopped = false;
 
     const poll = async () => {
@@ -44,11 +48,7 @@ export const ClusterPanel = () => {
         const bases = base ? [base, ''] : [''];
         let json: any[] | null = null;
         for (const b of bases) {
-          const res = await fetch(`${b}/api/cluster/peers`, {
-            headers: {
-              'X-Nacho-UserId': username,
-            },
-          });
+          const res = await fetch(`${b}/api/cluster/peers`, { cache: 'no-store' });
           if (!res.ok) continue;
           json = (await res.json()) as any[];
           break;
@@ -68,12 +68,12 @@ export const ClusterPanel = () => {
     };
 
     void poll();
-    const t = window.setInterval(() => void poll(), 5000);
+    const t = window.setInterval(() => void poll(), 8000);
     return () => {
       stopped = true;
       window.clearInterval(t);
     };
-  }, [username, base]);
+  }, [user?.uid, base]);
 
   const onlineCount = peers.length;
 
@@ -104,19 +104,13 @@ export const ClusterPanel = () => {
                   ) : null}
                 </div>
             </div>
-            <div className="flex gap-4 text-right">
-                <div>
-                    <div className="text-xs text-white/40 uppercase">Total Compute</div>
-                    <div className="text-xl font-mono font-bold text-green-400">Best-effort</div>
-                </div>
-                <div>
-                    <div className="text-xs text-white/40 uppercase">Latency</div>
-                    <div className="text-xl font-mono font-bold text-sky-200">—</div>
-                </div>
+            <div className="text-right">
+              <div className="text-xs text-white/40 uppercase">This device</div>
+              <div className="text-sm font-mono text-white/70">{myDeviceId ? `${myDeviceId.slice(0, 10)}…` : "—"}</div>
             </div>
         </div>
 
-        {!username && (
+        {!user && (
           <div className="bellum-card p-6 mb-8 border-2 border-white/10">
             <div className="text-white/80 font-semibold">Sign in to see your devices here.</div>
             <div className="text-white/50 text-sm mt-1">
@@ -124,7 +118,7 @@ export const ClusterPanel = () => {
             </div>
           </div>
         )}
-        {username && onlineCount === 0 && (
+        {user && onlineCount === 0 && (
           <div className="bellum-card p-6 mb-8 border-2 border-white/10">
             <div className="text-white/80 font-semibold">No active nodes yet</div>
             <div className="text-white/50 text-sm mt-1">

@@ -1,6 +1,5 @@
 import { NACHO_STORAGE_LIMIT_BYTES } from "@/lib/storage/quota";
-import { getCachedUsername } from "@/lib/auth/nacho-auth";
-import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
+import { authService } from "@/lib/firebase/auth-service";
 
 export interface ChunkedUploadInit {
   fileName: string;
@@ -35,11 +34,10 @@ function getClusterBase(): string {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const username = getCachedUsername();
-  if (!username) return {};
-  // For labeling / grouping only (Telegram routes are server-side; auth is enforced elsewhere).
-  const fp = await getDeviceFingerprintId();
-  return { "X-Nacho-UserId": username, "X-Nacho-Fingerprint": fp };
+  const user = authService.getCurrentUser();
+  if (!user) return {};
+  // Legacy header name kept for compatibility with external cluster server.
+  return { "X-Nacho-UserId": user.uid };
 }
 
 async function sha256Hex(data: ArrayBuffer | Uint8Array): Promise<string> {
@@ -91,8 +89,8 @@ export async function chunkedUploadFile(
   } = {}
 ): Promise<ChunkedUploadResult> {
   const base = getClusterBase();
-  const username = getCachedUsername();
-  if (!username) throw new Error("Sign in required");
+  const user = authService.getCurrentUser();
+  if (!user) throw new Error("Sign in required");
 
   // Best-effort: enforce cloud quota client-side (6GB) for Telegram-backed storage.
   // NOTE: quota tracking used to rely on client Firestore. With locked rules, we skip per-user tracking here.
@@ -130,7 +128,6 @@ export async function chunkedUploadFile(
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",
-          "X-Nacho-UserId": username,
           "X-File-Name": file.name,
           "X-Upload-Id": uploadId,
           "X-Chunk-Index": String(i),
@@ -152,7 +149,7 @@ export async function chunkedUploadFile(
 
     const manRes = await fetch(`/api/telegram/manifest`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Nacho-UserId": username },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fileName: file.name,
         totalBytes: file.size,

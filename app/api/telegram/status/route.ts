@@ -6,8 +6,6 @@ export async function GET() {
   const chatId = process.env.TELEGRAM_STORAGE_CHAT_ID;
   return Response.json({
     enabled: !!token && !!chatId,
-    hasToken: !!token,
-    hasChatId: !!chatId,
   });
 }
 

@@ -1,54 +1,10 @@
+import { adminDb } from "@/app/api/user/_util";
+import { verifySessionCookieFromRequest } from "@/lib/server/session";
+import { requireTelegramBotToken, requireTelegramStorageChatId, telegramSendDocument } from "@/lib/server/telegram";
+import { rateLimit, requireSameOrigin } from "@/lib/server/security";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-type TelegramSendDocumentResponse = {
-  ok: boolean;
-  result?: {
-    message_id: number;
-    document?: { file_id: string };
-  };
-  description?: string;
-};
-
-function requireTelegramConfig() {
-  const token = process.env.TELEGRAM_BOT_TOKEN || "";
-  const chatId = process.env.TELEGRAM_STORAGE_CHAT_ID || "";
-  if (!token || !chatId) {
-    throw new Error("Telegram storage not configured (missing env vars).");
-  }
-  return { token, chatId };
-}
-
-async function sendDocument(opts: {
-  token: string;
-  chatId: string;
-  caption: string;
-  filename: string;
-  bytes: Uint8Array;
-}) {
-  const url = `https://api.telegram.org/bot${opts.token}/sendDocument`;
-  const form = new FormData();
-  form.set("chat_id", opts.chatId);
-  form.set("caption", opts.caption);
-  // Ensure ArrayBuffer-backed payload (BlobPart typings exclude SharedArrayBuffer).
-  const copy = new Uint8Array(opts.bytes.byteLength);
-  copy.set(opts.bytes);
-  form.set(
-    "document",
-    new File([copy.buffer], opts.filename, { type: "application/octet-stream" }),
-  );
-
-  const res = await fetch(url, { method: "POST", body: form });
-  const json = (await res.json().catch(() => null)) as TelegramSendDocumentResponse | null;
-  if (!res.ok || !json?.ok) {
-    const msg = json?.description || `Telegram sendDocument failed (${res.status})`;
-    throw new Error(msg);
-  }
-  const fileId = json.result?.document?.file_id;
-  const messageId = json.result?.message_id;
-  if (!fileId || typeof messageId !== "number") throw new Error("Telegram response missing file_id/message_id");
-  return { fileId, messageId };
-}
 
 /**
  * Uploads a binary blob to Telegram storage.
@@ -67,9 +23,12 @@ async function sendDocument(opts: {
  */
 export async function POST(req: Request) {
   try {
-    const { token, chatId } = requireTelegramConfig();
+    requireSameOrigin(req);
+    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    rateLimit(req, { scope: "telegram_upload", limit: 30, windowMs: 60_000, key: uid });
+    const token = requireTelegramBotToken();
+    const chatId = requireTelegramStorageChatId();
 
-    const userId = req.headers.get("X-Nacho-UserId") || "anon";
     const fileName = req.headers.get("X-File-Name") || "upload.bin";
     const uploadId = req.headers.get("X-Upload-Id") || crypto.randomUUID();
     const chunkIndex = req.headers.get("X-Chunk-Index");
@@ -87,14 +46,14 @@ export async function POST(req: Request) {
 
     const caption =
       chunkIndex !== null
-        ? `nacho:${userId}:${uploadId}:chunk:${chunkIndex}/${chunkTotal ?? "?"}:${fileName}`
-        : `nacho:${userId}:${uploadId}:file:${fileName}`;
+        ? `bellum:${uid}:${uploadId}:chunk:${chunkIndex}/${chunkTotal ?? "?"}:${fileName}`
+        : `bellum:${uid}:${uploadId}:file:${fileName}`;
 
     const safeBase = fileName.replace(/[^\w.\-()+ ]+/g, "_").slice(0, 80) || "file";
     const outName =
       chunkIndex !== null ? `nacho_${uploadId}_chunk_${String(chunkIndex).padStart(6, "0")}_${safeBase}.bin` : `nacho_${uploadId}_${safeBase}.bin`;
 
-    const { fileId, messageId } = await sendDocument({
+    const { fileId, messageId } = await telegramSendDocument({
       token,
       chatId,
       caption,
@@ -102,9 +61,29 @@ export async function POST(req: Request) {
       bytes: buf,
     });
 
+    // Record ownership so clients can only access their own objects.
+    await adminDb()
+      .collection("telegram_files")
+      .doc(fileId)
+      .set(
+        {
+          ownerUid: uid,
+          kind: chunkIndex !== null ? "chunk" : "file",
+          uploadId,
+          fileName,
+          chunkIndex: chunkIndex !== null ? Number(chunkIndex) : null,
+          chunkTotal: chunkTotal !== null ? Number(chunkTotal) : null,
+          sizeBytes: buf.byteLength,
+          createdAt: Date.now(),
+        },
+        { merge: true },
+      );
+
     return Response.json({ fileId, messageId });
   } catch (e: any) {
-    return Response.json({ error: e?.message || "Telegram upload failed" }, { status: 500 });
+    const msg = e?.message || "Telegram upload failed";
+    const status = msg.includes("unauthenticated") ? 401 : 500;
+    return Response.json({ error: msg }, { status });
   }
 }
 

@@ -1,6 +1,3 @@
-import { getCachedUsername } from '@/lib/auth/nacho-auth';
-import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
-
 export interface NachoUserSettings {
   clusterParticipation: boolean;
 }
@@ -9,32 +6,28 @@ const DEFAULT_SETTINGS: NachoUserSettings = {
   clusterParticipation: true,
 };
 
-async function headers() {
-  const username = getCachedUsername();
-  if (!username) throw new Error('Not signed in');
-  const fp = await getDeviceFingerprintId();
-  return { 'X-Nacho-Username': username, 'X-Nacho-Fingerprint': fp };
-}
-
 export async function ensureNachoSettings(uid: string): Promise<void> {
+  void uid;
   // Server initializes defaults on read.
-  await fetch('/api/user/settings', { headers: await headers() }).catch(() => {});
+  await fetch('/api/user/settings', { cache: 'no-store' }).catch(() => {});
 }
 
 export async function setClusterParticipation(uid: string, enabled: boolean): Promise<void> {
+  void uid;
   await fetch('/api/user/settings', {
     method: 'POST',
-    headers: { ...(await headers()), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ clusterParticipation: enabled }),
   });
 }
 
 export function onSettings(uid: string, cb: (settings: NachoUserSettings) => void): () => void {
+  void uid;
   let stopped = false;
   const poll = async () => {
     if (stopped) return;
     try {
-      const res = await fetch('/api/user/settings', { headers: await headers() });
+      const res = await fetch('/api/user/settings', { cache: 'no-store' });
       if (!res.ok) return;
       const data = (await res.json().catch(() => null)) as Partial<NachoUserSettings> | null;
       cb({

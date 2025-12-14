@@ -8,8 +8,6 @@ import { downloadClusterFile } from '@/lib/storage/chunked-download';
 import { os } from '@/src/nacho_os';
 import type { InstalledApp } from '@/lib/apps/apps-service';
 import { opfsReadBytes, opfsWriteBytes } from '@/lib/storage/local-opfs';
-import { getCachedUsername } from '@/lib/auth/nacho-auth';
-import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 
 export interface AppRunnerProps {
   appId?: string;
@@ -23,7 +21,8 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
   const [progress, setProgress] = useState<number>(0);
   const [app, setApp] = useState<InstalledApp | null>(null);
 
-  const user = authService.getCurrentUser();
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  useEffect(() => authService.onAuthStateChange(setUser), []);
 
   const canRun = useMemo(() => !!user && !!appId, [user, appId]);
 
@@ -41,17 +40,11 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       }
 
       setStatus('Loading metadata…');
-      const username = getCachedUsername();
-      if (!username) {
-        setStatus('Sign in required');
-        return;
-      }
-      const fp = await getDeviceFingerprintId();
       const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
-        headers: { 'X-Nacho-Username': username, 'X-Nacho-Fingerprint': fp },
+        cache: 'no-store',
       });
       if (!res.ok) {
-        setStatus(res.status === 403 ? 'Device not trusted' : 'App not found');
+        setStatus(res.status === 401 ? 'Sign in required' : 'App not found');
         return;
       }
       const appData = (await res.json()) as InstalledApp;

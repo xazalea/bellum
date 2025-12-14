@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { adminDb, jsonError, requireTrustedUser } from '@/app/api/user/_util';
+import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
+import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
@@ -15,7 +16,7 @@ function normalizeDomain(input: string): string {
 
 type SiteRecord = {
   id: string;
-  ownerUsername: string;
+  ownerUid: string;
   domain: string | null;
   bundleFileId: string;
   createdAt: number;
@@ -23,11 +24,11 @@ type SiteRecord = {
 
 export async function GET(req: Request) {
   try {
-    const { username } = await requireTrustedUser(req);
+    const { uid } = await requireAuthedUser(req);
     const db = adminDb();
     const snap = await db
       .collection('xfabric_sites')
-      .where('ownerUsername', '==', username)
+      .where('ownerUid', '==', uid)
       .orderBy('createdAt', 'desc')
       .limit(50)
       .get();
@@ -35,13 +36,15 @@ export async function GET(req: Request) {
     const sites = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as SiteRecord[];
     return NextResponse.json({ sites }, { status: 200 });
   } catch (e: any) {
-    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+    return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { username } = await requireTrustedUser(req);
+    requireSameOrigin(req);
+    const { uid } = await requireAuthedUser(req);
+    rateLimit(req, { scope: 'xfabric_sites_create', limit: 30, windowMs: 60_000, key: uid });
     const body = (await req.json().catch(() => ({}))) as { domain?: string; bundleFileId?: string };
     const domainRaw = String(body.domain || '').trim();
     const domain = domainRaw ? normalizeDomain(domainRaw) : null;
@@ -53,7 +56,7 @@ export async function POST(req: Request) {
     const ref = db.collection('xfabric_sites').doc();
     await ref.set(
       {
-        ownerUsername: username,
+        ownerUid: uid,
         domain,
         bundleFileId,
         createdAt,
@@ -63,7 +66,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ id: ref.id, domain, createdAt }, { status: 200 });
   } catch (e: any) {
-    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+    return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
 
