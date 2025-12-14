@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { LayoutGrid, Settings, X, Terminal, Boxes, Sparkles } from 'lucide-react';
+import { LayoutGrid, Settings, X, Terminal, Boxes, Sparkles, User } from 'lucide-react';
 
 interface DynamicIslandProps {
   activeTab: string;
@@ -124,6 +124,17 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onTabChange('account');
+                      setIsExpanded(false);
+                    }}
+                    className="p-2 rounded-full border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95"
+                    title="Account"
+                  >
+                    <User size={16} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => {

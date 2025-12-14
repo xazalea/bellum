@@ -13,11 +13,38 @@ function normalizeDomain(input: string): string {
   return d;
 }
 
+type SiteRecord = {
+  id: string;
+  ownerUsername: string;
+  domain: string | null;
+  bundleFileId: string;
+  createdAt: number;
+};
+
+export async function GET(req: Request) {
+  try {
+    const { username } = await requireTrustedUser(req);
+    const db = adminDb();
+    const snap = await db
+      .collection('xfabric_sites')
+      .where('ownerUsername', '==', username)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+
+    const sites = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as SiteRecord[];
+    return NextResponse.json({ sites }, { status: 200 });
+  } catch (e: any) {
+    return jsonError(e, e?.message?.includes('trusted') ? 403 : 400);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { username } = await requireTrustedUser(req);
     const body = (await req.json().catch(() => ({}))) as { domain?: string; bundleFileId?: string };
-    const domain = normalizeDomain(String(body.domain || ''));
+    const domainRaw = String(body.domain || '').trim();
+    const domain = domainRaw ? normalizeDomain(domainRaw) : null;
     const bundleFileId = String(body.bundleFileId || '');
     if (!bundleFileId) throw new Error('Missing bundleFileId');
 

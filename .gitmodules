@@ -16,3 +16,6 @@
 [submodule "vendor/vercel"]
 	path = vendor/vercel
 	url = https://github.com/vercel/vercel.git
+[submodule "vendor/dokploy"]
+	path = vendor/dokploy
+	url = https://github.com/Dokploy/dokploy.git
