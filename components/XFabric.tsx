@@ -231,6 +231,11 @@ export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting
                   origin={origin}
                   signedIn={!!user}
                   onDeployed={async () => {
+                    try {
+                      window.localStorage.setItem('bellum.mission.deployed_site', '1');
+                    } catch {
+                      // ignore
+                    }
                     await refreshSites();
                     setNav("projects");
                   }}

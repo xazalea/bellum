@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authService } from "@/lib/firebase/auth-service";
 import { nachoEngine } from "@/lib/nacho/engine";
 
-type TelegramStatus = { enabled: boolean };
+type TelegramStatus = { enabled: boolean; misconfigured?: boolean };
 
 export default function ClusterServerPage() {
   const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
@@ -53,6 +53,7 @@ export default function ClusterServerPage() {
   const telegramLabel = useMemo(() => {
     if (!telegram) return "checking…";
     if (telegram.enabled) return "enabled";
+    if (telegram.misconfigured) return "misconfigured";
     return "disabled";
   }, [telegram]);
 

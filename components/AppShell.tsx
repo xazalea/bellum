@@ -14,12 +14,16 @@ import { nachoEngine } from '@/lib/nacho/engine';
 import { Archives } from './Archives';
 import { AccountPanel } from './Account';
 import { XFabricPanel } from './XFabric';
+import { CommandPalette, type CommandItem } from './CommandPalette';
+import { useRouter } from 'next/navigation';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [isBooted, setIsBooted] = useState(false);
     const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'account' | 'cluster' | 'settings' | 'runner' | 'fabrik'>('home');
     const [runnerAppId, setRunnerAppId] = useState<string | null>(null);
     const pathname = usePathname();
+    const router = useRouter();
+    const [paletteOpen, setPaletteOpen] = useState(false);
 
     // This app is primarily a single-page “shell” UI on `/`.
     // But we also want true Next.js routes for subsites like `/unblocker` and `/xfabric`.
@@ -29,6 +33,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         // Start the engine in the background
         nachoEngine?.boot().catch(console.error);
     }, []);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            const isK = e.key.toLowerCase() === 'k';
+            if ((e.metaKey || e.ctrlKey) && isK) {
+                e.preventDefault();
+                setPaletteOpen((v) => !v);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
+
+    const commandItems: CommandItem[] = useMemo(
+        () => [
+            { id: 'home', label: 'Go: Dashboard', keywords: 'home nacho', hint: 'tab', onSelect: () => setActiveTab('home') },
+            { id: 'apps', label: 'Go: App Library', keywords: 'apps install', hint: 'tab', onSelect: () => setActiveTab('apps') },
+            { id: 'runner', label: 'Go: Runner', keywords: 'run app emulator', hint: 'tab', onSelect: () => setActiveTab('runner') },
+            { id: 'archives', label: 'Go: Archives', keywords: 'archives backups', hint: 'tab', onSelect: () => setActiveTab('archives') },
+            { id: 'account', label: 'Go: Account', keywords: 'auth profile friends', hint: 'tab', onSelect: () => setActiveTab('account') },
+            { id: 'cluster', label: 'Go: Cluster', keywords: 'peers aethernet', hint: 'tab', onSelect: () => setActiveTab('cluster') },
+            { id: 'settings', label: 'Go: Settings', keywords: 'performance storage', hint: 'tab', onSelect: () => setActiveTab('settings') },
+            { id: 'fabrik', label: 'Open: Fabrik', keywords: 'hosting deploy domains xfabric', hint: '/fabrik', onSelect: () => router.push('/fabrik') },
+            { id: 'unblocker', label: 'Open: Unblocker', keywords: 'cherri games', hint: '/start.html', onSelect: () => router.push('/start.html') },
+        ],
+        [router],
+    );
 
     const renderView = () => {
         switch (activeTab) {
@@ -84,6 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                             onTabChange={(t) => setActiveTab(t as any)}
                             onOpenRunner={() => setActiveTab('runner')}
                         />
+                        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={commandItems} />
                         <main className="relative z-0">
                             <AnimatePresence mode="wait">
                                 <motion.div

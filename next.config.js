@@ -165,6 +165,16 @@ const nextConfig = {
           ...hsts,
         ],
       },
+      // Ads run inside an internal iframe route. Disable COEP/COOP there so the ad can load cross-origin resources
+      // without breaking cross-origin isolation for the main app.
+      {
+        source: '/ad/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
       // Cherri (Unblocker) loads several cross-origin CDN scripts/styles by design.
       // COEP/COOP would block them. We scope-disable isolation for those paths only.
       {
