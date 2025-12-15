@@ -1,5 +1,6 @@
 import { deleteClusterFile } from "@/lib/storage/chunked-download";
 import { opfsDelete } from "@/lib/storage/local-opfs";
+import { getNachoHeaders } from "@/lib/auth/nacho-identity";
 
 export type AppType = "android" | "windows" | "unknown";
 export type AppScope = "user" | "public";
@@ -31,7 +32,8 @@ export function subscribeInstalledApps(uid: string, cb: (apps: InstalledApp[]) =
   const poll = async () => {
     if (stopped) return;
     try {
-      const res = await fetch("/api/user/apps", { cache: "no-store" });
+      const headers = await getNachoHeaders();
+      const res = await fetch("/api/user/apps", { cache: "no-store", headers });
       if (!res.ok) return;
       const apps = (await res.json().catch(() => [])) as InstalledApp[];
       cb(Array.isArray(apps) ? apps : []);
@@ -49,9 +51,10 @@ export function subscribeInstalledApps(uid: string, cb: (apps: InstalledApp[]) =
 
 export async function addInstalledApp(uid: string, app: Omit<InstalledApp, "id">): Promise<string> {
   void uid;
+  const headers = await getNachoHeaders();
   const res = await fetch("/api/user/apps", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({ app }),
   });
   if (!res.ok) {
@@ -64,9 +67,11 @@ export async function addInstalledApp(uid: string, app: Omit<InstalledApp, "id">
 
 export async function removeInstalledApp(uid: string, appId: string): Promise<void> {
   void uid;
+  const headers = await getNachoHeaders();
   const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
     method: "DELETE",
     cache: "no-store",
+    headers,
   });
   if (!res.ok && res.status !== 204) {
     const j = (await res.json().catch(() => null)) as any;
@@ -99,7 +104,8 @@ export async function removeInstalledAppWithCleanup(uid: string, app: InstalledA
 
 export async function listInstalledApps(uid: string): Promise<InstalledApp[]> {
   void uid;
-  const res = await fetch("/api/user/apps", { cache: "no-store" });
+  const headers = await getNachoHeaders();
+  const res = await fetch("/api/user/apps", { cache: "no-store", headers });
   if (!res.ok) return [];
   const apps = (await res.json().catch(() => [])) as InstalledApp[];
   return Array.isArray(apps) ? apps : [];

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Network, Zap, Cpu, Share2, Shield, Activity } from 'lucide-react';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 import { authService } from '@/lib/firebase/auth-service';
-import { getClusterBase } from '@/lib/cluster/cluster-base';
+import { getNachoIdentity } from '@/lib/auth/nacho-identity';
 
 export const ClusterPanel = () => {
   const [user, setUser] = useState(() => authService.getCurrentUser());
@@ -23,7 +23,7 @@ export const ClusterPanel = () => {
   const [lastSyncMs, setLastSyncMs] = useState<number | null>(null);
 
   const base = useMemo(() => {
-    return getClusterBase();
+    return '';
   }, []);
 
   useEffect(() => {
@@ -42,14 +42,12 @@ export const ClusterPanel = () => {
       if (stopped) return;
       try {
         setStatus((s) => (s === 'online' ? 'online' : 'connecting'));
-        const bases = base ? [base, ''] : [''];
+        const bases = base ? [base] : [''];
         let json: any[] | null = null;
         for (const b of bases) {
-          const u = authService.getCurrentUser();
-          const res = await fetch(`${b}/api/cluster/peers`, {
-            cache: 'no-store',
-            headers: u ? { 'X-Nacho-UserId': u.uid } : undefined,
-          });
+          void b;
+          const id = await getNachoIdentity();
+          const res = await fetch(`/api/cluster/proxy/peers?userId=${encodeURIComponent(id.uid)}`, { cache: 'no-store' });
           if (!res.ok) continue;
           json = (await res.json()) as any[];
           break;

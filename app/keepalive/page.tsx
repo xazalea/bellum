@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { nachoEngine } from "@/lib/nacho/engine";
 import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
-import { authService } from "@/lib/firebase/auth-service";
-import { getClusterBase } from "@/lib/cluster/cluster-base";
+import { getNachoIdentity } from "@/lib/auth/nacho-identity";
 
 /**
  * Cluster keepalive page.
@@ -16,33 +14,19 @@ import { getClusterBase } from "@/lib/cluster/cluster-base";
  */
 export default function KeepalivePage() {
   useEffect(() => {
-    (async () => {
-      try {
-        await nachoEngine?.boot();
-      } catch (e) {
-        // Keepalive should never hard-crash the app; log only.
-        console.warn("Keepalive boot failed:", e);
-      }
-    })();
-
     let timer: number | null = null;
     let stopped = false;
 
     const tick = async () => {
       if (stopped) return;
       try {
-        // Ensure a session exists so heartbeat calls are authenticated.
-        if (!authService.getCurrentUser()) await authService.ensureIdentity();
-        const user = authService.getCurrentUser();
+        const id = await getNachoIdentity();
         const deviceId = await getDeviceFingerprintId();
-        const base = getClusterBase();
-        await fetch(`${base}/api/cluster/heartbeat`, {
+        await fetch(`/api/cluster/proxy/heartbeat`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(user ? { "X-Nacho-UserId": user.uid, "X-Nacho-DeviceId": deviceId } : {}),
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            userId: id.uid,
             deviceId,
             userAgent: navigator.userAgent,
             label: navigator.platform,
@@ -59,11 +43,6 @@ export default function KeepalivePage() {
     timer = window.setInterval(() => void tick(), 15_000);
 
     return () => {
-      try {
-        nachoEngine?.halt();
-      } catch {
-        // ignore
-      }
       stopped = true;
       if (timer) window.clearInterval(timer);
     };

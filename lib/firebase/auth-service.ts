@@ -1,21 +1,7 @@
-import type { User } from 'firebase/auth';
-import { onAuthStateChanged, signInAnonymously as firebaseSignInAnonymously, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { getNachoIdentity } from '@/lib/auth/nacho-identity';
 
+export type User = { uid: string };
 export type AuthDiagnostics = { unavailable: boolean; code?: string; message?: string };
-
-async function establishServerSession(user: User): Promise<void> {
-  const idToken = await user.getIdToken(/* forceRefresh */ true);
-  const res = await fetch('/api/auth/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
-  });
-  if (!res.ok) {
-    const j = (await res.json().catch(() => null)) as any;
-    throw new Error(j?.error || `session_failed_${res.status}`);
-  }
-}
 
 class AuthService {
   private currentUser: User | null = null;
@@ -25,17 +11,8 @@ class AuthService {
 
   constructor() {
     if (typeof window === 'undefined') return;
-    onAuthStateChanged(auth, async (user) => {
-      this.currentUser = user;
-      this.listeners.forEach((l) => l(user));
-      if (!user) return;
-      try {
-        await establishServerSession(user);
-        this.setDiagnostics({ unavailable: false });
-      } catch (e: any) {
-        this.setDiagnostics({ unavailable: true, code: 'session_failed', message: e?.message || 'Session establishment failed' });
-      }
-    });
+    // Fingerprint-based identity (no Firebase Auth providers).
+    void this.ensureIdentity();
   }
 
   private setDiagnostics(d: AuthDiagnostics) {
@@ -71,29 +48,27 @@ class AuthService {
     throw new Error('Email/password sign-up not implemented yet.');
   }
 
-  // Nacho identity is username + device fingerprint (no passwords).
-  // We bootstrap a server-verified session silently using an anonymous token.
-  async signInAnonymously(): Promise<User> {
-    const res = await firebaseSignInAnonymously(auth);
-    await establishServerSession(res.user);
-    return res.user;
-  }
-
   // Ensure an identity exists (silent, no UI).
   async ensureIdentity(): Promise<User> {
     const existing = this.currentUser;
     if (existing) return existing;
-    return await this.signInAnonymously();
+    try {
+      const id = await getNachoIdentity();
+      const user: User = { uid: id.uid };
+      this.currentUser = user;
+      this.listeners.forEach((l) => l(user));
+      this.setDiagnostics({ unavailable: false });
+      return user;
+    } catch (e: any) {
+      this.setDiagnostics({ unavailable: true, code: 'identity_failed', message: e?.message || 'Identity failed' });
+      throw e;
+    }
   }
 
   // Sign out
   async signOut(): Promise<void> {
-    try {
-      await fetch('/api/auth/session', { method: 'DELETE' });
-    } catch {
-      // ignore
-    }
-    await firebaseSignOut(auth);
+    this.currentUser = null;
+    this.listeners.forEach((l) => l(null));
   }
 
   // Get current user

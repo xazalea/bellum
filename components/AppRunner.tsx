@@ -9,6 +9,7 @@ import { os } from '@/src/nacho_os';
 import type { InstalledApp } from '@/lib/apps/apps-service';
 import { opfsReadBytes, opfsWriteBytes } from '@/lib/storage/local-opfs';
 import { unlockAchievement } from '@/lib/gamification/achievements';
+import { getNachoHeaders } from '@/lib/auth/nacho-identity';
 
 export interface AppRunnerProps {
   appId?: string;
@@ -41,11 +42,13 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       }
 
       // Nacho apps must work without explicit sign-in; bootstrap identity silently.
-      const u = user ?? (await authService.ensureIdentity());
+      void user;
+      const headers = await getNachoHeaders();
 
       setStatus('Loading metadata…');
       const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
         cache: 'no-store',
+        headers,
       });
       if (!res.ok) {
         // 401 here usually means identity/session hasn't been established yet.

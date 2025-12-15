@@ -7,7 +7,7 @@ import { subscribeInstalledApps, type InstalledApp } from "@/lib/apps/apps-servi
 import { authService } from "@/lib/firebase/auth-service";
 import { AdCard } from "@/components/AdCard";
 import { unlockAchievement } from "@/lib/gamification/achievements";
-import { getClusterBase } from "@/lib/cluster/cluster-base";
+import { getNachoIdentity } from "@/lib/auth/nacho-identity";
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -33,9 +33,7 @@ export const Dashboard = ({
   const [clusterStatus, setClusterStatus] = useState<"connecting" | "online" | "offline">("connecting");
   const [deployedSite, setDeployedSite] = useState(false);
 
-  const base = useMemo(() => {
-    return getClusterBase();
-  }, []);
+  const base = useMemo(() => "", []);
 
   useEffect(() => authService.onAuthStateChange(setUser), []);
 
@@ -55,14 +53,12 @@ export const Dashboard = ({
       if (stopped) return;
       try {
         setClusterStatus((s) => (s === "online" ? "online" : "connecting"));
-        const bases = base ? [base, ""] : [""];
+        const bases = base ? [base] : [""];
         let peers: any[] | null = null;
         for (const b of bases) {
-          const u = authService.getCurrentUser();
-          const res = await fetch(`${b}/api/cluster/peers`, {
-            cache: "no-store",
-            headers: u ? { "X-Nacho-UserId": u.uid } : undefined,
-          });
+          void b;
+          const id = await getNachoIdentity();
+          const res = await fetch(`/api/cluster/proxy/peers?userId=${encodeURIComponent(id.uid)}`, { cache: "no-store" });
           if (!res.ok) continue;
           peers = (await res.json()) as any[];
           break;

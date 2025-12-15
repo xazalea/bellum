@@ -5,6 +5,7 @@ import { authService } from '@/lib/firebase/auth-service';
 import { ensureKursor } from '@/lib/ui/kursor';
 import { hyperRuntime } from '@/lib/performance/hyper-runtime';
 import { unlockAchievement } from '@/lib/gamification/achievements';
+import { getNachoIdentity } from '@/lib/auth/nacho-identity';
 
 /**
  * Client-side initialization
@@ -16,8 +17,7 @@ export function ClientInit() {
     ensureKursor().catch(() => {});
 
     // Ensure a local identity exists (username + device fingerprint). No user action required.
-    authService
-      .ensureIdentity()
+    void getNachoIdentity()
       .then(() => unlockAchievement('booted'))
       .catch(() => {});
 

@@ -2,13 +2,14 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/server/firebase-admin';
-import { verifySessionCookieFromRequest } from '@/lib/server/session';
 
 export const runtime = 'nodejs';
 
 export async function requireAuthedUser(req: Request): Promise<{ uid: string; email?: string; name?: string }> {
-  const u = await verifySessionCookieFromRequest(req);
-  return { uid: u.uid, email: u.email, name: u.name };
+  // Nacho auth: username + fingerprint, passed as header. (No Firebase Auth required.)
+  const headerUid = String(req.headers.get('x-nacho-userid') || '').trim();
+  if (headerUid) return { uid: headerUid };
+  throw new Error('unauthenticated');
 }
 
 export function adminDb() {
