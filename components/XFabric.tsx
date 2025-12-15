@@ -545,7 +545,7 @@ function DeployView({
             <ol className="list-decimal pl-5 mt-2 space-y-1">
               <li>
                 Create an <span className="font-mono">A</span> record pointing to{" "}
-                <span className="font-mono text-white/80">{XFABRIC_A_RECORD_TARGET}</span>.
+                <span className="font-mono text-white/80">{FABRIK_A_RECORD_TARGET}</span>.
               </li>
               <li>Wait for DNS propagation (a few minutes up to an hour).</li>
               <li>Keep your site bundle small (Telegram chunk limits apply).</li>
