@@ -15,8 +15,8 @@ export function ClientInit() {
     // Custom cursor (Kursor)
     ensureKursor().catch(() => {});
 
-    // Ensure a local session exists (username+fingerprint auth does not use Firebase Auth providers).
-    authService.signInAnonymously().catch(() => {});
+    // Ensure a local identity exists (username + device fingerprint). No user action required.
+    authService.ensureIdentity().catch(() => {});
 
     const ensureKeepaliveFrame = (enabled: boolean) => {
       const id = 'nacho-cluster-keepalive';

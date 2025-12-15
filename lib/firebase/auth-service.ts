@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { GoogleAuthProvider, onAuthStateChanged, signInAnonymously as firebaseSignInAnonymously, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously as firebaseSignInAnonymously, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 export type AuthDiagnostics = { unavailable: boolean; code?: string; message?: string };
@@ -71,19 +71,19 @@ class AuthService {
     throw new Error('Email/password sign-up not implemented yet.');
   }
 
-  // Sign in with Google
-  async signInWithGoogle(): Promise<User> {
-    const provider = new GoogleAuthProvider();
-    const res = await signInWithPopup(auth, provider);
-    await establishServerSession(res.user);
-    return res.user;
-  }
-
-  // Guest sessions are supported via Firebase Anonymous auth (real auth, server-verified).
+  // Nacho identity is username + device fingerprint (no passwords).
+  // We bootstrap a server-verified session silently using an anonymous token.
   async signInAnonymously(): Promise<User> {
     const res = await firebaseSignInAnonymously(auth);
     await establishServerSession(res.user);
     return res.user;
+  }
+
+  // Ensure an identity exists (silent, no UI).
+  async ensureIdentity(): Promise<User> {
+    const existing = this.currentUser;
+    if (existing) return existing;
+    return await this.signInAnonymously();
   }
 
   // Sign out

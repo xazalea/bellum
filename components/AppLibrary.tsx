@@ -61,15 +61,12 @@ export function AppLibrary({
   const handlePick = () => inputRef.current?.click();
 
   const handleInstall = async (file: File) => {
-    if (!user) {
-      setError("Sign in required to install apps.");
-      return;
-    }
     setError(null);
     setIsInstalling(true);
     setInstallProgress(0);
 
     try {
+      const u = user ?? (await authService.ensureIdentity());
       const res = await chunkedUploadFile(file, {
         chunkBytes: 32 * 1024 * 1024,
         compressChunks: true,
@@ -93,7 +90,7 @@ export function AppLibrary({
         compression: "gzip-chunked",
       };
 
-      await addInstalledApp(user.uid, app);
+      await addInstalledApp(u.uid, app);
       setInstallProgress(100);
     } catch (e: any) {
       setError(e?.message || "Install failed");
@@ -104,10 +101,6 @@ export function AppLibrary({
   };
 
   const handleInstallFromUrl = async () => {
-    if (!user) {
-      setError("Sign in required to install apps.");
-      return;
-    }
     setError(null);
     setIsInstalling(true);
     setInstallProgress(0);

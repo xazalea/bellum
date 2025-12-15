@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { User, Users, UserPlus, Check, X, Shield, LogIn, LogOut, AtSign } from "lucide-react";
+import { User, Users, UserPlus, Check, X, Shield, LogOut, AtSign } from "lucide-react";
 import { authService } from "@/lib/firebase/auth-service";
 import {
   acceptFriendRequest,
@@ -79,29 +79,15 @@ export function AccountPanel() {
       .sort();
   }, [friends, profile?.handle]);
 
-  const doSignInGoogle = async () => {
+  const doContinue = async () => {
     setBusy(true);
     setError(null);
     setAuthMessage(null);
     try {
-      await authService.signInWithGoogle();
-      setAuthMessage("Signed in.");
+      await authService.ensureIdentity();
+      setAuthMessage("Identity established.");
     } catch (e: any) {
-      setError(e?.message || "Sign in failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const doSignInGuest = async () => {
-    setBusy(true);
-    setError(null);
-    setAuthMessage(null);
-    try {
-      await authService.signInAnonymously();
-      setAuthMessage("Signed in as guest.");
-    } catch (e: any) {
-      setError(e?.message || "Guest sign in failed");
+      setError(e?.message || "Failed to establish identity");
     } finally {
       setBusy(false);
     }
@@ -113,7 +99,7 @@ export function AccountPanel() {
     setAuthMessage(null);
     try {
       await authService.signOut();
-      setAuthMessage("Signed out.");
+      setAuthMessage("Identity cleared.");
     } catch (e: any) {
       setError(e?.message || "Sign out failed");
     } finally {
@@ -223,20 +209,11 @@ export function AccountPanel() {
             <button
               type="button"
               disabled={busy}
-              onClick={() => void doSignInGoogle()}
-              className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <LogIn size={16} />
-              Sign in with Google
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void doSignInGuest()}
+              onClick={() => void doContinue()}
               className="px-4 py-2 rounded-xl border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <User size={16} />
-              Continue as guest
+              Continue
             </button>
           </div>
 

@@ -16,29 +16,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
 
   if (!isOpen) return null;
 
-  const handleGoogle = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      await authService.signInWithGoogle();
-      onAuthSuccess();
-      onClose();
-    } catch (e: any) {
-      setError(e?.message || 'Google sign-in failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGuest = async () => {
     setError(null);
     setLoading(true);
     try {
-      await authService.signInAnonymously();
+      await authService.ensureIdentity();
       onAuthSuccess();
       onClose();
     } catch (e: any) {
-      setError(e?.message || 'Guest sign-in failed');
+      setError(e?.message || 'Failed to establish identity');
     } finally {
       setLoading(false);
     }
@@ -58,10 +44,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
         {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-white mb-2">
-            Sign in
+            Continue
           </h2>
           <p className="text-gray-400">
-            Sign in to unlock hosting, storage, and social features.
+            Identity is username + device fingerprint. No password required.
           </p>
         </div>
 
@@ -76,23 +62,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
           <button
             type="button"
             disabled={loading}
-            onClick={() => void handleGoogle()}
+            onClick={() => void handleGuest()}
             className="w-full bellum-btn disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <LogIn size={18} className="inline mr-2" />
-            Continue with Google
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => void handleGuest()}
-            className="w-full px-4 py-3 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transition-colors text-white font-semibold disabled:opacity-50"
-          >
             <User size={18} className="inline mr-2" />
-            Continue as guest
+            Continue
           </button>
           <div className="text-xs text-white/40">
-            Guest accounts are real Firebase anonymous accounts (server-verified). You can upgrade later by signing in with Google on the same device.
+            This is a passwordless identity used to sync apps/settings to your device.
           </div>
         </div>
       </div>

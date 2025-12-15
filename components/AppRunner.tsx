@@ -24,7 +24,7 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
   const [user, setUser] = useState(() => authService.getCurrentUser());
   useEffect(() => authService.onAuthStateChange(setUser), []);
 
-  const canRun = useMemo(() => !!user && !!appId, [user, appId]);
+  const canRun = useMemo(() => !!appId, [appId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,17 +34,21 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       setProgress(0);
       setApp(null);
 
-      if (!user || !appId) {
+      if (!appId) {
         setStatus('No app selected');
         return;
       }
+
+      // Nacho apps must work without explicit sign-in; bootstrap identity silently.
+      const u = user ?? (await authService.ensureIdentity());
 
       setStatus('Loading metadata…');
       const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
         cache: 'no-store',
       });
       if (!res.ok) {
-        setStatus(res.status === 401 ? 'Sign in required' : 'App not found');
+        // 401 here usually means identity/session hasn't been established yet.
+        setStatus(res.status === 401 ? 'Preparing identity…' : 'App not found');
         return;
       }
       const appData = (await res.json()) as InstalledApp;
