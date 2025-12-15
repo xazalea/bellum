@@ -34,15 +34,16 @@ function normalizeRules(raw: any): SiteRules {
   const out: SiteRules = {};
 
   const redirectsIn = Array.isArray(raw?.redirects) ? raw.redirects : [];
-  out.redirects = redirectsIn
+  const normalizedRedirects: Array<{ from: string; to: string; status: number }> = redirectsIn
     .slice(0, 100)
     .map((r: any) => ({
       from: String(r?.from || '').trim(),
       to: String(r?.to || '').trim(),
       status: Number(r?.status || 302),
     }))
-    .filter((r) => r.from && r.to)
-    .map((r) => ({
+    .filter((r: { from: string; to: string; status: number }) => r.from.length > 0 && r.to.length > 0);
+
+  out.redirects = normalizedRedirects.map((r: { from: string; to: string; status: number }) => ({
       from: r.from.startsWith('/') ? r.from : `/${r.from}`,
       to: r.to,
       status: r.status === 301 || r.status === 302 || r.status === 307 || r.status === 308 ? r.status : 302,
