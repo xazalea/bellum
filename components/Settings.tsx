@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Settings as SettingsIcon, Shield, Database, Wifi, Cpu, Code, Network } from 'lucide-react';
-import { onSettings, setClusterParticipation, type NachoUserSettings } from '@/lib/cluster/settings';
+import { type NachoUserSettings } from '@/lib/cluster/settings';
 import { NACHO_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
 import { authService } from '@/lib/firebase/auth-service';
 
@@ -36,9 +36,9 @@ export const SettingsPanel = () => {
   }, []);
 
   useEffect(() => {
-    let unsub = () => {};
-    if (userUid) unsub = onSettings(userUid, setSettings);
-    return () => unsub();
+    // Opt-out removed: always-on.
+    void userUid;
+    setSettings({ clusterParticipation: true });
   }, [userUid]);
 
   useEffect(() => {
@@ -51,10 +51,9 @@ export const SettingsPanel = () => {
   }, []);
 
   const toggleCluster = async () => {
-    if (!user) return;
-    const next = !settings.clusterParticipation;
-    await setClusterParticipation(user.uid, next);
-    setSettings((s) => ({ ...s, clusterParticipation: next }));
+    // Opt-out removed.
+    void user;
+    setSettings((s) => ({ ...s, clusterParticipation: true }));
   };
 
   const toggleCursor = () => {
@@ -103,7 +102,7 @@ export const SettingsPanel = () => {
             <p className="text-white/40 text-sm">These settings are applied immediately and stored per account.</p>
           </div>
 
-          {/* Cluster Participation (functional) */}
+          {/* Cluster (always on) */}
           <div className="space-y-4">
             <h4 className="text-xs uppercase tracking-widest text-white/40 font-bold">Cluster</h4>
 
@@ -113,9 +112,9 @@ export const SettingsPanel = () => {
                   <Network size={18} className="text-white" />
                 </div>
                 <div>
-                  <div className="font-semibold">Cluster participation</div>
+                  <div className="font-semibold">Always-on cluster</div>
                   <div className="text-xs text-white/50">
-                    Enabled by default. If you opt out, you lose access to cluster-dependent features (cloud install/run).
+                    Required for Fabrik hosting + distributed compute. This device is always connected while Nacho is open.
                   </div>
                 </div>
               </div>
@@ -123,17 +122,12 @@ export const SettingsPanel = () => {
               <button
                 type="button"
                 onClick={toggleCluster}
-                className={`w-14 h-7 rounded-full border-2 transition-all ${
-                  settings.clusterParticipation
-                    ? 'bg-blue-500/70 border-blue-300/50'
-                    : 'bg-white/5 border-white/20'
-                }`}
-                aria-pressed={settings.clusterParticipation}
+                className="w-14 h-7 rounded-full border-2 transition-all bg-blue-500/70 border-blue-300/50 cursor-not-allowed opacity-80"
+                aria-pressed={true}
+                aria-disabled={true}
               >
                 <span
-                  className={`block w-5 h-5 rounded-full bg-white transition-transform ${
-                    settings.clusterParticipation ? 'translate-x-7' : 'translate-x-1'
-                  }`}
+                  className="block w-5 h-5 rounded-full bg-white transition-transform translate-x-7"
                 />
               </button>
             </div>

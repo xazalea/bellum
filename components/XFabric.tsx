@@ -21,11 +21,18 @@ import {
 } from "lucide-react";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
 import { authService } from "@/lib/firebase/auth-service";
+import { unlockAchievement } from "@/lib/gamification/achievements";
+import { AppLibrary } from "@/components/AppLibrary";
+import { AppRunner } from "@/components/AppRunner";
 
 type CreatedSite = { id: string; domain: string | null; createdAt: number };
-type ListedSite = { id: string; domain: string | null; createdAt: number; bundleFileId: string };
+type SiteRules = {
+  redirects?: Array<{ from: string; to: string; status?: number }>;
+  headers?: Array<{ name: string; value: string }>;
+};
+type ListedSite = { id: string; domain: string | null; createdAt: number; bundleFileId: string; rules?: SiteRules };
 
-type NavKey = "overview" | "projects" | "deploy" | "domains" | "analytics" | "settings";
+type NavKey = "overview" | "projects" | "deploy" | "domains" | "apps" | "analytics" | "settings";
 
 // Vercel-style A record target. Override per-deployment with:
 // NEXT_PUBLIC_FABRIK_A_RECORD_TARGET=1.2.3.4
@@ -94,6 +101,7 @@ function DnsARecordCallout() {
 export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting" }) {
   const initial: NavKey = initialTab === "hosting" ? "deploy" : "overview";
   const [nav, setNav] = useState<NavKey>(initial);
+  const [runnerAppId, setRunnerAppId] = useState<string | null>(null);
 
   const [user, setUser] = useState(() => authService.getCurrentUser());
   useEffect(() => authService.onAuthStateChange(setUser), []);
@@ -111,6 +119,7 @@ export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting
         { key: "projects" as const, label: "Projects", icon: Boxes },
         { key: "deploy" as const, label: "Deploy", icon: Rocket },
         { key: "domains" as const, label: "Domains", icon: Globe },
+        { key: "apps" as const, label: "Apps", icon: Server },
         { key: "analytics" as const, label: "Analytics", icon: BarChart3 },
         { key: "settings" as const, label: "Settings", icon: Settings },
       ],
@@ -187,6 +196,14 @@ export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting
 
           {/* Main */}
           <div className="p-6">
+            {runnerAppId && (
+              <AppRunner
+                appId={runnerAppId}
+                onExit={() => {
+                  setRunnerAppId(null);
+                }}
+              />
+            )}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <div className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
@@ -236,14 +253,31 @@ export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting
                     } catch {
                       // ignore
                     }
+                    unlockAchievement('deployed_site');
                     await refreshSites();
                     setNav("projects");
                   }}
                 />
               )}
               {nav === "domains" && <DomainsView sites={sites} loading={sitesLoading} onSitesChanged={() => void refreshSites()} />}
+              {nav === "apps" && (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-bold text-white/90">Edge Apps (Nacho)</div>
+                    <div className="text-xs text-white/55 mt-1">
+                      Install and run apps that power hosting, automation, and compute across your cluster.
+                      This is the same App Library as NachoOS — available directly inside Fabrik.
+                    </div>
+                  </div>
+                  <AppLibrary
+                    onRunApp={(appId) => {
+                      setRunnerAppId(appId);
+                    }}
+                  />
+                </div>
+              )}
               {nav === "analytics" && <AnalyticsView sites={sites} loading={sitesLoading} />}
-              {nav === "settings" && <SettingsView />}
+              {nav === "settings" && <SettingsView sites={sites} onSitesChanged={() => void refreshSites()} />}
             </div>
           </div>
         </div>
@@ -667,12 +701,194 @@ function AnalyticsView({ sites, loading }: { sites: ListedSite[]; loading: boole
   );
 }
 
-function SettingsView() {
+function SettingsView({ sites, onSitesChanged }: { sites: ListedSite[]; onSitesChanged: () => void }) {
+  const [siteId, setSiteId] = useState<string>(() => (sites[0]?.id ? String(sites[0].id) : ''));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!siteId && sites[0]?.id) setSiteId(String(sites[0].id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sites.length]);
+
+  const site = sites.find((s) => s.id === siteId) || null;
+  const [redirects, setRedirects] = useState<Array<{ from: string; to: string; status: number }>>([]);
+  const [headers, setHeaders] = useState<Array<{ name: string; value: string }>>([]);
+
+  useEffect(() => {
+    const r = Array.isArray(site?.rules?.redirects) ? site!.rules!.redirects! : [];
+    setRedirects(
+      r.map((x) => ({
+        from: String((x as any)?.from || ''),
+        to: String((x as any)?.to || ''),
+        status: Number((x as any)?.status || 302),
+      })),
+    );
+    const h = Array.isArray(site?.rules?.headers) ? site!.rules!.headers! : [];
+    setHeaders(h.map((x) => ({ name: String((x as any)?.name || ''), value: String((x as any)?.value || '') })));
+  }, [siteId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async () => {
+    if (!siteId) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/fabrik/sites/${encodeURIComponent(siteId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rules: {
+            redirects,
+            headers,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => null)) as any;
+        throw new Error(j?.error || `Save failed (${res.status})`);
+      }
+      onSitesChanged();
+    } catch (e: any) {
+      setErr(e?.message || 'Save failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
-      <div className="font-extrabold text-white">XFabric settings</div>
-      <div className="text-sm text-white/55 mt-2">
-        This product currently exposes per-project settings in the Projects/Domains tabs. Authentication and account settings live in the Account page.
+      <div className="font-extrabold text-white">Fabrik rules</div>
+      <div className="text-sm text-white/55 mt-2">Cloudflare-style rules applied at the edge (redirects + custom headers).</div>
+
+      {err && <div className="mt-4 text-sm text-red-200 bg-red-500/10 border-2 border-red-400/20 rounded-xl p-3">{err}</div>}
+
+      <div className="mt-5 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+        <div className="rounded-2xl border-2 border-white/10 bg-black/20 p-4">
+          <div className="text-xs uppercase tracking-widest text-white/40 font-bold">Site</div>
+          <select
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+            className="mt-2 w-full bellum-input"
+          >
+            {sites.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.domain ? s.domain : s.id}
+              </option>
+            ))}
+          </select>
+
+          <div className="mt-4 text-xs text-white/45">
+            Applies to <span className="font-mono text-white/70">{site?.domain ? site.domain : `/host/${siteId}`}</span>
+          </div>
+
+          <button type="button" onClick={() => void save()} disabled={busy || !siteId} className="mt-4 w-full bellum-btn disabled:opacity-50">
+            Save rules
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-bold text-white/90">Redirects</div>
+                <div className="text-xs text-white/45 mt-1">Exact-path redirects (e.g. /old → /new).</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRedirects((r) => [...r, { from: '/old', to: '/new', status: 302 }])}
+                className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 transition-all text-sm font-bold"
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {redirects.length === 0 ? (
+                <div className="text-sm text-white/40">No redirects yet.</div>
+              ) : (
+                redirects.map((r, i) => (
+                  <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_90px_90px] gap-2">
+                    <input
+                      className="bellum-input"
+                      value={r.from}
+                      onChange={(e) => setRedirects((prev) => prev.map((x, idx) => (idx === i ? { ...x, from: e.target.value } : x)))}
+                      placeholder="/from"
+                    />
+                    <input
+                      className="bellum-input"
+                      value={r.to}
+                      onChange={(e) => setRedirects((prev) => prev.map((x, idx) => (idx === i ? { ...x, to: e.target.value } : x)))}
+                      placeholder="/to"
+                    />
+                    <select
+                      className="bellum-input"
+                      value={String(r.status)}
+                      onChange={(e) => setRedirects((prev) => prev.map((x, idx) => (idx === i ? { ...x, status: Number(e.target.value) } : x)))}
+                    >
+                      <option value="301">301</option>
+                      <option value="302">302</option>
+                      <option value="307">307</option>
+                      <option value="308">308</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setRedirects((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 transition-all text-sm font-bold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-bold text-white/90">Response headers</div>
+                <div className="text-xs text-white/45 mt-1">Adds headers to every response for this site.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHeaders((h) => [...h, { name: 'X-Robots-Tag', value: 'noindex' }])}
+                className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 transition-all text-sm font-bold"
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {headers.length === 0 ? (
+                <div className="text-sm text-white/40">No custom headers yet.</div>
+              ) : (
+                headers.map((h, i) => (
+                  <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_90px] gap-2">
+                    <input
+                      className="bellum-input"
+                      value={h.name}
+                      onChange={(e) => setHeaders((prev) => prev.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))}
+                      placeholder="Header-Name"
+                    />
+                    <input
+                      className="bellum-input"
+                      value={h.value}
+                      onChange={(e) => setHeaders((prev) => prev.map((x, idx) => (idx === i ? { ...x, value: e.target.value } : x)))}
+                      placeholder="value"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setHeaders((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 transition-all text-sm font-bold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

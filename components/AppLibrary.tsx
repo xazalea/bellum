@@ -6,6 +6,7 @@ import { Download, Link as LinkIcon, ExternalLink, MoreVertical, Smartphone, Mon
 import { addInstalledApp, detectAppType, removeInstalledAppWithCleanup, type InstalledApp, subscribeInstalledApps } from "@/lib/apps/apps-service";
 import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
 import { authService } from "@/lib/firebase/auth-service";
+import { unlockAchievement } from "@/lib/gamification/achievements";
 
 type FeaturedGame = {
   id: string;
@@ -91,6 +92,7 @@ export function AppLibrary({
       };
 
       await addInstalledApp(u.uid, app);
+      unlockAchievement("installed_app");
       setInstallProgress(100);
     } catch (e: any) {
       setError(e?.message || "Install failed");

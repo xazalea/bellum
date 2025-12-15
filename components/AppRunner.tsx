@@ -8,6 +8,7 @@ import { downloadClusterFile } from '@/lib/storage/chunked-download';
 import { os } from '@/src/nacho_os';
 import type { InstalledApp } from '@/lib/apps/apps-service';
 import { opfsReadBytes, opfsWriteBytes } from '@/lib/storage/local-opfs';
+import { unlockAchievement } from '@/lib/gamification/achievements';
 
 export interface AppRunnerProps {
   appId?: string;
@@ -93,6 +94,7 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       copy.set(bytes);
       const file = new File([copy.buffer], appData.originalName, { type: 'application/octet-stream' });
       await os.run(file);
+      unlockAchievement('ran_app');
 
       setStatus('Running');
     })().catch((e: any) => {

@@ -6,16 +6,31 @@ export const runtime = 'nodejs';
 
 const ACTIVE_WINDOW_MS = 60_000;
 
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') || '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type, x-nacho-userid',
+    Vary: 'Origin',
+  };
+}
+
+export async function OPTIONS(req: Request) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
+}
+
 export async function GET(req: Request) {
   let uid = '';
   try {
     uid = (await verifySessionCookieFromRequest(req)).uid;
   } catch {
-    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    uid = String(req.headers.get('x-nacho-userid') || '').trim();
+    if (!uid) return NextResponse.json({ error: 'unauthenticated' }, { status: 401, headers: corsHeaders(req) });
   }
 
   prunePeers(ACTIVE_WINDOW_MS);
   const peers = listActivePeersForUser(uid, ACTIVE_WINDOW_MS);
-  return NextResponse.json(peers, { status: 200 });
+  return NextResponse.json(peers, { status: 200, headers: corsHeaders(req) });
 }
 

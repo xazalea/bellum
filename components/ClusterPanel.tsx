@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Network, Zap, Cpu, Share2, Shield, Activity } from 'lucide-react';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 import { authService } from '@/lib/firebase/auth-service';
+import { getClusterBase } from '@/lib/cluster/cluster-base';
 
 export const ClusterPanel = () => {
   const [user, setUser] = useState(() => authService.getCurrentUser());
@@ -22,12 +23,7 @@ export const ClusterPanel = () => {
   const [lastSyncMs, setLastSyncMs] = useState<number | null>(null);
 
   const base = useMemo(() => {
-    return (
-      (typeof process !== 'undefined' &&
-        (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })
-          ?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
-      ''
-    );
+    return getClusterBase();
   }, []);
 
   useEffect(() => {
@@ -49,7 +45,11 @@ export const ClusterPanel = () => {
         const bases = base ? [base, ''] : [''];
         let json: any[] | null = null;
         for (const b of bases) {
-          const res = await fetch(`${b}/api/cluster/peers`, { cache: 'no-store' });
+          const u = authService.getCurrentUser();
+          const res = await fetch(`${b}/api/cluster/peers`, {
+            cache: 'no-store',
+            headers: u ? { 'X-Nacho-UserId': u.uid } : undefined,
+          });
           if (!res.ok) continue;
           json = (await res.json()) as any[];
           break;

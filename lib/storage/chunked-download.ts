@@ -1,4 +1,5 @@
 import { authService } from "@/lib/firebase/auth-service";
+import { getClusterBase } from "@/lib/cluster/cluster-base";
 
 export interface ClusterFileManifest {
   fileId: string;
@@ -10,15 +11,6 @@ export interface ClusterFileManifest {
 }
 
 export type ClusterFileScope = "user" | "public";
-
-function getClusterBase(): string {
-  return (
-    (typeof process !== "undefined" &&
-      (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })
-        ?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
-    ""
-  );
-}
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = authService.getCurrentUser();

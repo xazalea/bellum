@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { nachoEngine } from "@/lib/nacho/engine";
 import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
 import { authService } from "@/lib/firebase/auth-service";
+import { getClusterBase } from "@/lib/cluster/cluster-base";
 
 /**
  * Cluster keepalive page.
@@ -27,35 +28,27 @@ export default function KeepalivePage() {
     let timer: number | null = null;
     let stopped = false;
 
-    const getClusterBase = () =>
-      (typeof process !== "undefined" &&
-        (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })
-          ?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
-      "";
-
     const tick = async () => {
       if (stopped) return;
       try {
         // Ensure a session exists so heartbeat calls are authenticated.
-        if (!authService.getCurrentUser()) await authService.signInAnonymously();
+        if (!authService.getCurrentUser()) await authService.ensureIdentity();
+        const user = authService.getCurrentUser();
         const deviceId = await getDeviceFingerprintId();
         const base = getClusterBase();
-        const bases = base ? [base, ""] : [""];
-        for (const b of bases) {
-          const res = await fetch(`${b}/api/cluster/heartbeat`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              deviceId,
-              userAgent: navigator.userAgent,
-              label: navigator.platform,
-              load: null,
-            }),
-          });
-          if (res.ok) break;
-        }
+        await fetch(`${base}/api/cluster/heartbeat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(user ? { "X-Nacho-UserId": user.uid, "X-Nacho-DeviceId": deviceId } : {}),
+          },
+          body: JSON.stringify({
+            deviceId,
+            userAgent: navigator.userAgent,
+            label: navigator.platform,
+            load: null,
+          }),
+        }).catch(() => {});
       } catch (e) {
         // best-effort
       }

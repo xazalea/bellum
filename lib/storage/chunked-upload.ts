@@ -1,5 +1,6 @@
 import { NACHO_STORAGE_LIMIT_BYTES } from "@/lib/storage/quota";
 import { authService } from "@/lib/firebase/auth-service";
+import { getClusterBase } from "@/lib/cluster/cluster-base";
 
 export interface ChunkedUploadInit {
   fileName: string;
@@ -22,15 +23,6 @@ export interface ChunkedUploadResult {
   fileId: string;
   totalChunks: number;
   storedBytes: number;
-}
-
-function getClusterBase(): string {
-  return (
-    (typeof process !== "undefined" &&
-      (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })
-        ?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
-    ""
-  );
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -89,8 +81,7 @@ export async function chunkedUploadFile(
   } = {}
 ): Promise<ChunkedUploadResult> {
   const base = getClusterBase();
-  const user = authService.getCurrentUser();
-  if (!user) throw new Error("Sign in required");
+  const user = authService.getCurrentUser() ?? (await authService.ensureIdentity());
 
   // Best-effort: enforce cloud quota client-side (6GB) for Telegram-backed storage.
   // NOTE: quota tracking used to rely on client Firestore. With locked rules, we skip per-user tracking here.

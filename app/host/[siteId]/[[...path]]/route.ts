@@ -12,6 +12,10 @@ type SiteRecord = {
   domain: string;
   bundleFileId: string; // Telegram manifest file_id (from /api/telegram/manifest)
   createdAt: number;
+  rules?: {
+    redirects?: Array<{ from: string; to: string; status?: number }>;
+    headers?: Array<{ name: string; value: string }>;
+  };
 };
 
 type TelegramManifest = {
@@ -166,6 +170,20 @@ export async function GET(req: Request, ctx: { params: { siteId: string; path?: 
     const requested = (ctx.params.path && ctx.params.path.length ? ctx.params.path.join('/') : 'index.html')
       .replace(/^\/+/, '')
       .replace(/\.\./g, '');
+    const requestedPath = '/' + requested;
+
+    // Redirect rules (Cloudflare-like).
+    const redirects = Array.isArray(site?.rules?.redirects) ? site.rules!.redirects! : [];
+    for (const r of redirects) {
+      const from = String((r as any)?.from || '').trim();
+      const to = String((r as any)?.to || '').trim();
+      const status = Number((r as any)?.status || 302);
+      if (!from || !to) continue;
+      if (from === requestedPath) {
+        const code = status === 301 || status === 302 || status === 307 || status === 308 ? status : 302;
+        return NextResponse.redirect(new URL(to, new URL(req.url).origin), code);
+      }
+    }
 
     let zipFinal: AdmZip;
     if (cachedZip && cachedZip.expiresAt > now) {
@@ -188,6 +206,16 @@ export async function GET(req: Request, ctx: { params: { siteId: string; path?: 
     bytes.set(buf);
     const ct = contentTypeFor(entry.entryName);
 
+    // Apply custom response headers (Cloudflare-like rules).
+    const customHeaders = Array.isArray(site?.rules?.headers) ? site.rules!.headers! : [];
+    const ruleHeaders: Record<string, string> = {};
+    for (const h of customHeaders) {
+      const name = String((h as any)?.name || '').trim();
+      const value = String((h as any)?.value || '').trim();
+      if (!name || !value) continue;
+      ruleHeaders[name] = value;
+    }
+
     // Inject cluster join into served HTML so every hosted site contributes a node.
     if (ct.startsWith('text/html')) {
       const text = new TextDecoder().decode(bytes);
@@ -199,6 +227,7 @@ export async function GET(req: Request, ctx: { params: { siteId: string; path?: 
         headers: {
           'Content-Type': ct,
           'Cache-Control': 'public, max-age=0, must-revalidate',
+          ...ruleHeaders,
         },
       });
     }
@@ -212,6 +241,7 @@ export async function GET(req: Request, ctx: { params: { siteId: string; path?: 
       headers: {
         'Content-Type': ct,
         'Cache-Control': cacheControl,
+        ...ruleHeaders,
       },
     });
   } catch (e: any) {

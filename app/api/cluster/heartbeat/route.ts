@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prunePeers, upsertPeer } from '@/lib/cluster/presence-store';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
-import { rateLimit, requireSameOrigin } from '@/lib/server/security';
+import { rateLimit } from '@/lib/server/security';
 
 export const runtime = 'nodejs';
 
@@ -17,13 +17,28 @@ type Body = {
 
 const ACTIVE_WINDOW_MS = 60_000;
 
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') || '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type, x-nacho-userid, x-nacho-deviceid',
+    Vary: 'Origin',
+  };
+}
+
+export async function OPTIONS(req: Request) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
+}
+
 export async function POST(req: Request) {
-  requireSameOrigin(req);
   let uid = '';
   try {
     uid = (await verifySessionCookieFromRequest(req)).uid;
   } catch {
-    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    // Allow header-based identity for cross-origin cluster usage.
+    uid = String(req.headers.get('x-nacho-userid') || '').trim();
+    if (!uid) return NextResponse.json({ error: 'unauthenticated' }, { status: 401, headers: corsHeaders(req) });
   }
   rateLimit(req, { scope: 'cluster_heartbeat', limit: 600, windowMs: 60_000, key: uid });
 
@@ -35,7 +50,7 @@ export async function POST(req: Request) {
   }
 
   const deviceId = typeof body.deviceId === 'string' ? body.deviceId : '';
-  if (!deviceId) return NextResponse.json({ error: 'missing_device' }, { status: 400 });
+  if (!deviceId) return NextResponse.json({ error: 'missing_device' }, { status: 400, headers: corsHeaders(req) });
 
   upsertPeer({
     userId: uid,
@@ -49,6 +64,6 @@ export async function POST(req: Request) {
   });
   prunePeers(ACTIVE_WINDOW_MS);
 
-  return new NextResponse(null, { status: 204 });
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
 }
 

@@ -16,6 +16,9 @@ import { AccountPanel } from './Account';
 import { XFabricPanel } from './XFabric';
 import { CommandPalette, type CommandItem } from './CommandPalette';
 import { useRouter } from 'next/navigation';
+import { AchievementToasts } from './AchievementToasts';
+import { AchievementsModal } from './AchievementsModal';
+import { unlockAchievement } from '@/lib/gamification/achievements';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [isBooted, setIsBooted] = useState(false);
@@ -24,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const [paletteOpen, setPaletteOpen] = useState(false);
+    const [achievementsOpen, setAchievementsOpen] = useState(false);
 
     // This app is primarily a single-page “shell” UI on `/`.
     // But we also want true Next.js routes for subsites like `/unblocker` and `/xfabric`.
@@ -57,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { id: 'settings', label: 'Go: Settings', keywords: 'performance storage', hint: 'tab', onSelect: () => setActiveTab('settings') },
             { id: 'fabrik', label: 'Open: Fabrik', keywords: 'hosting deploy domains xfabric', hint: '/fabrik', onSelect: () => router.push('/fabrik') },
             { id: 'unblocker', label: 'Open: Unblocker', keywords: 'cherri games', hint: '/start.html', onSelect: () => router.push('/start.html') },
+            { id: 'achievements', label: 'Open: Achievements', keywords: 'missions xp trophies', hint: 'panel', onSelect: () => setAchievementsOpen(true) },
         ],
         [router],
     );
@@ -112,10 +117,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <div className={`min-h-screen transition-opacity duration-1000 ${isBooted ? 'opacity-100' : 'opacity-0'}`}>
                         <DynamicIsland
                             activeTab={activeTab}
-                            onTabChange={(t) => setActiveTab(t as any)}
+                            onTabChange={(t) => {
+                                if (t === 'fabrik') unlockAchievement('opened_fabrik');
+                                setActiveTab(t as any);
+                            }}
                             onOpenRunner={() => setActiveTab('runner')}
+                            onOpenAchievements={() => setAchievementsOpen(true)}
                         />
                         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={commandItems} />
+                        <AchievementsModal open={achievementsOpen} onClose={() => setAchievementsOpen(false)} />
+                        <AchievementToasts />
                         <main className="relative z-0">
                             <AnimatePresence mode="wait">
                                 <motion.div

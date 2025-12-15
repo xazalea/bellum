@@ -6,6 +6,8 @@ import { Monitor, Play, Plus, Sliders, Smartphone } from "lucide-react";
 import { subscribeInstalledApps, type InstalledApp } from "@/lib/apps/apps-service";
 import { authService } from "@/lib/firebase/auth-service";
 import { AdCard } from "@/components/AdCard";
+import { unlockAchievement } from "@/lib/gamification/achievements";
+import { getClusterBase } from "@/lib/cluster/cluster-base";
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -32,11 +34,7 @@ export const Dashboard = ({
   const [deployedSite, setDeployedSite] = useState(false);
 
   const base = useMemo(() => {
-    return (
-      (typeof process !== "undefined" &&
-        (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
-      ""
-    );
+    return getClusterBase();
   }, []);
 
   useEffect(() => authService.onAuthStateChange(setUser), []);
@@ -60,7 +58,11 @@ export const Dashboard = ({
         const bases = base ? [base, ""] : [""];
         let peers: any[] | null = null;
         for (const b of bases) {
-          const res = await fetch(`${b}/api/cluster/peers`, { cache: "no-store" });
+          const u = authService.getCurrentUser();
+          const res = await fetch(`${b}/api/cluster/peers`, {
+            cache: "no-store",
+            headers: u ? { "X-Nacho-UserId": u.uid } : undefined,
+          });
           if (!res.ok) continue;
           peers = (await res.json()) as any[];
           break;
@@ -72,6 +74,7 @@ export const Dashboard = ({
         if (!stopped) {
           setPeerCount(Array.isArray(peers) ? peers.length : 0);
           setClusterStatus("online");
+          if (Array.isArray(peers) && peers.length > 0) unlockAchievement("joined_cluster");
         }
       } catch {
         setClusterStatus("offline");
@@ -133,60 +136,66 @@ export const Dashboard = ({
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.05 }}
-        className="bellum-card p-8 h-64 relative overflow-hidden group"
-      >
-        <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
-          <Monitor size={120} />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.05 }}
+          className="bellum-card p-8 h-64 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
+            <Monitor size={120} />
+          </div>
 
-        <div className="relative z-10 h-full flex flex-col justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-1">System Status</h2>
-            <div className="flex gap-2 items-center text-white/70 text-sm font-mono">
-              <span className={`w-2 h-2 rounded-full ${user ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
-              {user ? "Signed in" : "Not signed in"}
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">System Status</h2>
+              <div className="flex gap-2 items-center text-white/70 text-sm font-mono">
+                <span className={`w-2 h-2 rounded-full ${user ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
+                {user ? "Identity active" : "Booting…"}
+              </div>
+              <div className="text-xs text-white/45 mt-2">
+                Cluster:{" "}
+                {clusterStatus === "online" ? (
+                  <span className="text-emerald-200">online</span>
+                ) : clusterStatus === "connecting" ? (
+                  <span className="text-amber-200">connecting…</span>
+                ) : (
+                  <span className="text-rose-200">offline</span>
+                )}
+              </div>
+              <div className="text-xs text-white/40 mt-2">
+                Missions: <span className="font-mono text-white/70">{missionDone}/4</span>
+              </div>
             </div>
-            <div className="text-xs text-white/45 mt-2">
-              Cluster:{" "}
-              {clusterStatus === "online" ? (
-                <span className="text-emerald-200">online</span>
-              ) : clusterStatus === "connecting" ? (
-                <span className="text-amber-200">connecting…</span>
-              ) : (
-                <span className="text-rose-200">offline</span>
-              )}
-            </div>
-            <div className="text-xs text-white/40 mt-2">
-              Missions: <span className="font-mono text-white/70">{missionDone}/4</span>
+
+            <div className="grid grid-cols-4 gap-8">
+              <div>
+                <div className="text-white/40 text-xs uppercase tracking-widest mb-1">WASM Heap</div>
+                <div className="text-2xl font-mono">{heapUsed ? formatBytes(heapUsed) : "n/a"}</div>
+              </div>
+              <div>
+                <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Peers</div>
+                <div className="text-2xl font-mono">{peerCount} Nodes</div>
+              </div>
+              <div>
+                <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Apps</div>
+                <div className="text-2xl font-mono">{apps.length}</div>
+              </div>
+              <div>
+                <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Storage</div>
+                <div className="text-2xl font-mono">{formatBytes(storedBytes)}</div>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-8">
-            <div>
-              <div className="text-white/40 text-xs uppercase tracking-widest mb-1">WASM Heap</div>
-              <div className="text-2xl font-mono">{heapUsed ? formatBytes(heapUsed) : "n/a"}</div>
-            </div>
-            <div>
-              <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Peers</div>
-              <div className="text-2xl font-mono">{peerCount} Nodes</div>
-            </div>
-            <div>
-              <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Apps</div>
-              <div className="text-2xl font-mono">{apps.length}</div>
-            </div>
-            <div>
-              <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Storage</div>
-              <div className="text-2xl font-mono">{formatBytes(storedBytes)}</div>
-            </div>
-          </div>
-        </div>
+          <div className="absolute inset-0 bg-sky-200/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        </motion.div>
 
-        <div className="absolute inset-0 bg-sky-200/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      </motion.div>
+        <div className="sticky top-24">
+          <AdCard />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {(hasInstalledApp
@@ -254,7 +263,7 @@ export const Dashboard = ({
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 items-start">
+      <div className="grid grid-cols-1 gap-6 items-start">
         <div className="bellum-card p-6 border-2 border-white/10">
           <div className="flex items-center justify-between">
             <div>
@@ -288,7 +297,6 @@ export const Dashboard = ({
           </div>
         </div>
 
-        <AdCard />
       </div>
     </div>
   );

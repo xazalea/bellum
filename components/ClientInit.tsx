@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react';
 import { authService } from '@/lib/firebase/auth-service';
-import { onSettings } from '@/lib/cluster/settings';
 import { ensureKursor } from '@/lib/ui/kursor';
 import { hyperRuntime } from '@/lib/performance/hyper-runtime';
+import { unlockAchievement } from '@/lib/gamification/achievements';
 
 /**
  * Client-side initialization
@@ -16,17 +16,14 @@ export function ClientInit() {
     ensureKursor().catch(() => {});
 
     // Ensure a local identity exists (username + device fingerprint). No user action required.
-    authService.ensureIdentity().catch(() => {});
+    authService
+      .ensureIdentity()
+      .then(() => unlockAchievement('booted'))
+      .catch(() => {});
 
-    const ensureKeepaliveFrame = (enabled: boolean) => {
+    const ensureKeepaliveFrame = () => {
       const id = 'nacho-cluster-keepalive';
       const existing = document.getElementById(id) as HTMLIFrameElement | null;
-
-      if (!enabled) {
-        existing?.remove();
-        return;
-      }
-
       if (existing) return;
 
       const iframe = document.createElement('iframe');
@@ -45,17 +42,7 @@ export function ClientInit() {
       document.body.appendChild(iframe);
     };
 
-    let unsubSettings: (() => void) | null = null;
-    const unsubAuth = authService.onAuthStateChange((user) => {
-      unsubSettings?.();
-      unsubSettings = null;
-      ensureKeepaliveFrame(false);
-
-      if (!user) return;
-      unsubSettings = onSettings(user.uid, (s) => {
-        ensureKeepaliveFrame(!!s.clusterParticipation);
-      });
-    });
+    ensureKeepaliveFrame();
 
     // Preload critical assets
     if ('requestIdleCallback' in window) {
@@ -77,9 +64,10 @@ export function ClientInit() {
     }
 
     return () => {
-      unsubSettings?.();
-      unsubAuth();
-      ensureKeepaliveFrame(false);
+      // Keepalive should persist for the lifetime of the app shell;
+      // on unmount, remove it.
+      const existing = document.getElementById('nacho-cluster-keepalive');
+      existing?.remove();
     };
   }, []);
 
