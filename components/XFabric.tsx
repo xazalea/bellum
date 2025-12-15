@@ -24,6 +24,8 @@ import { authService } from "@/lib/firebase/auth-service";
 import { unlockAchievement } from "@/lib/gamification/achievements";
 import { AppLibrary } from "@/components/AppLibrary";
 import { AppRunner } from "@/components/AppRunner";
+import { clearVpsIdentity, createVpsIdentity, loadVpsIdentity, type VpsIdentity } from "@/lib/vps/identity";
+import { startVpsHost } from "@/lib/vps/node/host";
 
 type CreatedSite = { id: string; domain: string | null; createdAt: number };
 type SiteRules = {
@@ -32,7 +34,7 @@ type SiteRules = {
 };
 type ListedSite = { id: string; domain: string | null; createdAt: number; bundleFileId: string; rules?: SiteRules };
 
-type NavKey = "overview" | "projects" | "deploy" | "domains" | "apps" | "analytics" | "settings";
+type NavKey = "overview" | "projects" | "deploy" | "domains" | "apps" | "vps" | "analytics" | "settings";
 
 // Vercel-style A record target. Override per-deployment with:
 // NEXT_PUBLIC_FABRIK_A_RECORD_TARGET=1.2.3.4
@@ -120,6 +122,7 @@ export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting
         { key: "deploy" as const, label: "Deploy", icon: Rocket },
         { key: "domains" as const, label: "Domains", icon: Globe },
         { key: "apps" as const, label: "Apps", icon: Server },
+        { key: "vps" as const, label: "VPS", icon: Shield },
         { key: "analytics" as const, label: "Analytics", icon: BarChart3 },
         { key: "settings" as const, label: "Settings", icon: Settings },
       ],
@@ -276,11 +279,198 @@ export function FabrikPanel({ initialTab }: { initialTab?: "overview" | "hosting
                   />
                 </div>
               )}
+              {nav === "vps" && <VpsView sites={sites} />}
               {nav === "analytics" && <AnalyticsView sites={sites} loading={sitesLoading} />}
               {nav === "settings" && <SettingsView sites={sites} onSitesChanged={() => void refreshSites()} />}
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function VpsView({ sites }: { sites: ListedSite[] }) {
+  const [identity, setIdentity] = useState<VpsIdentity | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [hosting, setHosting] = useState(false);
+  const [siteId, setSiteId] = useState<string>(() => (sites[0]?.id ? String(sites[0].id) : ""));
+  const [stopFn, setStopFn] = useState<(() => void) | null>(null);
+
+  useEffect(() => {
+    setIdentity(loadVpsIdentity());
+  }, []);
+
+  useEffect(() => {
+    if (!siteId && sites[0]?.id) setSiteId(String(sites[0].id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sites.length]);
+
+  const create = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const id = await createVpsIdentity();
+      setIdentity(id);
+    } catch (e: any) {
+      setErr(e?.message || "Failed to create VPS identity");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const clear = () => {
+    stopFn?.();
+    setStopFn(null);
+    setHosting(false);
+    clearVpsIdentity();
+    setIdentity(null);
+  };
+
+  const toggleHosting = () => {
+    if (!identity) return;
+    if (hosting) {
+      stopFn?.();
+      setStopFn(null);
+      setHosting(false);
+      return;
+    }
+    const stop = startVpsHost({ vpsId: identity.vpsId, siteId: siteId || null });
+    setStopFn(() => stop);
+    setHosting(true);
+  };
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const vpsUrl = identity ? `${origin}/vps/${identity.vpsId}/` : "";
+  const llmUrl = identity ? `${origin}/vps/${identity.vpsId}/api/llm/chat` : "";
+
+  const [prompt, setPrompt] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatOut, setChatOut] = useState<string>("");
+  const runChat = async () => {
+    if (!identity) return;
+    setChatBusy(true);
+    setChatOut("");
+    try {
+      const res = await fetch(llmUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: "You are running inside a browser-based Virtual VPS. Keep answers concise." },
+            { role: "user", content: prompt },
+          ],
+          maxNewTokens: 96,
+        }),
+      });
+      const j = (await res.json().catch(() => null)) as any;
+      if (!res.ok) throw new Error(j?.error || `LLM failed (${res.status})`);
+      setChatOut(String(j?.text || ""));
+    } catch (e: any) {
+      setChatOut(e?.message || "LLM failed");
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
+        <div className="font-extrabold text-white">Virtual VPS</div>
+        <div className="text-sm text-white/55 mt-2">
+          Browser-only VPS illusion: a stable VPS_ID (key-derived), a local node host, and a routed endpoint under <span className="font-mono">/vps/&lt;VPS_ID&gt;</span>.
+        </div>
+      </div>
+
+      {err && <div className="text-sm text-red-200 bg-red-500/10 border-2 border-red-400/20 rounded-xl p-3">{err}</div>}
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+        <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
+          <div className="text-xs uppercase tracking-widest text-white/40 font-bold">Identity</div>
+          {!identity ? (
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <div className="text-sm text-white/55">No VPS created yet.</div>
+              <button type="button" onClick={() => void create()} disabled={busy} className="bellum-btn disabled:opacity-50">
+                Create VPS
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="mt-3 text-sm text-white/60">VPS_ID</div>
+              <div className="mt-2 font-mono text-white/90 break-all">{identity.vpsId}</div>
+              <div className="mt-4 text-sm text-white/60">Endpoint</div>
+              <div className="mt-2 font-mono text-white/90 break-all">{vpsUrl}</div>
+
+              <div className="mt-5 flex gap-2">
+                <button type="button" onClick={() => navigator.clipboard.writeText(identity.vpsId)} className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 transition-all text-sm font-bold">
+                  Copy VPS_ID
+                </button>
+                <button type="button" onClick={() => navigator.clipboard.writeText(vpsUrl)} className="px-3 py-2 rounded-xl border-2 border-white/10 hover:border-white/25 bg-white/5 hover:bg-white/10 transition-all text-sm font-bold">
+                  Copy URL
+                </button>
+                <button type="button" onClick={clear} className="ml-auto px-3 py-2 rounded-xl border-2 border-red-400/20 hover:border-red-300/40 bg-red-500/10 hover:bg-red-500/15 transition-all text-sm font-bold">
+                  Reset
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
+          <div className="text-xs uppercase tracking-widest text-white/40 font-bold">Hosting</div>
+          <div className="text-sm text-white/55 mt-2">
+            Start a local node that answers requests for this VPS. If no browser node is online, the VPS endpoint returns <span className="font-mono">503</span>.
+          </div>
+
+          <div className="mt-4">
+            <div className="text-xs text-white/45 mb-2">Serve which Fabrik site?</div>
+            <select value={siteId} onChange={(e) => setSiteId(e.target.value)} className="w-full bellum-input">
+              <option value="">(none)</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.domain ? s.domain : s.id}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            disabled={!identity}
+            onClick={toggleHosting}
+            className="mt-4 w-full bellum-btn disabled:opacity-50"
+          >
+            {hosting ? "Stop hosting" : "Start hosting"}
+          </button>
+          <div className="mt-2 text-xs text-white/40">
+            Status: {hosting ? <span className="text-emerald-200">online</span> : <span className="text-white/50">offline</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border-2 border-white/10 bg-white/5 p-5">
+        <div className="text-xs uppercase tracking-widest text-white/40 font-bold">LLM (local inference)</div>
+        <div className="text-sm text-white/55 mt-2">
+          Runs on this browser node (no external API). First run will download the model once and cache it.
+        </div>
+        <div className="mt-3 grid grid-cols-1 lg:grid-cols-[1fr_160px] gap-3 items-start">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="bellum-input min-h-[92px]"
+            placeholder="Ask the Virtual VPS LLM…"
+          />
+          <button type="button" onClick={() => void runChat()} disabled={!identity || chatBusy} className="bellum-btn disabled:opacity-50">
+            {chatBusy ? "Thinking…" : "Run"}
+          </button>
+        </div>
+        {chatOut && (
+          <div className="mt-3 rounded-2xl border-2 border-white/10 bg-black/20 p-4">
+            <div className="text-xs uppercase tracking-widest text-white/40 font-bold">Output</div>
+            <div className="mt-2 text-sm text-white/80 whitespace-pre-wrap">{chatOut}</div>
+          </div>
+        )}
       </div>
     </div>
   );
