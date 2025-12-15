@@ -50,11 +50,15 @@ function normalizeRules(raw: any): SiteRules {
     }));
 
   const headersIn = Array.isArray(raw?.headers) ? raw.headers : [];
-  out.headers = headersIn
+  const normalizedHeaders: Array<{ name: string; value: string }> = headersIn
     .slice(0, 50)
     .map((h: any) => ({ name: String(h?.name || '').trim(), value: String(h?.value || '').trim() }))
-    .filter((h) => h.name && h.value)
-    .map((h) => ({ name: h.name.slice(0, 128), value: h.value.slice(0, 2048) }));
+    .filter((h: { name: string; value: string }) => h.name.length > 0 && h.value.length > 0);
+
+  out.headers = normalizedHeaders.map((h: { name: string; value: string }) => ({
+    name: h.name.slice(0, 128),
+    value: h.value.slice(0, 2048),
+  }));
 
   return out;
 }
