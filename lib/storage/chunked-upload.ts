@@ -83,60 +83,90 @@ export async function chunkedUploadFile(
   const base = getClusterBase();
   const user = authService.getCurrentUser() ?? (await authService.ensureIdentity());
 
-  // Best-effort: enforce cloud quota client-side (6GB) for Telegram-backed storage.
-  // NOTE: quota tracking used to rely on client Firestore. With locked rules, we skip per-user tracking here.
-  // Keep a simple hard cap so uploads don’t explode storage.
   if (file.size > NACHO_STORAGE_LIMIT_BYTES) throw new Error("File too large for cloud storage quota");
 
-  const chunkBytes = opts.chunkBytes ?? 32 * 1024 * 1024;
+  // Vercel Serverless Function Limit is 4.5MB.
+  // We use 3MB chunks with parallel uploads to maximize throughput without hitting limits.
+  const chunkBytes = opts.chunkBytes ?? 3 * 1024 * 1024;
   const totalChunks = Math.ceil(file.size / chunkBytes);
 
   const headers = await getAuthHeaders();
 
-  // If no external cluster base is configured and Telegram is enabled on this deployment,
-  // use Telegram-backed storage routes hosted alongside the Vercel site.
+  // Telegram-backed storage (Vercel hosted)
   const useTelegram = !base && (await isTelegramEnabled());
   if (useTelegram) {
     const uploadId = crypto.randomUUID();
-    const chunks: Array<{ index: number; telegramFileId: string; sizeBytes: number }> = [];
-    let uploadedBytes = 0;
-    let storedBytes = 0;
+    const chunks: Array<{ index: number; telegramFileId: string; sizeBytes: number }> = new Array(totalChunks);
+    let uploadedBytesGlobal = 0;
+    
+    // Concurrency: 6 parallel uploads (optimal for Vercel/Browser)
+    const MAX_CONCURRENCY = 6;
+    const queue = Array.from({ length: totalChunks }, (_, i) => i);
+    
+    const worker = async () => {
+        while (queue.length > 0) {
+            const i = queue.shift();
+            if (i === undefined) break;
 
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * chunkBytes;
-      const end = Math.min(file.size, start + chunkBytes);
-      const chunk = file.slice(start, end);
+            const start = i * chunkBytes;
+            const end = Math.min(file.size, start + chunkBytes);
+            const chunk = file.slice(start, end);
 
-      const payload = opts.compressChunks
-        ? await gzipCompressBlob(chunk)
-        : new Uint8Array(await chunk.arrayBuffer());
+            const payload = opts.compressChunks
+                ? await gzipCompressBlob(chunk)
+                : new Uint8Array(await chunk.arrayBuffer());
 
-      // Ensure ArrayBuffer-backed bytes for fetch BodyInit typing.
-      const sendBytes = new Uint8Array(payload.byteLength);
-      sendBytes.set(payload);
+            // Ensure ArrayBuffer-backed bytes
+            const sendBytes = new Uint8Array(payload.byteLength);
+            sendBytes.set(payload);
 
-      const res = await fetch(`/api/telegram/upload`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "X-File-Name": file.name,
-          "X-Upload-Id": uploadId,
-          "X-Chunk-Index": String(i),
-          "X-Chunk-Total": String(totalChunks),
-        },
-        body: sendBytes.buffer,
-      });
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`Telegram chunk upload failed (${res.status}) [${i}/${totalChunks}]: ${t}`);
-      }
-      const j = (await res.json()) as { fileId: string };
-      chunks.push({ index: i, telegramFileId: j.fileId, sizeBytes: sendBytes.byteLength });
+            let res = await fetch(`/api/telegram/upload`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                    "X-File-Name": file.name,
+                    "X-Upload-Id": uploadId,
+                    "X-Chunk-Index": String(i),
+                    "X-Chunk-Total": String(totalChunks),
+                },
+                body: sendBytes.buffer,
+            });
 
-      uploadedBytes += end - start;
-      storedBytes += sendBytes.byteLength;
-      opts.onProgress?.({ chunkIndex: i, totalChunks, uploadedBytes, totalBytes: file.size });
-    }
+            if (!res.ok) {
+                // Simple retry
+                await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+                res = await fetch(`/api/telegram/upload`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/octet-stream",
+                        "X-File-Name": file.name,
+                        "X-Upload-Id": uploadId,
+                        "X-Chunk-Index": String(i),
+                        "X-Chunk-Total": String(totalChunks),
+                    },
+                    body: sendBytes.buffer,
+                });
+                
+                if (!res.ok) {
+                    const t = await res.text().catch(() => "");
+                    throw new Error(`Upload failed at chunk ${i}: ${res.status} ${t}`);
+                }
+            }
+
+            const j = (await res.json()) as { fileId: string };
+            chunks[i] = { index: i, telegramFileId: j.fileId, sizeBytes: sendBytes.byteLength };
+            
+            uploadedBytesGlobal += end - start;
+            opts.onProgress?.({ 
+                chunkIndex: i, 
+                totalChunks, 
+                uploadedBytes: uploadedBytesGlobal, 
+                totalBytes: file.size 
+            });
+        }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(totalChunks, MAX_CONCURRENCY) }, worker));
 
     const manRes = await fetch(`/api/telegram/manifest`, {
       method: "POST",
@@ -147,7 +177,7 @@ export async function chunkedUploadFile(
         chunkBytes,
         totalChunks,
         createdAtUnixMs: Date.now(),
-        storedBytes,
+        storedBytes: chunks.reduce((s, c) => s + c.sizeBytes, 0),
         chunks,
       }),
     });
@@ -157,9 +187,10 @@ export async function chunkedUploadFile(
     }
     const manJson = (await manRes.json()) as { fileId: string };
 
-    return { uploadId, fileId: manJson.fileId, totalChunks, storedBytes };
+    return { uploadId, fileId: manJson.fileId, totalChunks, storedBytes: chunks.reduce((s, c) => s + c.sizeBytes, 0) };
   }
 
+  // External Cluster Path (Custom Backend)
   const initBody: ChunkedUploadInit = {
     fileName: file.name,
     totalBytes: file.size,
@@ -191,7 +222,6 @@ export async function chunkedUploadFile(
       ? await gzipCompressBlob(chunk)
       : new Uint8Array(await chunk.arrayBuffer());
 
-    // Ensure ArrayBuffer-backed bytes for fetch BodyInit typing.
     const sendBytes = new Uint8Array(payload.byteLength);
     sendBytes.set(payload);
     const hash = await sha256Hex(sendBytes.buffer);
@@ -233,5 +263,3 @@ export async function chunkedUploadFile(
     storedBytes,
   };
 }
-
-

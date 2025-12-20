@@ -10,6 +10,7 @@ export async function GET() {
   const misconfigured = hasToken !== hasChatId;
   return Response.json({
     enabled,
+    chatId: enabled ? chatId : undefined,
     misconfigured,
   });
 }
