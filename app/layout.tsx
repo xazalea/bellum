@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Material_Symbols_Outlined, Noto_Sans, Space_Grotesk } from 'next/font/google';
+import { Noto_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 
@@ -13,12 +13,6 @@ const fontBody = Noto_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-body',
-});
-
-const fontIcons = Material_Symbols_Outlined({
-  subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-icons',
 });
 
 export const metadata: Metadata = {
@@ -51,8 +45,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${fontDisplay.variable} ${fontBody.variable} ${fontIcons.variable} dark`}>
+    <html lang="en" className={`${fontDisplay.variable} ${fontBody.variable} dark`}>
       <head>
+        {/* Material Symbols is not supported by next/font/google yet; load via stylesheet. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        />
         {/* Performance hints */}
         <link rel="prefetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
       </head>
