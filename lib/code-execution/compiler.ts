@@ -3,10 +3,15 @@
  * Supports Go, Rust, and Zig compilation via backend service
  */
 
+import { putWasmArtifactToCas } from '@/lib/storage/wasm-cas';
+import { runWasmOffMainThread } from '@/lib/code-execution/wasm-runner';
+
 export interface CompilationResult {
   wasm: ArrayBuffer | null;
   error: string | null;
   warnings: string[];
+  artifactId?: string;
+  artifactFileId?: string;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
@@ -46,10 +51,13 @@ export class CodeCompiler {
 
       // Convert base64 to ArrayBuffer
       const wasmBytes = Uint8Array.from(atob(result.wasmBase64), c => c.charCodeAt(0));
+      const cas = await putWasmArtifactToCas(wasmBytes.buffer);
       return {
         wasm: wasmBytes.buffer,
         error: null,
         warnings: result.warnings || [],
+        artifactId: cas.artifactId,
+        artifactFileId: cas.fileId,
       };
     } catch (error: any) {
       return {
@@ -94,10 +102,13 @@ export class CodeCompiler {
 
       // Convert base64 to ArrayBuffer
       const wasmBytes = Uint8Array.from(atob(result.wasmBase64), c => c.charCodeAt(0));
+      const cas = await putWasmArtifactToCas(wasmBytes.buffer);
       return {
         wasm: wasmBytes.buffer,
         error: null,
         warnings: result.warnings || [],
+        artifactId: cas.artifactId,
+        artifactFileId: cas.fileId,
       };
     } catch (error: any) {
       return {
@@ -142,10 +153,13 @@ export class CodeCompiler {
 
       // Convert base64 to ArrayBuffer
       const wasmBytes = Uint8Array.from(atob(result.wasmBase64), c => c.charCodeAt(0));
+      const cas = await putWasmArtifactToCas(wasmBytes.buffer);
       return {
         wasm: wasmBytes.buffer,
         error: null,
         warnings: result.warnings || [],
+        artifactId: cas.artifactId,
+        artifactFileId: cas.fileId,
       };
     } catch (error: any) {
       return {
@@ -165,6 +179,10 @@ export class CodeCompiler {
     exitCode: number;
   }> {
     try {
+      // Prefer worker execution to keep the UI thread jank-free.
+      if (typeof Worker !== 'undefined') {
+        return await runWasmOffMainThread({ wasm, input, timeoutMs: 5000 });
+      }
       const wasmModule = await WebAssembly.instantiate(wasm);
       const instance = wasmModule.instance;
 
@@ -172,18 +190,10 @@ export class CodeCompiler {
       const main = instance.exports.main as (() => number) | undefined;
       if (main) {
         const exitCode = main();
-        return {
-          stdout: '',
-          stderr: '',
-          exitCode: exitCode || 0,
-        };
+        return { stdout: '', stderr: '', exitCode: exitCode || 0 };
       }
 
-      return {
-        stdout: '',
-        stderr: 'No main function found in WASM module',
-        exitCode: 1,
-      };
+      return { stdout: '', stderr: 'No main function found in WASM module', exitCode: 1 };
     } catch (error: any) {
       return {
         stdout: '',

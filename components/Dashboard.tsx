@@ -20,9 +20,11 @@ function formatBytes(bytes: number): string {
 export const Dashboard = ({
   onGoApps,
   onOpenRunner,
+  onRunTest,
 }: {
   onGoApps?: () => void;
   onOpenRunner?: () => void;
+  onRunTest?: () => void;
 }) => {
   const [user, setUser] = useState(() => authService.getCurrentUser());
   const userUid = user?.uid ?? null;
@@ -121,6 +123,10 @@ export const Dashboard = ({
         </div>
 
         <div className="flex gap-4">
+          <button onClick={onRunTest} className="bellum-btn bellum-btn-secondary flex items-center gap-2 bg-white/5 border-white/10 hover:bg-white/10 text-white/60">
+             <Sliders size={18} />
+             Test
+          </button>
           <button onClick={onOpenRunner} className="bellum-btn flex items-center gap-2">
             <Play size={18} fill="currentColor" />
             Run an app

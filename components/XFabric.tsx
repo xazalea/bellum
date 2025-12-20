@@ -26,6 +26,7 @@ import { AppLibrary } from "@/components/AppLibrary";
 import { AppRunner } from "@/components/AppRunner";
 import { clearVpsIdentity, createVpsIdentity, loadVpsIdentity, type VpsIdentity } from "@/lib/vps/identity";
 import { startVpsHost } from "@/lib/vps/node/host";
+import { deriveStableUlaFromString } from "@/lib/nacho/networking/virtual-ipv6";
 
 type CreatedSite = { id: string; domain: string | null; createdAt: number };
 type SiteRules = {
@@ -78,6 +79,25 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
       </div>
     </div>
   );
+}
+
+function useStableSiteIpv6(siteId: string): string {
+  const [v6, setV6] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const ip = await deriveStableUlaFromString(`fabrik-site:${siteId}`);
+        if (!cancelled) setV6(ip);
+      } catch {
+        if (!cancelled) setV6("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [siteId]);
+  return v6;
 }
 
 function DnsARecordCallout() {
@@ -542,6 +562,25 @@ function ProjectsView({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  const [selectedV6, setSelectedV6] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const next: Record<string, string> = {};
+      for (const s of sites) {
+        try {
+          next[s.id] = await deriveStableUlaFromString(`fabrik-site:${s.id}`);
+        } catch {
+          next[s.id] = "";
+        }
+      }
+      if (!cancelled) setSelectedV6(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sites]);
+
   const deleteSite = async (id: string) => {
     setErr(null);
     setBusyId(id);
@@ -573,22 +612,30 @@ function ProjectsView({
       </div>
 
       <div className="rounded-2xl border-2 border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[1fr_220px_160px_140px] bg-white/5 border-b border-white/10 px-4 py-3 text-xs uppercase tracking-widest text-white/40 font-bold">
+        <div className="grid grid-cols-[1fr_220px_220px_140px] bg-white/5 border-b border-white/10 px-4 py-3 text-xs uppercase tracking-widest text-white/40 font-bold">
           <div>Project</div>
           <div>Domain</div>
-          <div>Requests</div>
+          <div>Ingress</div>
           <div>Actions</div>
         </div>
         <div className="divide-y divide-white/10">
           {sites.map((s) => (
-            <div key={s.id} className="grid grid-cols-[1fr_220px_160px_140px] px-4 py-3 items-center">
+            <div key={s.id} className="grid grid-cols-[1fr_220px_220px_140px] px-4 py-3 items-center">
               <div className="min-w-0">
                 <div className="font-extrabold text-white truncate">{s.id}</div>
                 <div className="text-xs text-white/45 font-mono">created: {new Date(s.createdAt).toLocaleString()}</div>
               </div>
               <div className="text-sm text-white/70 truncate font-mono">{s.domain || "—"}</div>
-              <div className="text-sm text-white/70 font-mono">
-                {typeof (s as any)?.stats?.totalRequests === "number" ? String((s as any).stats.totalRequests) : "—"}
+              <div className="text-xs text-white/70 font-mono space-y-1">
+                <a
+                  className="inline-flex items-center gap-2 text-white/80 hover:text-white"
+                  href={`${origin}/ingress/${s.id}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  /ingress <ExternalLink size={14} />
+                </a>
+                <div className="text-white/45">{selectedV6[s.id] ? `v6 ${selectedV6[s.id].slice(0, 18)}…` : "v6 (loading)"}</div>
               </div>
               <div className="flex items-center justify-end gap-2">
                 <a

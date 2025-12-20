@@ -1,5 +1,6 @@
 import { createFrameScheduler } from '@/lib/vps/runtime/scheduler';
 import { getLatestCheckpoint, putCheckpoint, type VpsCheckpoint } from '@/lib/vps/runtime/idb';
+import { assertUrlAllowed, getGlobalAllowlist } from '@/lib/security/allowlist';
 
 export type VpsProcess = {
   pid: string;
@@ -100,6 +101,7 @@ export class VirtualVpsRuntime {
     }
 
     const target = `${window.location.origin}/host/${encodeURIComponent(args.siteId)}${args.path}`;
+    assertUrlAllowed(target, getGlobalAllowlist());
     const upstream = await fetch(target, { method: 'GET', cache: 'no-store' });
     const buf = await upstream.arrayBuffer();
     const headers: Record<string, string> = {};

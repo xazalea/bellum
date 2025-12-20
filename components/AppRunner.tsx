@@ -36,6 +36,18 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
       setProgress(0);
       setApp(null);
 
+      if (appId === 'test') {
+          setStatus('Booting NachoOS Test Mode...');
+          if (!os) throw new Error('No OS');
+          await os.boot(canvas);
+          
+          setStatus('Running Test Binary...');
+          const file = new File([], 'test.exe');
+          await os.run(file);
+          setStatus('Running');
+          return;
+      }
+
       if (!appId) {
         setStatus('No app selected');
         return;

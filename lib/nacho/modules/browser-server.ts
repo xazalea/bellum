@@ -7,6 +7,8 @@
 import { TunnelSocket } from '../networking/tunnel-socket';
 import { V86Wrapper } from '../emulation/v86-wrapper';
 import { nachoEngine } from '../engine';
+import { virtualIpv6Overlay } from '../networking/virtual-ipv6';
+import { assertUrlAllowed, getGlobalAllowlist } from '@/lib/security/allowlist';
 
 export class BrowserServerEngine {
     // A. Browser-Based Virtual Server Hosting (1-10)
@@ -137,8 +139,17 @@ export class BrowserServerEngine {
     localReverseProxy = {
         mappings: new Map<string, string>(), // localhost:3000 -> worker:1
         proxy: (url: string) => {
-            const target = this.localReverseProxy.mappings.get(new URL(url).host);
-            return target ? fetch(target) : null;
+            try {
+                const u = new URL(url);
+                const target = this.localReverseProxy.mappings.get(u.host);
+                if (!target) return null;
+                // Apply in-app allowlist policy (only affects our internal proxy surface).
+                const policy = getGlobalAllowlist();
+                assertUrlAllowed(target, policy);
+                return fetch(target);
+            } catch {
+                return null;
+            }
         }
     };
 
@@ -490,8 +501,30 @@ export class BrowserServerEngine {
         table: [] as string[],
         addRoute: (ip: string, service: string) => {
             this.virtualIpUi.table.push(`${ip} -> ${service}`);
+            // If this looks like IPv6, treat it as an overlay route for discovery/debug.
+            if (ip.includes(':')) {
+                virtualIpv6Overlay?.registerLocalRoute({
+                    ipv6: ip,
+                    port: 0,
+                    proto: 'tunnel',
+                    serviceName: service,
+                });
+            }
         }
     };
+
+    // Convenience: show the live overlay table as strings (for “datacenter map” UX).
+    listVirtualIpv6Routes(): string[] {
+        const local = virtualIpv6Overlay?.getLocalIpv6?.() || null;
+        const rows = (virtualIpv6Overlay?.listRoutes?.() || []).map((r) => {
+            const who = r.origin === 'local' ? 'local' : (r.peerId ? `peer:${r.peerId.slice(0, 6)}` : 'peer');
+            const svc = r.serviceName || r.serviceId || r.proto;
+            const port = r.port ? `:${r.port}` : '';
+            return `${r.ipv6}${port} [${who}] -> ${svc}`;
+        });
+        if (local) rows.unshift(`${local} [local] -> node`);
+        return rows;
+    }
 
     // 50. Safe Port Forwarding
     safePortForwarding = {

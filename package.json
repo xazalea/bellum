@@ -3,20 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/sync-cherri.js --if-missing",
     "dev": "next dev",
-    "prebuild": "node scripts/sync-cherri.js --if-missing",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "node scripts/copy-optimizers.js --if-missing && node scripts/sync-cherri.js --if-missing"
+    "postinstall": "node scripts/copy-optimizers.js --if-missing"
   },
   "dependencies": {
     "@fingerprintjs/fingerprintjs": "^4.2.1",
     "@thumbmarkjs/thumbmarkjs": "^1.5.1",
     "@types/adm-zip": "^0.5.7",
     "@types/jszip": "^3.4.0",
-    "@xenova/transformers": "^2.17.2",
     "adm-zip": "^0.5.16",
     "clsx": "^2.1.1",
     "fengari": "^0.1.4",

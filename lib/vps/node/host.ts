@@ -1,6 +1,7 @@
 import { getNachoIdentity } from '@/lib/auth/nacho-identity';
 import { VirtualVpsRuntime } from '@/lib/vps/runtime/runtime';
 import { generateChat } from '@/lib/vps/llm/local-llm';
+import { assertUrlAllowed, getGlobalAllowlist } from '@/lib/security/allowlist';
 
 type PendingRequest = {
   requestId: string;
@@ -106,6 +107,7 @@ export function startVpsHost(cfg: VpsHostConfig): () => void {
             init.body = fromBase64(req.bodyBase64);
           }
           const target = `${window.location.origin}/host/${encodeURIComponent(cfg.siteId)}${urlPath}`;
+          assertUrlAllowed(target, getGlobalAllowlist());
           const upstream = await fetch(target, init);
           outStatus = upstream.status;
           outHeaders = {};

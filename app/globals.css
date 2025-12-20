@@ -61,6 +61,22 @@ body::before {
   z-index: 0;
 }
 
+/* Fog toggle (used by Settings). Keep it a cheap off switch (no repaints). */
+html[data-fog="off"] body::before {
+  display: none;
+}
+
+/* Motion modes (used by Settings). Prefer CSS-based reductions to avoid JS churn. */
+html[data-motion="reduced"] * {
+  scroll-behavior: auto !important;
+}
+
+html[data-motion="reduced"] .bellum-card,
+html[data-motion="reduced"] .bellum-btn,
+html[data-motion="reduced"] .bellum-btn-secondary {
+  transition-duration: 0.001ms !important;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -99,6 +115,14 @@ body::before {
   transform: translateY(-2px) scale(1.005);
 }
 
+/* Performance brain: when perf is low, reduce hover motion (cheap wins). */
+html[data-perf="low"] .bellum-card:hover {
+  transform: translateY(-1px) scale(1.002);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 18px rgba(140, 170, 238, 0.10);
+}
+
 .bellum-btn {
   background: #FFFFFF;
   color: #020408;
@@ -112,6 +136,10 @@ body::before {
 .bellum-btn:hover {
   transform: translateY(-1px) scale(1.04);
   box-shadow: 0 0 18px rgba(198, 208, 245, 0.14), 0 0 30px rgba(140, 170, 238, 0.16);
+}
+
+html[data-perf="low"] .bellum-btn:hover {
+  transform: translateY(-1px) scale(1.02);
 }
 
 .bellum-btn:active,

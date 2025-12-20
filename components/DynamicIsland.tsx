@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { LayoutGrid, Settings, X, Terminal, Boxes, Sparkles, User, Trophy } from 'lucide-react';
+import { LayoutGrid, Settings, X, Terminal, Boxes, Sparkles, User, Trophy, Network, NotebookPen } from 'lucide-react';
 
 interface DynamicIslandProps {
   activeTab: string;
@@ -51,6 +51,8 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
       { id: 'apps', icon: Boxes, label: 'Apps' },
       { id: 'runner', icon: Terminal, label: 'Run' },
       { id: 'fabrik', icon: Sparkles, label: 'Fabrik' },
+      { id: 'lan', icon: Network, label: 'LAN' },
+      { id: 'notebook', icon: NotebookPen, label: 'Notebook' },
     ],
     [],
   );
@@ -66,7 +68,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
         initial={false}
         animate={{
           width: isExpanded ? 460 : 210,
-          height: isExpanded ? 186 : 40,
+          height: isExpanded ? 220 : 40,
           borderRadius: isExpanded ? 34 : 999,
         }}
         transition={{ type: 'spring', stiffness: 420, damping: 34 }}
@@ -169,7 +171,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2 mb-3">
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 {primaryNav.map((item) => (
                   <motion.button
                     key={item.id}

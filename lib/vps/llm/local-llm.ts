@@ -5,15 +5,41 @@ type GenerateArgs = {
   maxNewTokens?: number;
 };
 
-// Lazy, cached model instance.
+declare global {
+  interface Window {
+    transformers?: {
+      pipeline: (task: string, model: string) => Promise<any>;
+    };
+  }
+}
+
+let scriptPromise: Promise<void> | null = null;
 let pipelinePromise: Promise<any> | null = null;
+
+function loadTransformersJs(): Promise<void> {
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise<void>((resolve, reject) => {
+    if (typeof window === 'undefined') return reject(new Error('client_only'));
+    if (window.transformers?.pipeline) return resolve();
+
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+    // Under COEP:require-corp, ensure CORS fetch is used.
+    s.crossOrigin = 'anonymous';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('transformers_load_failed'));
+    document.head.appendChild(s);
+  });
+  return scriptPromise;
+}
 
 async function getPipeline() {
   if (pipelinePromise) return pipelinePromise;
   pipelinePromise = (async () => {
-    // Dynamic import so the main bundle stays fast.
-    const { pipeline } = await import('@xenova/transformers');
-    // Small-ish default model. Cached by browser once downloaded.
+    await loadTransformersJs();
+    const pipeline = window.transformers?.pipeline;
+    if (!pipeline) throw new Error('transformers_missing_pipeline');
     return await pipeline('text-generation', 'Xenova/distilgpt2');
   })();
   return pipelinePromise;

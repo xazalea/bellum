@@ -5,7 +5,8 @@
  */
 
 import { AndroidSystem } from './engine/android/system';
-import { WindowsKernel } from './engine/windows/kernel';
+// import { WindowsKernel } from './engine/windows/kernel'; // Replaced by new Runtime
+import { WindowsRuntime } from '@/lib/nacho/windows/runtime';
 import { WindowManager } from './engine/windows/gdi';
 import { DistributedWindows } from './engine/windows/distributed_runtime';
 import { webgpu } from './nacho/engine/webgpu-context';
@@ -21,10 +22,11 @@ import { WasmMemoryManager } from './engine/wasm/memory_allocator';
 import { BinaryECS } from './engine/ecs/binary_ecs';
 import { ChunkGenerator } from './engine/world/chunk_generator';
 import { DistributedCompute } from './engine/net/distributed_compute';
+import { PETestGenerator } from '@/lib/nacho/windows/test-gen';
 
 export class NachoOS {
     public android: AndroidSystem;
-    public windows: WindowsKernel;
+    public windows: WindowsRuntime;
     public win32WindowManager: WindowManager;
     public distributedWindows: DistributedWindows;
     public creativeHacks: CreativeHacks;
@@ -43,7 +45,8 @@ export class NachoOS {
     private constructor() {
         // Initialize Core Subsystems
         this.android = new AndroidSystem();
-        this.windows = new WindowsKernel();
+        // Adapter for WebGPU Context difference
+        this.windows = new WindowsRuntime(webgpu as any);
         this.win32WindowManager = new WindowManager();
         this.distributedWindows = new DistributedWindows(this.win32WindowManager);
         this.creativeHacks = new CreativeHacks();
@@ -80,6 +83,9 @@ export class NachoOS {
 
         console.log("NachoOS: Hardware initialized.");
         console.log("NachoOS: Ready to launch Apps (APK/EXE).");
+        
+        // Boot Windows Runtime
+        await this.windows.boot();
 
         // Example: Auto-mount SDCard if available
         // vfs.mountSDCard();
@@ -89,6 +95,13 @@ export class NachoOS {
      * Run an application (auto-detect type)
      */
     async run(file: File) {
+        if (file.name === 'test.exe') {
+             console.log("NachoOS: Running Internal Test Binary");
+             const buffer = PETestGenerator.generateHelloWorld();
+             await this.windows.loadPE(buffer);
+             return;
+        }
+
         if (file.name.endsWith('.apk')) {
             console.log("NachoOS: Detected Android APK");
             await this.android.boot(file);

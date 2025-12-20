@@ -71,6 +71,15 @@ export class UnifiedMemory {
     readF32(ptr: number): number { return this.view.getFloat32(ptr, true); }
     writeF32(ptr: number, val: number): void { this.view.setFloat32(ptr, val, true); }
 
+    // Missing 16-bit accessors
+    readU16(ptr: number): number { return this.view.getUint16(ptr, true); }
+    writeU16(ptr: number, val: number): void { this.view.setUint16(ptr, val, true); }
+
+    // Load data into memory
+    load(ptr: number, data: Uint8Array): void {
+        this.u8.set(data, ptr);
+    }
+
     // Zero-Copy View Creation
     
     getSubView(ptr: number, length: number): Uint8Array {

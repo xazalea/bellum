@@ -1,19 +1,20 @@
-// Cluster host is an IP; HTTPS is often misconfigured on raw IPs.
-// We proxy through our own API anyway, but keep both candidates.
-export const DEFAULT_CLUSTER_HOST = '136.61.15.136';
-
 export function getClusterBaseCandidates(): string[] {
   const env =
     (typeof process !== 'undefined' &&
       (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
     '';
 
-  const primary = (env || `https://${DEFAULT_CLUSTER_HOST}`).replace(/\/+$/, '');
+  // If not configured, default to same-origin (empty base).
+  // This enables Telegram-backed storage routes (`/api/telegram/*`) without forcing a hardcoded cluster IP.
+  const trimmed = env.trim();
+  if (!trimmed) return [''];
+
+  const primary = trimmed.replace(/\/+$/, '');
   const alt = primary.startsWith('https://')
     ? primary.replace(/^https:\/\//, 'http://')
     : primary.startsWith('http://')
       ? primary.replace(/^http:\/\//, 'https://')
-      : `http://${DEFAULT_CLUSTER_HOST}`;
+      : primary;
 
   // Unique, stable order.
   return Array.from(new Set([primary, alt]));
