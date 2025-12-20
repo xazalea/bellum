@@ -99,12 +99,12 @@ export function startVpsHost(cfg: VpsHostConfig): () => void {
           const result = await rt.handleHttpGetProxy({ siteId: cfg.siteId || null, path: urlPath });
           outStatus = result.status;
           outHeaders = result.headers;
-          outBody = result.body.buffer;
+          outBody = result.body.buffer as ArrayBuffer;
         } else if (cfg.siteId) {
           // Pass-through for non-GET until we fully virtualize request handlers.
           const init: RequestInit = { method: req.method, headers: req.headers };
           if (req.bodyBase64 && req.method !== 'GET' && req.method !== 'HEAD') {
-            init.body = fromBase64(req.bodyBase64);
+            init.body = fromBase64(req.bodyBase64) as BodyInit;
           }
           const target = `${window.location.origin}/host/${encodeURIComponent(cfg.siteId)}${urlPath}`;
           assertUrlAllowed(target, getGlobalAllowlist());

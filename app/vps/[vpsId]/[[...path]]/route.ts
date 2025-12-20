@@ -34,7 +34,7 @@ async function handle(req: Request, ctx: { params: { vpsId: string; path?: strin
       bodyBase64: bodyBuf ? btoa(String.fromCharCode(...new Uint8Array(bodyBuf))) : null,
     });
     const body = fromBase64(resp.bodyBase64 || '');
-    return new Response(req.method === 'HEAD' ? null : body, { status: resp.status, headers: resp.headers });
+    return new Response(req.method === 'HEAD' ? null : (body as BodyInit), { status: resp.status, headers: resp.headers });
   } catch (e: any) {
     const msg = e?.message || 'no_nodes_online';
     const code = msg === 'no_nodes_online' ? 503 : msg === 'timeout' ? 504 : 500;

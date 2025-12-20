@@ -61,7 +61,7 @@ export function startUiQualityBrain(): () => void {
     adaptivePerformance.onConfigChange(onCfg);
     // Apply immediately using current config.
     onCfg(adaptivePerformance.getConfig());
-    return () => adaptivePerformance.offConfigChange(onCfg);
+    return () => adaptivePerformance?.offConfigChange(onCfg);
   }
 
   // Pinned: keep current attributes and ensure explicit user settings exist.

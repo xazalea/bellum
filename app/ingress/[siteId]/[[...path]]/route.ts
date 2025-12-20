@@ -44,7 +44,7 @@ async function handle(req: Request, ctx: { params: { siteId: string; path?: stri
       bodyBase64: bodyBuf ? toBase64(bodyBuf) : null,
     });
     const body = fromBase64(resp.bodyBase64 || '');
-    return new Response(method === 'HEAD' ? null : body, { status: resp.status, headers: resp.headers });
+    return new Response(method === 'HEAD' ? null : (body as BodyInit), { status: resp.status, headers: resp.headers });
   } catch (e: any) {
     const msg = e?.message || 'no_nodes_online';
     // Fallback: serve directly from canonical /host path (still works if no nodes are available yet).

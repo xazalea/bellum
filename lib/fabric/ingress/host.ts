@@ -110,7 +110,7 @@ export function startFabrikIngressHost(cfg: FabrikIngressHostConfig): () => void
           if (cached && now - cached.cachedAt < CACHE_TTL_MS) {
             outStatus = cached.status;
             outHeaders = cached.headers;
-            outBody = cached.body.buffer;
+            outBody = cached.body.buffer as ArrayBuffer;
           } else {
             const target = `${window.location.origin}/host/${encodeURIComponent(cfg.siteId)}${urlPath}`;
             assertUrlAllowed(target, getGlobalAllowlist());
@@ -128,7 +128,7 @@ export function startFabrikIngressHost(cfg: FabrikIngressHostConfig): () => void
         } else {
           // Pass-through for non-GET.
           const init: RequestInit = { method, headers: req.headers };
-          if (req.bodyBase64 && method !== 'GET' && method !== 'HEAD') init.body = fromBase64(req.bodyBase64);
+          if (req.bodyBase64 && method !== 'GET' && method !== 'HEAD') init.body = fromBase64(req.bodyBase64) as BodyInit;
           const target = `${window.location.origin}/host/${encodeURIComponent(cfg.siteId)}${urlPath}`;
           assertUrlAllowed(target, getGlobalAllowlist());
           const upstream = await fetch(target, init);

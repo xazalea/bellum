@@ -65,8 +65,8 @@ async function sha256Bytes(text: string): Promise<Uint8Array> {
 
 async function deriveStableUlaFromIdentity(): Promise<string> {
   const id = await getNachoIdentity();
-  // Use both uid + deviceId to create stable-yet-per-device IPv6.
-  const seed = `nacho-ipv6:v1:${id.uid}:${id.deviceId}`;
+  // Use uid as stable seed.
+  const seed = `nacho-ipv6:v1:${id.uid}`;
   const hash = await sha256Bytes(seed);
   return bytesToIpv6Ula(hash.subarray(0, 16));
 }
