@@ -114,9 +114,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Suspense fallback={<PanelFallback label="Dashboard" />}>
                         <Dashboard
                             onGoApps={() => setActiveTab('apps')}
-                            onOpenRunner={() => setActiveTab('runner')}
-                            onRunTest={() => {
-                                setRunnerAppId('test');
+                            onOpenRunner={(appId) => {
+                                if (appId) setRunnerAppId(appId);
                                 setActiveTab('runner');
                             }}
                         />
