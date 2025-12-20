@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .text-stroke {
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.8);
+    color: transparent;
+  }
+  .text-stroke-sm {
+    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
+    color: transparent;
+  }
+}
+
 :root {
   /* Catppuccin Frappe-inspired palette */
   --foreground-rgb: 198, 208, 245; /* text */
@@ -55,10 +66,22 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* Less gradients: a single soft wash. */
-  background: radial-gradient(900px 520px at 45% 15%, rgba(140, 170, 238, 0.10), transparent 62%);
-  opacity: 0.9;
+  /* Screenshot-style background wash */
+  background:
+    radial-gradient(820px 560px at 72% 12%, rgba(59, 130, 246, 0.18), transparent 62%),
+    radial-gradient(760px 560px at 18% 78%, rgba(168, 85, 247, 0.18), transparent 64%),
+    radial-gradient(900px 520px at 50% 30%, rgba(255, 255, 255, 0.05), transparent 70%);
+  opacity: 1;
   z-index: 0;
+}
+
+/* Screenshot UI grid: subtle lines (cheaper than thousands of DOM nodes). */
+.ui-grid {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(closest-side at 50% 30%, rgba(0,0,0,0.9), transparent 70%);
 }
 
 /* Fog toggle (used by Settings). Keep it a cheap off switch (no repaints). */
@@ -202,4 +225,8 @@ select:focus-visible {
 }
 .animate-pulse-slow {
   animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.bg-grid-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
 }
