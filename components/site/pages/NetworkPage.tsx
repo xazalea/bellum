@@ -1,4 +1,8 @@
-import React from 'react';
+/* eslint-disable @next/next/no-img-element */
+'use client';
+
+import React, { useMemo, useState } from 'react';
+import { useClusterPeers } from '../hooks/useClusterPeers';
 
 function OutlineCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
@@ -11,13 +15,27 @@ function OutlineCard({ children, className = '' }: { children: React.ReactNode; 
 }
 
 export function NetworkPage() {
+  const { peers, self } = useClusterPeers();
+  const [keepaliveEnabled, setKeepaliveEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem('nacho.keepalive') !== 'off';
+  });
+
+  const activePeers = peers.length;
+  const lastSeen = useMemo(() => {
+    if (!self?.lastSeenUnixMs) return null;
+    const s = Math.max(0, Date.now() - self.lastSeenUnixMs);
+    const sec = Math.floor(s / 1000);
+    return sec < 90 ? `${sec}s ago` : `${Math.floor(sec / 60)}m ago`;
+  }, [self?.lastSeenUnixMs]);
+
   return (
     <div className="w-full">
       <div className="flex items-start justify-between gap-6">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold tracking-wide text-white/75">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.55)]" />
-            GRID ONLINE • STABLE
+            <span className={`h-2 w-2 rounded-full ${activePeers ? 'bg-emerald-400' : 'bg-amber-300'} shadow-[0_0_10px_rgba(52,211,153,0.55)]`} />
+            {activePeers ? `CLUSTER CONNECTED • ${activePeers} PEER${activePeers === 1 ? '' : 'S'}` : 'CLUSTER CONNECTING'}
           </div>
           <h1 className="mt-5 font-display text-6xl font-black tracking-tight text-white">Network</h1>
           <div className="font-display text-6xl font-black tracking-tight text-white/70">
@@ -27,11 +45,12 @@ export function NetworkPage() {
 
         <div className="hidden md:block">
           <div className="text-right">
-            <div className="text-[10px] font-bold tracking-wider text-white/55">GLOBAL PEERS</div>
-            <div className="mt-1 font-display text-4xl font-extrabold text-white">12,842</div>
+            <div className="text-[10px] font-bold tracking-wider text-white/55">ACTIVE PEERS</div>
+            <div className="mt-1 font-display text-4xl font-extrabold text-white">{activePeers}</div>
             <div className="mt-3 h-1 w-28 rounded-full bg-white/10">
-              <div className="h-full w-20 rounded-full bg-[#3b82f6]" />
+              <div className="h-full w-28 rounded-full bg-[#3b82f6]" style={{ width: `${Math.min(112, 20 + activePeers * 6)}px` }} />
             </div>
+            {lastSeen && <div className="mt-2 text-xs font-semibold text-white/45">Last heartbeat: {lastSeen}</div>}
           </div>
         </div>
       </div>
@@ -39,30 +58,41 @@ export function NetworkPage() {
       <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
         <OutlineCard className="md:col-span-2">
           <div className="relative p-8">
-            <div className="absolute inset-0 bg-[#3b82f6]/90" />
+            <div className="absolute inset-0 bg-[#3b82f6]/85" />
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
             <div className="relative">
               <div className="flex items-center justify-between">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-[10px] font-bold tracking-wider text-white">
-                  <span className="material-symbols-outlined text-[14px]">bolt</span>
-                  TURBO ACTIVE
+                  <span className="material-symbols-outlined text-[14px]">hub</span>
+                  NODE STATUS
                 </div>
                 <div className="grid h-10 w-10 place-items-center rounded-full bg-white/95 text-black">
                   <span className="material-symbols-outlined text-[18px]">bolt</span>
                 </div>
               </div>
 
-              <div className="mt-5 font-display text-xl font-bold text-white/90">Collective Boost Factor</div>
-              <div className="mt-4 flex items-end gap-2">
-                <div className="font-display text-7xl font-black text-white">8.4</div>
-                <div className="pb-3 font-display text-2xl font-bold text-white/80">x</div>
-              </div>
-              <div className="mt-3 max-w-2xl text-sm font-semibold leading-relaxed text-white/90">
-                Your browser is currently running <span className="underline">8.4x faster</span> thanks to distributed peer acceleration.
+              <div className="mt-5 font-display text-xl font-bold text-white/95">Background Node</div>
+              <div className="mt-2 text-sm font-semibold text-white/90">
+                {keepaliveEnabled ? 'Enabled' : 'Disabled'} • Heartbeats are sent from the hidden keepalive frame.
               </div>
 
-              <div className="mt-6 h-3 overflow-hidden rounded-full bg-white/20">
-                <div className="h-full w-[78%] rounded-full bg-white/90" />
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !keepaliveEnabled;
+                    setKeepaliveEnabled(next);
+                    window.localStorage.setItem('nacho.keepalive', next ? 'on' : 'off');
+                    // Reload to apply (ClientInit reads this when mounting).
+                    window.location.reload();
+                  }}
+                  className="h-12 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_14px_28px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
+                >
+                  {keepaliveEnabled ? 'Stop Node' : 'Start Node'}
+                </button>
+                <div className="text-xs font-semibold text-white/75">
+                  Self: {self ? `${self.deviceId.slice(0, 8)}…` : '—'}
+                </div>
               </div>
             </div>
           </div>
@@ -93,16 +123,23 @@ export function NetworkPage() {
                 <div className="absolute left-1/2 top-1/2 w-px h-[90%] -translate-y-1/2 bg-white/10" />
               </div>
 
-              <div className="absolute left-[28%] top-[40%] h-2 w-2 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(192,132,252,0.6)]" />
-              <div className="absolute left-[56%] top-[52%] h-2 w-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.6)]" />
-              <div className="absolute left-[68%] top-[62%] h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.6)]" />
-              <div className="absolute left-[60%] top-[72%] h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
+              {peers.slice(0, 6).map((p, idx) => (
+                <div
+                  key={`${p.userId}:${p.deviceId}`}
+                  className="absolute h-2 w-2 rounded-full shadow-[0_0_10px_rgba(56,189,248,0.6)]"
+                  style={{
+                    left: `${28 + (idx * 9) % 44}%`,
+                    top: `${38 + (idx * 11) % 44}%`,
+                    backgroundColor: idx % 3 === 0 ? '#a855f7' : idx % 3 === 1 ? '#38bdf8' : '#34d399',
+                  }}
+                />
+              ))}
             </div>
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-[10px] font-semibold text-white/55">
-              <span className="rounded-full bg-white/5 px-3 py-1">NA-East 42ms</span>
-              <span className="rounded-full bg-white/5 px-3 py-1">EU-West 88ms</span>
-              <span className="rounded-full bg-white/5 px-3 py-1">Asia 120ms</span>
+              <span className="rounded-full bg-white/5 px-3 py-1">Peers: {activePeers}</span>
+              <span className="rounded-full bg-white/5 px-3 py-1">Window: 60s</span>
+              <span className="rounded-full bg-white/5 px-3 py-1">Heartbeat: 15s</span>
             </div>
           </div>
         </OutlineCard>
@@ -138,24 +175,27 @@ export function NetworkPage() {
                 </div>
               </div>
 
-              <div className="absolute left-[28%] top-[62%] rounded-xl bg-[#3b82f6] px-3 py-2 text-[11px] font-bold text-white shadow-[0_0_0_2px_rgba(255,255,255,0.85)]">
-                <div className="text-[9px] font-semibold text-white/85">WORKER #441</div>
-                Processing
-              </div>
-
-              <div className="absolute left-[62%] top-[54%] rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 text-[10px] font-bold text-emerald-200">
-                Syncing
-              </div>
+              {peers.slice(0, 3).map((p, idx) => (
+                <div
+                  key={`${p.userId}:${p.deviceId}`}
+                  className="absolute rounded-xl bg-[#3b82f6] px-3 py-2 text-[11px] font-bold text-white shadow-[0_0_0_2px_rgba(255,255,255,0.85)]"
+                  style={{ left: `${22 + idx * 18}%`, top: `${56 + (idx % 2) * 10}%` }}
+                >
+                  <div className="text-[9px] font-semibold text-white/85">{p.label || 'Peer'}</div>
+                  {p.deviceId.slice(0, 8)}…
+                </div>
+              ))}
 
               <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-[10px] font-semibold text-white/55 backdrop-blur">
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#3b82f6]" /> Node 0x82… connected
-                </span>
-                <span className="inline-flex items-center gap-2 text-emerald-300">
-                  <span className="material-symbols-outlined text-[14px]">bolt</span> Job #2911 optimized (24ms)
+                  <span className={`h-2 w-2 rounded-full ${keepaliveEnabled ? 'bg-emerald-400' : 'bg-amber-300'}`} /> Node{' '}
+                  {keepaliveEnabled ? 'enabled' : 'disabled'}
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-white/50" /> New region Tokyo added
+                  <span className="material-symbols-outlined text-[14px]">devices</span> {activePeers} active peers
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px]">schedule</span> {lastSeen ? `last ${lastSeen}` : 'no heartbeat'}
                 </span>
               </div>
             </div>
@@ -176,15 +216,8 @@ export function NetworkPage() {
               <span className="material-symbols-outlined text-[18px] text-white/70">speed</span>
             </div>
           </div>
-          <div className="mt-5 flex h-10 items-end gap-2">
-            {[12, 22, 14, 28, 20, 8].map((h, idx) => (
-              <div key={idx} className="w-full rounded-md bg-white/10">
-                <div className="rounded-md bg-[#3b82f6]" style={{ height: `${h}px` }} />
-              </div>
-            ))}
-            <div className="w-full rounded-md bg-white/10">
-              <div className="rounded-md bg-emerald-400" style={{ height: `10px` }} />
-            </div>
+          <div className="mt-5 text-sm font-semibold text-white/60">
+            Reported load: {typeof self?.load === 'number' ? `${Math.round(self.load * 100)}%` : '—'}
           </div>
         </OutlineCard>
 
@@ -198,9 +231,8 @@ export function NetworkPage() {
               <span className="material-symbols-outlined text-[18px] text-white/70">memory</span>
             </div>
           </div>
-          <div className="mt-4 text-sm font-semibold text-emerald-300">↗ +12.5% this hour</div>
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full w-[62%] rounded-full bg-[#3b82f6]" />
+          <div className="mt-4 text-sm font-semibold text-white/60">
+            Heartbeat source: /keepalive iframe (15s interval)
           </div>
         </OutlineCard>
 
@@ -214,9 +246,9 @@ export function NetworkPage() {
               <span className="material-symbols-outlined text-[18px] text-white/70">verified_user</span>
             </div>
           </div>
-          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            Audit Verified
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white/75">
+            <span className={`h-2 w-2 rounded-full ${keepaliveEnabled ? 'bg-emerald-400' : 'bg-amber-300'}`} />
+            {keepaliveEnabled ? 'Participating' : 'Not participating'}
           </div>
         </OutlineCard>
       </div>
@@ -231,15 +263,22 @@ export function NetworkPage() {
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <button
                 type="button"
+                onClick={() => {
+                  const next = !keepaliveEnabled;
+                  setKeepaliveEnabled(next);
+                  window.localStorage.setItem('nacho.keepalive', next ? 'on' : 'off');
+                  window.location.reload();
+                }}
                 className="h-12 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_14px_28px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
               >
-                Start Node
+                {keepaliveEnabled ? 'Stop Node' : 'Start Node'}
               </button>
               <button
                 type="button"
                 className="h-12 rounded-full border border-white/15 bg-white/5 px-6 text-sm font-semibold text-white/80 transition hover:bg-white/10"
+                onClick={() => window.open('/keepalive', '_blank', 'noopener,noreferrer')}
               >
-                Learn More
+                Open keepalive
               </button>
             </div>
           </div>

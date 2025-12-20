@@ -230,3 +230,55 @@ select:focus-visible {
 .bg-grid-pattern {
   background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
 }
+
+/* Docs typography (used by /docs/[slug]) */
+.ui-doc-h1 {
+  margin-top: 0.2rem;
+  margin-bottom: 1rem;
+  font-family: Space Grotesk, sans-serif;
+  font-size: 2.25rem;
+  line-height: 1.1;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.95);
+}
+.ui-doc-h2 {
+  margin-top: 1.4rem;
+  margin-bottom: 0.6rem;
+  font-family: Space Grotesk, sans-serif;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.92);
+}
+.ui-doc-h3 {
+  margin-top: 1.1rem;
+  margin-bottom: 0.4rem;
+  font-family: Space Grotesk, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+}
+.ui-doc-p {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.68);
+}
+.ui-doc-spacer {
+  height: 0.7rem;
+}
+.ui-doc-pre {
+  margin-top: 0.9rem;
+  margin-bottom: 0.9rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.85);
+  overflow: auto;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}

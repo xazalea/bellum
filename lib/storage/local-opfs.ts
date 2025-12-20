@@ -41,6 +41,18 @@ export async function opfsReadBytes(key: string): Promise<Uint8Array | null> {
   }
 }
 
+export async function opfsHas(key: string): Promise<boolean> {
+  try {
+    const root = await getRootDir();
+    const nacho = await ensureDir(root, "nacho");
+    const apps = await ensureDir(nacho, "apps");
+    await apps.getFileHandle(`${key}.bin`, { create: false });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function opfsDelete(key: string): Promise<void> {
   try {
     const root = await getRootDir();

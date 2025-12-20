@@ -22,6 +22,12 @@ export function ClientInit() {
       .catch(() => {});
 
     const ensureKeepaliveFrame = () => {
+      try {
+        // User-controlled opt-out (Network page toggle).
+        if (window.localStorage.getItem('nacho.keepalive') === 'off') return;
+      } catch {
+        // ignore
+      }
       const id = 'nacho-cluster-keepalive';
       const existing = document.getElementById(id) as HTMLIFrameElement | null;
       if (existing) return;

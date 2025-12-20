@@ -3,6 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
+import { useMemo, useState } from 'react';
+import { useClusterPeers } from './hooks/useClusterPeers';
+import { authService } from '@/lib/firebase/auth-service';
 
 type NavItem = {
   href: string;
@@ -23,6 +26,13 @@ function isActivePath(pathname: string, href: string) {
 
 export function SiteShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
+  const { peers } = useClusterPeers();
+  const [accountOpen, setAccountOpen] = useState(false);
+
+  const clusterLabel = useMemo(() => {
+    if (peers.length > 0) return `Cluster Connected (${peers.length})`;
+    return 'Cluster Connecting';
+  }, [peers.length]);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
@@ -61,14 +71,15 @@ export function SiteShell({ children }: PropsWithChildren) {
 
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 md:flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.55)]" />
-              <span className="text-[11px] font-semibold tracking-wide text-white/85">Cluster Ready</span>
+              <span className={`h-2 w-2 rounded-full ${peers.length ? 'bg-emerald-400' : 'bg-amber-300'} shadow-[0_0_8px_rgba(52,211,153,0.55)]`} />
+              <span className="text-[11px] font-semibold tracking-wide text-white/85">{clusterLabel}</span>
             </div>
             <button
               type="button"
+              onClick={() => setAccountOpen(true)}
               className="h-10 rounded-full bg-white px-5 text-sm font-semibold text-black shadow-[0_10px_22px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
             >
-              Login
+              Account
             </button>
           </div>
         </div>
@@ -95,6 +106,70 @@ export function SiteShell({ children }: PropsWithChildren) {
           </div>
         </div>
       </footer>
+
+      {accountOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setAccountOpen(false)}
+          />
+          <div className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#070b16]/85 p-6 backdrop-blur shadow-[0_26px_90px_rgba(0,0,0,0.65)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="font-display text-2xl font-bold text-white">Account</div>
+                <div className="mt-1 text-sm font-semibold text-white/55">
+                  Your Nacho identity is automatic (fingerprint-based).
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAccountOpen(false)}
+                className="grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-white/5 text-white/70 transition hover:bg-white/10"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
+              <div className="text-[10px] font-bold tracking-wider text-white/55">USER ID</div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div className="truncate font-mono text-sm font-semibold text-white/85">
+                  {authService.getCurrentUser()?.uid ?? '…'}
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const uid = authService.getCurrentUser()?.uid ?? (await authService.ensureIdentity()).uid;
+                    await navigator.clipboard.writeText(uid);
+                  }}
+                  className="h-9 rounded-full bg-white px-4 text-xs font-bold text-black"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+              <Link
+                href="/dashboard"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white/80 transition hover:bg-white/10"
+                onClick={() => setAccountOpen(false)}
+              >
+                Open Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={() => setAccountOpen(false)}
+                className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_14px_28px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
