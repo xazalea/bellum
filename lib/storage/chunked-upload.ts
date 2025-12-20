@@ -85,9 +85,9 @@ export async function chunkedUploadFile(
 
   if (file.size > NACHO_STORAGE_LIMIT_BYTES) throw new Error("File too large for cloud storage quota");
 
-  // Vercel Serverless Function Limit is 4.5MB.
-  // We use 3MB chunks with parallel uploads to maximize throughput without hitting limits.
-  const chunkBytes = opts.chunkBytes ?? 3 * 1024 * 1024;
+  // Vercel request body limits can be strict; keep chunks small to avoid 413.
+  // 1 MiB is a safe default for serverless + Telegram upload path.
+  const chunkBytes = opts.chunkBytes ?? 1 * 1024 * 1024;
   const totalChunks = Math.ceil(file.size / chunkBytes);
 
   const headers = await getAuthHeaders();
@@ -128,6 +128,7 @@ export async function chunkedUploadFile(
                     "X-Upload-Id": uploadId,
                     "X-Chunk-Index": String(i),
                     "X-Chunk-Total": String(totalChunks),
+                    ...headers,
                 },
                 body: sendBytes.buffer,
             });
@@ -143,6 +144,7 @@ export async function chunkedUploadFile(
                         "X-Upload-Id": uploadId,
                         "X-Chunk-Index": String(i),
                         "X-Chunk-Total": String(totalChunks),
+                        ...headers,
                     },
                     body: sendBytes.buffer,
                 });
@@ -170,7 +172,7 @@ export async function chunkedUploadFile(
 
     const manRes = await fetch(`/api/telegram/manifest`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({
         fileName: file.name,
         totalBytes: file.size,

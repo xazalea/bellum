@@ -17,14 +17,11 @@ export type ClusterPeer = {
 };
 
 async function fetchPeers(uid: string): Promise<ClusterPeer[]> {
-  // Prefer proxy (works cross-origin and against multiple candidates).
-  const proxy = await fetch(`/api/cluster/proxy/peers?userId=${encodeURIComponent(uid)}`, { cache: 'no-store' })
-    .then((r) => (r.ok ? r.json() : null))
-    .catch(() => null);
-  if (Array.isArray(proxy)) return proxy as ClusterPeer[];
-
-  // Fallback to local store (requires auth header; proxy should usually succeed).
-  const local = await fetch('/api/cluster/peers', { cache: 'no-store' })
+  // Prefer local store (single-deployment reliable).
+  const local = await fetch('/api/cluster/peers', {
+    cache: 'no-store',
+    headers: { 'X-Nacho-UserId': uid },
+  })
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);
   return Array.isArray(local) ? (local as ClusterPeer[]) : [];

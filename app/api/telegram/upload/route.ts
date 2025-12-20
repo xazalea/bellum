@@ -1,5 +1,4 @@
-import { adminDb } from "@/app/api/user/_util";
-import { verifySessionCookieFromRequest } from "@/lib/server/session";
+import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, requireTelegramStorageChatId, telegramSendDocument } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
@@ -24,7 +23,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     requireSameOrigin(req);
-    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: "telegram_upload", limit: 30, windowMs: 60_000, key: uid });
     const token = requireTelegramBotToken();
     const chatId = requireTelegramStorageChatId();

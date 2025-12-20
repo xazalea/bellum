@@ -152,8 +152,8 @@ class HyperRuntimeAccelerator {
           this.gpuWarmContexts.webgpuQueue = queue;
           // Minimal compute pass to pre-poison pipeline
           const encoder = device.createCommandEncoder();
-          encoder.finish();
-          queue.submit([encoder.finish()]);
+          const cmd = encoder.finish();
+          queue.submit([cmd]);
         }
         this.capabilities.webgpu = !!adapter;
       } catch (err) {
@@ -205,6 +205,18 @@ class HyperRuntimeAccelerator {
   private async warmAudioTick(): Promise<void> {
     if (typeof window === 'undefined' || this.silentAudioCtx) return;
     try {
+      const ua = (navigator as any).userActivation as { hasBeenActive?: boolean } | undefined;
+      if (ua && ua.hasBeenActive === false) {
+        // Avoid autoplay warning: wait for first user gesture.
+        const resume = () => {
+          window.removeEventListener('pointerdown', resume);
+          window.removeEventListener('keydown', resume);
+          void this.warmAudioTick();
+        };
+        window.addEventListener('pointerdown', resume, { once: true, passive: true });
+        window.addEventListener('keydown', resume, { once: true });
+        return;
+      }
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'interactive' });
       const gain = ctx.createGain();
       gain.gain.value = 0.00001; // effectively silent

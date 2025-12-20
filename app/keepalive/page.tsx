@@ -22,11 +22,10 @@ export default function KeepalivePage() {
       try {
         const id = await getNachoIdentity();
         const deviceId = await getDeviceFingerprintId();
-        await fetch(`/api/cluster/proxy/heartbeat`, {
+        await fetch(`/api/cluster/heartbeat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Nacho-UserId": id.uid },
           body: JSON.stringify({
-            userId: id.uid,
             deviceId,
             userAgent: navigator.userAgent,
             label: navigator.platform,

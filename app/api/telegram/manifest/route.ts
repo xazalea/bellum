@@ -1,5 +1,4 @@
-import { adminDb } from "@/app/api/user/_util";
-import { verifySessionCookieFromRequest } from "@/lib/server/session";
+import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, requireTelegramStorageChatId, telegramDownloadFileBytes, telegramSendDocument } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
@@ -27,7 +26,7 @@ type TelegramManifest = {
 export async function POST(req: Request) {
   try {
     requireSameOrigin(req);
-    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: "telegram_manifest_store", limit: 60, windowMs: 60_000, key: uid });
     const token = requireTelegramBotToken();
     const chatId = requireTelegramStorageChatId();
@@ -89,7 +88,7 @@ export async function GET(req: Request) {
     const fileId = searchParams.get("fileId") || "";
     if (!fileId) return Response.json({ error: "fileId required" }, { status: 400 });
 
-    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: "telegram_manifest_fetch", limit: 240, windowMs: 60_000, key: uid });
     const snap = await adminDb().collection("telegram_files").doc(fileId).get();
     if (!snap.exists) return Response.json({ error: "not_found" }, { status: 404 });

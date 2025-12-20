@@ -1,5 +1,4 @@
-import { adminDb } from "@/app/api/user/_util";
-import { verifySessionCookieFromRequest } from "@/lib/server/session";
+import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, telegramDownloadFileBytes } from "@/lib/server/telegram";
 import { rateLimit } from "@/lib/server/security";
 
@@ -8,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
-    const uid = (await verifySessionCookieFromRequest(req)).uid;
+    const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: "telegram_file", limit: 600, windowMs: 60_000, key: uid });
     const token = requireTelegramBotToken();
     const { searchParams } = new URL(req.url);

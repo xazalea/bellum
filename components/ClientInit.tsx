@@ -13,6 +13,12 @@ import { getNachoIdentity } from '@/lib/auth/nacho-identity';
  */
 export function ClientInit() {
   useEffect(() => {
+    // IMPORTANT: /keepalive runs inside a hidden iframe. Do not spawn nested iframes or warm heavy subsystems there.
+    if (typeof window !== 'undefined') {
+      const path = window.location?.pathname || '';
+      if (path.startsWith('/keepalive')) return;
+    }
+
     // Custom cursor (Kursor)
     ensureKursor().catch(() => {});
 
