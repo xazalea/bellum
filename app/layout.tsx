@@ -1,6 +1,25 @@
 import type { Metadata } from 'next';
+import { Material_Symbols_Outlined, Noto_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
+
+const fontDisplay = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-display',
+});
+
+const fontBody = Noto_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-body',
+});
+
+const fontIcons = Material_Symbols_Outlined({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-icons',
+});
 
 export const metadata: Metadata = {
   title: 'Nacho - Universal Runtime Platform',
@@ -32,14 +51,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`${fontDisplay.variable} ${fontBody.variable} ${fontIcons.variable} dark`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-          rel="stylesheet"
-        />
         {/* Performance hints */}
         <link rel="prefetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
       </head>

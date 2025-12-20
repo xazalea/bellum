@@ -36,24 +36,6 @@ function StatusPill({ tone, label }: { tone: CacheTone; label: string }) {
   );
 }
 
-function Segmented({ labels }: { labels: string[] }) {
-  return (
-    <div className="flex w-full items-center gap-2 rounded-full border border-white/12 bg-white/5 p-1 backdrop-blur md:w-auto">
-      {labels.map((label, idx) => (
-        <button
-          key={label}
-          type="button"
-          className={`h-10 rounded-full px-5 text-xs font-semibold transition ${
-            idx === 0 ? 'bg-white text-black shadow-[0_10px_18px_rgba(0,0,0,0.35)]' : 'text-white/70 hover:text-white'
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function LibraryPage() {
   const router = useRouter();
   const { user, apps } = useInstalledApps();
@@ -278,7 +260,6 @@ export function LibraryPage() {
                   <span className="material-symbols-outlined text-[16px]">delete</span>
                   Delete
                 </button>
-              ))}
             </div>
           </div>
           );

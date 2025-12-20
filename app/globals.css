@@ -13,6 +13,12 @@
   }
 }
 
+/* Material Symbols (loaded via next/font) */
+.material-symbols-outlined {
+  font-family: var(--font-icons) !important;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
 :root {
   /* Catppuccin Frappe-inspired palette */
   --foreground-rgb: 198, 208, 245; /* text */
