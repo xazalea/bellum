@@ -20,6 +20,13 @@ export function AccountPanel() {
   const [profile, setProfile] = useState<{ handle: string | null } | null>(null);
   const [handleInput, setHandleInput] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [accountUsername, setAccountUsername] = useState("");
+  const [accountCodeInput, setAccountCodeInput] = useState("");
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [pendingChallenge, setPendingChallenge] = useState(false);
+  const [displayedChallenge, setDisplayedChallenge] = useState<{ code: string; expiresAt: number } | null>(null);
+  const [accountBusy, setAccountBusy] = useState(false);
 
   const [friendHandle, setFriendHandle] = useState("");
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
@@ -69,6 +76,117 @@ export function AccountPanel() {
       cancelled = true;
     };
   }, [userUid]);
+
+  const ensureIdentity = async () => {
+    if (user) return user;
+    const u = await authService.ensureIdentity();
+    setUser(u);
+    return u;
+  };
+
+  const handleAccountResponse = (message: string) => {
+    setAccountMessage(message);
+    setAccountError(null);
+  };
+
+  const handleAccountError = (message: string) => {
+    setAccountError(message);
+    setAccountMessage(null);
+  };
+
+  const accountAction = async (action: "create" | "signin" | "verify") => {
+    if (accountBusy) return;
+    const username = accountUsername.trim().toLowerCase();
+    if (!username) {
+      handleAccountError("Enter a username.");
+      return;
+    }
+    if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+      handleAccountError("Usernames must be 3-20 chars (a-z, 0-9, underscore).");
+      return;
+    }
+    setAccountBusy(true);
+    setAccountMessage(null);
+    setAccountError(null);
+    try {
+      await ensureIdentity();
+      const payload: Record<string, unknown> = { action, username };
+      if (action === "verify") {
+        if (!accountCodeInput.trim()) {
+          handleAccountError("Enter the code shown on your primary device.");
+          return;
+        }
+        payload.code = accountCodeInput.trim();
+      }
+      const res = await fetch("/api/user/account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json().catch(() => ({}))) as any;
+      if (!res.ok) {
+        handleAccountError(json?.error || `Failed (${res.status})`);
+        return;
+      }
+      if (json.status === "created") {
+        handleAccountResponse("Account created. Your username is linked to this device.");
+        setAccountCodeInput("");
+        return;
+      }
+      if (json.status === "ok") {
+        handleAccountResponse("Signed in successfully.");
+        setPendingChallenge(false);
+        setAccountCodeInput("");
+        return;
+      }
+      if (json.status === "challenge_created") {
+        handleAccountResponse("A code was generated. Check your primary device to view it.");
+        setPendingChallenge(true);
+        return;
+      }
+      handleAccountResponse("Action completed.");
+    } catch (e: any) {
+      handleAccountError(e?.message || "Account service failed");
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!userUid || !profile?.handle) {
+      setDisplayedChallenge(null);
+      return;
+    }
+    let cancelled = false;
+    const fetchChallenge = async () => {
+      try {
+        const res = await fetch(`/api/user/account/challenge?username=${encodeURIComponent(profile.handle)}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          setDisplayedChallenge(null);
+          return;
+        }
+        const data = (await res.json()) as { code?: string | null; expiresAt?: number };
+        if (cancelled) return;
+        if (data.code && typeof data.expiresAt === "number") {
+          setDisplayedChallenge({ code: data.code, expiresAt: data.expiresAt });
+        } else {
+          setDisplayedChallenge(null);
+        }
+      } catch {
+        if (!cancelled) setDisplayedChallenge(null);
+      }
+    };
+    void fetchChallenge();
+    const interval = window.setInterval(() => {
+      void fetchChallenge();
+    }, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [userUid, profile?.handle]);
 
   const friendNames = useMemo(() => {
     return friends
@@ -176,6 +294,71 @@ export function AccountPanel() {
           <p className="text-white/30 text-xs font-mono mt-1">handle: {profile?.handle ? profile.handle : "—"}</p>
         </div>
       </div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bellum-card p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Shield className="text-cyan-300" />
+          <div className="font-bold text-lg">Device-linked account</div>
+        </div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <input
+            className="bellum-input flex-1"
+            placeholder="username (create/sign-in)"
+            value={accountUsername}
+            onChange={(e) => setAccountUsername(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={accountBusy}
+            onClick={() => void accountAction("create")}
+            className="px-4 py-2 rounded-xl border-2 border-white/15 bg-white/5 hover:border-white/35 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm disabled:opacity-50"
+          >
+            Create account
+          </button>
+          <button
+            type="button"
+            disabled={accountBusy}
+            onClick={() => void accountAction("signin")}
+            className="px-4 py-2 rounded-xl border-2 border-white/15 bg-white/5 hover:border-white/35 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm disabled:opacity-50"
+          >
+            Sign in
+          </button>
+        </div>
+        {pendingChallenge && (
+          <div className="mt-3 text-xs text-amber-200">
+            A new device attempted to sign in. The code is shown on your primary device (below) for verification.
+          </div>
+        )}
+        {accountMessage && (
+          <div className="mt-3 text-sm font-semibold text-emerald-300">{accountMessage}</div>
+        )}
+        {accountError && <div className="mt-3 text-sm font-semibold text-rose-300">{accountError}</div>}
+        <div className="mt-4 flex gap-2">
+          <input
+            className="bellum-input flex-1"
+            placeholder="Enter code shown on first device"
+            value={accountCodeInput}
+            onChange={(e) => setAccountCodeInput(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={accountBusy}
+            onClick={() => void accountAction("verify")}
+            className="px-4 py-2 rounded-xl border-2 border-white/15 bg-white/5 hover:border-white/35 hover:bg-white/10 transition-all active:scale-95 font-bold text-sm disabled:opacity-50"
+          >
+            Verify code
+          </button>
+        </div>
+        {displayedChallenge && (
+          <div className="mt-3 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs text-white/80">
+            <div className="font-semibold mb-1">Current code for {profile?.handle}</div>
+            <div className="font-mono text-lg">{displayedChallenge.code}</div>
+            <div className="text-[11px] text-white/60">
+              Expires in {Math.max(0, Math.floor((displayedChallenge.expiresAt - Date.now()) / 1000))}s
+            </div>
+          </div>
+        )}
+      </motion.div>
 
       {error && (
         <div className="bellum-card p-4 mb-6 border-2 border-red-400/30 bg-red-500/10 text-red-200">

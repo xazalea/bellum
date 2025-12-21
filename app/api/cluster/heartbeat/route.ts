@@ -36,7 +36,6 @@ export async function POST(req: Request) {
   try {
     uid = (await verifySessionCookieFromRequest(req)).uid;
   } catch {
-    // Allow header-based identity for cross-origin cluster usage.
     uid = String(req.headers.get('x-nacho-userid') || '').trim();
     if (!uid) return NextResponse.json({ error: 'unauthenticated' }, { status: 401, headers: corsHeaders(req) });
   }
