@@ -68,6 +68,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
     }
     return raw.startsWith('v') ? raw : `v${raw}`;
   }, []);
+  const versionLabel = versionBadge === 'local' ? 'local build' : versionBadge;
 
   return (
     <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 select-none">
@@ -100,13 +101,13 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                 priority
               />
             </div>
-            <div className="flex flex-col items-start gap-1">
-              <span className="text-sm font-semibold text-white/95 tracking-wide">Nacho</span>
-              <span className="text-xs text-white/45">{activeLabel}</span>
-              <span className="text-[9px] text-white/40 font-mono uppercase tracking-[0.3em]">
-                {versionBadge === 'local' ? 'local build' : versionBadge}
-              </span>
-            </div>
+              <div className="flex flex-col items-start gap-1">
+                <span className="text-sm font-semibold text-white/95 tracking-wide">Nacho</span>
+                <span className="text-xs text-white/60">{activeLabel}</span>
+                <span className="text-[10px] text-white/60 font-mono uppercase tracking-[0.35em]">
+                  {versionLabel}
+                </span>
+              </div>
           </motion.div>
         )}
 
@@ -134,6 +135,9 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                   <div className="flex flex-col leading-tight">
                     <div className="font-bold text-base">Nacho</div>
                     <div className="text-[11px] text-white/45">{activeLabel}</div>
+                    <div className="text-[10px] text-white/50 font-mono uppercase tracking-[0.35em]">
+                      {versionLabel}
+                    </div>
                   </div>
                 </div>
 

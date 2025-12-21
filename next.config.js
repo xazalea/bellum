@@ -30,6 +30,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
     NEXT_PUBLIC_BUILD_VERSION: resolveBuildVersion(),
+    NEXT_PUBLIC_CLUSTER_SERVER_URL: process.env.NEXT_PUBLIC_CLUSTER_SERVER_URL ?? 'https://nachooo.vercel.app',
   },
   reactStrictMode: true,
   

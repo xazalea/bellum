@@ -1,23 +1,45 @@
+const SHARED_CLUSTER_BASE = 'https://nachooo.vercel.app';
+
+function normalizeCandidate(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const withoutSlash = trimmed.replace(/\/+$/, '');
+  return withoutSlash;
+}
+
 export function getClusterBaseCandidates(): string[] {
   const env =
     (typeof process !== 'undefined' &&
       (process.env as unknown as { NEXT_PUBLIC_CLUSTER_SERVER_URL?: string })?.NEXT_PUBLIC_CLUSTER_SERVER_URL) ||
     '';
 
-  // If not configured, default to same-origin (empty base).
-  // This enables Telegram-backed storage routes (`/api/telegram/*`) without forcing a hardcoded cluster IP.
-  const trimmed = env.trim();
-  if (!trimmed) return [''];
+  const seen = new Set<string>();
+  const pushCandidate = (value: string | null) => {
+    if (value === null) return;
+    const normalized = value === '' ? '' : normalizeCandidate(value);
+    if (normalized === null) return;
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+    }
+  };
 
-  const primary = trimmed.replace(/\/+$/, '');
-  const alt = primary.startsWith('https://')
-    ? primary.replace(/^https:\/\//, 'http://')
-    : primary.startsWith('http://')
-      ? primary.replace(/^http:\/\//, 'https://')
-      : primary;
+  const addAlternatives = (base: string) => {
+    pushCandidate(base);
+    if (base.startsWith('https://')) {
+      pushCandidate(base.replace(/^https:\/\//, 'http://'));
+    } else if (base.startsWith('http://')) {
+      pushCandidate(base.replace(/^http:\/\//, 'https://'));
+    }
+  };
 
-  // Unique, stable order.
-  return Array.from(new Set([primary, alt]));
+  if (env.trim()) {
+    addAlternatives(env.trim());
+  }
+
+  addAlternatives(SHARED_CLUSTER_BASE);
+  pushCandidate('');
+
+  return Array.from(seen);
 }
 
 export function getClusterBase(): string {

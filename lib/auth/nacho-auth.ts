@@ -1,4 +1,4 @@
-import { getDeviceFingerprintId } from "@/lib/auth/fingerprint";
+import { getFingerprint } from "@/lib/tracking";
 
 export type NachoAuthResult =
   | { status: "ok"; username: string }
@@ -13,7 +13,7 @@ function normalizeUsername(input: string): string {
 }
 
 async function nachoFetch<T>(path: string, init: RequestInit & { json?: any } = {}): Promise<T> {
-  const fp = await getDeviceFingerprintId();
+  const fp = await getFingerprint();
   const headers: Record<string, string> = {
     ...(init.headers as Record<string, string> | undefined),
     "Content-Type": "application/json",
