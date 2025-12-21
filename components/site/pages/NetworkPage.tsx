@@ -5,18 +5,40 @@ import { useClusterPeers } from '../hooks/useClusterPeers';
 import { locateGeneralArea } from '@/lib/geolocator/client';
 
 const AREA_DEFINITIONS = [
-  { id: 'north-america', label: 'North America', top: '32%', left: '55%' },
-  { id: 'south-america', label: 'South America', top: '62%', left: '59%' },
-  { id: 'europe', label: 'Europe', top: '24%', left: '68%' },
-  { id: 'asia', label: 'Asia', top: '34%', left: '80%' },
-  { id: 'africa', label: 'Africa', top: '48%', left: '65%' },
-  { id: 'oceania', label: 'Oceania', top: '60%', left: '85%' },
+  { id: 'north-america', label: 'North America', center: { lat: 41, lon: -100 } },
+  { id: 'south-america', label: 'South America', center: { lat: -15, lon: -60 } },
+  { id: 'europe', label: 'Europe', center: { lat: 54, lon: 10 } },
+  { id: 'asia', label: 'Asia', center: { lat: 35, lon: 105 } },
+  { id: 'africa', label: 'Africa', center: { lat: 2, lon: 25 } },
+  { id: 'oceania', label: 'Oceania', center: { lat: -20, lon: 135 } },
 ];
 
 function pickAreaForPeer(deviceId: string) {
   if (!deviceId) return AREA_DEFINITIONS[0].id;
   const hash = deviceId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
   return AREA_DEFINITIONS[hash % AREA_DEFINITIONS.length].id;
+}
+
+function deriveLatLon(deviceId: string) {
+  let latAccum = 0;
+  let lonAccum = 0;
+  for (let i = 0; i < deviceId.length; i += 1) {
+    const code = deviceId.charCodeAt(i);
+    latAccum += (code * (i + 1)) % 180;
+    lonAccum += (code * (i + 2)) % 360;
+  }
+  const lat = (latAccum % 180) - 90;
+  const lon = (lonAccum % 360) - 180;
+  return { lat, lon };
+}
+
+function projectToGlobeCoords(lat: number, lon: number) {
+  const latRad = (lat * Math.PI) / 180;
+  const lonRad = (lon * Math.PI) / 180;
+  const radius = 40;
+  const x = 50 + radius * Math.cos(latRad) * Math.sin(lonRad);
+  const y = 50 - radius * Math.sin(latRad);
+  return { x, y };
 }
 
 export function NetworkPage() {
@@ -86,17 +108,32 @@ export function NetworkPage() {
         </div>
 
         <div className="mt-6 flex justify-center">
-          <div className="globe relative h-[320px] w-[320px]">
-            <div className="globe-core" />
-            <div className="globe-ring" />
-            <div className="globe-ring globe-ring--alt" />
-            {AREA_DEFINITIONS.map((area) => (
-              <div key={area.id} className="globe-marker" style={{ top: area.top, left: area.left }}>
+        <div className="globe relative h-[320px] w-[320px]">
+          <div className="globe-core" />
+          <div className="globe-ring" />
+          <div className="globe-ring globe-ring--alt" />
+          {peers.map((peer) => {
+            const { lat, lon } = deriveLatLon(peer.deviceId);
+            const { x, y } = projectToGlobeCoords(lat, lon);
+            return (
+              <span
+                key={`${peer.userId}:${peer.deviceId}`}
+                className="globe-dot"
+                style={{ left: `${x}%`, top: `${y}%` }}
+                aria-label={`Peer ${peer.deviceId.slice(0, 6)}`}
+              />
+            );
+          })}
+          {AREA_DEFINITIONS.map((area) => {
+            const { x, y } = projectToGlobeCoords(area.center.lat, area.center.lon);
+            return (
+              <div key={`${area.id}-label`} className="globe-marker" style={{ top: `${y}%`, left: `${x}%` }}>
                 <span className="globe-marker__label">{area.label.split(' ')[0]}</span>
                 <span className="globe-marker__count">{totals[area.id] ?? 0}</span>
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -160,6 +197,16 @@ export function NetworkPage() {
           font-size: 14px;
           font-weight: 700;
           color: #38bdf8;
+        }
+        .globe-dot {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          border-radius: 999px;
+          background: radial-gradient(circle, #34d399, #0f172a);
+          box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+          transform: translate(-50%, -50%);
+          pointer-events: none;
         }
 
         @keyframes orbit {
