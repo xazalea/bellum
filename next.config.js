@@ -1,5 +1,24 @@
+const { execSync } = require('child_process');
+
+const resolveBuildCommit = () => {
+  if (process.env.NEXT_PUBLIC_BUILD_COMMIT) {
+    return process.env.NEXT_PUBLIC_BUILD_COMMIT;
+  }
+  if (process.env.VERCEL_GIT_COMMIT_SHA) {
+    return process.env.VERCEL_GIT_COMMIT_SHA;
+  }
+  try {
+    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    return 'unknown';
+  }
+};
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
+  },
   reactStrictMode: true,
   
   // Performance optimizations

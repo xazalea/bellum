@@ -61,6 +61,14 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
     return primaryNav.find((x) => x.id === activeTab)?.label ?? 'Nacho';
   }, [activeTab, primaryNav]);
 
+  const commitBadge = useMemo(() => {
+    const raw = process.env.NEXT_PUBLIC_BUILD_COMMIT ?? 'local';
+    if (raw === 'local' || raw === 'unknown') {
+      return 'local';
+    }
+    return raw.slice(0, 7);
+  }, []);
+
   return (
     <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 select-none">
       <motion.div
@@ -92,9 +100,12 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
                 priority
               />
             </div>
-            <div className="flex items-baseline gap-2">
+            <div className="flex flex-col items-start gap-1">
               <span className="text-sm font-semibold text-white/95 tracking-wide">Nacho</span>
               <span className="text-xs text-white/45">{activeLabel}</span>
+              <span className="text-[9px] text-white/40 font-mono uppercase tracking-[0.3em]">
+                {commitBadge === 'local' ? 'local build' : `commit ${commitBadge}`}
+              </span>
             </div>
           </motion.div>
         )}

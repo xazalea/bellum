@@ -118,9 +118,26 @@ export class ISOLoader {
     }
 
     // Fetch with streaming
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ISO: ${response.statusText}`);
+    const attemptFetch = async (sourceUrl: string) => {
+      const res = await fetch(sourceUrl);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch ISO from ${sourceUrl}: ${res.status} ${res.statusText}`);
+      }
+      return res;
+    };
+
+    let response: Response;
+    let resolvedUrl = url;
+    try {
+      response = await attemptFetch(url);
+    } catch (error) {
+      if (config.githubUrl && url !== config.githubUrl) {
+        console.warn('ISO CDN failed, falling back to GitHub release', error);
+        response = await attemptFetch(config.githubUrl);
+        resolvedUrl = config.githubUrl;
+      } else {
+        throw error;
+      }
     }
 
     const contentLength = response.headers.get('content-length');
@@ -151,7 +168,7 @@ export class ISOLoader {
     // Cache the blob
     try {
       const db = await this.initDB();
-      await this.saveToCache(db, isoId, blob, url);
+      await this.saveToCache(db, isoId, blob, resolvedUrl);
     } catch (error) {
       console.warn('Failed to cache ISO:', error);
     }
