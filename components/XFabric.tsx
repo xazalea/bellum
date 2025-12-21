@@ -693,7 +693,6 @@ function DeployView({
       if (!signedIn) throw new Error("Sign in required.");
 
       const up = await chunkedUploadFile(bundle, {
-        chunkBytes: 32 * 1024 * 1024,
         compressChunks: false,
         onProgress: (p) => setProgress(Math.round((p.uploadedBytes / p.totalBytes) * 100)),
       });

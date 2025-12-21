@@ -44,7 +44,7 @@ export async function putWasmArtifactToCas(wasm: ArrayBuffer): Promise<WasmCasPu
 
   // Upload as a normal cluster file using existing storage routes.
   const file = new File([wasm], `wasm_${artifactId}.wasm`, { type: 'application/wasm' });
-  const up = await chunkedUploadFile(file, { chunkBytes: 8 * 1024 * 1024, compressChunks: false });
+  const up = await chunkedUploadFile(file, { compressChunks: false });
   index[artifactId] = up.fileId;
   writeIndex(index);
   return { artifactId, fileId: up.fileId };

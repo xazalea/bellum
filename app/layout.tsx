@@ -57,7 +57,7 @@ export default function RootLayout({
         <link rel="prefetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
       </head>
       <body className="min-h-screen w-full flex flex-col bg-background-dark text-slate-300 font-body antialiased overflow-x-hidden selection:bg-primary selection:text-white">
-        {children}
+          {children}
         <ClientInit />
       </body>
     </html>

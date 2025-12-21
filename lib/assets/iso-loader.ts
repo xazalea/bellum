@@ -7,6 +7,7 @@ export interface ISOConfig {
   id: string;
   name: string;
   githubUrl?: string;
+  cdnUrl?: string;
   localPath?: string;
   size?: number;
   checksum?: string;
@@ -17,11 +18,13 @@ export const ISO_CONFIGS: Record<string, ISOConfig> = {
     id: 'android-x86-9.0-r2',
     name: 'Android x86 9.0 R2',
     githubUrl: 'https://github.com/xazalea/bellum/releases/download/v1.0/android-x86-9.0-r2.iso',
+    cdnUrl: 'https://cdn.jsdelivr.net/gh/xazalea/bellum@v1.0/android-x86-9.0-r2.iso',
   },
   'windows98': {
     id: 'windows98',
     name: 'Windows 98 SE',
     githubUrl: 'https://github.com/xazalea/bellum/releases/download/v1.0/windows98.iso',
+    cdnUrl: 'https://cdn.jsdelivr.net/gh/xazalea/bellum@v1.0/windows98.iso',
   },
 };
 
@@ -75,7 +78,11 @@ export class ISOLoader {
       console.warn('IndexedDB cache check failed:', error);
     }
 
-    // If GitHub URL, return it directly (browser will handle caching)
+    // Prefer CDN mirrors when available, fallback to GitHub or local storage
+    if (config.cdnUrl) {
+      return config.cdnUrl;
+    }
+
     if (config.githubUrl) {
       return config.githubUrl;
     }

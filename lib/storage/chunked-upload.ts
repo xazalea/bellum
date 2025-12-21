@@ -85,9 +85,9 @@ export async function chunkedUploadFile(
 
   if (file.size > NACHO_STORAGE_LIMIT_BYTES) throw new Error("File too large for cloud storage quota");
 
-  // Vercel request body limits can be strict; keep chunks small to avoid 413.
-  // 1 MiB is a safe default for serverless + Telegram upload path.
-  const chunkBytes = opts.chunkBytes ?? 1 * 1024 * 1024;
+  // Vercel request body limits can be strict; clamp chunk sizes (256 KB max) to avoid 413.
+  const HARD_MAX_CHUNK_BYTES = 256 * 1024;
+  const chunkBytes = Math.min(opts.chunkBytes ?? HARD_MAX_CHUNK_BYTES, HARD_MAX_CHUNK_BYTES);
   const totalChunks = Math.ceil(file.size / chunkBytes);
 
   const headers = await getAuthHeaders();

@@ -69,7 +69,6 @@ export function AppLibrary({
     try {
       const u = user ?? (await authService.ensureIdentity());
       const res = await chunkedUploadFile(file, {
-        chunkBytes: 32 * 1024 * 1024,
         compressChunks: true,
         onProgress: (p) => {
           setInstallProgress(Math.round((p.uploadedBytes / p.totalBytes) * 100));
