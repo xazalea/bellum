@@ -196,6 +196,13 @@ const nextConfig = {
           ...hsts,
         ],
       },
+      {
+        source: '/vercel.live/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+        ],
+      },
       // Ads run inside an internal iframe route. Disable COEP/COOP there so the ad can load cross-origin resources
       // without breaking cross-origin isolation for the main app.
       {
