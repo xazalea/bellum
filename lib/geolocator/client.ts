@@ -69,3 +69,4 @@ export async function locateGeneralArea(): Promise<GeneralArea | null> {
   }
 }
 
+
