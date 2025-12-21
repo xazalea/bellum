@@ -1,4 +1,5 @@
 const { execSync } = require('child_process');
+const { version: packageVersion } = require('./package.json');
 
 const resolveBuildCommit = () => {
   if (process.env.NEXT_PUBLIC_BUILD_COMMIT) {
@@ -14,10 +15,21 @@ const resolveBuildCommit = () => {
   }
 };
 
+const resolveBuildVersion = () => {
+  if (process.env.NEXT_PUBLIC_BUILD_VERSION) {
+    return process.env.NEXT_PUBLIC_BUILD_VERSION;
+  }
+  if (packageVersion) {
+    return packageVersion.startsWith('v') ? packageVersion : `v${packageVersion}`;
+  }
+  return 'local';
+};
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
+    NEXT_PUBLIC_BUILD_VERSION: resolveBuildVersion(),
   },
   reactStrictMode: true,
   
