@@ -153,14 +153,15 @@ export function AccountPanel() {
   };
 
   useEffect(() => {
-    if (!userUid || !profile?.handle) {
+    const handle = profile?.handle;
+    if (!userUid || !handle) {
       setDisplayedChallenge(null);
       return;
     }
     let cancelled = false;
     const fetchChallenge = async () => {
       try {
-        const res = await fetch(`/api/user/account/challenge?username=${encodeURIComponent(profile.handle)}`, {
+        const res = await fetch(`/api/user/account/challenge?username=${encodeURIComponent(handle)}`, {
           cache: "no-store",
         });
         if (!res.ok) {
