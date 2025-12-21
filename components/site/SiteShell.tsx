@@ -28,6 +28,14 @@ export function SiteShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { peers } = useClusterPeers();
   const [accountOpen, setAccountOpen] = useState(false);
+  const versionBadge = useMemo(() => {
+    const raw = process.env.NEXT_PUBLIC_BUILD_VERSION ?? 'local';
+    if (raw === 'local' || raw === 'unknown') {
+      return 'local';
+    }
+    return raw.startsWith('v') ? raw : `v${raw}`;
+  }, []);
+  const versionLabel = versionBadge === 'local' ? 'local build' : versionBadge;
 
   const clusterLabel = useMemo(() => {
     if (peers.length > 0) return `Cluster Connected (${peers.length})`;
@@ -49,7 +57,10 @@ export function SiteShell({ children }: PropsWithChildren) {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2f7cfb] ring-2 ring-white/90 shadow-[0_0_24px_rgba(59,130,246,0.35)]">
               <span className="material-symbols-outlined text-[22px] font-bold text-white">bolt</span>
             </div>
-            <span className="font-display text-lg font-bold tracking-tight text-white">Nacho</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-display text-lg font-bold tracking-tight text-white">Nacho</span>
+              <span className="text-[10px] uppercase tracking-[0.4em] text-white/60">{versionLabel}</span>
+            </div>
           </div>
 
           <nav className="hidden items-center gap-10 md:flex">
