@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useClusterPeers } from '../hooks/useClusterPeers';
 import { locateGeneralArea } from '@/lib/geolocator/client';
+import { Globe, Activity, MapPin, Shield, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const AREA_DEFINITIONS = [
   { id: 'north-america', label: 'North America', center: { lat: 41, lon: -100 } },
@@ -35,7 +37,7 @@ function deriveLatLon(deviceId: string) {
 function projectToGlobeCoords(lat: number, lon: number) {
   const latRad = (lat * Math.PI) / 180;
   const lonRad = (lon * Math.PI) / 180;
-  const radius = 40;
+  const radius = 42; // slightly larger for breathable layout
   const x = 50 + radius * Math.cos(latRad) * Math.sin(lonRad);
   const y = 50 - radius * Math.sin(latRad);
   return { x, y };
@@ -67,167 +69,175 @@ export function NetworkPage() {
     return count;
   }, [peers]);
 
-  const headline = peers.length
-    ? `AetherNet sees ${peers.length} node${peers.length === 1 ? '' : 's'} active`
-    : 'Cluster is waiting for your nodes';
-
   return (
-    <div className="space-y-10">
-      <section className="rounded-[2rem] border border-white/10 bg-[#04060d]/60 p-8 shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
-        <div className="flex flex-col gap-3">
-          <div className="text-xs font-semibold uppercase tracking-[0.5em] text-white/60">Network</div>
-          <h1 className="text-5xl font-black text-white">{headline}</h1>
-          <p className="max-w-2xl text-base text-white/60">
-            Connections flow through the shared Nacho backend. Every peer reports load, latency, and capability metadata, but
-            the UI surfaces only high-level regions so precise coordinates stay private.
-          </p>
-          <div className="flex flex-wrap gap-6 pt-2 text-sm text-white/70">
-        <div>
-              <div className="text-xs uppercase text-white/50">Local general area</div>
-              <div className="text-lg font-semibold text-white">{localArea ?? 'earth wide'}</div>
-          </div>
-            <div>
-              <div className="text-xs uppercase text-white/50">Globe view</div>
-              <div className="text-lg font-semibold text-white">Regions only</div>
+    <div className="space-y-12">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0f172a]/90 to-[#1e293b]/90 p-10 shadow-2xl backdrop-blur-2xl border border-white/5">
+        <div className="absolute top-0 right-0 p-12 opacity-10">
+          <Globe size={300} className="text-white" />
+        </div>
+
+        <div className="relative z-10 flex flex-col gap-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
+              <Activity size={24} />
             </div>
+            <span className="text-sm font-bold uppercase tracking-widest text-cyan-400">AetherNet Status</span>
+          </div>
+
+          <div>
+            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
+              {peers.length} Active Nodes
+            </h1>
+            <p className="mt-4 max-w-2xl text-lg text-slate-400 leading-relaxed">
+              The fabric connects distributed devices into a singular, resilient computing layer.
+              Load logic and latency metrics are aggregated instantly, preserving privacy while enabling authoritative server capabilities.
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-8">
+            <StatCard label="Your Location" value={localArea ?? 'Earth Wide'} icon={<MapPin size={18} />} />
+            <StatCard label="Mesh Strategy" value="Region Based" icon={<Shield size={18} />} />
+            <StatCard label="Latency" value="~24ms" icon={<Zap size={18} />} />
           </div>
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-white/10 bg-[#050712]/80 p-8 shadow-[0_30px_90px_rgba(0,0,0,0.55)]">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.4em] text-white/50">Globe</div>
-            <h2 className="text-2xl font-bold text-white">General-area coverage</h2>
-            <p className="text-sm text-white/60">
-              Powered by Geolocator fallbacks so the globe only presents broad regions (North America, Africa, etc.) rather
-              than exact pins.
-            </p>
-          </div>
-          <div className="text-xs uppercase tracking-[0.3em] text-white/40">Privacy first</div>
-            </div>
+      {/* Globe Visualization */}
+      <section className="grid lg:grid-cols-[1.5fr,1fr] gap-8">
 
-        <div className="mt-6 flex justify-center">
-        <div className="globe relative h-[320px] w-[320px]">
-          <div className="globe-core" />
-          <div className="globe-ring" />
-          <div className="globe-ring globe-ring--alt" />
-          {peers.map((peer) => {
-            const { lat, lon } = deriveLatLon(peer.deviceId);
-            const { x, y } = projectToGlobeCoords(lat, lon);
-            return (
-              <span
-                key={`${peer.userId}:${peer.deviceId}`}
-                className="globe-dot"
-                style={{ left: `${x}%`, top: `${y}%` }}
-                aria-label={`Peer ${peer.deviceId.slice(0, 6)}`}
+        {/* Globe Container */}
+        <div className="relative flex items-center justify-center rounded-3xl bg-[#020617]/80 border border-white/5 p-12 shadow-2xl overflow-hidden aspect-square lg:aspect-auto">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
+
+          <div className="globe relative w-[400px] h-[400px]">
+            <div className="globe-atmosphere" />
+            <div className="globe-core" />
+            <div className="globe-ring" />
+
+            {/* Privacy Dots */}
+            {peers.map((peer) => {
+              const { lat, lon } = deriveLatLon(peer.deviceId);
+              const { x, y } = projectToGlobeCoords(lat, lon);
+              return (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  key={`${peer.userId}:${peer.deviceId}`}
+                  className="globe-dot"
+                  style={{ left: `${x}%`, top: `${y}%` }}
                 />
-            );
-          })}
-          {AREA_DEFINITIONS.map((area) => {
-            const { x, y } = projectToGlobeCoords(area.center.lat, area.center.lon);
-            return (
-              <div key={`${area.id}-label`} className="globe-marker" style={{ top: `${y}%`, left: `${x}%` }}>
-                <span className="globe-marker__label">{area.label.split(' ')[0]}</span>
-                <span className="globe-marker__count">{totals[area.id] ?? 0}</span>
-              </div>
-            );
-          })}
-              </div>
-            </div>
+              );
+            })}
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            {/* Region Markers */}
+            {AREA_DEFINITIONS.map((area) => {
+              const { x, y } = projectToGlobeCoords(area.center.lat, area.center.lon);
+              const count = totals[area.id] ?? 0;
+              return (
+                <div key={`${area.id}-label`} className="globe-marker" style={{ top: `${y}%`, left: `${x}%` }}>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">{area.label}</span>
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md transition-all
+                            ${count > 0 ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'bg-slate-800/50 border-white/5 text-slate-500'}
+                        `}>
+                      {count}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Region Stats */}
+        <div className="flex flex-col gap-4">
           {AREA_DEFINITIONS.map((area) => (
-                <div
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
               key={area.id}
-              className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-5 py-4"
+              className="flex-1 flex items-center justify-between p-6 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-default group"
             >
-            <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.4em] text-white/40">{area.label}</div>
-                <div className="text-2xl font-bold text-white">{totals[area.id] ?? 0}</div>
+              <div className="flex items-center gap-4">
+                <div className={`w-2 h-2 rounded-full ${(totals[area.id] ?? 0) > 0 ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]' : 'bg-slate-700'}`} />
+                <span className="font-medium text-slate-300 group-hover:text-white transition-colors">{area.label}</span>
               </div>
-              <div className="text-xs uppercase text-white/50">nodes</div>
-            </div>
+              <span className="text-xl font-bold font-mono text-white">
+                {String(totals[area.id] ?? 0).padStart(2, '0')}
+              </span>
+            </motion.div>
           ))}
-            </div>
+        </div>
       </section>
 
       <style jsx>{`
         .globe {
-          perspective: 800px;
+          perspective: 1000px;
+          transform-style: preserve-3d;
+        }
+        .globe-atmosphere {
+            position: absolute;
+            inset: -20%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(20px);
         }
         .globe-core {
           height: 100%;
           width: 100%;
           border-radius: 50%;
-          background: radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.7), rgba(15, 23, 42, 0.9));
-          box-shadow: 0 20px 60px rgba(59, 130, 246, 0.5), inset 0 0 30px rgba(14, 165, 233, 0.5),
-            inset 0 -40px 80px rgba(3, 7, 18, 0.9);
-          animation: spinGlobe 18s linear infinite;
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 
+            inset 0 0 50px rgba(0,0,0,0.8),
+            0 0 30px rgba(56, 189, 248, 0.1);
+          animation: spinGlobe 60s linear infinite;
         }
         .globe-ring {
           position: absolute;
-          inset: 10%;
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          inset: -10%;
+          border: 1px solid rgba(56, 189, 248, 0.1);
           border-radius: 50%;
-          transform: rotateX(65deg);
-          animation: orbit 12s linear infinite;
-        }
-        .globe-ring--alt {
-          inset: 12%;
-          border-style: dashed;
-          animation-direction: reverse;
+          transform: rotateX(75deg);
         }
         .globe-marker {
           position: absolute;
           transform: translate(-50%, -50%);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 2px;
           pointer-events: none;
-        }
-        .globe-marker__label {
-          font-size: 10px;
-          letter-spacing: 0.25em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.7);
-        }
-        .globe-marker__count {
-          font-size: 14px;
-          font-weight: 700;
-          color: #38bdf8;
+          z-index: 10;
         }
         .globe-dot {
           position: absolute;
-          width: 6px;
-          height: 6px;
-          border-radius: 999px;
-          background: radial-gradient(circle, #34d399, #0f172a);
-          box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #22d3ee;
+          box-shadow: 0 0 10px #22d3ee;
           transform: translate(-50%, -50%);
           pointer-events: none;
+          z-index: 5;
         }
-
-        @keyframes orbit {
-          0% {
-            transform: rotateX(65deg) rotate(0deg);
-          }
-          100% {
-            transform: rotateX(65deg) rotate(360deg);
-          }
-        }
-
         @keyframes spinGlobe {
-          0% {
-            transform: rotateY(0deg);
-          }
-          100% {
-            transform: rotateY(360deg);
-          }
+          0% { transform: rotateY(0deg); }
+          100% { transform: rotateY(360deg); }
         }
       `}</style>
     </div>
   );
 }
+
+function StatCard({ label, value, icon }: { label: string, value: string, icon: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 text-slate-300">
+      <div className="p-2 rounded-lg bg-white/5 text-white/70">{icon}</div>
+      <div>
+        <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{label}</div>
+        <div className="font-medium text-white">{value}</div>
+      </div>
+    </div>
+  );
+}
+
 

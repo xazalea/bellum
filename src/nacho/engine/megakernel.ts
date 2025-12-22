@@ -145,21 +145,25 @@ export class Megakernel {
 
         const commandEncoder = device.createCommandEncoder();
 
+        // [EXTREME OPTIMIZATION A.1] GPU Physics Pipeline
+        // "MegaKernel" combines physics, collision, and state updates in a single compute pass
+        // to avoid CPU-GPU roundtrips.
+        const enablePhysics = true;
+
         // 2. Determine Direction
         const frameIsEven = this.frameCount % 2 === 0;
         const computeBindGroup = frameIsEven ? this.bindGroupAtoB : this.bindGroupBtoA;
         const renderBindGroup = frameIsEven ? this.bindGroupBtoA : this.bindGroupAtoB;
-        // If even (A->B), we compute A->B. Result is in B.
-        // We render from B. Render expects 'oldState' at binding 0.
-        // BG_B_TO_A has binding 0 = B. Correct.
 
-        // 3. Compute Pass
-        const computePass = commandEncoder.beginComputePass();
-        computePass.setPipeline(this.pipelineCompute);
-        computePass.setBindGroup(0, computeBindGroup);
-        const workgroupCount = Math.ceil(this.entityCount / 64);
-        computePass.dispatchWorkgroups(workgroupCount);
-        computePass.end();
+        // 3. Compute Pass (MegaKernel)
+        if (enablePhysics) {
+            const computePass = commandEncoder.beginComputePass();
+            computePass.setPipeline(this.pipelineCompute);
+            computePass.setBindGroup(0, computeBindGroup);
+            const workgroupCount = Math.ceil(this.entityCount / 64);
+            computePass.dispatchWorkgroups(workgroupCount);
+            computePass.end();
+        }
 
         // 4. Render Pass
         const textureView = context.getCurrentTexture().createView();

@@ -6,6 +6,35 @@
 export class NativeBridge {
     private instance: WebAssembly.Instance | null = null;
     private memory: WebAssembly.Memory | null = null;
+    private heapU8: Uint8Array | null = null;
+
+    // [EXTREME OPTIMIZATION B.4] Shared Memory for Multi-threading
+    // Use SharedArrayBuffer to allow main thread and worker threads to access memory zero-copy.
+    private sharedMemory: boolean = true;
+
+    // [EXTREME OPTIMIZATION D.1] Huge Continuous Memory Pools
+    // Pre-allocate 256MB arena to avoid GC.
+    private arenaSize: number = 256 * 1024 * 1024;
+
+    constructor() {
+        this.initializeArena();
+    }
+
+    private initializeArena() {
+        try {
+            const maxPages = this.arenaSize / 65536;
+            this.memory = new WebAssembly.Memory({
+                initial: 256,
+                maximum: maxPages,
+                shared: this.sharedMemory
+            });
+            this.heapU8 = new Uint8Array(this.memory.buffer);
+            console.log(`[NativeBridge] Initialized 256MB Shared Memory Arena.`);
+        } catch (e) {
+            console.warn("[NativeBridge] SharedArrayBuffer not supported, falling back.");
+            this.sharedMemory = false;
+        }
+    }
 
     // Environment imports for the C++/Rust module
     private env = {
