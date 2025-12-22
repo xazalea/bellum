@@ -258,14 +258,19 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                             </div>
 
                             {/* Manual Install Prompt */}
-                            {status.includes("Ready for Local Install") && (
+                            {(status.includes("Ready for Local Install") || status.includes("Waiting for Local File")) && (
                                 <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="mt-4 p-6 border-2 border-dashed border-cyan-500/50 rounded-xl bg-cyan-500/5 text-center cursor-pointer hover:bg-cyan-500/10 transition-colors"
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="mt-6 p-8 border border-white/10 rounded-2xl bg-white/5 backdrop-blur-xl text-center cursor-pointer hover:bg-white/10 transition-all hover:scale-[1.02] shadow-2xl relative overflow-hidden group"
                                 >
-                                    <div className="text-cyan-400 font-bold text-lg mb-1">CLOUD DOWNLOAD FAILED</div>
-                                    <div className="text-white/60 text-sm">Drag & drop your .{app?.type?.includes('android') ? 'apk' : 'exe'} file here to launch manually</div>
+                                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="relative z-10">
+                                        <div className="text-white/90 font-bold text-xl mb-2 tracking-tight">Setup Required</div>
+                                        <div className="text-white/60 text-sm font-medium">
+                                            Drop your <span className="text-white font-mono bg-white/10 px-1 rounded">.{app?.type?.includes('android') ? 'apk' : 'exe'}</span> file here to install
+                                        </div>
+                                    </div>
                                 </motion.div>
                             )}
                         </div>
