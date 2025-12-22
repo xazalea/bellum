@@ -82,10 +82,10 @@ export function NetworkPage() {
             the UI surfaces only high-level regions so precise coordinates stay private.
           </p>
           <div className="flex flex-wrap gap-6 pt-2 text-sm text-white/70">
-            <div>
+        <div>
               <div className="text-xs uppercase text-white/50">Local general area</div>
               <div className="text-lg font-semibold text-white">{localArea ?? 'earth wide'}</div>
-            </div>
+          </div>
             <div>
               <div className="text-xs uppercase text-white/50">Globe view</div>
               <div className="text-lg font-semibold text-white">Regions only</div>
@@ -105,7 +105,7 @@ export function NetworkPage() {
             </p>
           </div>
           <div className="text-xs uppercase tracking-[0.3em] text-white/40">Privacy first</div>
-        </div>
+            </div>
 
         <div className="mt-6 flex justify-center">
         <div className="globe relative h-[320px] w-[320px]">
@@ -121,7 +121,7 @@ export function NetworkPage() {
                 className="globe-dot"
                 style={{ left: `${x}%`, top: `${y}%` }}
                 aria-label={`Peer ${peer.deviceId.slice(0, 6)}`}
-              />
+                />
             );
           })}
           {AREA_DEFINITIONS.map((area) => {
@@ -133,23 +133,23 @@ export function NetworkPage() {
               </div>
             );
           })}
-        </div>
-        </div>
+              </div>
+            </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
           {AREA_DEFINITIONS.map((area) => (
-            <div
+                <div
               key={area.id}
               className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-5 py-4"
             >
-              <div>
+            <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.4em] text-white/40">{area.label}</div>
                 <div className="text-2xl font-bold text-white">{totals[area.id] ?? 0}</div>
               </div>
               <div className="text-xs uppercase text-white/50">nodes</div>
             </div>
           ))}
-        </div>
+            </div>
       </section>
 
       <style jsx>{`

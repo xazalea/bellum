@@ -58,7 +58,7 @@ export function SiteShell({ children }: PropsWithChildren) {
               <span className="material-symbols-outlined text-[22px] font-bold text-white">bolt</span>
             </div>
             <div className="flex flex-col leading-tight">
-              <span className="font-display text-lg font-bold tracking-tight text-white">Nacho</span>
+            <span className="font-display text-lg font-bold tracking-tight text-white">Nacho</span>
               <span className="text-[10px] uppercase tracking-[0.4em] text-white/60">{versionLabel}</span>
             </div>
           </div>

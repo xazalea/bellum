@@ -102,12 +102,12 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
               />
             </div>
               <div className="flex flex-col items-start gap-1">
-                <span className="text-sm font-semibold text-white/95 tracking-wide">Nacho</span>
+              <span className="text-sm font-semibold text-white/95 tracking-wide">Nacho</span>
                 <span className="text-xs text-white/60">{activeLabel}</span>
                 <span className="text-[10px] text-white/60 font-mono uppercase tracking-[0.35em]">
                   {versionLabel}
                 </span>
-              </div>
+            </div>
           </motion.div>
         )}
 
