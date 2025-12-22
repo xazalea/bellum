@@ -130,8 +130,11 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                     void opfsWriteBytes(appData.fileId, bytes).catch(() => { });
                 } catch (e: any) {
                     // Be more gentle with 404s
-                    if (e.message.includes('404')) {
-                        throw new Error("Cloud resource unavailable (404). Please ensure the app is uploaded or available locally.");
+                    if (e.message && e.message.includes('404')) {
+                        console.warn("Cloud payload missing. User must upload or install local file.");
+                        // Do NOT set Error state. Just warn and return.
+                        setStatus("Ready for Local Install (Drop File)");
+                        return;
                     }
                     throw e;
                 }
