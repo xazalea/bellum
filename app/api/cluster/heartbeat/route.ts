@@ -51,17 +51,22 @@ export async function POST(req: Request) {
   const deviceId = typeof body.deviceId === 'string' ? body.deviceId : '';
   if (!deviceId) return NextResponse.json({ error: 'missing_device' }, { status: 400, headers: corsHeaders(req) });
 
-  upsertPeer({
-    userId: uid,
-    deviceId,
-    userAgent: typeof body.userAgent === 'string' ? body.userAgent : null,
-    label: typeof body.label === 'string' ? body.label : null,
-    load: typeof body.load === 'number' ? body.load : null,
-    uplinkKbps: typeof body.uplinkKbps === 'number' ? body.uplinkKbps : null,
-    downlinkKbps: typeof body.downlinkKbps === 'number' ? body.downlinkKbps : null,
-    caps: Array.isArray(body.caps) ? body.caps.map((x) => String(x)).slice(0, 32) : null,
-  });
-  prunePeers(ACTIVE_WINDOW_MS);
+  try {
+    upsertPeer({
+      userId: uid,
+      deviceId,
+      userAgent: typeof body.userAgent === 'string' ? body.userAgent : null,
+      label: typeof body.label === 'string' ? body.label : null,
+      load: typeof body.load === 'number' ? body.load : null,
+      uplinkKbps: typeof body.uplinkKbps === 'number' ? body.uplinkKbps : null,
+      downlinkKbps: typeof body.downlinkKbps === 'number' ? body.downlinkKbps : null,
+      caps: Array.isArray(body.caps) ? body.caps.map((x) => String(x)).slice(0, 32) : null,
+    });
+    prunePeers(ACTIVE_WINDOW_MS);
+  } catch (e) {
+    console.error("[heartbeat] Failed to update presence:", e);
+    // Return 200 anyway to prevent client retry storms
+  }
 
   return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
 }
