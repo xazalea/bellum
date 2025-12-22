@@ -203,7 +203,7 @@ function DockItem({ icon, tooltip, onClick }: { icon: string, tooltip: string, o
             onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.2) translateY(-10px)'; }}
             onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1) translateY(0)'; }}
         >
-            <img src={icon} style={{ width: '32px', height: '32px' }} />
+            <img src={icon} alt={tooltip} style={{ width: '32px', height: '32px' }} />
         </div>
     );
 }

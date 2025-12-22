@@ -91,9 +91,12 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
             addLog("Mounting virtual filesystem...");
 
             // 1. Check LocalStore (IndexedDB) - "Local Install"
-            let bytes = (await localStore.getFile(appData.fileId))?.data
-                ? new Uint8Array(await (await localStore.getFile(appData.fileId))!.data.arrayBuffer())
-                : null;
+            let bytes: Uint8Array | null = null;
+            const localFile = await localStore.getFile(appData.fileId);
+
+            if (localFile?.data) {
+                bytes = new Uint8Array(await localFile.data.arrayBuffer());
+            }
 
             if (bytes) {
                 addLog("Loaded from Local Store (IndexedDB).");
@@ -104,7 +107,8 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                 const opfsBytes = await opfsReadBytes(appData.fileId);
                 // Force cast to avoid SharedArrayBuffer type mismatch
                 if (opfsBytes) {
-                    bytes = opfsBytes as any as Uint8Array;
+                    // Fix: Double cast through unknown to handle ArrayBufferLike vs ArrayBuffer strictness
+                    bytes = new Uint8Array(opfsBytes.buffer as unknown as ArrayBuffer);
                     addLog("Loaded from OPFS Cache.");
                 }
             }

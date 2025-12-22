@@ -25,7 +25,7 @@ export function AetherLanPanel() {
   const localPeerId = useMemo(() => room?.getLocalPeerId() ?? null, [room]);
   const peers = useMemo(() => room?.listPeers() ?? [], [room, status]);
   const localV6 = useMemo(() => virtualIpv6Overlay?.getLocalIpv6?.() ?? null, [status]);
-  const dhcp = useMemo(() => (room ? room.getDhcpTable() : null), [room, status, peers.length]);
+  const dhcp = useMemo(() => (room ? room.getDhcpTable() : null), [room, status]);
   const localLease = useMemo(() => {
     if (!dhcp || !localPeerId) return null;
     return dhcp.leases.find((l) => l.peerId === localPeerId) || null;
@@ -401,9 +401,8 @@ export function AetherLanPanel() {
           </div>
           <button
             type="button"
-            className={`w-14 h-7 rounded-full border-2 transition-all ${
-              lanAllowEnabled ? 'bg-sky-200/40 border-sky-200/40' : 'bg-white/5 border-white/20'
-            }`}
+            className={`w-14 h-7 rounded-full border-2 transition-all ${lanAllowEnabled ? 'bg-sky-200/40 border-sky-200/40' : 'bg-white/5 border-white/20'
+              }`}
             aria-pressed={lanAllowEnabled}
             aria-label="Enable room allowlist"
             onClick={() => {
