@@ -40,16 +40,8 @@ export async function GET(req: Request, ctx: { params: { isoId: string } }) {
     throw new Error("All Upstreams Failed");
 
   } catch (e) {
-    console.error(`[iso-proxy] Critical Failure: ${e}. Serving Fallback Mock ISO.`);
-    // Generate a small dummy ISO
-    const mockIso = new Uint8Array(1024 * 1024); // 1MB Mock
-    mockIso.fill(0);
-    const encoder = new TextEncoder();
-    mockIso.set(encoder.encode('MOCK_ISO_DATA'), 0);
-
-    return new Response(mockIso, {
-      status: 200,
-      headers: AVAILABLE_HEADERS
-    });
+    console.error(`[iso-proxy] Critical Failure: ${e}`);
+    // No mock fallback requested.
+    return NextResponse.json({ error: 'upstream_failed' }, { status: 502 });
   }
 }

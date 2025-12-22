@@ -176,8 +176,31 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
         };
     }, [user, appId]);
 
+    // Simple Drag-and-Drop Handler
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0 && os) {
+            const file = files[0];
+            addLog(`Manual install detected: ${file.name}`);
+            setStatus("Installing local file...");
+            setError(null);
+
+            // Run directly
+            await os.run(file);
+            unlockAchievement('ran_app');
+            addLog("Process started successfully.");
+            setIsRunning(true);
+            setStatus('Running');
+        }
+    };
+
     return (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col font-mono text-white overflow-hidden">
+        <div
+            className="fixed inset-0 bg-black z-50 flex flex-col font-mono text-white overflow-hidden"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+        >
 
             {/* Background / Canvas Layer */}
             <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#050505]">
@@ -233,6 +256,18 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                                     animate={{ width: `${progress}%` }}
                                 />
                             </div>
+
+                            {/* Manual Install Prompt */}
+                            {status.includes("Ready for Local Install") && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="mt-4 p-6 border-2 border-dashed border-cyan-500/50 rounded-xl bg-cyan-500/5 text-center cursor-pointer hover:bg-cyan-500/10 transition-colors"
+                                >
+                                    <div className="text-cyan-400 font-bold text-lg mb-1">CLOUD DOWNLOAD FAILED</div>
+                                    <div className="text-white/60 text-sm">Drag & drop your .{app?.type?.includes('android') ? 'apk' : 'exe'} file here to launch manually</div>
+                                </motion.div>
+                            )}
                         </div>
                     </motion.div>
                 )}
