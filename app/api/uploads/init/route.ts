@@ -3,27 +3,30 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { filename, size, type } = body;
+        // Client sends 'fileName', 'totalBytes', 'contentType'
+        // We support both just in case.
+        const name = body.fileName || body.filename;
+        const bytes = body.totalBytes || body.size;
 
-        if (!filename || !size) {
-            return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+        if (!name || !bytes) {
+            return NextResponse.json({
+                error: 'invalid_request',
+                receivedKeys: Object.keys(body)
+            }, { status: 400 });
         }
 
-        // Mocking an upload ID and presigned URL (or direct upload confirmation)
         const uploadId = crypto.randomUUID();
-
-        // In a real app, this would return a presigned S3 URL or similar.
-        // For now, we'll return a success signal that lets the client proceed 
-        // with a direct binary upload or simulation.
 
         return NextResponse.json({
             uploadId,
-            url: `/api/uploads/binary/${uploadId}`, // Mock destination
-            method: 'POST'
+            url: `/api/uploads/binary/${uploadId}`,
+            method: 'POST',
+            // Return expected verification fields if client needs them
+            totalChunks: Math.ceil(bytes / (256 * 1024))
         });
 
     } catch (e) {
-        return NextResponse.json({ error: 'server_error' }, { status: 500 });
+        return NextResponse.json({ error: 'server_error', details: String(e) }, { status: 500 });
     }
 }
 
@@ -32,7 +35,8 @@ export async function OPTIONS() {
         status: 204,
         headers: {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, X-Nacho-UserId'
         }
     });
 }
