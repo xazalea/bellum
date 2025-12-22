@@ -47,7 +47,7 @@ export async function GET(req: Request, ctx: { params: { isoId: string } }) {
     const encoder = new TextEncoder();
     mockIso.set(encoder.encode('MOCK_ISO_DATA'), 0);
 
-    return new NextResponse(mockIso, {
+    return new Response(mockIso, {
       status: 200,
       headers: AVAILABLE_HEADERS
     });
