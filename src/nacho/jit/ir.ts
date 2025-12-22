@@ -27,11 +27,15 @@ export enum Opcode {
     JMP = 'JMP',            // goto target
 
     // Meta
-    PHI = 'PHI'             // value selection for SSA form (future proofing)
+    PHI = 'PHI',            // value selection for SSA form (future proofing)
+
+    // Function ops
+    CALL = 'CALL',          // dst = call(target, args...) (args handled via src1/src2 or special handling)
+    RET = 'RET'             // return src1
 }
 
 export type Operand = {
-    type: 'REG' | 'IMM' | 'MEM' | 'LABEL';
+    type: 'REG' | 'IMM' | 'MEM' | 'LABEL' | 'SYMBOL';
     value: number | string; // Register ID, Immediate Value, or Label ID
 };
 

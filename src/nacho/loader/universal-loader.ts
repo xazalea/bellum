@@ -2,6 +2,9 @@ import { vmManager } from '@/lib/vm/manager';
 import { VMType } from '@/lib/vm/types';
 import { runJITTest } from '../jit/test-jit';
 import { hyperion } from '../engine/hyperion';
+import { DBT } from '../jit/dbt';
+import { Android } from '../os/android/framework';
+import { jitExecutor } from '../jit/executor';
 
 export type FileType = 'EXE' | 'APK' | 'ISO' | 'BIN' | 'UNKNOWN';
 
@@ -9,8 +12,11 @@ export class UniversalLoader {
     private static instance: UniversalLoader;
     public logs: string[] = [];
     private listeners: ((logs: string[]) => void)[] = [];
+    private dbt: DBT;
 
-    private constructor() { }
+    private constructor() {
+        this.dbt = new DBT();
+    }
 
     public static getInstance(): UniversalLoader {
         if (!UniversalLoader.instance) {
@@ -58,6 +64,11 @@ export class UniversalLoader {
         // Mocking PE parsing
         await new Promise(r => setTimeout(r, 500));
 
+        // Demo: Translate a dummy x86 block
+        const dummyX86 = new Uint8Array([0xB8, 0x05, 0x00, 0x00, 0x00]); // MOV EAX, 5
+        const block = this.dbt.translateBlock(dummyX86, 0x00400000);
+        this.log(`DBT: Translated BasicBlock with ${block.instructions.length} IR instructions.`);
+
         this.log('Starting JIT Pipeline (x86_64 -> WGSL)...');
         const wgsl = await runJITTest();
         if (wgsl) {
@@ -72,8 +83,29 @@ export class UniversalLoader {
     private async handleAPK(file: File) {
         this.log('Initializing Android Runtime (ART)...');
         this.log('Parsing AndroidManifest.xml...');
-        await new Promise(r => setTimeout(r, 800));
-        this.log('Launching Zygote process...');
+
+        const buffer = await file.arrayBuffer();
+
+        try {
+            this.log('Starting Dalvik -> Nacho IR Translation...');
+            const irModule = this.dbt.translateDalvik(buffer);
+            this.log(`JIT Success: Module created with ${irModule.blocks.size} blocks.`);
+
+            // Execute with Fabrik offloading
+            await jitExecutor.executeModule(irModule, 'dalvik');
+
+            // In a real app, we would execute this IR.
+            // For now, we launch the visualizer which will eventually host the Android.App.Activity
+            this.log('Launching Android Environment...');
+
+            // Shim Verification (Simulate booting the main activity)
+            const activity = new Android.App.Activity();
+            activity.onCreate(null);
+            this.log('Activity.onCreate executed successfully via Shim.');
+
+        } catch (e) {
+            this.log(`JIT Error: ${e}`);
+        }
 
         this.launchVisualizer(VMType.ANDROID);
     }

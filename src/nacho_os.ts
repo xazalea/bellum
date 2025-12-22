@@ -23,6 +23,8 @@ import { BinaryECS } from './engine/ecs/binary_ecs';
 import { ChunkGenerator } from './engine/world/chunk_generator';
 import { DistributedCompute } from './engine/net/distributed_compute';
 import { PETestGenerator } from '@/lib/nacho/windows/test-gen';
+import { fabricCompute } from '@/lib/fabric/compute'; // Initializing Compute Service
+
 
 export class NachoOS {
     public android: AndroidSystem;
@@ -77,13 +79,16 @@ export class NachoOS {
         // 1. Initialize Hardware (WebGPU, FS, Network)
         const gpuSuccess = await webgpu.initialize(canvas);
         if (!gpuSuccess) console.warn("NachoOS: WebGPU failed, falling back to CPU");
-        
+
         await vfs.initialize();
         // P2P initializes on import (via constructor)
+        // Ensure Compute Service is active
+        const compute = fabricCompute;
+        console.log("NachoOS: Fabrik Compute Service initialized.");
 
         console.log("NachoOS: Hardware initialized.");
         console.log("NachoOS: Ready to launch Apps (APK/EXE).");
-        
+
         // Boot Windows Runtime
         await this.windows.boot();
 
@@ -96,10 +101,10 @@ export class NachoOS {
      */
     async run(file: File) {
         if (file.name === 'test.exe') {
-             console.log("NachoOS: Running Internal Test Binary");
-             const buffer = PETestGenerator.generateHelloWorld();
-             await this.windows.loadPE(buffer);
-             return;
+            console.log("NachoOS: Running Internal Test Binary");
+            const buffer = PETestGenerator.generateHelloWorld();
+            await this.windows.loadPE(buffer);
+            return;
         }
 
         if (file.name.endsWith('.apk')) {

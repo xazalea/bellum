@@ -1,4 +1,5 @@
 import { X64Decoder, X64Instruction } from '../../engine/cpu/x64';
+import { DalvikDecoder } from './dalvik';
 import { IRModule, BasicBlock, Opcode, Operand } from './ir';
 
 /**
@@ -10,6 +11,16 @@ export class DBT {
 
     constructor() {
         this.module = new IRModule();
+    }
+
+    /**
+     * Translates a sequence of bytes (Dalvik/DEX) into an IR Module.
+     */
+    public translateDalvik(buffer: ArrayBuffer): IRModule {
+        const decoder = new DalvikDecoder(buffer);
+        const ir = decoder.decode();
+        // In real implementation, we would merge this into the main module or link it.
+        return ir;
     }
 
     /**

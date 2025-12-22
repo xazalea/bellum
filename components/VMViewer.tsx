@@ -4,6 +4,7 @@ import { VMInstance, VMType } from '@/lib/vm/types';
 import { colors } from '@/lib/ui/design-system';
 import { hyperion } from '@/src/nacho/engine/hyperion';
 import { runJITTest } from '@/src/nacho/jit/test-jit';
+import { Launcher } from './OS/Launcher';
 
 interface VMViewerProps {
   vmId?: string;
@@ -122,19 +123,8 @@ export function VMViewer({ vmId, vmType, gameId, style }: VMViewerProps) {
 
   if (!vmId && !vmType) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100%',
-        width: '100%',
-        background: colors.bg.primary,
-        color: colors.text.primary,
-        fontSize: '18px',
-        flexDirection: 'column',
-        gap: '10px'
-      }}>
-        <div>No VM Selected</div>
+      <div style={{ width: '100%', height: '100%' }}>
+        <Launcher />
       </div>
     );
   }
