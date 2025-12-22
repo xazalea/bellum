@@ -1,5 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { os } from '@/src/nacho_os';
+import { chunkedUploadFile } from '@/lib/storage/chunked-upload';
+import { localStore } from '@/lib/storage/local-store';
 
 /**
  * Launcher UI
@@ -25,12 +27,34 @@ export function Launcher() {
 
     const handleDragLeave = () => setIsDragging(false);
 
+    const [localApps, setLocalApps] = useState<any[]>([]);
+
+    useEffect(() => {
+        loadApps();
+    }, []);
+
+    const loadApps = async () => {
+        const apps = await localStore.listFiles();
+        setLocalApps(apps);
+    };
+
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
         const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0 && os) {
-            await os.run(files[0]);
+        if (files.length > 0) {
+            const file = files[0];
+            console.log("Installing locally:", file.name);
+            try {
+                // Save to local IndexedDB
+                await chunkedUploadFile(file, { storageMode: 'local' });
+                await loadApps(); // Refresh grid
+
+                // Auto-launch after install
+                if (os) await os.run(file);
+            } catch (err) {
+                console.error("Local install failed:", err);
+            }
         }
     };
 
@@ -70,8 +94,24 @@ export function Launcher() {
             {/* Desktop Grid Area */}
             <div style={{ padding: '40px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 80px)', gap: '30px' }}>
                 <DesktopIcon name="My Computer" icon={APP_ICONS.Files} />
-                <DesktopIcon name="Chrome" icon={APP_ICONS.Brave} />
                 <DesktopIcon name="Recycle Bin" icon={APP_ICONS.Settings} />
+
+                {/* Local Apps */}
+                {localApps.map(app => (
+                    <DesktopIcon
+                        key={app.id}
+                        name={app.name}
+                        icon={app.type.includes('android') || app.name.endsWith('.apk') ? APP_ICONS.Android : APP_ICONS.Terminal}
+                        onClick={async () => {
+                            const fileData = await localStore.getFile(app.id);
+                            if (fileData && os) {
+                                // Reconstruct File object
+                                const file = new File([fileData.data], app.name, { type: app.type });
+                                await os.run(file);
+                            }
+                        }}
+                    />
+                ))}
             </div>
 
             {/* Dock */}
@@ -126,15 +166,20 @@ export function Launcher() {
     );
 }
 
-function DesktopIcon({ name, icon }: { name: string, icon: string }) {
+function DesktopIcon({ name, icon, onClick }: { name: string, icon: string, onClick?: () => void }) {
     return (
-        <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-            cursor: 'pointer', transition: 'transform 0.2s',
-            color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-        }}>
+        <div
+            onClick={onClick}
+            style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                cursor: 'pointer', transition: 'transform 0.2s',
+                color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        >
             <img src={icon} alt={name} style={{ width: '48px', height: '48px', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }} />
-            <span style={{ fontSize: '13px', fontWeight: 500 }}>{name}</span>
+            <span style={{ fontSize: '13px', fontWeight: 500, textAlign: 'center', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
         </div>
     );
 }

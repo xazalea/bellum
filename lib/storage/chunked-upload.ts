@@ -1,6 +1,7 @@
 import { NACHO_STORAGE_LIMIT_BYTES } from "@/lib/storage/quota";
 import { authService } from "@/lib/firebase/auth-service";
 import { getClusterBase } from "@/lib/cluster/cluster-base";
+import { localStore } from "./local-store";
 
 export interface ChunkedUploadInit {
   fileName: string;
@@ -78,10 +79,32 @@ export async function chunkedUploadFile(
       uploadedBytes: number;
       totalBytes: number;
     }) => void;
+    storageMode?: 'cloud' | 'local';
   } = {}
 ): Promise<ChunkedUploadResult> {
   const base = getClusterBase();
   const user = authService.getCurrentUser() ?? (await authService.ensureIdentity());
+
+  // Local-First Bypass
+  if (opts.storageMode === 'local') {
+    const quota = await localStore.hasQuota(file.size);
+    if (!quota) throw new Error("Not enough local storage space.");
+
+    const fileId = await localStore.saveFile(file);
+    opts.onProgress?.({
+      chunkIndex: 1,
+      totalChunks: 1,
+      uploadedBytes: file.size,
+      totalBytes: file.size
+    });
+
+    return {
+      uploadId: 'local-' + fileId,
+      fileId,
+      totalChunks: 1,
+      storedBytes: file.size
+    };
+  }
 
   if (file.size > NACHO_STORAGE_LIMIT_BYTES) throw new Error("File too large for cloud storage quota");
 
@@ -98,74 +121,74 @@ export async function chunkedUploadFile(
     const uploadId = crypto.randomUUID();
     const chunks: Array<{ index: number; telegramFileId: string; sizeBytes: number }> = new Array(totalChunks);
     let uploadedBytesGlobal = 0;
-    
+
     // Concurrency: 6 parallel uploads (optimal for Vercel/Browser)
     const MAX_CONCURRENCY = 6;
     const queue = Array.from({ length: totalChunks }, (_, i) => i);
-    
+
     const worker = async () => {
-        while (queue.length > 0) {
-            const i = queue.shift();
-            if (i === undefined) break;
+      while (queue.length > 0) {
+        const i = queue.shift();
+        if (i === undefined) break;
 
-            const start = i * chunkBytes;
-            const end = Math.min(file.size, start + chunkBytes);
-            const chunk = file.slice(start, end);
+        const start = i * chunkBytes;
+        const end = Math.min(file.size, start + chunkBytes);
+        const chunk = file.slice(start, end);
 
-            const payload = opts.compressChunks
-                ? await gzipCompressBlob(chunk)
-                : new Uint8Array(await chunk.arrayBuffer());
+        const payload = opts.compressChunks
+          ? await gzipCompressBlob(chunk)
+          : new Uint8Array(await chunk.arrayBuffer());
 
-            // Ensure ArrayBuffer-backed bytes
-            const sendBytes = new Uint8Array(payload.byteLength);
-            sendBytes.set(payload);
+        // Ensure ArrayBuffer-backed bytes
+        const sendBytes = new Uint8Array(payload.byteLength);
+        sendBytes.set(payload);
 
-            let res = await fetch(`/api/telegram/upload`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/octet-stream",
-                    "X-File-Name": file.name,
-                    "X-Upload-Id": uploadId,
-                    "X-Chunk-Index": String(i),
-                    "X-Chunk-Total": String(totalChunks),
-                    ...headers,
-                },
-                body: sendBytes.buffer,
-            });
+        let res = await fetch(`/api/telegram/upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "X-File-Name": file.name,
+            "X-Upload-Id": uploadId,
+            "X-Chunk-Index": String(i),
+            "X-Chunk-Total": String(totalChunks),
+            ...headers,
+          },
+          body: sendBytes.buffer,
+        });
 
-            if (!res.ok) {
-                // Simple retry
-                await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
-                res = await fetch(`/api/telegram/upload`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/octet-stream",
-                        "X-File-Name": file.name,
-                        "X-Upload-Id": uploadId,
-                        "X-Chunk-Index": String(i),
-                        "X-Chunk-Total": String(totalChunks),
-                        ...headers,
-                    },
-                    body: sendBytes.buffer,
-                });
-                
-                if (!res.ok) {
-                    const t = await res.text().catch(() => "");
-                    throw new Error(`Upload failed at chunk ${i}: ${res.status} ${t}`);
-                }
-            }
+        if (!res.ok) {
+          // Simple retry
+          await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+          res = await fetch(`/api/telegram/upload`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "X-File-Name": file.name,
+              "X-Upload-Id": uploadId,
+              "X-Chunk-Index": String(i),
+              "X-Chunk-Total": String(totalChunks),
+              ...headers,
+            },
+            body: sendBytes.buffer,
+          });
 
-            const j = (await res.json()) as { fileId: string };
-            chunks[i] = { index: i, telegramFileId: j.fileId, sizeBytes: sendBytes.byteLength };
-            
-            uploadedBytesGlobal += end - start;
-            opts.onProgress?.({ 
-                chunkIndex: i, 
-                totalChunks, 
-                uploadedBytes: uploadedBytesGlobal, 
-                totalBytes: file.size 
-            });
+          if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(`Upload failed at chunk ${i}: ${res.status} ${t}`);
+          }
         }
+
+        const j = (await res.json()) as { fileId: string };
+        chunks[i] = { index: i, telegramFileId: j.fileId, sizeBytes: sendBytes.byteLength };
+
+        uploadedBytesGlobal += end - start;
+        opts.onProgress?.({
+          chunkIndex: i,
+          totalChunks,
+          uploadedBytes: uploadedBytesGlobal,
+          totalBytes: file.size
+        });
+      }
     };
 
     await Promise.all(Array.from({ length: Math.min(totalChunks, MAX_CONCURRENCY) }, worker));
