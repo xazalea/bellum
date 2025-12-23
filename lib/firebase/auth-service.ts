@@ -56,9 +56,9 @@ class AuthService {
     }
 
     // Update local state
-    const id = await getNachoIdentity();
-    id.username = usernameNorm;
-    const user: User = { uid: id.uid, username: usernameNorm };
+    const currentId = await getNachoIdentity();
+    currentId.username = usernameNorm;
+    const user: User = { uid: currentId.uid, username: usernameNorm };
     this.currentUser = user;
     this.listeners.forEach((l) => l(user));
     return user;
