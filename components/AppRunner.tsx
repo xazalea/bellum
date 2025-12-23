@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Maximize2, Minimize2, Power, RefreshCw, Mic, Volume2, Terminal, Cpu, AlertTriangle } from 'lucide-react';
+import { Maximize2, Minimize2, Power, RefreshCw, Mic, Volume2, Terminal, Cpu, AlertTriangle, Download } from 'lucide-react';
 import { authService } from '@/lib/firebase/auth-service';
 import { downloadClusterFile } from '@/lib/storage/chunked-download';
 import { os } from '@/src/nacho_os';
@@ -113,40 +113,11 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                 }
             }
 
-            // 3. Cloud Download
+            // 3. No Auto-Download (Strict Local-First)
             if (!bytes) {
-                addLog("Cache miss. Initiating cluster download...");
-                try {
-                    const dl = await downloadClusterFile(appData.fileId, {
-                        compressedChunks: appData.compression === 'gzip-chunked',
-                        scope: appData.scope ?? "user",
-                        onProgress: (p) => {
-                            setProgress(Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100));
-                            setStatus(`Downloading: ${Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100)}%`);
-                        },
-                    });
-                    bytes = dl.bytes;
-                    addLog("Download complete. Verifying integrity...");
-                    void opfsWriteBytes(appData.fileId, bytes).catch(() => { });
-                } catch (e: any) {
-                    // Be more gentle with 404s
-                    if (e.message && e.message.includes('404')) {
-                        console.warn("Cloud payload missing. User must upload or install local file.");
-                        // Do NOT set Error state. Just warn and return.
-                        setStatus("Ready for Local Install (Drop File)");
-                        return;
-                    }
-                    throw e;
-                }
-            } else {
-                setProgress(100);
-            }
-            if (cancelled) return;
-
-            if (!bytes) {
-                // Should be caught by catch block above, but double check
-                console.error("Critical: Bytes still null after all attempts");
-                throw new Error("Failed to load application data.");
+                console.log("[AppRunner] No local file found. Waiting for user input.");
+                setStatus("Waiting for Local File...");
+                return; // Stop here. Do not throw.
             }
 
             addLog(`Executing: ${appData.originalName}`);
@@ -175,6 +146,49 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
             cancelled = true;
         };
     }, [user, appId]);
+
+    // Manual Cloud Download Handler
+    const downloadFromCloud = async () => {
+        if (!app?.fileId) return;
+
+        try {
+            setError(null);
+            addLog("Initiating manual cloud download...");
+            const dl = await downloadClusterFile(app.fileId, {
+                compressedChunks: app.compression === 'gzip-chunked',
+                scope: app.scope ?? "user",
+                onProgress: (p) => {
+                    setProgress(Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100));
+                    setStatus(`Downloading: ${Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100)}%`);
+                },
+            });
+
+            addLog("Download complete. Verifying integrity...");
+            await opfsWriteBytes(app.fileId, dl.bytes);
+
+            // Run logic (duplicated from useEffect for safety)
+            const copy = new Uint8Array(dl.bytes.byteLength);
+            copy.set(dl.bytes as Uint8Array);
+            const file = new File([copy.buffer], app.originalName, { type: 'application/octet-stream' });
+
+            if (os) {
+                await os.run(file);
+                unlockAchievement('ran_app');
+                addLog("Process started successfully.");
+                setIsRunning(true);
+                setStatus('Running');
+            } else {
+                throw new Error("System Kernel (OS) is not loaded.");
+            }
+
+        } catch (e: any) {
+            console.error(e);
+            const msg = e?.message || 'Download Failed';
+            addLog(`Error: ${msg}`);
+            // Don't crash, just let them try again or drop file
+            setStatus("Download Failed. Try again or drop local file.");
+        }
+    };
 
     // Simple Drag-and-Drop Handler
     const handleDrop = async (e: React.DragEvent) => {
@@ -270,6 +284,17 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                                         <div className="text-white/60 text-sm font-medium">
                                             Drop your <span className="text-white font-mono bg-white/10 px-1 rounded">.{app?.type?.includes('android') ? 'apk' : 'exe'}</span> file here to install
                                         </div>
+
+                                        {/* Optional Cloud Restore */}
+                                        {app?.fileId && (
+                                            <div
+                                                onClick={(e) => { e.stopPropagation(); downloadFromCloud(); }}
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 text-xs font-bold uppercase tracking-wider transition-all hover:scale-105 z-50 pointer-events-auto"
+                                            >
+                                                <Download size={14} />
+                                                Download Cloud Save
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             )}
