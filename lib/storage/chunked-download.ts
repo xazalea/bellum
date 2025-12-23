@@ -74,8 +74,18 @@ export async function fetchClusterManifest(
   const path = scope === "public" ? `/api/public/files/${fileId}/manifest` : `/api/files/${fileId}/manifest`;
   const res = await fetch(`${base}${path}`, { headers });
   if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error(`Manifest fetch failed (${res.status}): ${t}`);
+    let msg = await res.text().catch(() => "");
+    // If response is HTML (likely 404 page), truncate it
+    if (msg.trim().startsWith("<") || msg.includes("<!DOCTYPE")) {
+      msg = "Remote file not found (404)";
+    }
+    // Try to parse JSON error if possible
+    try {
+      const json = JSON.parse(msg);
+      if (json && json.error) msg = json.error;
+    } catch { }
+
+    throw new Error(`Cloud Error (${res.status}): ${msg.slice(0, 100)}`);
   }
   return (await res.json()) as ClusterFileManifest;
 }

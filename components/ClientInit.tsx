@@ -20,12 +20,12 @@ export function ClientInit() {
     }
 
     // Custom cursor (Kursor)
-    ensureKursor().catch(() => {});
+    ensureKursor().catch(() => { });
 
     // Ensure a local identity exists (username + device fingerprint). No user action required.
     void getNachoIdentity()
       .then(() => unlockAchievement('booted'))
-      .catch(() => {});
+      .catch(() => { });
 
     const ensureKeepaliveFrame = () => {
       try {
@@ -60,18 +60,15 @@ export function ClientInit() {
     if ('requestIdleCallback' in window) {
       requestIdleCallback(() => {
         // Warm runtime helpers early (GPU/audio/worker/idle queue).
-        hyperRuntime.ensureInitialized().catch(() => {});
+        hyperRuntime.ensureInitialized().catch(() => { });
 
         // Warm Fabric (semantic memo index + CAS path) early for better perceived speed.
         import('@/lib/fabric/runtime')
           .then(({ fabricRuntime }) => fabricRuntime.initialize())
-          .catch(() => {});
+          .catch(() => { });
 
-        // Preload ISO files in background
-        import('@/lib/assets/iso-loader').then(({ ISOLoader }) => {
-          ISOLoader.preloadISO('android-x86-9.0-r2').catch(console.warn);
-          ISOLoader.preloadISO('windows98').catch(console.warn);
-        });
+        // Preload ISO files logic removed for Local-First policy
+        // Users will provide their own files or manually download.
       });
     }
 
