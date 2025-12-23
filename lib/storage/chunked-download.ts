@@ -46,6 +46,8 @@ export async function fetchClusterManifest(
   fileId: string,
   scope: ClusterFileScope = "user"
 ): Promise<ClusterFileManifest> {
+  console.trace(`[fetchClusterManifest] Called for ${fileId} (${scope})`);
+  const isPublic = scope === "public";
   const base = getClusterBase();
   const headers = await getAuthHeaders();
 
