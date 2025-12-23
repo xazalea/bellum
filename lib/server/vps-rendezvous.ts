@@ -48,13 +48,23 @@ function getOrCreateVps(vpsId: string): VpsState {
 
 function pickOwner(vpsId: string): NodeState | null {
   const v = vpses.get(vpsId);
-  if (!v) return null;
+  if (!v) {
+     // Debug helper: log if we have no state for this vpsId at all
+     console.warn(`[VPS] No state for vpsId=${vpsId}`);
+     return null;
+  }
   const t = now();
   // Remove dead nodes.
   for (const [nid, n] of v.nodes) {
-    if (t - n.lastSeenMs > OWNER_TTL_MS) v.nodes.delete(nid);
+    if (t - n.lastSeenMs > OWNER_TTL_MS) {
+       console.log(`[VPS] Node ${nid} expired for ${vpsId}`);
+       v.nodes.delete(nid);
+    }
   }
-  if (v.nodes.size === 0) return null;
+  if (v.nodes.size === 0) {
+     console.warn(`[VPS] All nodes expired/missing for vpsId=${vpsId}`);
+     return null;
+  }
   // Deterministic tie-break: lowest nodeId lexicographically.
   const ids = Array.from(v.nodes.keys()).sort();
   return v.nodes.get(ids[0]!) || null;
@@ -65,8 +75,11 @@ export function registerOwner(vpsId: string, nodeId: string) {
   const v = getOrCreateVps(vpsId);
   let n = v.nodes.get(nodeId);
   if (!n) {
+    console.log(`[VPS] New node registered: ${nodeId} for ${vpsId}`);
     n = { nodeId, lastSeenMs: t, pendingQueue: [], responseWaiters: new Map() };
     v.nodes.set(nodeId, n);
+  } else {
+    // console.log(`[VPS] Heartbeat from ${nodeId} for ${vpsId}`);
   }
   n.lastSeenMs = t;
 }

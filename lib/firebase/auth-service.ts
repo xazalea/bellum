@@ -36,9 +36,17 @@ class AuthService {
   // Claim a human-readable username for this fingerprint.
   async claimUsername(username: string): Promise<User> {
     const usernameNorm = username.trim().toLowerCase();
+    
+    // Pass current fingerprint so server can authorize/link
+    const id = await getNachoIdentity();
+    const headers = { 
+      'Content-Type': 'application/json',
+      'X-Nacho-UserId': id.uid
+    };
+
     const res = await fetch('/api/user/account', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ action: 'create', username: usernameNorm }),
     });
 

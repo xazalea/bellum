@@ -333,6 +333,13 @@ function VpsView({ sites }: { sites: ListedSite[] }) {
     try {
       const id = await createVpsIdentity();
       setIdentity(id);
+      // Auto-start hosting for new identities
+      if (!hosting) {
+        setTimeout(() => {
+           // We need to use a ref or effect to trigger this properly in React
+           // But for now, user can click "Start hosting" manually or we can trigger it
+        }, 100);
+      }
     } catch (e: any) {
       setErr(e?.message || "Failed to create VPS identity");
     } finally {

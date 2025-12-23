@@ -45,10 +45,11 @@ export function startVpsHost(cfg: VpsHostConfig): () => void {
     // Heartbeat for rendezvous (keeps node eligible + enables failover).
     const heartbeat = async () => {
       try {
+        const hId = await getNachoIdentity();
         await fetch('/api/vps/rendezvous/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ vpsId: cfg.vpsId, nodeId: id.uid }),
+          body: JSON.stringify({ vpsId: cfg.vpsId, nodeId: hId.uid }),
         });
       } catch {
         // ignore
@@ -66,6 +67,7 @@ export function startVpsHost(cfg: VpsHostConfig): () => void {
           { cache: 'no-store', signal: pollAbort.signal },
         );
         if (!res.ok) {
+          // console.warn('[VPS] Poll failed', res.status);
           await new Promise((r) => setTimeout(r, 1000));
           continue;
         }

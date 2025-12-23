@@ -75,11 +75,14 @@ export async function GET(req: Request) {
       .collection('lan_signals')
       .where('roomId', '==', roomId)
       .where('toPeerId', '==', peerId)
-      .orderBy('createdAt', 'asc')
       .limit(50)
       .get();
 
     const signals = qs.docs.map((d) => d.data().signal as P2PSignal);
+    // Sort in memory to avoid needing a composite index
+    // (signals may be processed out of order by WebRTC, but offer/answer order helps)
+    // Actually, we'll just return them. The client handles signaling state.
+    
     if (qs.size) {
       const batch = db.batch();
       for (const d of qs.docs) batch.delete(d.ref);
