@@ -1,6 +1,6 @@
 import { getNachoIdentity } from '@/lib/auth/nacho-identity';
 
-export type User = { uid: string };
+export type User = { uid: string; username?: string | null };
 export type AuthDiagnostics = { unavailable: boolean; code?: string; message?: string };
 
 class AuthService {
@@ -33,6 +33,29 @@ class AuthService {
     };
   }
 
+  // Claim a human-readable username for this fingerprint.
+  async claimUsername(username: string): Promise<User> {
+    const usernameNorm = username.trim().toLowerCase();
+    const res = await fetch('/api/user/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', username: usernameNorm }),
+    });
+
+    const j = await res.json();
+    if (!res.ok) {
+      throw new Error(j.error || 'Failed to claim username');
+    }
+
+    // Update local state
+    const id = await getNachoIdentity();
+    id.username = usernameNorm;
+    const user: User = { uid: id.uid, username: usernameNorm };
+    this.currentUser = user;
+    this.listeners.forEach((l) => l(user));
+    return user;
+  }
+
   // Sign in with email/password
   async signIn(email: string, password: string): Promise<User> {
     void email;
@@ -54,7 +77,7 @@ class AuthService {
     if (existing) return existing;
     try {
       const id = await getNachoIdentity();
-      const user: User = { uid: id.uid };
+      const user: User = { uid: id.uid, username: id.username };
       this.currentUser = user;
       this.listeners.forEach((l) => l(user));
       this.setDiagnostics({ unavailable: false });

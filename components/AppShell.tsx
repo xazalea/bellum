@@ -12,6 +12,9 @@ import { AchievementToasts } from './AchievementToasts';
 import { AchievementsModal } from './AchievementsModal';
 import { unlockAchievement } from '@/lib/gamification/achievements';
 
+import { ClaimAccount } from './Auth/ClaimAccount';
+import { authService } from '@/lib/firebase/auth-service';
+
 const Dashboard = React.lazy(() => import('./Dashboard').then((m) => ({ default: m.Dashboard })));
 const AppLibrary = React.lazy(() => import('./AppLibrary').then((m) => ({ default: m.AppLibrary })));
 const ClusterPanel = React.lazy(() => import('./ClusterPanel').then((m) => ({ default: m.ClusterPanel })));
@@ -24,18 +27,19 @@ const AetherLanPanel = React.lazy(() => import('./AetherLan').then((m) => ({ def
 const NotebookPanel = React.lazy(() => import('./Notebook').then((m) => ({ default: m.NotebookPanel })));
 
 function PanelFallback({ label }: { label: string }) {
-  return (
-    <div className="w-full max-w-7xl mx-auto p-8 pt-24">
-      <div className="bellum-card p-6 border-2 border-white/10">
-        <div className="text-sm font-bold text-white/90">{label}</div>
-        <div className="text-xs text-white/45 mt-1">Loading…</div>
-      </div>
-    </div>
-  );
+    return (
+        <div className="w-full max-w-7xl mx-auto p-8 pt-24">
+            <div className="bellum-card p-6 border-2 border-white/10">
+                <div className="text-sm font-bold text-white/90">{label}</div>
+                <div className="text-xs text-white/45 mt-1">Loading…</div>
+            </div>
+        </div>
+    );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [isBooted, setIsBooted] = useState(false);
+    const [user, setUser] = useState(() => authService.getCurrentUser());
     const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'account' | 'cluster' | 'settings' | 'runner' | 'fabrik' | 'lan' | 'notebook'>('home');
     const [runnerAppId, setRunnerAppId] = useState<string | null>(null);
     const pathname = usePathname();
@@ -45,9 +49,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const [motionPref, setMotionPref] = useState<'auto' | 'reduced' | 'full'>('auto');
     const [perfLevel, setPerfLevel] = useState<'high' | 'balanced' | 'low'>('high');
 
+    useEffect(() => {
+        return authService.onAuthStateChange(setUser);
+    }, []);
+
     // This app is primarily a single-page “shell” UI on `/`.
     // But we also want true Next.js routes for subsites like `/xfabric`.
     const isSubsiteRoute = pathname !== '/' && !pathname.startsWith('/api');
+
+    const showClaimModal = isBooted && !user?.username;
 
     useEffect(() => {
         // Start the engine off the critical path (avoid stealing time from first paint).
@@ -201,6 +211,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {!isBooted && <BootSequence onComplete={() => setIsBooted(true)} />}
 
                     <div className={`min-h-screen transition-opacity duration-1000 ${isBooted ? 'opacity-100' : 'opacity-0'}`}>
+                        <ClaimAccount isOpen={showClaimModal} onSuccess={() => void authService.ensureIdentity()} />
                         <DynamicIsland
                             activeTab={activeTab}
                             onTabChange={(t) => {

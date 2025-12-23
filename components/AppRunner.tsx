@@ -25,6 +25,8 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
     const [progress, setProgress] = useState<number>(0);
     const [app, setApp] = useState<InstalledApp | null>(null);
     const [isRunning, setIsRunning] = useState(false);
+    const [cloudStatus, setCloudStatus] = useState<'idle' | 'downloading' | 'ready'>('idle');
+    const [cloudError, setCloudError] = useState<string | null>(null);
 
     const [user, setUser] = useState(() => authService.getCurrentUser());
     useEffect(() => authService.onAuthStateChange(setUser), []);
@@ -150,7 +152,8 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
     // Manual Cloud Download Handler
     const downloadFromCloud = async () => {
         if (!app?.fileId) return;
-
+        setCloudStatus('downloading');
+        setCloudError(null);
         try {
             setError(null);
             addLog("Initiating manual cloud download...");

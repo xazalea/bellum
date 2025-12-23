@@ -6,6 +6,7 @@ import { ensureKursor } from '@/lib/ui/kursor';
 import { hyperRuntime } from '@/lib/performance/hyper-runtime';
 import { unlockAchievement } from '@/lib/gamification/achievements';
 import { getNachoIdentity } from '@/lib/auth/nacho-identity';
+import { AetherLanRoom } from '@/lib/lan/aetherlan';
 
 /**
  * Client-side initialization
@@ -58,14 +59,24 @@ export function ClientInit() {
 
     // Preload critical assets
     if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => {
+      requestIdleCallback(async () => {
         // Warm runtime helpers early (GPU/audio/worker/idle queue).
         hyperRuntime.ensureInitialized().catch(() => { });
 
-        // Warm Fabric (semantic memo index + CAS path) early for better perceived speed.
-        import('@/lib/fabric/runtime')
-          .then(({ fabricRuntime }) => fabricRuntime.initialize())
-          .catch(() => { });
+        // Bootstrap Global P2P Networking (Fabrik)
+        try {
+          // Use a fixed roomId for the global mesh
+          const globalRoom = new AetherLanRoom('global');
+          await globalRoom.start();
+          console.log('[Fabric] Global P2P Mesh connected.');
+
+          // Warm Fabric (semantic memo index + CAS path) early for better perceived speed.
+          const { fabricRuntime } = await import('@/lib/fabric/runtime');
+          await fabricRuntime.initialize();
+          console.log('[Fabric] Runtime initialized.');
+        } catch (err) {
+          console.warn('[Fabric] P2P auto-start failed', err);
+        }
 
         // Preload ISO files logic removed for Local-First policy
         // Users will provide their own files or manually download.
