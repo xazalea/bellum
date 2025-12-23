@@ -97,6 +97,8 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
             const localFile = await localStore.getFile(appData.fileId);
 
             if (localFile?.data) {
+                // If the blob is large, arrayBuffer() can be slow/fail on main thread.
+                // But typically for indexedDB blobs it's okay.
                 bytes = new Uint8Array(await localFile.data.arrayBuffer());
             }
 
@@ -115,11 +117,58 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                 }
             }
 
+            // 3. Manual Cloud Download (Fallback)
+            // Only try cloud if:
+            // a) We didn't find it locally
+            // b) AND it has a fileId (implied)
+            // c) AND manual download hasn't run yet
+            // BUT: If the user just uploaded this file, they expect it to be local.
+            // The "Cloud Error (404)" happens because we might be falling through to a "missing file" state
+            // and maybe some other logic triggers a download.
+            // Wait: The user provided logs showing "Initiating manual cloud download...".
+            // That text comes from `downloadFromCloud` function, OR if we auto-trigger it.
+            // Looking at the code, we DO NOT auto-trigger cloud download in the useEffect main flow.
+            // We only log "Waiting for Local File...".
+            
+            // However, if the user clicks "Download from Cloud" or if some other state triggers it.
+            // Let's verify if `appData` (from server) has the right fileId that matches what `localStore` has.
+            
+            // Fix: If we have bytes, we should NOT fall through to any "missing" logic.
+            if (bytes) {
+               // ... proceed to run ...
+            } else {
+               // Only HERE should we consider waiting or failing.
+               console.log("[AppRunner] No local file found for", appData.fileId);
+               
+               // Auto-trigger cloud download IF it's a public app? 
+               // Or just wait.
+               // The log shows "Initiating manual cloud download..." which means `downloadFromCloud` was called.
+               // If the user clicked it manually, that's fine.
+               // But if it happened automatically, we need to know why.
+               
+               // Ah, `downloadFromCloud` checks `app?.fileId`.
+               // If the user uploaded a file, `chunkedUploadFile` returns a `fileId` (UUID).
+               // That `fileId` is saved to `localStore`.
+               // The `appData` passed here comes from the server list.
+               // It SHOULD match.
+               
+               // Potential Issue: `chunkedUploadFile` uses `localStore.saveFile(file)` which generates a random ID.
+               // Then `addInstalledApp` sends that ID to the server.
+               // Then `AppRunner` receives that ID.
+               // Then `localStore.getFile(id)` should find it.
+               
+               // Debugging: Log what ID we are looking for.
+               addLog(`Looking for local file: ${appData.fileId}`);
+            }
+
             // 3. No Auto-Download (Strict Local-First)
             if (!bytes) {
                 console.log("[AppRunner] No local file found. Waiting for user input.");
                 setStatus("Waiting for Local File...");
-                return; // Stop here. Do not throw.
+                
+                // If it's a public app, we might want to suggest downloading?
+                // For now, just stop.
+                return; 
             }
 
             addLog(`Executing: ${appData.originalName}`);
