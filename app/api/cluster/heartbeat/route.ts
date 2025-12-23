@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prunePeers, upsertPeer } from '@/lib/cluster/presence-store';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
+import { adminDb } from '@/app/api/user/_util';
 
 export const runtime = 'nodejs';
 
@@ -52,8 +53,18 @@ export async function POST(req: Request) {
   if (!deviceId) return NextResponse.json({ error: 'missing_device' }, { status: 400, headers: corsHeaders(req) });
 
   try {
+    // Resolve handle (username) if available to group devices
+    let effectiveUserId = uid;
+    try {
+       const userSnap = await adminDb().collection('users').doc(uid).get();
+       const handle = userSnap.exists ? (userSnap.data() as any)?.handle : null;
+       if (handle) effectiveUserId = handle;
+    } catch {
+       // ignore firestore error, fallback to uid
+    }
+
     upsertPeer({
-      userId: uid,
+      userId: effectiveUserId,
       deviceId,
       userAgent: typeof body.userAgent === 'string' ? body.userAgent : null,
       label: typeof body.label === 'string' ? body.label : null,

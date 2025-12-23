@@ -34,7 +34,14 @@ export async function POST(req: Request) {
       const doc = adminDb().collection('accounts').doc(name);
       const snapshot = await doc.get();
       if (snapshot.exists) return NextResponse.json({ error: 'username_taken' }, { status: 409 });
-      await doc.set({ username: name, ownerUid: uid, createdAt: Date.now() });
+      
+      // Update account ownership and sync profile/handle
+      const batch = adminDb().batch();
+      batch.set(doc, { username: name, ownerUid: uid, createdAt: Date.now() });
+      batch.set(adminDb().collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
+      batch.set(adminDb().collection('handles').doc(name), { uid, updatedAt: Date.now() });
+      await batch.commit();
+      
       return NextResponse.json({ status: 'created' });
     }
 
@@ -79,8 +86,18 @@ export async function POST(req: Request) {
       if (challenge.code !== code.trim()) {
         return NextResponse.json({ error: 'invalid_code' }, { status: 400 });
       }
-      await adminDb().collection('accounts').doc(name).set({ ownerUid: uid, lastSwitchedAt: Date.now() }, { merge: true });
-      await challengeDoc.ref.delete();
+      
+      const batch = adminDb().batch();
+      // Transfer account ownership
+      batch.set(adminDb().collection('accounts').doc(name), { ownerUid: uid, lastSwitchedAt: Date.now() }, { merge: true });
+      // Sync profile and handle index
+      batch.set(adminDb().collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
+      batch.set(adminDb().collection('handles').doc(name), { uid, updatedAt: Date.now() });
+      // Delete challenge
+      batch.delete(challengeDoc.ref);
+      
+      await batch.commit();
+
       return NextResponse.json({ status: 'ok' });
     }
 

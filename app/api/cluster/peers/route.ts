@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listActivePeersForUser, prunePeers } from '@/lib/cluster/presence-store';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
+import { adminDb } from '@/app/api/user/_util';
 
 export const runtime = 'nodejs';
 
@@ -29,8 +30,17 @@ export async function GET(req: Request) {
     if (!uid) return NextResponse.json({ error: 'unauthenticated' }, { status: 401, headers: corsHeaders(req) });
   }
 
+  let effectiveUserId = uid;
+  try {
+     const userSnap = await adminDb().collection('users').doc(uid).get();
+     const handle = userSnap.exists ? (userSnap.data() as any)?.handle : null;
+     if (handle) effectiveUserId = handle;
+  } catch {
+     // ignore
+  }
+
   prunePeers(ACTIVE_WINDOW_MS);
-  const peers = listActivePeersForUser(uid, ACTIVE_WINDOW_MS);
+  const peers = listActivePeersForUser(effectiveUserId, ACTIVE_WINDOW_MS);
   return NextResponse.json(peers, { status: 200, headers: corsHeaders(req) });
 }
 

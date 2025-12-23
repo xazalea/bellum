@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useClusterPeers } from './hooks/useClusterPeers';
 import { authService } from '@/lib/firebase/auth-service';
 
@@ -28,6 +28,30 @@ export function SiteShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { peers } = useClusterPeers();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [user, setUser] = useState(() => authService.getCurrentUser());
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [usernameInput, setUsernameInput] = useState('');
+
+  // Subscribe to auth changes
+  useEffect(() => {
+    return authService.onAuthStateChange(setUser);
+  }, []);
+
+  const handleRegister = async () => {
+    if (!usernameInput.trim()) return;
+    setIsRegistering(true);
+    setRegisterError(null);
+    try {
+      await authService.claimUsername(usernameInput);
+      // User state will update via listener
+    } catch (e: any) {
+      setRegisterError(e.message || 'Registration failed');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
   const versionBadge = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_BUILD_VERSION ?? 'local';
     if (raw === 'local' || raw === 'unknown') {
@@ -131,7 +155,11 @@ export function SiteShell({ children }: PropsWithChildren) {
               <div>
                 <div className="font-display text-2xl font-bold text-white">Account</div>
                 <div className="mt-1 text-sm font-semibold text-white/55">
-                  Your Nacho identity is automatic (fingerprint-based).
+                  {user?.username ? (
+                    <>Signed in as <span className="text-white">{user.username}</span></>
+                  ) : (
+                    "You don't have an account."
+                  )}
                 </div>
               </div>
               <button
@@ -143,41 +171,69 @@ export function SiteShell({ children }: PropsWithChildren) {
               </button>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
-              <div className="text-[10px] font-bold tracking-wider text-white/55">USER ID</div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <div className="truncate font-mono text-sm font-semibold text-white/85">
-                  {authService.getCurrentUser()?.uid ?? '…'}
+            {!user?.username ? (
+              <div className="mt-5 space-y-4">
+                <p className="text-sm text-white/70">
+                  Register a username to link it to your device fingerprint.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="text"
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    placeholder="Choose a username"
+                    className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-white placeholder-white/30 focus:border-blue-500 focus:outline-none"
+                  />
+                  {registerError && (
+                    <p className="text-xs text-red-400">{registerError}</p>
+                  )}
+                  <button
+                    onClick={handleRegister}
+                    disabled={isRegistering || !usernameInput.trim()}
+                    className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white disabled:opacity-50 hover:bg-blue-500"
+                  >
+                    {isRegistering ? 'Registering...' : 'Create Account'}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const uid = authService.getCurrentUser()?.uid ?? (await authService.ensureIdentity()).uid;
-                    await navigator.clipboard.writeText(uid);
-                  }}
-                  className="h-9 rounded-full bg-white px-4 text-xs font-bold text-black"
-                >
-                  Copy
-                </button>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
+                  <div className="text-[10px] font-bold tracking-wider text-white/55">USER ID</div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <div className="truncate font-mono text-sm font-semibold text-white/85">
+                      {user?.uid ?? '…'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (user?.uid) await navigator.clipboard.writeText(user.uid);
+                      }}
+                      className="h-9 rounded-full bg-white px-4 text-xs font-bold text-black"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
 
-            <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
-              <Link
-                href="/dashboard"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-                onClick={() => setAccountOpen(false)}
-              >
-                Open Dashboard
-              </Link>
-              <button
-                type="button"
-                onClick={() => setAccountOpen(false)}
-                className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_14px_28px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
-              >
-                Done
-              </button>
-            </div>
+                <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-5 text-sm font-semibold text-white/80 transition hover:bg-white/10"
+                    onClick={() => setAccountOpen(false)}
+                  >
+                    Open Dashboard
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setAccountOpen(false)}
+                    className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_14px_28px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
+                  >
+                    Done
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
