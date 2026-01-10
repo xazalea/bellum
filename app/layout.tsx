@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Noto_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
+import { NachoCursor } from '@/components/NachoCursor';
 import { cn } from '@/lib/utils';
 
 const fontDisplay = Space_Grotesk({
@@ -49,6 +50,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen w-full flex flex-col bg-nacho-bg text-nacho-text font-body antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
+        <NachoCursor />
         {children}
         <ClientInit />
       </body>

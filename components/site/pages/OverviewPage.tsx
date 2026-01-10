@@ -1,59 +1,91 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { GlobalSearch } from '@/components/nacho-ui/GlobalSearch';
 import { Button } from '@/components/nacho-ui/Button';
 import { Card } from '@/components/nacho-ui/Card';
 import { ProgressBar } from '@/components/nacho-ui/ProgressBar';
 import { StatusIndicator } from '@/components/nacho-ui/StatusIndicator';
-import { Toggle } from '@/components/nacho-ui/Toggle';
 import { AppCard } from '@/components/nacho-ui/AppCard';
 import { IconCard } from '@/components/nacho-ui/IconCard';
-import { Settings, ArrowRight, ChevronRight } from 'lucide-react';
+import { Settings, ArrowRight, ChevronRight, Play, HardDrive, Cpu, MoreVertical } from 'lucide-react';
+import { useInstalledApps } from '../hooks/useInstalledApps';
+import { useClusterPeers } from '../hooks/useClusterPeers';
+
+function formatBytes(bytes: number): string {
+  const gb = 1024 * 1024 * 1024;
+  if (bytes >= gb) return `${(bytes / gb).toFixed(2)} GB`;
+  const mb = 1024 * 1024;
+  if (bytes >= mb) return `${(bytes / mb).toFixed(0)} MB`;
+  return `${bytes} B`;
+}
 
 export function OverviewPage() {
-  const [darkMode, setDarkMode] = useState(true);
+  const router = useRouter();
+  const { apps } = useInstalledApps();
+  const { peers } = useClusterPeers();
+  const [search, setSearch] = useState('');
+
+  const featured = useMemo(() => {
+    return [...apps].sort((a, b) => b.installedAt - a.installedAt)[0] ?? null;
+  }, [apps]);
+
+  const storageUsed = useMemo(() => apps.reduce((acc, app) => acc + (app.storedBytes || 0), 0), [apps]);
+  const storagePercent = Math.min(100, (storageUsed / (5 * 1024 * 1024 * 1024)) * 100); // Assume 5GB quota for demo
 
   return (
     <div className="flex flex-col gap-10 pb-20">
       {/* Hero Section */}
       <section className="text-center space-y-6 pt-10">
         <h1 className="text-5xl md:text-7xl font-black font-display tracking-tight text-white drop-shadow-2xl">
-          Minimal. Matte. Modern.
+          Play. <span className="text-nacho-primary">Instantly.</span> Securely.
         </h1>
         <p className="max-w-2xl mx-auto text-lg md:text-xl text-nacho-subtext leading-relaxed font-light">
-          A design system showcase built on the philosophy of soft pastel tones, high-radius components, and a flat yet tactile interface.
+          Your universal runtime for Windows and Android apps, powered by the distributed cloud.
         </p>
       </section>
 
       {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
-        {/* Left Column Group (Spans 2 columns on large screens) */}
+        {/* Left Column Group */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           
-          {/* Global Search Section */}
+          {/* Search Section */}
           <Card className="flex flex-col gap-4">
-            <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1">Global Search</div>
-            <GlobalSearch />
+            <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1">Library Search</div>
+            <GlobalSearch 
+              placeholder="Find apps, settings, or files..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  router.push(`/library?q=${encodeURIComponent(search)}`);
+                }
+              }}
+            />
           </Card>
 
           {/* Split Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Interactive Primitives */}
-            <Card className="flex flex-col gap-8 h-full">
-              <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1">Interactive Primitives</div>
+            {/* Quick Actions */}
+            <Card className="flex flex-col gap-8 h-full justify-between">
+              <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1">Quick Actions</div>
               
               <div className="flex flex-col gap-4">
-                <Button className="w-full justify-between group">
-                  Primary Action
+                <Button 
+                  className="w-full justify-between group"
+                  onClick={() => router.push('/library')}
+                >
+                  Install New App
                   <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
                 </Button>
                 
                 <div className="flex gap-3">
-                  <Button variant="secondary" className="flex-1">
-                    Secondary
+                  <Button variant="secondary" className="flex-1" onClick={() => router.push('/network')}>
+                    View Network
                   </Button>
                   <Button variant="secondary" className="px-3 aspect-square">
                     <Settings size={20} />
@@ -62,22 +94,22 @@ export function OverviewPage() {
               </div>
             </Card>
 
-            {/* Data Feedback */}
+            {/* System Status */}
             <Card className="flex flex-col gap-8 h-full">
-              <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1">Data Feedback</div>
+              <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1">System Status</div>
               
               <div className="space-y-6">
-                <ProgressBar value={75} label="System Stability" />
+                <ProgressBar value={storagePercent} label="Storage Quota" showValue />
                 
                 <div className="flex flex-wrap gap-2">
-                  <StatusIndicator status="active" />
-                  <StatusIndicator status="maintenance" />
-                  <StatusIndicator status="pending" />
+                  <StatusIndicator status={peers.length > 0 ? 'active' : 'pending'} label="Cluster" />
+                  <StatusIndicator status="active" label="Runtime" />
+                  <StatusIndicator status="info" label={`${apps.length} Apps`} />
                 </div>
                 
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-sm font-medium text-nacho-text">Dark Mode Sync</span>
-                  <Toggle checked={darkMode} onCheckedChange={setDarkMode} />
+                <div className="flex items-center justify-between pt-2 border-t border-nacho-border">
+                  <span className="text-sm font-medium text-nacho-subtext">Version</span>
+                  <span className="text-sm font-mono text-white">v1.0.4</span>
                 </div>
               </div>
             </Card>
@@ -88,29 +120,76 @@ export function OverviewPage() {
         {/* Right Column Group */}
         <div className="flex flex-col gap-6">
           
-          {/* Standard Card */}
-          <Card className="flex flex-col gap-4">
-            <div className="h-10 w-10 rounded-xl bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-nacho-primary mb-2">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
+          {/* Featured App (Standard Card) */}
+          {featured ? (
+            <Card className="flex flex-col gap-4 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Cpu size={100} />
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-nacho-primary mb-2 shadow-glow">
+                {featured.type === 'android' ? <span className="material-symbols-outlined">smartphone</span> : <span className="material-symbols-outlined">desktop_windows</span>}
+              </div>
+              
+              <div>
+                <div className="text-xs font-bold tracking-widest uppercase text-nacho-primary mb-1">Jump Back In</div>
+                <h3 className="text-xl font-bold text-white truncate">{featured.name}</h3>
+              </div>
+              
+              <p className="text-sm text-nacho-subtext leading-relaxed line-clamp-2">
+                {featured.originalName}
+              </p>
+              
+              <Button 
+                onClick={() => router.push(`/play?appId=${encodeURIComponent(featured.id)}`)}
+                className="mt-2 w-full gap-2"
+              >
+                <Play size={18} fill="currentColor" /> Resume
+              </Button>
+            </Card>
+          ) : (
+            <Card className="flex flex-col gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-nacho-subtext mb-2">
+                <HardDrive size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-white">No Apps Installed</h3>
+              <p className="text-sm text-nacho-subtext leading-relaxed">
+                Your library is empty. Install your first app to get started.
+              </p>
+              <Button onClick={() => router.push('/library')} className="mt-2">Go to Library</Button>
+            </Card>
+          )}
+
+          {/* App Card (Static or Contextual) */}
+          <Card className="relative overflow-hidden group">
+            <div className="flex justify-between items-start mb-4">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-nacho-subtext/20 to-nacho-subtext/5 backdrop-blur-sm border border-white/5" />
+              <button className="text-nacho-subtext hover:text-white transition-colors">
+                <MoreVertical size={20} />
+              </button>
             </div>
             
-            <h3 className="text-lg font-bold text-white">Standard Card</h3>
-            <p className="text-sm text-nacho-subtext leading-relaxed">
-              The base card component provides a clean container for generic content, featuring a subtle border and matte fill.
+            <h3 className="text-lg font-bold text-white mb-2 font-display">Nacho Workspace</h3>
+            <p className="text-sm text-nacho-subtext leading-relaxed mb-6">
+              Manage your distributed compute nodes and storage buckets.
             </p>
             
-            <button className="flex items-center gap-1 text-sm font-bold text-white hover:text-nacho-primary transition-colors mt-2 group">
-              View API <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
-            </button>
+            <Button variant="secondary" className="w-full uppercase text-xs tracking-wider font-bold py-3 hover:bg-nacho-card-hover hover:border-nacho-border-strong">
+              Open Workspace
+            </Button>
           </Card>
 
-          {/* Nacho App Card */}
-          <AppCard />
-
-          {/* Icon Card */}
-          <IconCard />
+          {/* Icon Card (Stats) */}
+          <div className="relative overflow-hidden bg-nacho-primary/90 rounded-[2rem] p-6 md:p-8 text-nacho-bg transition-transform hover:-translate-y-1 duration-300">
+            <div className="flex justify-between items-end">
+              <div>
+                <div className="text-xs font-bold tracking-widest uppercase opacity-70 mb-1">Total Storage</div>
+                <div className="text-4xl font-black font-display tracking-tight">{formatBytes(storageUsed)}</div>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-black/10 flex items-center justify-center backdrop-blur-sm">
+                <HardDrive className="h-6 w-6 opacity-80" />
+              </div>
+            </div>
+          </div>
 
         </div>
       </div>
