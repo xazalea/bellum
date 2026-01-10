@@ -91,6 +91,10 @@ export class NachoOS {
 
         // Boot Windows Runtime
         await this.windows.boot();
+        
+        // Set canvas for rendering
+        this.android.setCanvas(canvas);
+        this.windows.setCanvas(canvas);
 
         // Example: Auto-mount SDCard if available
         // vfs.mountSDCard();

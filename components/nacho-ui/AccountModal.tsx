@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from './Card';
 import { Button } from './Button';
-import { GlobalSearch } from './GlobalSearch'; // We might use a simpler input instead
 import { authService } from '@/lib/firebase/auth-service';
 import { User } from '@/lib/firebase/auth-service';
-import { X, User as UserIcon, Copy, Check } from 'lucide-react';
+import { X, User as UserIcon, Copy, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -21,13 +21,44 @@ export function AccountModal({ isOpen, onClose, user }: AccountModalProps) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [usernameValid, setUsernameValid] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setUsernameInput('');
       setRegisterError(null);
+      setUsernameValid(null);
     }
   }, [isOpen]);
+
+  // Real-time username validation
+  useEffect(() => {
+    if (!usernameInput.trim() || usernameInput.length < 3) {
+      setUsernameValid(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setChecking(true);
+      try {
+        // Basic validation
+        if (!/^[a-z0-9_]+$/i.test(usernameInput)) {
+          setUsernameValid(false);
+          setRegisterError('Username can only contain letters, numbers, and underscores');
+        } else {
+          setUsernameValid(true);
+          setRegisterError(null);
+        }
+      } catch (e) {
+        setUsernameValid(null);
+      } finally {
+        setChecking(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [usernameInput]);
 
   const handleRegister = async () => {
     if (!usernameInput.trim()) return;
@@ -54,14 +85,27 @@ export function AccountModal({ isOpen, onClose, user }: AccountModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
-      <div 
-        className="absolute inset-0" 
-        onClick={onClose} 
-        aria-label="Close modal"
-      />
-      
-      <Card className="relative w-full max-w-lg bg-nacho-card border-nacho-border shadow-2xl p-6 z-10 animate-in fade-in zoom-in-95 duration-200">
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
+      >
+        <motion.div 
+          className="absolute inset-0" 
+          onClick={onClose} 
+          aria-label="Close modal"
+        />
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: "spring", duration: 0.4 }}
+          className="relative w-full max-w-lg bg-nacho-card border border-nacho-border rounded-nacho shadow-2xl p-6 z-10"
+        >
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="font-display text-2xl font-bold text-white">Account</h2>
@@ -88,16 +132,34 @@ export function AccountModal({ isOpen, onClose, user }: AccountModalProps) {
             </p>
             
             <div className="space-y-2">
-              <input
-                type="text"
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="Choose a username"
-                className="w-full bg-nacho-bg border border-nacho-border rounded-xl px-4 py-3 text-white placeholder:text-nacho-subtext/50 focus:outline-none focus:border-nacho-primary focus:ring-1 focus:ring-nacho-primary transition-all"
-                onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  placeholder="Choose a username"
+                  className={cn(
+                    "w-full bg-nacho-bg border rounded-xl px-4 py-3 pr-12 text-white placeholder:text-nacho-subtext/50 focus:outline-none focus:border-nacho-primary focus:ring-1 focus:ring-nacho-primary transition-all",
+                    usernameValid === true && "border-green-500/50",
+                    usernameValid === false && "border-red-500/50",
+                    !usernameValid && "border-nacho-border"
+                  )}
+                  onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {checking && <Loader2 className="h-5 w-5 animate-spin text-nacho-subtext" />}
+                  {!checking && usernameValid === true && <Check className="h-5 w-5 text-green-400" />}
+                  {!checking && usernameValid === false && <X className="h-5 w-5 text-red-400" />}
+                </div>
+              </div>
               {registerError && (
-                <p className="text-xs font-semibold text-red-400 pl-1">{registerError}</p>
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs font-semibold text-red-400 pl-1"
+                >
+                  {registerError}
+                </motion.p>
               )}
             </div>
 
@@ -137,7 +199,8 @@ export function AccountModal({ isOpen, onClose, user }: AccountModalProps) {
             </div>
           </div>
         )}
-      </Card>
-    </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '@/lib/firebase/auth-service';
 import { addInstalledApp, detectAppType, removeInstalledAppWithCleanup, type InstalledApp } from '@/lib/apps/apps-service';
 import { chunkedUploadFile } from '@/lib/storage/chunked-upload';
@@ -12,6 +13,7 @@ import { Card } from '@/components/nacho-ui/Card';
 import { Button } from '@/components/nacho-ui/Button';
 import { GlobalSearch } from '@/components/nacho-ui/GlobalSearch';
 import { StatusIndicator } from '@/components/nacho-ui/StatusIndicator';
+import { PageTransition } from '@/components/nacho-ui/PageTransition';
 import { Cloud, Search, Play, Settings, Trash2, Plus, Smartphone, Monitor, Grid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -103,9 +105,10 @@ export function LibraryPage() {
   };
 
   return (
-    <div className="flex flex-col gap-10 pb-20">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pt-10">
+    <PageTransition>
+      <div className="flex flex-col gap-10 pb-20">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pt-10">
         <div className="space-y-4">
           <StatusIndicator status="active" label="Cluster Connected" />
           <div>
@@ -172,7 +175,20 @@ export function LibraryPage() {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.1,
+            },
+          },
+        }}
+        className="grid grid-cols-1 gap-6 md:grid-cols-3"
+      >
         <input
           ref={inputRef}
           type="file"
@@ -199,7 +215,13 @@ export function LibraryPage() {
         )}
 
         {/* Add New Item Card */}
-        <Card className="relative overflow-hidden group border-dashed border-2 bg-transparent hover:bg-nacho-card-hover transition-colors">
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0 },
+          }}
+        >
+          <Card className="relative overflow-hidden group border-dashed border-2 bg-transparent hover:bg-nacho-card-hover transition-colors">
           <div className="flex flex-col h-full justify-between gap-6">
             <div>
               <div className="h-14 w-14 rounded-2xl bg-nacho-card border border-nacho-border flex items-center justify-center text-nacho-subtext mb-6 group-hover:text-white group-hover:border-nacho-primary/50 transition-colors">
@@ -221,6 +243,7 @@ export function LibraryPage() {
             </div>
           </div>
         </Card>
+        </motion.div>
 
         {filtered.map((app) => {
           const cached = !!cacheMap[app.id];
@@ -229,7 +252,14 @@ export function LibraryPage() {
           const Icon = app.type === 'android' ? Smartphone : app.type === 'windows' ? Monitor : Grid;
 
           return (
-            <Card key={app.id} className="group relative overflow-hidden hover:border-nacho-primary/30">
+            <motion.div
+              key={app.id}
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 },
+              }}
+            >
+              <Card className="group relative overflow-hidden hover:border-nacho-primary/30">
               <div className="flex items-start justify-between mb-6">
                 <div className="h-14 w-14 rounded-2xl bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-white">
                   <Icon size={24} />
@@ -262,13 +292,26 @@ export function LibraryPage() {
                 </div>
               </div>
             </Card>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
 
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-lg shadow-2xl border-nacho-border-strong">
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+            >
+              <Card className="w-full max-w-lg shadow-2xl border-nacho-border-strong">
             <h2 className="font-display text-2xl font-bold text-white mb-2">Delete app</h2>
             <p className="text-sm text-nacho-subtext mb-6">
               This removes <span className="text-white font-semibold">{confirmDelete.name}</span> from your library and clears the local cache.
@@ -291,8 +334,11 @@ export function LibraryPage() {
               </Button>
             </div>
           </Card>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+    </PageTransition>
   );
 }

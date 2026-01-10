@@ -1,5 +1,5 @@
 import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
-import { requireTelegramBotToken, telegramDownloadFileBytes } from "@/lib/server/telegram";
+import { requireTelegramBotToken, telegramDownloadFileBytesWithRetry, TelegramError, TelegramErrorType } from "@/lib/server/telegram";
 import { rateLimit } from "@/lib/server/security";
 
 export const runtime = "nodejs";
@@ -20,7 +20,11 @@ export async function GET(req: Request) {
     const meta = snap.data() as any;
     if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });
 
-    const bytes = await telegramDownloadFileBytes({ token, fileId });
+    const bytes = await telegramDownloadFileBytesWithRetry({ 
+      token, 
+      fileId,
+      expectedSha256: meta?.sha256 // Verify hash if stored
+    });
     // Ensure ArrayBuffer-backed payload for Response typings (avoid ArrayBufferLike/SharedArrayBuffer complaints).
     const copy = new Uint8Array(bytes.byteLength);
     copy.set(bytes);
@@ -35,6 +39,20 @@ export async function GET(req: Request) {
       },
     });
   } catch (e: any) {
+    if (e instanceof TelegramError) {
+      let status = 500;
+      switch (e.type) {
+        case TelegramErrorType.RATE_LIMIT:
+          status = 429;
+          break;
+        case TelegramErrorType.INVALID_TOKEN:
+          status = 401;
+          break;
+        default:
+          status = e.statusCode || 500;
+      }
+      return Response.json({ error: e.message, type: e.type, retryable: e.retryable }, { status });
+    }
     const msg = e?.message || "Telegram download failed";
     const status = msg.includes("unauthenticated") ? 401 : 500;
     return Response.json({ error: msg }, { status });

@@ -6,6 +6,7 @@ import { locateGeneralArea } from '@/lib/geolocator/client';
 import { Globe, Activity, MapPin, Shield, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/nacho-ui/Card';
+import { PageTransition } from '@/components/nacho-ui/PageTransition';
 import { cn } from '@/lib/utils';
 
 const AREA_DEFINITIONS = [
@@ -72,9 +73,10 @@ export function NetworkPage() {
   }, [peers]);
 
   return (
-    <div className="space-y-10 pb-20">
-      {/* Hero Section */}
-      <Card className="relative overflow-hidden bg-gradient-to-br from-nacho-card to-nacho-bg border-nacho-border shadow-2xl">
+    <PageTransition>
+      <div className="space-y-10 pb-20">
+        {/* Hero Section */}
+        <Card className="relative overflow-hidden bg-gradient-to-br from-nacho-card to-nacho-bg border-nacho-border shadow-2xl">
         <div className="absolute top-0 right-0 p-12 opacity-[0.03]">
           <Globe size={400} className="text-white" />
         </div>
@@ -235,6 +237,7 @@ export function NetworkPage() {
         }
       `}</style>
     </div>
+    </PageTransition>
   );
 }
 

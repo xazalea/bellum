@@ -15,6 +15,9 @@ import { Card } from '@/components/nacho-ui/Card';
 import { Button } from '@/components/nacho-ui/Button';
 import { ProgressBar } from '@/components/nacho-ui/ProgressBar';
 import { StatusIndicator } from '@/components/nacho-ui/StatusIndicator';
+import { buildStandaloneHtmlFile, downloadTextFile as downloadHtml } from '@/lib/packaging/standalone-html';
+import { buildStandaloneWasmFile, downloadTextFile as downloadWasm } from '@/lib/packaging/standalone-wasm';
+import { buildStandaloneEmulatorFile, downloadTextFile as downloadEmulator } from '@/lib/packaging/standalone-emulator';
 
 export interface AppRunnerProps {
     appId?: string;
@@ -29,9 +32,43 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
     const [progress, setProgress] = useState<number>(0);
     const [app, setApp] = useState<InstalledApp | null>(null);
     const [isRunning, setIsRunning] = useState(false);
+    const [showPerf, setShowPerf] = useState(false);
+    const [fps, setFps] = useState(0);
+    const [memUsage, setMemUsage] = useState(0);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     
     const [user, setUser] = useState(() => authService.getCurrentUser());
     useEffect(() => authService.onAuthStateChange(setUser), []);
+
+    // Performance monitoring
+    useEffect(() => {
+        if (!isRunning) return;
+        
+        let lastTime = performance.now();
+        let frameCount = 0;
+        
+        const measurePerf = () => {
+            frameCount++;
+            const now = performance.now();
+            if (now >= lastTime + 1000) {
+                setFps(Math.round(frameCount * 1000 / (now - lastTime)));
+                frameCount = 0;
+                lastTime = now;
+                
+                // Memory usage (if available)
+                if ((performance as any).memory) {
+                    const mem = (performance as any).memory;
+                    setMemUsage(Math.round(mem.usedJSHeapSize / 1024 / 1024));
+                }
+            }
+            if (isRunning) requestAnimationFrame(measurePerf);
+        };
+        
+        const handle = requestAnimationFrame(measurePerf);
+        return () => cancelAnimationFrame(handle);
+    }, [isRunning]);
 
     const addLog = (msg: string) => {
         setLogs(prev => [...prev.slice(-8), `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -170,6 +207,71 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
         }
     };
 
+    const handleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            setIsFullscreen(true);
+        } else {
+            document.exitFullscreen();
+            setIsFullscreen(false);
+        }
+    };
+
+    const handleScreenshot = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        canvas.toBlob((blob) => {
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${app?.name || 'screenshot'}-${Date.now()}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    };
+
+    const handleReboot = () => {
+        window.location.reload();
+    };
+
+    const handleExport = async (exportType: 'emulator' | 'wasm') => {
+        if (!app) return;
+        
+        setIsExporting(true);
+        try {
+            if (exportType === 'emulator') {
+                // Export with embedded emulator
+                console.log('Exporting as standalone emulator...');
+                // For now, we'll create a placeholder since we need the binary
+                const placeholderBinary = new ArrayBuffer(1024); // Placeholder
+                const html = await buildStandaloneEmulatorFile({
+                    title: app.name,
+                    binary: placeholderBinary,
+                    type: app.type === 'android' ? 'apk' : 'exe',
+                });
+                downloadEmulator(`${app.name}-standalone.html`, html);
+            } else if (exportType === 'wasm') {
+                // Export as WASM (would require transpilation)
+                console.log('Exporting as WASM...');
+                // Placeholder WASM module
+                const placeholderWasm = new ArrayBuffer(1024);
+                const html = await buildStandaloneWasmFile({
+                    title: app.name,
+                    wasmModule: placeholderWasm,
+                });
+                downloadWasm(`${app.name}-wasm.html`, html);
+            }
+            
+            setShowExportModal(false);
+        } catch (e: any) {
+            console.error('Export failed:', e);
+            alert('Export failed: ' + e.message);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div
             className="fixed inset-0 bg-nacho-bg z-50 flex flex-col font-mono text-white overflow-hidden"
@@ -238,44 +340,209 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
 
             {/* Error State */}
             {error && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
-                    <Card className="max-w-md w-full border-red-500/30 bg-red-950/20">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6"
+                >
+                    <Card className="max-w-lg w-full border-red-500/30 bg-red-950/20">
                         <div className="flex flex-col items-center text-center gap-4">
-                            <AlertTriangle size={48} className="text-red-500" />
+                            <AlertTriangle size={48} className="text-red-500 animate-pulse" />
                             <div>
                                 <h2 className="text-xl font-bold text-white">Runtime Error</h2>
-                                <p className="text-red-300 font-mono text-sm mt-2">{error}</p>
+                                <p className="text-red-300 font-mono text-sm mt-2 bg-black/40 p-3 rounded-lg border border-red-500/20">{error}</p>
                             </div>
-                            <Button className="w-full bg-red-600 hover:bg-red-700 text-white border-none mt-4" onClick={onExit}>
-                                Force Shutdown
-                            </Button>
+                            
+                            {/* Troubleshooting Tips */}
+                            <div className="w-full bg-nacho-bg/50 border border-nacho-border rounded-xl p-4 text-left text-xs space-y-2">
+                                <div className="font-bold text-nacho-text mb-2">Troubleshooting Tips:</div>
+                                <div className="text-nacho-subtext space-y-1">
+                                    <p>• Check if the file is corrupted or incomplete</p>
+                                    <p>• For .apk files: Ensure it's a valid Android app</p>
+                                    <p>• For .exe files: Only 32-bit Windows apps are supported</p>
+                                    <p>• Try re-uploading the file</p>
+                                    <p>• Clear browser cache and reload</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 w-full">
+                                <Button variant="secondary" className="flex-1" onClick={handleReboot}>
+                                    Try Again
+                                </Button>
+                                <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white border-none" onClick={onExit}>
+                                    Exit
+                                </Button>
+                            </div>
                         </div>
                     </Card>
-                </div>
+                </motion.div>
             )}
 
             {/* HUD / Controls */}
             <AnimatePresence>
                 {isRunning && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
-                        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
-                    >
-                        <div className="flex items-center gap-2 p-2 rounded-full bg-nacho-card/90 border border-nacho-border backdrop-blur-2xl shadow-2xl">
-                            <div className="pl-4 pr-3 flex items-center gap-2 border-r border-nacho-border mr-1">
-                                <span className="relative flex h-2 w-2">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                </span>
-                                <span className="text-[10px] font-bold tracking-widest text-nacho-subtext">LIVE</span>
-                            </div>
+                    <>
+                        {/* Performance Display */}
+                        {showPerf && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="absolute top-8 left-8 z-30"
+                            >
+                                <div className="flex flex-col gap-2 p-3 rounded-xl bg-black/80 border border-nacho-border backdrop-blur-xl text-xs font-mono">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="text-nacho-subtext">FPS:</span>
+                                        <span className={`font-bold ${fps >= 30 ? 'text-green-400' : 'text-yellow-400'}`}>{fps}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="text-nacho-subtext">Memory:</span>
+                                        <span className="text-nacho-primary font-bold">{memUsage}MB</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <span className="text-nacho-subtext">Type:</span>
+                                        <span className="text-nacho-text font-bold uppercase">{app?.type || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
 
-                            <ControlButton icon={<Power size={16} />} onClick={onExit} danger label="Power Off" />
-                            <ControlButton icon={<RefreshCw size={16} />} label="Reboot" />
-                            <ControlButton icon={<Maximize2 size={16} />} label="Fullscreen" />
-                        </div>
+                        {/* Control HUD */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 50 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 50 }}
+                            className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
+                        >
+                            <div className="flex items-center gap-2 p-2 rounded-full bg-nacho-card/90 border border-nacho-border backdrop-blur-2xl shadow-2xl">
+                                <div className="pl-4 pr-3 flex items-center gap-2 border-r border-nacho-border mr-1">
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    <span className="text-[10px] font-bold tracking-widest text-nacho-subtext">LIVE</span>
+                                </div>
+
+                                <ControlButton 
+                                    icon={<Terminal size={16} />} 
+                                    onClick={() => setShowPerf(!showPerf)} 
+                                    label="Performance"
+                                    active={showPerf}
+                                />
+                                <ControlButton 
+                                    icon={<Download size={16} />} 
+                                    onClick={handleScreenshot} 
+                                    label="Screenshot" 
+                                />
+                                <div className="h-6 w-px bg-nacho-border mx-1" />
+                                <ControlButton 
+                                    icon={<span style={{fontSize: '14px'}}>📦</span>} 
+                                    onClick={() => setShowExportModal(true)} 
+                                    label="Export" 
+                                />
+                                <ControlButton 
+                                    icon={isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />} 
+                                    onClick={handleFullscreen} 
+                                    label="Fullscreen" 
+                                />
+                                <ControlButton 
+                                    icon={<RefreshCw size={16} />} 
+                                    onClick={handleReboot} 
+                                    label="Reboot" 
+                                />
+                                <ControlButton 
+                                    icon={<Power size={16} />} 
+                                    onClick={onExit} 
+                                    danger 
+                                    label="Power Off" 
+                                />
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Export Modal */}
+            <AnimatePresence>
+                {showExportModal && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+                        onClick={() => !isExporting && setShowExportModal(false)}
+                    >
+                        <Card 
+                            className="max-w-lg w-full border-nacho-border" 
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        >
+                            <div className="flex flex-col gap-6">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold text-white">Export as Standalone</h2>
+                                    {!isExporting && (
+                                        <button 
+                                            onClick={() => setShowExportModal(false)}
+                                            className="text-nacho-subtext hover:text-white transition-colors"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                </div>
+
+                                <p className="text-nacho-subtext text-sm">
+                                    Create a standalone HTML file that can run offline without any server or dependencies.
+                                </p>
+
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => handleExport('emulator')}
+                                        disabled={isExporting}
+                                        className="w-full p-4 rounded-xl bg-nacho-card hover:bg-nacho-card-hover border border-nacho-border hover:border-nacho-border-strong transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className="text-2xl">{app?.type === 'android' ? '🤖' : '⊞'}</div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-white mb-1">Emulator Export</div>
+                                                <div className="text-xs text-nacho-subtext">
+                                                    Embeds the full {app?.type === 'android' ? 'Android' : 'Windows'} runtime.
+                                                    Large file (~10-50MB) but completely self-contained.
+                                                </div>
+                                                <div className="mt-2 text-[10px] text-nacho-primary font-mono">
+                                                    ⚠️ Experimental • May have compatibility issues
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleExport('wasm')}
+                                        disabled={isExporting}
+                                        className="w-full p-4 rounded-xl bg-nacho-card hover:bg-nacho-card-hover border border-nacho-border hover:border-nacho-border-strong transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className="text-2xl">⚡</div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-white mb-1">WASM Export</div>
+                                                <div className="text-xs text-nacho-subtext">
+                                                    For transpiled games. Faster and smaller (~1-5MB).
+                                                    Requires prior transpilation.
+                                                </div>
+                                                <div className="mt-2 text-[10px] text-nacho-primary font-mono">
+                                                    ⚡ Fast • Optimized
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                {isExporting && (
+                                    <div className="flex items-center justify-center gap-3 py-4">
+                                        <div className="w-5 h-5 border-2 border-nacho-primary border-t-transparent rounded-full animate-spin" />
+                                        <span className="text-nacho-subtext">Generating export...</span>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -283,11 +550,13 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
     );
 };
 
-const ControlButton = ({ icon, onClick, danger, label }: any) => (
+const ControlButton = ({ icon, onClick, danger, label, active }: any) => (
     <button
         onClick={onClick}
         className={`p-3 rounded-full transition-all hover:scale-105 active:scale-95 group relative
-            ${danger ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'hover:bg-white/10 text-nacho-subtext hover:text-white'}`}
+            ${danger ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 
+              active ? 'bg-nacho-primary/20 text-nacho-primary' :
+              'hover:bg-white/10 text-nacho-subtext hover:text-white'}`}
         title={label}
     >
         {icon}

@@ -1,5 +1,5 @@
 import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
-import { requireTelegramBotToken, requireTelegramStorageChatId, telegramSendDocument } from "@/lib/server/telegram";
+import { requireTelegramBotToken, requireTelegramStorageChatId, telegramSendDocumentWithRetry, TelegramError, TelegramErrorType } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
 export const runtime = "nodejs";
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
     const uploadId = req.headers.get("X-Upload-Id") || crypto.randomUUID();
     const chunkIndex = req.headers.get("X-Chunk-Index");
     const chunkTotal = req.headers.get("X-Chunk-Total");
+    const providedSha256 = req.headers.get("X-Chunk-Sha256") || undefined;
 
     const buf = new Uint8Array(await req.arrayBuffer());
     if (!buf.byteLength) {
@@ -52,12 +53,13 @@ export async function POST(req: Request) {
     const outName =
       chunkIndex !== null ? `nacho_${uploadId}_chunk_${String(chunkIndex).padStart(6, "0")}_${safeBase}.bin` : `nacho_${uploadId}_${safeBase}.bin`;
 
-    const { fileId, messageId } = await telegramSendDocument({
+    const { fileId, messageId, sha256 } = await telegramSendDocumentWithRetry({
       token,
       chatId,
       caption,
       filename: outName,
       bytes: buf,
+      sha256: providedSha256,
     });
 
     // Record ownership so clients can only access their own objects.
@@ -73,13 +75,34 @@ export async function POST(req: Request) {
           chunkIndex: chunkIndex !== null ? Number(chunkIndex) : null,
           chunkTotal: chunkTotal !== null ? Number(chunkTotal) : null,
           sizeBytes: buf.byteLength,
+          sha256,
           createdAt: Date.now(),
         },
         { merge: true },
       );
 
-    return Response.json({ fileId, messageId });
+    return Response.json({ fileId, messageId, sha256 });
   } catch (e: any) {
+    if (e instanceof TelegramError) {
+      let status = 500;
+      switch (e.type) {
+        case TelegramErrorType.RATE_LIMIT:
+          status = 429;
+          break;
+        case TelegramErrorType.INVALID_TOKEN:
+          status = 401;
+          break;
+        case TelegramErrorType.FILE_TOO_LARGE:
+          status = 413;
+          break;
+        case TelegramErrorType.CHAT_NOT_FOUND:
+          status = 500;
+          break;
+        default:
+          status = e.statusCode || 500;
+      }
+      return Response.json({ error: e.message, type: e.type, retryable: e.retryable }, { status });
+    }
     const msg = e?.message || "Telegram upload failed";
     const status = msg.includes("unauthenticated") ? 401 : 500;
     return Response.json({ error: msg }, { status });

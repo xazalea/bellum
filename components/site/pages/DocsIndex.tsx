@@ -8,6 +8,7 @@ import { Search, BookOpen, FileText, Sparkles, Zap, ArrowRight } from 'lucide-re
 import { Card } from '@/components/nacho-ui/Card';
 import { Button } from '@/components/nacho-ui/Button';
 import { GlobalSearch } from '@/components/nacho-ui/GlobalSearch';
+import { PageTransition } from '@/components/nacho-ui/PageTransition';
 import { cn } from '@/lib/utils';
 
 export function DocsIndex({ docs }: { docs: DocEntry[] }) {
@@ -29,10 +30,11 @@ export function DocsIndex({ docs }: { docs: DocEntry[] }) {
   }, [docs]);
 
   return (
-    <div className="flex flex-col gap-10 pb-20 pt-10">
+    <PageTransition>
+      <div className="flex flex-col gap-10 pb-20 pt-10">
 
-      {/* Hero Section */}
-      <Card className="relative overflow-hidden bg-gradient-to-br from-nacho-bg to-nacho-card border-nacho-border shadow-2xl !p-12 text-center">
+        {/* Hero Section */}
+        <Card className="relative overflow-hidden bg-gradient-to-br from-nacho-bg to-nacho-card border-nacho-border shadow-2xl !p-12 text-center">
         <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03] bg-center" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-nacho-primary/5 blur-[120px] rounded-full" />
 
@@ -139,5 +141,6 @@ export function DocsIndex({ docs }: { docs: DocEntry[] }) {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 }
