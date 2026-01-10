@@ -6,7 +6,7 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
  */
 export async function getDeviceFingerprintId(): Promise<string> {
   try {
-    const fp = await FingerprintJS.load({ monitoring: false });
+    const fp = await FingerprintJS.load();
     const res = await fp.get();
     return res.visitorId;
   } catch (error) {
