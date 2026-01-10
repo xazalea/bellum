@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Maximize2, Minimize2, Power, RefreshCw, Mic, Volume2, Terminal, Cpu, AlertTriangle, Download } from 'lucide-react';
+import { Maximize2, Minimize2, Power, RefreshCw, Mic, Volume2, Terminal, Cpu, AlertTriangle, Download, Wifi } from 'lucide-react';
 import { authService } from '@/lib/firebase/auth-service';
 import { downloadClusterFile } from '@/lib/storage/chunked-download';
 import { getNachoOS } from '@/src/nacho_os';
@@ -11,6 +11,10 @@ import { opfsReadBytes, opfsWriteBytes } from '@/lib/storage/local-opfs';
 import { localStore } from '@/lib/storage/local-store';
 import { unlockAchievement } from '@/lib/gamification/achievements';
 import { getNachoHeaders } from '@/lib/auth/nacho-identity';
+import { Card } from '@/components/nacho-ui/Card';
+import { Button } from '@/components/nacho-ui/Button';
+import { ProgressBar } from '@/components/nacho-ui/ProgressBar';
+import { StatusIndicator } from '@/components/nacho-ui/StatusIndicator';
 
 export interface AppRunnerProps {
     appId?: string;
@@ -25,14 +29,12 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
     const [progress, setProgress] = useState<number>(0);
     const [app, setApp] = useState<InstalledApp | null>(null);
     const [isRunning, setIsRunning] = useState(false);
-    const [cloudStatus, setCloudStatus] = useState<'idle' | 'downloading' | 'ready'>('idle');
-    const [cloudError, setCloudError] = useState<string | null>(null);
-
+    
     const [user, setUser] = useState(() => authService.getCurrentUser());
     useEffect(() => authService.onAuthStateChange(setUser), []);
 
     const addLog = (msg: string) => {
-        setLogs(prev => [...prev.slice(-10), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+        setLogs(prev => [...prev.slice(-8), `[${new Date().toLocaleTimeString()}] ${msg}`]);
         setStatus(msg);
     };
 
@@ -51,31 +53,15 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                 return;
             }
 
-            if (appId === 'test') {
-                addLog("Booting Diagnostic Mode...");
-                const canvas = canvasRef.current;
-                if (!canvas) throw new Error('Display subsystem unavailable');
-                const os = getNachoOS();
-                if (!os) throw new Error('Kernel panic: OS not loaded');
-                await os.boot(canvas);
-                addLog("Running internal self-test...");
-                await os.run(new File([], 'test.exe'));
-                setIsRunning(true);
-                setStatus('Running');
-                return;
-            }
-
-            addLog("Authenticating user session...");
-            void user;
-            const headers = await getNachoHeaders();
-
+            // --- 1. Fetch Metadata ---
             addLog("Fetching application metadata...");
+            const headers = await getNachoHeaders();
             const res = await fetch(`/api/user/apps/${encodeURIComponent(appId)}`, {
                 cache: 'no-store',
                 headers,
             });
             if (!res.ok) {
-                throw new Error(res.status === 401 ? 'Identity verification failed' : 'Application not found in registry');
+                throw new Error(res.status === 401 ? 'Identity verification failed' : 'Application not found');
             }
             const appData = (await res.json()) as InstalledApp;
             if (cancelled) return;
@@ -84,109 +70,79 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
             const canvas = canvasRef.current;
             if (!canvas) throw new Error('Display subsystem unavailable');
 
-            addLog("Initializing Nacho Runtime Environment...");
+            // --- 2. Initialize OS ---
+            addLog("Initializing Nacho Runtime...");
             const os = getNachoOS();
             if (!os) throw new Error('Kernel panic: OS not loaded');
-
             await os.boot(canvas);
             if (cancelled) return;
 
-            addLog("Mounting virtual filesystem...");
-
-            // 1. Check LocalStore (IndexedDB) - "Local Install"
+            // --- 3. Resolve File (Local -> OPFS -> Cloud) ---
+            addLog("Resolving storage...");
             let bytes: Uint8Array | null = null;
+
+            // Check LocalStore
             const localFile = await localStore.getFile(appData.fileId);
-
             if (localFile?.data) {
-                // If the blob is large, arrayBuffer() can be slow/fail on main thread.
-                // But typically for indexedDB blobs it's okay.
                 bytes = new Uint8Array(await localFile.data.arrayBuffer());
+                addLog("Loaded from Local Store.");
             }
 
-            if (bytes) {
-                addLog("Loaded from Local Store (IndexedDB).");
-            }
-
-            // 2. Check OPFS (Historical Cache)
+            // Check OPFS
             if (!bytes) {
                 const opfsBytes = await opfsReadBytes(appData.fileId);
-                // Force cast to avoid SharedArrayBuffer type mismatch
                 if (opfsBytes) {
-                    // Fix: Double cast through unknown to handle ArrayBufferLike vs ArrayBuffer strictness
                     bytes = new Uint8Array(opfsBytes.buffer as unknown as ArrayBuffer);
                     addLog("Loaded from OPFS Cache.");
                 }
             }
 
-            // 3. Manual Cloud Download (Fallback)
-            // Only try cloud if:
-            // a) We didn't find it locally
-            // b) AND it has a fileId (implied)
-            // c) AND manual download hasn't run yet
-            // BUT: If the user just uploaded this file, they expect it to be local.
-            // The "Cloud Error (404)" happens because we might be falling through to a "missing file" state
-            // and maybe some other logic triggers a download.
-            // Wait: The user provided logs showing "Initiating manual cloud download...".
-            // That text comes from `downloadFromCloud` function, OR if we auto-trigger it.
-            // Looking at the code, we DO NOT auto-trigger cloud download in the useEffect main flow.
-            // We only log "Waiting for Local File...".
-            
-            // However, if the user clicks "Download from Cloud" or if some other state triggers it.
-            // Let's verify if `appData` (from server) has the right fileId that matches what `localStore` has.
-            
-            // Fix: If we have bytes, we should NOT fall through to any "missing" logic.
-            if (bytes) {
-               // ... proceed to run ...
-            } else {
-               // Only HERE should we consider waiting or failing.
-               console.log("[AppRunner] No local file found for", appData.fileId);
-               
-               // Auto-trigger cloud download IF it's a public app? 
-               // Or just wait.
-               // The log shows "Initiating manual cloud download..." which means `downloadFromCloud` was called.
-               // If the user clicked it manually, that's fine.
-               // But if it happened automatically, we need to know why.
-               
-               // Ah, `downloadFromCloud` checks `app?.fileId`.
-               // If the user uploaded a file, `chunkedUploadFile` returns a `fileId` (UUID).
-               // That `fileId` is saved to `localStore`.
-               // The `appData` passed here comes from the server list.
-               // It SHOULD match.
-               
-               // Potential Issue: `chunkedUploadFile` uses `localStore.saveFile(file)` which generates a random ID.
-               // Then `addInstalledApp` sends that ID to the server.
-               // Then `AppRunner` receives that ID.
-               // Then `localStore.getFile(id)` should find it.
-               
-               // Debugging: Log what ID we are looking for.
-               addLog(`Looking for local file: ${appData.fileId}`);
+            // Download from Cloud (Auto)
+            if (!bytes && appData.fileId) {
+                addLog("Downloading from Cluster...");
+                try {
+                    const dl = await downloadClusterFile(appData.fileId, {
+                        compressedChunks: appData.compression === 'gzip-chunked',
+                        scope: appData.scope ?? "user",
+                        onProgress: (p) => {
+                            const pct = Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100);
+                            setProgress(pct);
+                            setStatus(`Downloading: ${pct}%`);
+                        },
+                    });
+                    bytes = new Uint8Array(dl.bytes);
+                    
+                    // Cache for next time
+                    await opfsWriteBytes(appData.fileId, dl.bytes);
+                    addLog("Download complete & cached.");
+                } catch (e: any) {
+                    console.error("Auto-download failed:", e);
+                    // Fallthrough to manual prompt if download fails
+                    addLog(`Download failed: ${e.message}`);
+                }
             }
 
-            // 3. No Auto-Download (Strict Local-First)
             if (!bytes) {
-                console.log("[AppRunner] No local file found. Waiting for user input.");
-                setStatus("Waiting for Local File...");
-                
-                // If it's a public app, we might want to suggest downloading?
-                // For now, just stop.
-                return; 
+                setStatus("Waiting for File...");
+                addLog("No file found locally or in cloud.");
+                return; // Stays in "Waiting" state, showing prompt
             }
 
+            // --- 4. Execution ---
             addLog(`Executing: ${appData.originalName}`);
-
-            // Fix: Explicitly handle potential SharedArrayBuffer/ArrayBuffer mismatch
-            // by creating a copy that is guaranteed to be a standard ArrayBuffer
+            
+            // Safety copy for SharedArrayBuffer issues
             const copy = new Uint8Array(bytes.byteLength);
-            copy.set(bytes as Uint8Array);
-
+            copy.set(bytes);
             const file = new File([copy.buffer], appData.originalName, { type: 'application/octet-stream' });
 
             await os.run(file);
             unlockAchievement('ran_app');
 
-            addLog("Process started successfully.");
+            addLog("Process started.");
             setIsRunning(true);
             setStatus('Running');
+
         })().catch((e: any) => {
             console.error(e);
             setError(e?.message || 'Fatal Execution Error');
@@ -197,190 +153,108 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
         return () => {
             cancelled = true;
         };
-    }, [user, appId]);
+    }, [appId]);
 
-    // Manual Cloud Download Handler
-    const downloadFromCloud = async () => {
-        if (!app?.fileId) return;
-        setCloudStatus('downloading');
-        setCloudError(null);
-        try {
-            setError(null);
-            addLog("Initiating manual cloud download...");
-            const dl = await downloadClusterFile(app.fileId, {
-                compressedChunks: app.compression === 'gzip-chunked',
-                scope: app.scope ?? "user",
-                onProgress: (p) => {
-                    setProgress(Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100));
-                    setStatus(`Downloading: ${Math.round(((p.chunkIndex + 1) / p.totalChunks) * 100)}%`);
-                },
-            });
-
-            addLog("Download complete. Verifying integrity...");
-            await opfsWriteBytes(app.fileId, dl.bytes);
-
-            // Run logic (duplicated from useEffect for safety)
-            const copy = new Uint8Array(dl.bytes.byteLength);
-            copy.set(dl.bytes as Uint8Array);
-            const file = new File([copy.buffer], app.originalName, { type: 'application/octet-stream' });
-
-            const os = getNachoOS();
-            if (!os) throw new Error("System Kernel (OS) is not loaded.");
-            
-            await os.run(file);
-            unlockAchievement('ran_app');
-            addLog("Process started successfully.");
-            setIsRunning(true);
-            setStatus('Running');
-
-        } catch (e: any) {
-            console.error(e);
-            const msg = e?.message || 'Download Failed';
-            addLog(`Error: ${msg}`);
-            // Don't crash, just let them try again or drop file
-            setStatus("Download Failed. Try again or drop local file.");
-        }
-    };
-
-    // Simple Drag-and-Drop Handler
+    // Manual Drag-and-Drop Handler (Fallback)
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
             const file = files[0];
-            addLog(`Manual install detected: ${file.name}`);
-            setStatus("Installing local file...");
-            setError(null);
-
+            addLog(`Manual install: ${file.name}`);
             const os = getNachoOS();
-            if (!os) {
-                setError("System Kernel (OS) is not loaded.");
-                return;
+            if (os) {
+                await os.run(file);
+                setIsRunning(true);
             }
-
-            // Run directly
-            await os.run(file);
-            unlockAchievement('ran_app');
-            addLog("Process started successfully.");
-            setIsRunning(true);
-            setStatus('Running');
         }
     };
 
     return (
         <div
-            className="fixed inset-0 bg-black z-50 flex flex-col font-mono text-white overflow-hidden"
+            className="fixed inset-0 bg-nacho-bg z-50 flex flex-col font-mono text-white overflow-hidden"
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
         >
-
             {/* Background / Canvas Layer */}
-            <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#050505]">
+            <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
                 <canvas
                     ref={canvasRef}
-                    className={`w-full h-full object-contain transition-opacity duration-1000 ${isRunning ? 'opacity-100' : 'opacity-20 blur-lg'}`}
+                    className={`w-full h-full object-contain transition-opacity duration-1000 ${isRunning ? 'opacity-100' : 'opacity-40 blur-md'}`}
                     width={1920}
                     height={1080}
                 />
             </div>
 
-            {/* Boot Overlay (Visible when not running) */}
+            {/* Overlay UI */}
             <AnimatePresence>
                 {!isRunning && !error && (
                     <motion.div
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
                         transition={{ duration: 0.8, ease: "easeInOut" }}
-                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-xl"
+                        className="absolute inset-0 z-20 flex items-center justify-center bg-nacho-bg/80 backdrop-blur-xl p-4"
                     >
-                        <div className="w-full max-w-2xl p-8 space-y-8">
-                            {/* Loader Graphic */}
-                            <div className="flex justify-center">
-                                <div className="relative w-24 h-24">
-                                    <div className="absolute inset-0 rounded-full border-4 border-white/10" />
-                                    <div className="absolute inset-0 rounded-full border-t-4 border-cyan-500 animate-spin" />
+                        <Card className="w-full max-w-lg flex flex-col gap-8 border-nacho-border shadow-2xl">
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="relative w-20 h-20">
+                                    <div className="absolute inset-0 rounded-full border-4 border-nacho-border" />
+                                    <div className="absolute inset-0 rounded-full border-t-4 border-nacho-primary animate-spin" />
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <Cpu size={32} className="text-cyan-500 animate-pulse" />
+                                        <Cpu size={28} className="text-nacho-primary animate-pulse" />
                                     </div>
+                                </div>
+                                <div className="text-center">
+                                    <h2 className="font-display text-2xl font-bold text-white mb-1">{app?.name || "System Boot"}</h2>
+                                    <p className="text-sm font-mono text-nacho-primary animate-pulse">{status}</p>
                                 </div>
                             </div>
 
-                            {/* Status Text */}
-                            <div className="text-center space-y-2">
-                                <h2 className="text-2xl font-bold tracking-tight text-white">{app?.name || "System Boot"}</h2>
-                                <p className="text-cyan-400 animate-pulse">{status}</p>
-                            </div>
-
-                            {/* Terminal Logs */}
-                            <div className="h-48 overflow-hidden rounded-lg bg-black/50 border border-white/10 p-4 font-mono text-xs text-green-400/80 shadow-inner">
-                                {logs.map((log, i) => (
-                                    <div key={i} className="truncate pb-1 border-b border-white/5 last:border-0">
-                                        <span className="opacity-50 mr-2">&gt;</span>{log}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                                <motion.div
-                                    className="h-full bg-cyan-500"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${progress}%` }}
-                                />
-                            </div>
-
-                            {/* Manual Install Prompt */}
-                            {(status.includes("Ready for Local Install") || status.includes("Waiting for Local File")) && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="mt-6 p-8 border border-white/10 rounded-2xl bg-white/5 backdrop-blur-xl text-center cursor-pointer hover:bg-white/10 transition-all hover:scale-[1.02] shadow-2xl relative overflow-hidden group"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="relative z-10">
-                                        <div className="text-white/90 font-bold text-xl mb-2 tracking-tight">Setup Required</div>
-                                        <div className="text-white/60 text-sm font-medium">
-                                            Drop your <span className="text-white font-mono bg-white/10 px-1 rounded">.{app?.type?.includes('android') ? 'apk' : 'exe'}</span> file here to install
+                            <div className="bg-nacho-bg border border-nacho-border rounded-xl p-4 h-32 overflow-hidden font-mono text-xs text-nacho-subtext relative">
+                                <div className="absolute top-2 right-3 text-[10px] uppercase font-bold text-nacho-subtext/50">System Log</div>
+                                <div className="flex flex-col justify-end h-full">
+                                    {logs.map((log, i) => (
+                                        <div key={i} className="truncate opacity-80 pb-0.5">
+                                            <span className="text-nacho-primary mr-2">➜</span>{log}
                                         </div>
+                                    ))}
+                                </div>
+                            </div>
 
-                                        {/* Optional Cloud Restore */}
-                                        {app?.fileId && (
-                                            <div
-                                                onClick={(e) => { e.stopPropagation(); downloadFromCloud(); }}
-                                                className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-lg text-cyan-400 text-xs font-bold uppercase tracking-wider transition-all hover:scale-105 z-50 pointer-events-auto"
-                                            >
-                                                <Download size={14} />
-                                                Download Cloud Save
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
+                            {progress > 0 && (
+                                <ProgressBar value={progress} showValue className="mt-2" />
                             )}
-                        </div>
+
+                            {status.includes("Waiting for File") && (
+                                <div className="p-4 border border-dashed border-nacho-border rounded-xl bg-nacho-bg/50 text-center">
+                                    <p className="text-sm text-nacho-subtext mb-2">Manual Override Required</p>
+                                    <p className="text-xs text-nacho-subtext/70">Drop .exe or .apk file here to inject</p>
+                                </div>
+                            )}
+                        </Card>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Error Overlay */}
+            {/* Error State */}
             {error && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
-                    <div className="bg-red-950/30 border border-red-500/50 p-8 rounded-2xl max-w-md w-full text-center space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
-                        <AlertTriangle size={64} className="mx-auto text-red-500" />
-                        <div>
-                            <h2 className="text-xl font-bold text-red-400 mb-2">CRITICAL FAILURE</h2>
-                            <p className="text-red-200/60 font-mono text-sm">{error}</p>
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
+                    <Card className="max-w-md w-full border-red-500/30 bg-red-950/20">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <AlertTriangle size={48} className="text-red-500" />
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Runtime Error</h2>
+                                <p className="text-red-300 font-mono text-sm mt-2">{error}</p>
+                            </div>
+                            <Button className="w-full bg-red-600 hover:bg-red-700 text-white border-none mt-4" onClick={onExit}>
+                                Force Shutdown
+                            </Button>
                         </div>
-                        <button
-                            onClick={onExit}
-                            className="w-full py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-300 rounded-lg transition-colors font-bold tracking-widest text-sm"
-                        >
-                            EMERGENCY SHUTDOWN
-                        </button>
-                    </div>
+                    </Card>
                 </div>
             )}
 
-            {/* HUD / Controls (Only visible when running) */}
+            {/* HUD / Controls */}
             <AnimatePresence>
                 {isRunning && (
                     <motion.div
@@ -389,17 +263,18 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                         exit={{ opacity: 0, y: 50 }}
                         className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
                     >
-                        <div className="flex items-center gap-4 p-4 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-2xl shadow-2xl">
-
-                            <div className="flex items-center gap-3 px-4 border-r border-white/10 mr-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]" />
-                                <span className="text-xs font-bold tracking-widest text-white/60">ONLINE</span>
+                        <div className="flex items-center gap-2 p-2 rounded-full bg-nacho-card/90 border border-nacho-border backdrop-blur-2xl shadow-2xl">
+                            <div className="pl-4 pr-3 flex items-center gap-2 border-r border-nacho-border mr-1">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                                <span className="text-[10px] font-bold tracking-widest text-nacho-subtext">LIVE</span>
                             </div>
 
-                            <ControlButton icon={<Power size={18} />} onClick={onExit} danger label="Exit" />
-                            <ControlButton icon={<RefreshCw size={18} />} label="Reset" />
-                            <ControlButton icon={<Mic size={18} />} label="Audio" />
-                            <ControlButton icon={<Maximize2 size={18} />} label="Fullscreen" />
+                            <ControlButton icon={<Power size={16} />} onClick={onExit} danger label="Power Off" />
+                            <ControlButton icon={<RefreshCw size={16} />} label="Reboot" />
+                            <ControlButton icon={<Maximize2 size={16} />} label="Fullscreen" />
                         </div>
                     </motion.div>
                 )}
@@ -411,12 +286,10 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
 const ControlButton = ({ icon, onClick, danger, label }: any) => (
     <button
         onClick={onClick}
-        className={`p-3 rounded-xl transition-all hover:scale-110 active:scale-95 group relative
-            ${danger ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'bg-white/5 hover:bg-white/10 text-white/80'}`}
+        className={`p-3 rounded-full transition-all hover:scale-105 active:scale-95 group relative
+            ${danger ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'hover:bg-white/10 text-nacho-subtext hover:text-white'}`}
+        title={label}
     >
         {icon}
-        <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 border border-white/10 rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            {label}
-        </span>
     </button>
 );
