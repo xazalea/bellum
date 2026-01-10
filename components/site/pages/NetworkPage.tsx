@@ -5,6 +5,8 @@ import { useClusterPeers } from '../hooks/useClusterPeers';
 import { locateGeneralArea } from '@/lib/geolocator/client';
 import { Globe, Activity, MapPin, Shield, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Card } from '@/components/nacho-ui/Card';
+import { cn } from '@/lib/utils';
 
 const AREA_DEFINITIONS = [
   { id: 'north-america', label: 'North America', center: { lat: 41, lon: -100 } },
@@ -70,47 +72,47 @@ export function NetworkPage() {
   }, [peers]);
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10 pb-20">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0f172a]/90 to-[#1e293b]/90 p-10 shadow-2xl backdrop-blur-2xl border border-white/5">
-        <div className="absolute top-0 right-0 p-12 opacity-10">
-          <Globe size={300} className="text-white" />
+      <Card className="relative overflow-hidden bg-gradient-to-br from-nacho-card to-nacho-bg border-nacho-border shadow-2xl">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03]">
+          <Globe size={400} className="text-white" />
         </div>
 
-        <div className="relative z-10 flex flex-col gap-6">
+        <div className="relative z-10 flex flex-col gap-8">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
-              <Activity size={24} />
+            <div className="p-2 rounded-xl bg-nacho-accent-blue/10 text-nacho-accent-blue border border-nacho-accent-blue/20">
+              <Activity size={20} />
             </div>
-            <span className="text-sm font-bold uppercase tracking-widest text-cyan-400">AetherNet Status</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-nacho-accent-blue">AetherNet Status</span>
           </div>
 
           <div>
-            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
-              {peers.length} Active Nodes
+            <h1 className="text-5xl md:text-7xl font-black font-display tracking-tight text-white">
+              {peers.length} <span className="text-nacho-subtext">Active Nodes</span>
             </h1>
-            <p className="mt-4 max-w-2xl text-lg text-slate-400 leading-relaxed">
+            <p className="mt-6 max-w-2xl text-lg text-nacho-subtext leading-relaxed font-light">
               The fabric connects distributed devices into a singular, resilient computing layer.
               Load logic and latency metrics are aggregated instantly, preserving privacy while enabling authoritative server capabilities.
             </p>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
             <StatCard label="Your Location" value={localArea ?? 'Earth Wide'} icon={<MapPin size={18} />} />
             <StatCard label="Mesh Strategy" value="Region Based" icon={<Shield size={18} />} />
             <StatCard label="Latency" value="~24ms" icon={<Zap size={18} />} />
           </div>
         </div>
-      </section>
+      </Card>
 
       {/* Globe Visualization */}
-      <section className="grid lg:grid-cols-[1.5fr,1fr] gap-8">
+      <div className="grid lg:grid-cols-[1.5fr,1fr] gap-8">
 
         {/* Globe Container */}
-        <div className="relative flex items-center justify-center rounded-3xl bg-[#020617]/80 border border-white/5 p-12 shadow-2xl overflow-hidden aspect-square lg:aspect-auto">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
-
-          <div className="globe relative w-[400px] h-[400px]">
+        <Card className="relative flex items-center justify-center bg-[#020617] border-nacho-border shadow-2xl overflow-hidden aspect-square lg:aspect-auto min-h-[500px]">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10 bg-center" />
+          
+          <div className="globe relative w-[300px] h-[300px] md:w-[400px] md:h-[400px]">
             <div className="globe-atmosphere" />
             <div className="globe-core" />
             <div className="globe-ring" />
@@ -137,10 +139,13 @@ export function NetworkPage() {
               return (
                 <div key={`${area.id}-label`} className="globe-marker" style={{ top: `${y}%`, left: `${x}%` }}>
                   <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">{area.label}</span>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md transition-all
-                            ${count > 0 ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)]' : 'bg-slate-800/50 border-white/5 text-slate-500'}
-                        `}>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1 drop-shadow-md">{area.label}</span>
+                    <div className={cn(
+                      "px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md transition-all",
+                      count > 0 
+                        ? "bg-nacho-accent-blue/20 border-nacho-accent-blue text-nacho-accent-blue shadow-[0_0_15px_rgba(96,165,250,0.3)]" 
+                        : "bg-white/5 border-white/5 text-nacho-subtext/50"
+                    )}>
                       {count}
                     </div>
                   </div>
@@ -148,29 +153,34 @@ export function NetworkPage() {
               );
             })}
           </div>
-        </div>
+        </Card>
 
         {/* Region Stats */}
         <div className="flex flex-col gap-4">
-          {AREA_DEFINITIONS.map((area) => (
+          {AREA_DEFINITIONS.map((area, i) => (
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
               key={area.id}
-              className="flex-1 flex items-center justify-between p-6 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-default group"
             >
-              <div className="flex items-center gap-4">
-                <div className={`w-2 h-2 rounded-full ${(totals[area.id] ?? 0) > 0 ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]' : 'bg-slate-700'}`} />
-                <span className="font-medium text-slate-300 group-hover:text-white transition-colors">{area.label}</span>
-              </div>
-              <span className="text-xl font-bold font-mono text-white">
-                {String(totals[area.id] ?? 0).padStart(2, '0')}
-              </span>
+              <Card className="flex items-center justify-between !p-5 hover:bg-nacho-card-hover transition-colors group cursor-default">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-2.5 h-2.5 rounded-full transition-all duration-500",
+                    (totals[area.id] ?? 0) > 0 ? "bg-nacho-accent-blue shadow-[0_0_8px_#60A5FA]" : "bg-nacho-card-2"
+                  )} />
+                  <span className="font-medium text-nacho-subtext group-hover:text-white transition-colors">{area.label}</span>
+                </div>
+                <span className="text-xl font-bold font-mono text-white">
+                  {String(totals[area.id] ?? 0).padStart(2, '0')}
+                </span>
+              </Card>
             </motion.div>
           ))}
         </div>
-      </section>
+      </div>
 
       <style jsx>{`
         .globe {
@@ -180,7 +190,7 @@ export function NetworkPage() {
         .globe-atmosphere {
             position: absolute;
             inset: -20%;
-            background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(96, 165, 250, 0.1) 0%, transparent 70%);
             border-radius: 50%;
             filter: blur(20px);
         }
@@ -188,17 +198,17 @@ export function NetworkPage() {
           height: 100%;
           width: 100%;
           border-radius: 50%;
-          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-          border: 1px solid rgba(255,255,255,0.1);
+          background: linear-gradient(135deg, #0B0F1A 0%, #141A26 100%);
+          border: 1px solid rgba(255,255,255,0.05);
           box-shadow: 
             inset 0 0 50px rgba(0,0,0,0.8),
-            0 0 30px rgba(56, 189, 248, 0.1);
+            0 0 30px rgba(96, 165, 250, 0.05);
           animation: spinGlobe 60s linear infinite;
         }
         .globe-ring {
           position: absolute;
           inset: -10%;
-          border: 1px solid rgba(56, 189, 248, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.03);
           border-radius: 50%;
           transform: rotateX(75deg);
         }
@@ -210,11 +220,11 @@ export function NetworkPage() {
         }
         .globe-dot {
           position: absolute;
-          width: 8px;
-          height: 8px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
-          background: #22d3ee;
-          box-shadow: 0 0 10px #22d3ee;
+          background: #60A5FA;
+          box-shadow: 0 0 8px #60A5FA;
           transform: translate(-50%, -50%);
           pointer-events: none;
           z-index: 5;
@@ -230,14 +240,12 @@ export function NetworkPage() {
 
 function StatCard({ label, value, icon }: { label: string, value: string, icon: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 text-slate-300">
-      <div className="p-2 rounded-lg bg-white/5 text-white/70">{icon}</div>
+    <div className="flex items-center gap-4 bg-nacho-bg/30 p-4 rounded-2xl border border-nacho-border/50">
+      <div className="p-2.5 rounded-xl bg-nacho-card text-nacho-primary">{icon}</div>
       <div>
-        <div className="text-xs uppercase tracking-wider text-slate-500 font-semibold">{label}</div>
-        <div className="font-medium text-white">{value}</div>
+        <div className="text-[10px] uppercase tracking-wider text-nacho-subtext font-bold mb-0.5">{label}</div>
+        <div className="font-semibold text-white">{value}</div>
       </div>
     </div>
   );
 }
-
-

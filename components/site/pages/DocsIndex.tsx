@@ -4,21 +4,11 @@ import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
 import type { DocEntry } from '@/lib/server/docs';
 import { motion } from 'framer-motion';
-import { Search, BookOpen, FileText, Sparkles, Zap } from 'lucide-react';
-
-function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string, delay?: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
-      className={`group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl transition-all hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_40px_rgba(56,189,248,0.1)] ${className}`}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="relative z-10">{children}</div>
-    </motion.div>
-  );
-}
+import { Search, BookOpen, FileText, Sparkles, Zap, ArrowRight } from 'lucide-react';
+import { Card } from '@/components/nacho-ui/Card';
+import { Button } from '@/components/nacho-ui/Button';
+import { GlobalSearch } from '@/components/nacho-ui/GlobalSearch';
+import { cn } from '@/lib/utils';
 
 export function DocsIndex({ docs }: { docs: DocEntry[] }) {
   const [q, setQ] = useState('');
@@ -39,111 +29,115 @@ export function DocsIndex({ docs }: { docs: DocEntry[] }) {
   }, [docs]);
 
   return (
-    <div className="w-full space-y-12 pb-20">
+    <div className="flex flex-col gap-10 pb-20 pt-10">
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[#0f172a] to-[#1e293b] border border-white/10 p-12 text-center shadow-2xl">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/10 blur-[100px] rounded-full" />
+      <Card className="relative overflow-hidden bg-gradient-to-br from-nacho-bg to-nacho-card border-nacho-border shadow-2xl !p-12 text-center">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03] bg-center" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-nacho-primary/5 blur-[120px] rounded-full" />
 
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-bold tracking-widest text-cyan-400 mb-8">
+        <div className="relative z-10 flex flex-col items-center max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 rounded-full border border-nacho-accent-blue/30 bg-nacho-accent-blue/10 px-4 py-1.5 text-xs font-bold tracking-widest text-nacho-accent-blue mb-8">
             <Sparkles size={14} />
             <span>KNOWLEDGE BASE</span>
           </div>
 
-          <h1 className="max-w-4xl text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50 tracking-tight">
-            Documentation & <span className="text-cyan-400">Specifications</span>
+          <h1 className="text-5xl md:text-7xl font-black font-display tracking-tight text-white mb-6">
+            Documentation & <span className="text-nacho-primary">Specifications</span>
           </h1>
 
-          <p className="mt-6 max-w-2xl text-lg text-slate-400 leading-relaxed font-medium">
+          <p className="text-lg text-nacho-subtext leading-relaxed font-light mb-10 max-w-2xl">
             Comprehensive guides, architectural deep-dives, and API references.
             Everything is backed by live markdown files in the repository.
           </p>
 
-          {/* Search Bar */}
-          <div className="mt-10 w-full max-w-xl group relative">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className="text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={20} />
-            </div>
+          <div className="w-full max-w-xl relative group">
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-nacho-subtext group-focus-within:text-nacho-primary transition-colors duration-200" />
             <input
-              className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:bg-white/10 transition-all font-medium"
+              className="w-full h-14 pl-12 pr-4 rounded-2xl bg-nacho-card border border-nacho-border text-white placeholder:text-nacho-subtext/50 focus:outline-none focus:border-nacho-primary/50 focus:bg-nacho-card-hover focus:shadow-glow transition-all"
               placeholder="Search for guides, APIs, or concepts..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Featured Doc */}
       {featured && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center gap-2 mb-4 px-2">
-            <Zap size={18} className="text-amber-400" />
-            <span className="text-xs font-bold tracking-widest text-slate-400 uppercase">Featured Read</span>
+            <Zap size={18} className="text-nacho-accent-pink" />
+            <span className="text-xs font-bold tracking-widest text-nacho-subtext uppercase">Featured Read</span>
           </div>
-          <GlassCard className="!p-0 border-amber-500/20 bg-amber-500/5">
+          <Card className="!p-0 border-nacho-accent-pink/20 bg-nacho-accent-pink/5 hover:bg-nacho-accent-pink/10 transition-colors">
             <div className="flex flex-col md:flex-row h-full">
-              <div className="p-10 flex-1 flex flex-col justify-center">
-                <h2 className="text-3xl font-bold text-white mb-4">{featured.title}</h2>
-                <p className="text-slate-300 mb-8 text-lg font-medium opacity-80">{featured.description}</p>
+              <div className="p-8 md:p-12 flex-1 flex flex-col justify-center">
+                <h2 className="text-3xl font-bold font-display text-white mb-4">{featured.title}</h2>
+                <p className="text-nacho-text mb-8 text-lg font-medium opacity-80 leading-relaxed max-w-3xl">{featured.description}</p>
 
-                <div className="flex items-center gap-4">
-                  <Link href={`/docs/${featured.slug}`} className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-white text-black font-bold hover:bg-slate-200 transition-colors">
-                    <BookOpen size={18} />
-                    Read Now
+                <div className="flex flex-wrap items-center gap-4">
+                  <Link href={`/docs/${featured.slug}`}>
+                    <Button className="gap-2 px-8 h-12">
+                      <BookOpen size={18} />
+                      Read Now
+                    </Button>
                   </Link>
-                  <div className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-white/50">
+                  <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-nacho-subtext">
                     {featured.fileName}
                   </div>
                 </div>
               </div>
             </div>
-          </GlassCard>
+          </Card>
         </motion.div>
       )}
 
       {/* Grid */}
       <div>
         <div className="flex items-center justify-between mb-6 px-2">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_10px_#22d3ee]" />
-            <h3 className="text-lg font-bold text-white">All Documents</h3>
-            <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs font-bold text-slate-400">{filtered.length}</span>
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-nacho-primary shadow-glow" />
+            <h3 className="text-xl font-bold text-white font-display">All Documents</h3>
+            <span className="px-2.5 py-0.5 rounded-full bg-nacho-card border border-nacho-border text-xs font-bold text-nacho-subtext">{filtered.length}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((d, i) => (
-            <GlassCard key={d.slug} delay={i * 0.05}>
-              <div className="flex items-start justify-between mb-6">
-                <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400">
-                  <FileText size={24} />
+            <motion.div
+              key={d.slug}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.05 }}
+            >
+              <Card className="h-full flex flex-col group hover:border-nacho-primary/30">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="h-12 w-12 rounded-2xl bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-nacho-primary group-hover:scale-105 transition-transform">
+                    <FileText size={24} strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[10px] font-mono text-nacho-subtext border border-nacho-border px-2 py-1 rounded-lg bg-nacho-bg/50">
+                    {d.fileName}
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-500 border border-white/5 px-2 py-1 rounded bg-black/20">
-                  {d.fileName}
-                </span>
-              </div>
 
-              <h4 className="text-xl font-bold text-slate-100 mb-3 group-hover:text-cyan-300 transition-colors">{d.title}</h4>
-              <p className="text-sm text-slate-400 leading-relaxed mb-6 line-clamp-3">
-                {d.description}
-              </p>
+                <h4 className="text-xl font-bold text-white mb-3 font-display group-hover:text-nacho-primary transition-colors">{d.title}</h4>
+                <p className="text-sm text-nacho-subtext leading-relaxed mb-6 line-clamp-3 flex-1">
+                  {d.description}
+                </p>
 
-              <Link
-                href={`/docs/${d.slug}`}
-                className="inline-flex items-center text-sm font-bold text-white hover:text-cyan-400 transition-colors group/link"
-              >
-                Read Article <span className="ml-1 transition-transform group-hover/link:translate-x-1">→</span>
-              </Link>
-            </GlassCard>
+                <Link
+                  href={`/docs/${d.slug}`}
+                  className="inline-flex items-center text-sm font-bold text-white hover:text-nacho-primary transition-colors group/link mt-auto"
+                >
+                  Read Article <ArrowRight size={16} className="ml-2 transition-transform group-hover/link:translate-x-1" />
+                </Link>
+              </Card>
+            </motion.div>
           ))}
         </div>
       </div>
     </div>
   );
 }
-
-
-

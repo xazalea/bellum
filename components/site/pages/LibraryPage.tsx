@@ -8,6 +8,12 @@ import { addInstalledApp, detectAppType, removeInstalledAppWithCleanup, type Ins
 import { chunkedUploadFile } from '@/lib/storage/chunked-upload';
 import { opfsHas } from '@/lib/storage/local-opfs';
 import { useInstalledApps } from '../hooks/useInstalledApps';
+import { Card } from '@/components/nacho-ui/Card';
+import { Button } from '@/components/nacho-ui/Button';
+import { GlobalSearch } from '@/components/nacho-ui/GlobalSearch';
+import { StatusIndicator } from '@/components/nacho-ui/StatusIndicator';
+import { Cloud, Search, Play, Settings, Trash2, Plus, Smartphone, Monitor, Grid } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 function formatBytes(bytes: number): string {
   const gb = 1024 * 1024 * 1024;
@@ -17,23 +23,6 @@ function formatBytes(bytes: number): string {
   const kb = 1024;
   if (bytes >= kb) return `${(bytes / kb).toFixed(0)} KB`;
   return `${bytes} B`;
-}
-
-type CacheTone = 'ready' | 'cached';
-
-function StatusPill({ tone, label }: { tone: CacheTone; label: string }) {
-  const styles =
-    tone === 'ready'
-      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-      : tone === 'cached'
-        ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
-        : 'bg-amber-500/15 text-amber-200 border-amber-500/30';
-  return (
-    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-bold tracking-wider ${styles}`}>
-      <span className="h-2 w-2 rounded-full bg-current opacity-80" />
-      {label.toUpperCase()}
-    </span>
-  );
 }
 
 export function LibraryPage() {
@@ -86,7 +75,7 @@ export function LibraryPage() {
     setInstallProgress(0);
     try {
       const u = user ?? (await authService.ensureIdentity());
-    const res = await chunkedUploadFile(file, {
+      const res = await chunkedUploadFile(file, {
         compressChunks: true,
         onProgress: (p) => setInstallProgress(Math.round((p.uploadedBytes / p.totalBytes) * 100)),
       });
@@ -114,64 +103,67 @@ export function LibraryPage() {
   };
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold tracking-wide text-white/75">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.55)]" />
-            CLUSTER CONNECTED
+    <div className="flex flex-col gap-10 pb-20">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 pt-10">
+        <div className="space-y-4">
+          <StatusIndicator status="active" label="Cluster Connected" />
+          <div>
+            <h1 className="text-5xl font-black font-display tracking-tight text-white">My Library</h1>
+            <div className="text-3xl font-bold tracking-tight text-nacho-primary">Games & Binaries</div>
           </div>
-          <h1 className="mt-5 font-display text-6xl font-black tracking-tight text-white">My Library</h1>
-          <div className="font-display text-3xl font-bold tracking-tight text-[#3b82f6]">Games &amp; Binaries</div>
         </div>
 
-        <div className="flex w-full flex-col gap-3 md:w-[340px]">
-          <div className="rounded-[1.75rem] border-2 border-white/80 bg-[#070b16]/70 p-5 shadow-[0_26px_90px_rgba(0,0,0,0.55)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-[10px] font-bold tracking-wider text-white/55">STORAGE</div>
-                <div className="mt-1 font-display text-3xl font-extrabold text-white">
-                  {(totals.storedBytes / (1024 * 1024 * 1024)).toFixed(1)}
-                  <span className="text-sm font-semibold text-white/60">GB</span>
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold tracking-wider text-white/55">ITEMS</div>
-                <div className="mt-1 font-display text-3xl font-extrabold text-white">{totals.count}</div>
-              </div>
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#3b82f6] shadow-[0_0_0_3px_rgba(255,255,255,0.85)]">
-                <span className="material-symbols-outlined text-[22px] text-white">cloud</span>
+        {/* Stats Card */}
+        <Card className="w-full md:w-[340px] !p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] font-bold tracking-wider text-nacho-subtext/60 mb-1">STORAGE</div>
+              <div className="font-display text-3xl font-extrabold text-white">
+                {(totals.storedBytes / (1024 * 1024 * 1024)).toFixed(1)}
+                <span className="text-sm font-semibold text-nacho-subtext ml-1">GB</span>
               </div>
             </div>
+            <div>
+              <div className="text-[10px] font-bold tracking-wider text-nacho-subtext/60 mb-1">ITEMS</div>
+              <div className="font-display text-3xl font-extrabold text-white">{totals.count}</div>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-nacho-primary flex items-center justify-center text-nacho-bg shadow-glow">
+              <Cloud size={24} strokeWidth={2.5} />
+            </div>
           </div>
-        </div>
+        </Card>
       </div>
 
-      <div className="mt-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex w-full items-center gap-2 rounded-full border border-white/12 bg-white/5 p-1 backdrop-blur md:w-auto">
+      {/* Controls Section */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex w-full items-center gap-1 rounded-full border border-nacho-border bg-nacho-card p-1 md:w-auto">
           {[
             { label: 'All Items', value: 'all' as const },
             { label: 'Games', value: 'games' as const },
             { label: 'Binaries', value: 'binaries' as const },
             { label: 'Favorites', value: 'favorites' as const },
-          ].map((x, idx) => (
+          ].map((x) => (
             <button
               key={x.value}
               type="button"
               onClick={() => setTab(x.value)}
-              className={`h-10 rounded-full px-5 text-xs font-semibold transition ${
-                tab === x.value ? 'bg-white text-black shadow-[0_10px_18px_rgba(0,0,0,0.35)]' : 'text-white/70 hover:text-white'
-              }`}
+              className={cn(
+                "h-10 rounded-full px-5 text-xs font-semibold transition-all duration-200",
+                tab === x.value 
+                  ? "bg-white text-nacho-bg shadow-sm" 
+                  : "text-nacho-subtext hover:text-white hover:bg-white/5"
+              )}
             >
               {x.label}
             </button>
           ))}
         </div>
 
-        <div className="flex w-full items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 py-3 backdrop-blur md:w-[360px]">
-          <span className="material-symbols-outlined text-[18px] text-white/50">search</span>
+        <div className="relative w-full md:w-[360px] group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-nacho-subtext group-focus-within:text-nacho-primary transition-colors" />
           <input
-            className="w-full bg-transparent text-sm font-medium text-white/85 placeholder:text-white/35 outline-none"
+            className="w-full h-12 pl-10 pr-4 rounded-full bg-nacho-card border border-nacho-border text-sm font-medium text-white placeholder:text-nacho-subtext/50 focus:outline-none focus:border-nacho-primary/50 focus:bg-nacho-card-hover transition-all"
             placeholder="Search library..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -179,7 +171,8 @@ export function LibraryPage() {
         </div>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+      {/* Grid */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <input
           ref={inputRef}
           type="file"
@@ -193,131 +186,100 @@ export function LibraryPage() {
         />
 
         {error && (
-          <div className="md:col-span-3 rounded-[1.75rem] border border-red-400/30 bg-red-500/10 p-5 text-sm font-semibold text-red-200">
+          <div className="md:col-span-3 rounded-[1.75rem] border border-red-500/20 bg-red-500/10 p-5 text-sm font-semibold text-red-200">
             {error}
           </div>
         )}
 
         {installing && (
-          <div className="md:col-span-3 rounded-[1.75rem] border border-white/12 bg-white/5 p-5 text-sm font-semibold text-white/80">
-            Installing… {installProgress}%
-          </div>
+          <Card className="md:col-span-3 flex items-center justify-between">
+            <span className="text-sm font-semibold text-white">Installing...</span>
+            <span className="font-mono text-nacho-primary">{installProgress}%</span>
+          </Card>
         )}
+
+        {/* Add New Item Card */}
+        <Card className="relative overflow-hidden group border-dashed border-2 bg-transparent hover:bg-nacho-card-hover transition-colors">
+          <div className="flex flex-col h-full justify-between gap-6">
+            <div>
+              <div className="h-14 w-14 rounded-2xl bg-nacho-card border border-nacho-border flex items-center justify-center text-nacho-subtext mb-6 group-hover:text-white group-hover:border-nacho-primary/50 transition-colors">
+                <Plus size={28} />
+              </div>
+              <div className="font-display text-2xl font-bold text-white">Add New Item</div>
+              <p className="mt-2 text-sm font-medium text-nacho-subtext leading-relaxed">
+                Upload a native binary or install a new game from the global grid.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <Button onClick={handlePick} className="w-full">
+                Install File
+              </Button>
+              <Button variant="secondary" onClick={() => router.push('/')} className="w-full">
+                Open Full Library
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {filtered.map((app) => {
           const cached = !!cacheMap[app.id];
-          const status = cached ? { label: 'Cached', tone: 'cached' as const } : { label: 'Ready', tone: 'ready' as const };
-          const icon = app.type === 'android' ? 'smartphone' : app.type === 'windows' ? 'desktop_windows' : 'apps';
+          const status = cached ? 'info' : 'active';
+          const label = cached ? 'Cached' : 'Ready';
+          const Icon = app.type === 'android' ? Smartphone : app.type === 'windows' ? Monitor : Grid;
 
           return (
-          <div
-              key={app.id}
-              className="overflow-hidden rounded-[2rem] border-2 border-white/80 bg-[#070b16]/60 p-6 shadow-[0_26px_90px_rgba(0,0,0,0.55)]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-4">
-                  <div className={`grid h-14 w-14 place-items-center rounded-2xl bg-white/10 ring-2 ring-white/15`}>
-                    <span className="material-symbols-outlined text-[24px] text-white">{icon}</span>
-                  </div>
-                  <div>
-                    <div className="font-display text-2xl font-bold text-white">{app.name}</div>
-                    <div className="text-sm font-semibold text-white/55">
-                      {app.originalName} • {formatBytes(app.storedBytes)}
-                    </div>
-                  </div>
+            <Card key={app.id} className="group relative overflow-hidden hover:border-nacho-primary/30">
+              <div className="flex items-start justify-between mb-6">
+                <div className="h-14 w-14 rounded-2xl bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-white">
+                  <Icon size={24} />
+                </div>
+                <StatusIndicator status={status as any} label={label} />
               </div>
-                <StatusPill tone={status.tone} label={status.label} />
-            </div>
 
-            <div className="mt-6">
-              <button
-                type="button"
-                onClick={() => router.push(`/play?appId=${encodeURIComponent(app.id)}`)}
-                className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-bold text-black shadow-[0_16px_30px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
-              >
-                <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                Run
-              </button>
-            </div>
+              <div className="mb-6">
+                <h3 className="font-display text-xl font-bold text-white mb-1 truncate">{app.name}</h3>
+                <div className="text-xs font-medium text-nacho-subtext truncate">
+                  {app.originalName} • {formatBytes(app.storedBytes)}
+                </div>
+              </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+              <div className="space-y-3">
+                <Button 
                   onClick={() => router.push(`/play?appId=${encodeURIComponent(app.id)}`)}
+                  className="w-full gap-2"
                 >
-                  <span className="material-symbols-outlined text-[16px]">
-                    settings
-                  </span>
-                  Details
-                </button>
-                <button
-                  type="button"
-                  className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
-                  onClick={() => setConfirmDelete(app)}
-                >
-                  <span className="material-symbols-outlined text-[16px]">delete</span>
-                  Delete
-                </button>
-            </div>
-          </div>
+                  <Play size={16} fill="currentColor" /> Run
+                </Button>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="secondary" size="sm" onClick={() => router.push(`/play?appId=${encodeURIComponent(app.id)}`)}>
+                    <Settings size={14} /> Details
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(app)} className="hover:text-red-400 hover:border-red-400/30">
+                    <Trash2 size={14} /> Delete
+                  </Button>
+                </div>
+              </div>
+            </Card>
           );
         })}
-
-        <div className="relative overflow-hidden rounded-[2rem] border-2 border-white/15 bg-[#070b16]/40 p-8 shadow-[0_26px_90px_rgba(0,0,0,0.55)]">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/25 to-transparent" />
-          <div className="relative">
-            <div className="grid h-20 w-20 place-items-center rounded-[1.6rem] border-2 border-dashed border-white/20 bg-white/5">
-              <span className="material-symbols-outlined text-[34px] text-white/70">add</span>
-            </div>
-            <div className="mt-6 font-display text-2xl font-bold text-white">Add New Item</div>
-            <div className="mt-2 max-w-xs text-sm font-medium leading-relaxed text-white/55">
-              Upload a native binary or install a new game from the global grid.
-            </div>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handlePick}
-                className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_14px_28px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
-              >
-                Install file
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push('/dashboard')}
-                className="h-11 rounded-full border border-white/15 bg-white/5 px-6 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-              >
-                Open full library
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/70"
-            aria-label="Close"
-            onClick={() => setConfirmDelete(null)}
-          />
-          <div className="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-white/15 bg-[#070b16]/85 p-6 backdrop-blur shadow-[0_26px_90px_rgba(0,0,0,0.65)]">
-            <div className="font-display text-2xl font-bold text-white">Delete app</div>
-            <div className="mt-2 text-sm font-semibold text-white/60">
-              This removes <span className="text-white">{confirmDelete.name}</span> from your library and clears the local cache.
-            </div>
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                className="h-11 rounded-full border border-white/15 bg-white/5 px-6 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-                onClick={() => setConfirmDelete(null)}
-              >
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-lg shadow-2xl border-nacho-border-strong">
+            <h2 className="font-display text-2xl font-bold text-white mb-2">Delete app</h2>
+            <p className="text-sm text-nacho-subtext mb-6">
+              This removes <span className="text-white font-semibold">{confirmDelete.name}</span> from your library and clears the local cache.
+            </p>
+            
+            <div className="flex items-center justify-end gap-3">
+              <Button variant="secondary" onClick={() => setConfirmDelete(null)}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                className="h-11 rounded-full bg-white px-6 text-sm font-semibold text-black shadow-[0_14px_28px_rgba(0,0,0,0.35)] transition hover:bg-white/95"
+              </Button>
+              <Button 
+                className="bg-red-500 hover:bg-red-600 text-white border-none shadow-none"
                 onClick={async () => {
                   const u = user ?? (await authService.ensureIdentity());
                   const app = confirmDelete;
@@ -326,13 +288,11 @@ export function LibraryPage() {
                 }}
               >
                 Delete
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>
   );
 }
-
-

@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import { Noto_Sans, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
+import { cn } from '@/lib/utils';
 
 const fontDisplay = Space_Grotesk({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700', '900'],
   variable: '--font-display',
 });
 
@@ -16,19 +17,13 @@ const fontBody = Noto_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Nacho - Universal Runtime Platform',
-  description: 'Run Windows and Android apps in your browser with local storage and WebGPU acceleration.',
-  keywords: ['nacho', 'webgpu', 'wasm', 'android', 'windows', 'runtime', 'emulation'],
+  title: 'Nacho UI - Minimal. Matte. Modern.',
+  description: 'A design system showcase built on the philosophy of soft pastel tones, high-radius components, and a flat yet tactile interface.',
+  keywords: ['nacho', 'ui', 'design system', 'react', 'tailwind'],
   authors: [{ name: 'nacho' }],
   icons: {
     icon: [{ url: '/icon' }],
     apple: [{ url: '/apple-icon' }],
-  },
-  openGraph: {
-    title: 'Nacho - Universal Runtime Platform',
-    description: 'Run Windows and Android apps in your browser with local storage and WebGPU acceleration.',
-    type: 'website',
-    images: [{ url: '/icon' }],
   },
 };
 
@@ -36,7 +31,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#303446',
+  themeColor: '#0B0F1A',
 };
 
 export default function RootLayout({
@@ -45,19 +40,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${fontDisplay.variable} ${fontBody.variable} dark`}>
+    <html lang="en" className={cn(fontDisplay.variable, fontBody.variable, "dark")}>
       <head>
-        {/* Material Symbols is not supported by next/font/google yet; load via stylesheet. */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        {/* Material Symbols */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
-        {/* Performance hints */}
-        <link rel="prefetch" href="/v86/v86.wasm" crossOrigin="anonymous" />
       </head>
-      <body className="min-h-screen w-full flex flex-col bg-background-dark text-slate-300 font-body antialiased overflow-x-hidden selection:bg-primary selection:text-white">
-          {children}
+      <body className="min-h-screen w-full flex flex-col bg-nacho-bg text-nacho-text font-body antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
+        {children}
         <ClientInit />
       </body>
     </html>

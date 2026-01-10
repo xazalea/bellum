@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { os } from '@/src/nacho_os';
+import { getNachoOS } from '@/src/nacho_os';
 import { chunkedUploadFile } from '@/lib/storage/chunked-upload';
 import { localStore } from '@/lib/storage/local-store';
 
@@ -51,6 +51,7 @@ export function Launcher() {
                 await loadApps(); // Refresh grid
 
                 // Auto-launch after install
+                const os = getNachoOS();
                 if (os) await os.run(file);
             } catch (err) {
                 console.error("Local install failed:", err);
@@ -59,8 +60,9 @@ export function Launcher() {
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0 && os) {
-            await os.run(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            const os = getNachoOS();
+            if (os) await os.run(e.target.files[0]);
         }
     };
 
@@ -104,10 +106,13 @@ export function Launcher() {
                         icon={app.type.includes('android') || app.name.endsWith('.apk') ? APP_ICONS.Android : APP_ICONS.Terminal}
                         onClick={async () => {
                             const fileData = await localStore.getFile(app.id);
-                            if (fileData && os) {
-                                // Reconstruct File object
-                                const file = new File([fileData.data], app.name, { type: app.type });
-                                await os.run(file);
+                            if (fileData) {
+                                const os = getNachoOS();
+                                if (os) {
+                                    // Reconstruct File object
+                                    const file = new File([fileData.data], app.name, { type: app.type });
+                                    await os.run(file);
+                                }
                             }
                         }}
                     />

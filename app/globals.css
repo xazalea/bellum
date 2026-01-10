@@ -20,90 +20,25 @@
 }
 
 :root {
-  /* Catppuccin Frappe-inspired palette */
-  --foreground-rgb: 198, 208, 245; /* text */
-  --background-rgb: 48, 52, 70; /* base */
-  --nacho-bg: #232634; /* crust */
-  --nacho-card: #303446; /* base */
-  --nacho-card-2: #292c3c; /* mantle */
-  --nacho-border: rgba(186, 187, 241, 0.18); /* lavender */
-  --nacho-border-strong: rgba(140, 170, 238, 0.34); /* blue */
-  --nacho-outline: 3px;
+  /* Nacho UI Palette */
+  --nacho-bg: #0B0F1A;
+  --nacho-card: #141A26;
+  --nacho-card-hover: #1D2433;
+  --nacho-primary: #A8B4D0;
+  --nacho-text: #E2E8F0;
+  --nacho-subtext: #94A3B8;
+  --nacho-border: rgba(255, 255, 255, 0.08);
+  --nacho-border-strong: rgba(255, 255, 255, 0.15);
+  --nacho-outline: 2px;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: var(--nacho-text);
   background: var(--nacho-bg);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-}
-
-/* Only hide the native cursor when the custom cursor is enabled.
-   This prevents "laggy cursor" reports on low-end devices. */
-html.kursor-enabled,
-html.kursor-enabled body,
-html.kursor-enabled * {
-  cursor: none !important;
-}
-
-/* Custom cursor: keep it lightweight (avoid blend-mode repaints). */
-.kursor,
-.kursor--1,
-.kursor--2,
-.kursorChild,
-.kursorChild * {
-  background: rgba(198, 208, 245, 0.95) !important; /* text */
-  border-color: rgba(140, 170, 238, 0.95) !important; /* blue */
-  color: rgba(198, 208, 245, 0.95) !important;
-}
-
-/* Keep cursor overlay from blocking clicks. */
-.kursor,
-.kursorChild {
-  pointer-events: none !important;
-  will-change: transform;
-  transform: translateZ(0);
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  /* Screenshot-style background wash */
-  background:
-    radial-gradient(820px 560px at 72% 12%, rgba(59, 130, 246, 0.18), transparent 62%),
-    radial-gradient(760px 560px at 18% 78%, rgba(168, 85, 247, 0.18), transparent 64%),
-    radial-gradient(900px 520px at 50% 30%, rgba(255, 255, 255, 0.05), transparent 70%);
-  opacity: 1;
-  z-index: 0;
-}
-
-/* Screenshot UI grid: subtle lines (cheaper than thousands of DOM nodes). */
-.ui-grid {
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(closest-side at 50% 30%, rgba(0,0,0,0.9), transparent 70%);
-}
-
-/* Fog toggle (used by Settings). Keep it a cheap off switch (no repaints). */
-html[data-fog="off"] body::before {
-  display: none;
-}
-
-/* Motion modes (used by Settings). Prefer CSS-based reductions to avoid JS churn. */
-html[data-motion="reduced"] * {
-  scroll-behavior: auto !important;
-}
-
-html[data-motion="reduced"] .bellum-card,
-html[data-motion="reduced"] .bellum-btn,
-html[data-motion="reduced"] .bellum-btn-secondary {
-  transition-duration: 0.001ms !important;
 }
 
 /* Custom Scrollbar */
@@ -113,178 +48,86 @@ html[data-motion="reduced"] .bellum-btn-secondary {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--nacho-card-2);
+  background: var(--nacho-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--nacho-card-hover);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #FFFFFF;
+  background: var(--nacho-primary);
 }
 
-/* Nacho UI Components */
-.bellum-card {
-  background: rgba(48, 52, 70, 0.78); /* base */
-  border: var(--nacho-outline) solid var(--nacho-border);
-  border-radius: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-  transform: translateZ(0);
-  will-change: transform, box-shadow, border-color;
+/* Nacho UI Components - Base Styles */
+.nacho-card {
+  background: var(--nacho-card);
+  border: 1px solid var(--nacho-border);
+  border-radius: 1.5rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 
-.bellum-card:hover {
+.nacho-card:hover {
+  background: var(--nacho-card-hover);
   border-color: var(--nacho-border-strong);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 34px rgba(140, 170, 238, 0.14);
-  transform: translateY(-2px) scale(1.005);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.3);
 }
 
-/* Performance brain: when perf is low, reduce hover motion (cheap wins). */
-html[data-perf="low"] .bellum-card:hover {
-  transform: translateY(-1px) scale(1.002);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 0 18px rgba(140, 170, 238, 0.10);
-}
-
-.bellum-btn {
-  background: #FFFFFF;
-  color: #020408;
+.nacho-btn {
+  background: var(--nacho-primary);
+  color: #0B0F1A;
   font-weight: 600;
   padding: 0.75rem 1.5rem;
   border-radius: 9999px;
   transition: all 0.2s ease;
-  border: var(--nacho-outline) solid #FFFFFF;
+  border: none;
 }
 
-.bellum-btn:hover {
-  transform: translateY(-1px) scale(1.04);
-  box-shadow: 0 0 18px rgba(198, 208, 245, 0.14), 0 0 30px rgba(140, 170, 238, 0.16);
+.nacho-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(168, 180, 208, 0.3);
 }
 
-html[data-perf="low"] .bellum-btn:hover {
-  transform: translateY(-1px) scale(1.02);
+.nacho-btn:active {
+  transform: translateY(0);
 }
 
-.bellum-btn:active,
-.bellum-btn-secondary:active {
-  transform: translateY(0px) scale(0.98);
+/* Legacy Support (mapping to new styles) */
+.bellum-card {
+  @apply nacho-card;
 }
 
-.bellum-btn-secondary {
-  background: transparent;
-  color: rgb(var(--foreground-rgb));
-  border: var(--nacho-outline) solid var(--nacho-border);
-}
-
-.bellum-btn-secondary:hover {
-  border-color: var(--nacho-border-strong);
-  background: rgba(255, 255, 255, 0.05);
+.bellum-btn {
+  @apply nacho-btn;
 }
 
 .bellum-input {
-  background: var(--nacho-card-2);
-  border: var(--nacho-outline) solid var(--nacho-border);
-  color: rgb(var(--foreground-rgb));
+  background: var(--nacho-card);
+  border: 1px solid var(--nacho-border);
+  color: var(--nacho-text);
   padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   width: 100%;
   transition: all 0.2s ease;
 }
 
 .bellum-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.80);
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.10),
-    0 0 0 6px rgba(59, 130, 246, 0.12);
+  border-color: var(--nacho-primary);
+  background: var(--nacho-card-hover);
+  box-shadow: 0 0 0 4px rgba(168, 180, 208, 0.1);
 }
 
-/* Consistent focus rings (keyboard users) */
+/* Focus Rings */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.12),
-    0 0 0 6px rgba(140, 170, 238, 0.16);
-}
-
-/* Animations */
-@keyframes island-expand {
-  0% { width: 120px; height: 36px; border-radius: 18px; }
-  100% { width: 400px; height: 200px; border-radius: 24px; }
-}
-
-.bg-noise {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-}
-.perspective-1000 {
-  perspective: 1000px;
-}
-.animate-pulse-slow {
-  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.bg-grid-pattern {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-}
-
-/* Docs typography (used by /docs/[slug]) */
-.ui-doc-h1 {
-  margin-top: 0.2rem;
-  margin-bottom: 1rem;
-  font-family: Space Grotesk, sans-serif;
-  font-size: 2.25rem;
-  line-height: 1.1;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.95);
-}
-.ui-doc-h2 {
-  margin-top: 1.4rem;
-  margin-bottom: 0.6rem;
-  font-family: Space Grotesk, sans-serif;
-  font-size: 1.25rem;
-  line-height: 1.2;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.92);
-}
-.ui-doc-h3 {
-  margin-top: 1.1rem;
-  margin-bottom: 0.4rem;
-  font-family: Space Grotesk, sans-serif;
-  font-size: 1.05rem;
-  line-height: 1.2;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.9);
-}
-.ui-doc-p {
-  margin-top: 0.35rem;
-  margin-bottom: 0.35rem;
-  font-size: 0.95rem;
-  line-height: 1.65;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.68);
-}
-.ui-doc-spacer {
-  height: 0.7rem;
-}
-.ui-doc-pre {
-  margin-top: 0.9rem;
-  margin-bottom: 0.9rem;
-  padding: 1rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.35);
-  color: rgba(255, 255, 255, 0.85);
-  overflow: auto;
-  font-size: 0.85rem;
-  line-height: 1.55;
+  box-shadow: 0 0 0 2px var(--nacho-bg), 0 0 0 4px var(--nacho-primary);
 }

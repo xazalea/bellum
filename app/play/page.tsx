@@ -23,7 +23,7 @@ function PlayContent() {
     <div className="w-full h-full bg-black">
         <AppRunner 
             appId={appId} 
-            onExit={() => router.push('/dashboard')}
+            onExit={() => router.push('/')}
         />
     </div>
   );

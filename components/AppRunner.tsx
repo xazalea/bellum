@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Maximize2, Minimize2, Power, RefreshCw, Mic, Volume2, Terminal, Cpu, AlertTriangle, Download } from 'lucide-react';
 import { authService } from '@/lib/firebase/auth-service';
 import { downloadClusterFile } from '@/lib/storage/chunked-download';
-import { os } from '@/src/nacho_os';
+import { getNachoOS } from '@/src/nacho_os';
 import type { InstalledApp } from '@/lib/apps/apps-service';
 import { opfsReadBytes, opfsWriteBytes } from '@/lib/storage/local-opfs';
 import { localStore } from '@/lib/storage/local-store';
@@ -55,6 +55,7 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                 addLog("Booting Diagnostic Mode...");
                 const canvas = canvasRef.current;
                 if (!canvas) throw new Error('Display subsystem unavailable');
+                const os = getNachoOS();
                 if (!os) throw new Error('Kernel panic: OS not loaded');
                 await os.boot(canvas);
                 addLog("Running internal self-test...");
@@ -84,12 +85,12 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
             if (!canvas) throw new Error('Display subsystem unavailable');
 
             addLog("Initializing Nacho Runtime Environment...");
+            const os = getNachoOS();
             if (!os) throw new Error('Kernel panic: OS not loaded');
 
             await os.boot(canvas);
             if (cancelled) return;
 
-            addLog("Mounting virtual filesystem...");
             addLog("Mounting virtual filesystem...");
 
             // 1. Check LocalStore (IndexedDB) - "Local Install"
@@ -223,15 +224,14 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
             copy.set(dl.bytes as Uint8Array);
             const file = new File([copy.buffer], app.originalName, { type: 'application/octet-stream' });
 
-            if (os) {
-                await os.run(file);
-                unlockAchievement('ran_app');
-                addLog("Process started successfully.");
-                setIsRunning(true);
-                setStatus('Running');
-            } else {
-                throw new Error("System Kernel (OS) is not loaded.");
-            }
+            const os = getNachoOS();
+            if (!os) throw new Error("System Kernel (OS) is not loaded.");
+            
+            await os.run(file);
+            unlockAchievement('ran_app');
+            addLog("Process started successfully.");
+            setIsRunning(true);
+            setStatus('Running');
 
         } catch (e: any) {
             console.error(e);
@@ -246,11 +246,17 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0 && os) {
+        if (files.length > 0) {
             const file = files[0];
             addLog(`Manual install detected: ${file.name}`);
             setStatus("Installing local file...");
             setError(null);
+
+            const os = getNachoOS();
+            if (!os) {
+                setError("System Kernel (OS) is not loaded.");
+                return;
+            }
 
             // Run directly
             await os.run(file);

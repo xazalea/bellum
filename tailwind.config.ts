@@ -10,47 +10,49 @@ const config: Config = {
     extend: {
       colors: {
         nacho: {
-          // Catppuccin Frappe-inspired palette
-          crust: '#232634',
-          mantle: '#292c3c',
-          base: '#303446',
-          surface0: '#414559',
-          surface1: '#51576d',
-          surface2: '#626880',
-          text: '#c6d0f5',
-          subtext0: '#a5adce',
-          subtext1: '#b5bfe2',
-          blue: '#8caaee',
-          lavender: '#babbf1',
-          sky: '#99d1db',
-          teal: '#81c8be',
-          green: '#a6d189',
-          yellow: '#e5c890',
-          peach: '#ef9f76',
-          red: '#e78284',
-          pink: '#f4b8e4',
+          // Nacho UI Palette
+          bg: '#0B0F1A',
+          card: '#141A26',
+          'card-hover': '#1D2433',
+          border: 'rgba(255, 255, 255, 0.08)',
+          'border-strong': 'rgba(255, 255, 255, 0.15)',
+          primary: '#A8B4D0',
+          'primary-hover': '#C0CCE5',
+          text: '#E2E8F0',
+          subtext: '#94A3B8',
+          muted: '#64748B',
+          
+          // Accents
+          'accent-green': '#4ADE80',
+          'accent-pink': '#F472B6',
+          'accent-grey': '#64748B',
+          'accent-blue': '#60A5FA',
         },
-        primary: '#3b82f6',
-        'primary-light': '#60a5fa',
-        'background-dark': '#050914',
-        'background-card': '#0F1623',
-        surface: '#1A2333',
+        // Legacy/Compatibility mapping
+        primary: '#A8B4D0',
+        'primary-light': '#C0CCE5',
+        'background-dark': '#0B0F1A',
+        'background-card': '#141A26',
+        surface: '#1D2433',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         display: ['var(--font-display)', 'sans-serif'],
         body: ['var(--font-body)', 'system-ui', 'sans-serif'],
       },
+      borderRadius: {
+        'nacho': '1.5rem', // 24px
+        'nacho-lg': '2rem', // 32px
+        'nacho-sm': '1rem', // 16px
+      },
       boxShadow: {
-        glow: '0 0 25px rgba(59, 130, 246, 0.5)',
-        'glow-card': '0 0 40px rgba(59, 130, 246, 0.15)',
-        hard: '6px 6px 0px 0px rgba(255, 255, 255, 1)',
-        'hard-primary': '6px 6px 0px 0px rgba(59, 130, 246, 1)',
+        'nacho': '0 4px 20px -2px rgba(0, 0, 0, 0.25)',
+        'nacho-hover': '0 10px 30px -4px rgba(0, 0, 0, 0.35)',
+        glow: '0 0 25px rgba(168, 180, 208, 0.2)',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'grid-pattern': "radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px)",
       },
     },
   },
