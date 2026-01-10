@@ -336,9 +336,9 @@ export async function downloadAndEncodeResource(url: string): Promise<string | n
     // Determine MIME type
     const contentType = response.headers.get('content-type') || guessMimeType(url);
     
-    return \`data:\${contentType};base64,\${base64}\`;
+    return `data:${contentType};base64,${base64}`;
   } catch (e) {
-    console.warn(\`Failed to download resource: \${url}\`, e);
+    console.warn(`Failed to download resource: ${url}`, e);
     return null;
   }
 }

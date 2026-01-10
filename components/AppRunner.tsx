@@ -358,7 +358,7 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
                                 <div className="font-bold text-nacho-text mb-2">Troubleshooting Tips:</div>
                                 <div className="text-nacho-subtext space-y-1">
                                     <p>• Check if the file is corrupted or incomplete</p>
-                                    <p>• For .apk files: Ensure it's a valid Android app</p>
+                                    <p>• For .apk files: Ensure it&apos;s a valid Android app</p>
                                     <p>• For .exe files: Only 32-bit Windows apps are supported</p>
                                     <p>• Try re-uploading the file</p>
                                     <p>• Clear browser cache and reload</p>

@@ -634,7 +634,7 @@ export class ExecutionFabric {
     tasksCompleted: number;
     tasksFailed: number;
     avgTaskDuration: number;
-    activeT asks: number;
+    activeTasks: number;
   } {
     const devices = Array.from(this.devices.values());
     const avgWorkload = devices.reduce((sum, d) => sum + d.workload, 0) / devices.length;
