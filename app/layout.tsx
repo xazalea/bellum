@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 const fontDisplay = Space_Grotesk({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '900'],
+  weight: ['300', '400', '500', '600', '700'],
   variable: '--font-display',
 });
 
