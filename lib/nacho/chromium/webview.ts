@@ -162,7 +162,8 @@ export class WebView {
   async executeJavaScript(code: string): Promise<any> {
     try {
       // This only works for same-origin pages
-      const result = this.iframe.contentWindow?.eval(code);
+      const contentWindow = this.iframe.contentWindow as any;
+      const result = contentWindow?.eval(code);
       return result;
     } catch (e) {
       console.error("[WebView] Failed to execute JavaScript (cross-origin?):", e);
