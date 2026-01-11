@@ -224,10 +224,20 @@ export class AudioDecoder {
     for (let ch = 0; ch < sample.channels; ch++) {
       // Ensure Float32Array uses proper ArrayBuffer (handle SharedArrayBuffer)
       const channelData = sample.data[ch];
-      const buffer = channelData.buffer instanceof SharedArrayBuffer 
-        ? new Float32Array(channelData) // Clone to new buffer if SharedArrayBuffer
-        : channelData;
-      audioBuffer.copyToChannel(buffer as Float32Array, ch);
+      
+      // If the buffer is a SharedArrayBuffer, we must clone it to a standard ArrayBuffer
+      // Otherwise TypeScript complains because copyToChannel expects Float32Array backed by ArrayBuffer
+      let buffer: Float32Array;
+      
+      if (channelData.buffer instanceof SharedArrayBuffer) {
+        buffer = new Float32Array(channelData);
+      } else {
+        buffer = channelData;
+      }
+      
+      // Force cast to any to bypass strict ArrayBuffer vs SharedArrayBuffer check
+      // We've already ensured it's safe above, but TS is being pedantic about the type signature overlap
+      audioBuffer.copyToChannel(buffer as any, ch);
     }
     
     const source = this.audioContext.createBufferSource();
@@ -475,10 +485,20 @@ export class AudioPlayer {
     for (let ch = 0; ch < sample.channels; ch++) {
       // Ensure Float32Array uses proper ArrayBuffer (handle SharedArrayBuffer)
       const channelData = sample.data[ch];
-      const buffer = channelData.buffer instanceof SharedArrayBuffer 
-        ? new Float32Array(channelData) // Clone to new buffer if SharedArrayBuffer
-        : channelData;
-      audioBuffer.copyToChannel(buffer as Float32Array, ch);
+      
+      // If the buffer is a SharedArrayBuffer, we must clone it to a standard ArrayBuffer
+      // Otherwise TypeScript complains because copyToChannel expects Float32Array backed by ArrayBuffer
+      let buffer: Float32Array;
+      
+      if (channelData.buffer instanceof SharedArrayBuffer) {
+        buffer = new Float32Array(channelData);
+      } else {
+        buffer = channelData;
+      }
+      
+      // Force cast to any to bypass strict ArrayBuffer vs SharedArrayBuffer check
+      // We've already ensured it's safe above, but TS is being pedantic about the type signature overlap
+      audioBuffer.copyToChannel(buffer as any, ch);
     }
     
     const source = this.audioContext.createBufferSource();

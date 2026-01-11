@@ -320,8 +320,14 @@ export class VideoEncoder {
     const ctx = canvas.getContext('2d');
     
     if (ctx) {
+      // Ensure we have a standard buffer for ImageData
+      let data = frame.data;
+      if (data.buffer instanceof SharedArrayBuffer) {
+        data = new Uint8Array(data); // Clone
+      }
+
       const imageData = new ImageData(
-        new Uint8ClampedArray(frame.data),
+        new Uint8ClampedArray(data),
         frame.width,
         frame.height
       );
