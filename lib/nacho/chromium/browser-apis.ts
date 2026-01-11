@@ -372,6 +372,7 @@ export class GeolocationManager {
     options?: PositionOptions
   ): void {
     // Return dummy position (San Francisco)
+    const timestamp = Date.now();
     const position: GeolocationPosition = {
       coords: {
         latitude: 37.7749,
@@ -391,7 +392,19 @@ export class GeolocationManager {
           speed: null,
         }),
       },
-      timestamp: Date.now(),
+      timestamp,
+      toJSON: () => ({
+        coords: {
+          latitude: 37.7749,
+          longitude: -122.4194,
+          accuracy: 100,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp,
+      }),
     };
     
     setTimeout(() => success(position), 100);
