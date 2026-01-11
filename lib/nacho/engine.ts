@@ -37,7 +37,7 @@ import { TemporalWasmEngine } from './modules/hacking/temporal-wasm';
 import { CompressionStabilityEngine } from './modules/hacking/entropy-compression';
 import { MicroOpsEngine } from './modules/hacking/micro-ops';
 import { BrowserServerEngine } from './modules/browser-server';
-import { ArsenicHypervisor } from '@/lib/arsenic/hypervisor';
+import { nachoProxy } from './proxy/proxy-server';
 
 export enum ExecutionTier {
     INTERPRETER = 0,
@@ -83,7 +83,6 @@ export class NachoEngine {
     public compressionStability: CompressionStabilityEngine;
     public microOps: MicroOpsEngine;
     public browserServer: BrowserServerEngine;
-    public arsenic: ArsenicHypervisor;
 
     private constructor() {
         this.coreExecution = new CoreExecutionEngine();
@@ -104,7 +103,6 @@ export class NachoEngine {
         this.compressionStability = new CompressionStabilityEngine();
         this.microOps = new MicroOpsEngine();
         this.browserServer = new BrowserServerEngine();
-        this.arsenic = new ArsenicHypervisor();
     }
 
     static getInstance(): NachoEngine {
@@ -148,6 +146,7 @@ export class NachoEngine {
                 this.initMemory(),
                 this.initStorage(),
                 this.initAI(),
+                this.initProxy(),
                 hyperRuntime.ensureInitialized(), // warms GPU/Audio/Workers & primes event loop
             ]);
 
@@ -185,6 +184,12 @@ export class NachoEngine {
     private async initAI() {
         // Initialize Local LLM / Optimization Model
         // await neuralCore.initialize();
+    }
+
+    private async initProxy() {
+        // Initialize Nacho Proxy for CORS handling
+        await nachoProxy.ready();
+        console.log('🌮 Nacho Proxy: Ready');
     }
 
     /**

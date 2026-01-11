@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { LayoutGrid, Settings, X, Terminal, Boxes, Sparkles, User, Trophy, Network, NotebookPen } from 'lucide-react';
+import { LayoutGrid, Settings, X, Terminal, Boxes, Sparkles, User, Trophy, Network, NotebookPen, Gamepad2 } from 'lucide-react';
 
 interface DynamicIslandProps {
   activeTab: string;
@@ -49,6 +49,7 @@ export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabCh
     () => [
       { id: 'home', icon: LayoutGrid, label: 'Home' },
       { id: 'apps', icon: Boxes, label: 'Apps' },
+      { id: 'games', icon: Gamepad2, label: 'Games' },
       { id: 'runner', icon: Terminal, label: 'Run' },
       { id: 'fabrik', icon: Sparkles, label: 'Fabrik' },
       { id: 'lan', icon: Network, label: 'LAN' },

@@ -21,11 +21,13 @@ import { buildStandaloneEmulatorFile, downloadTextFile as downloadEmulator } fro
 
 export interface AppRunnerProps {
     appId?: string;
+    gameUrl?: string;
     onExit?: () => void;
 }
 
-export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
+export const AppRunner: React.FC<AppRunnerProps> = ({ appId, gameUrl, onExit }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
     const [status, setStatus] = useState<string>('Initializing...');
     const [logs, setLogs] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,9 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
     
     const [user, setUser] = useState(() => authService.getCurrentUser());
     useEffect(() => authService.onAuthStateChange(setUser), []);
+    
+    // Handle web game URL
+    const isWebGame = !!gameUrl;
 
     // Performance monitoring
     useEffect(() => {
@@ -84,6 +89,13 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
             setApp(null);
             setLogs([]);
             setIsRunning(false);
+
+            // Handle web game URL
+            if (gameUrl) {
+                setStatus('Loading game...');
+                setIsRunning(true);
+                return;
+            }
 
             if (!appId) {
                 setStatus('No app selected');
@@ -190,7 +202,7 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
         return () => {
             cancelled = true;
         };
-    }, [appId]);
+    }, [appId, gameUrl, user]);
 
     // Manual Drag-and-Drop Handler (Fallback)
     const handleDrop = async (e: React.DragEvent) => {
@@ -280,12 +292,23 @@ export const AppRunner: React.FC<AppRunnerProps> = ({ appId, onExit }) => {
         >
             {/* Background / Canvas Layer */}
             <div className="absolute inset-0 z-0 flex items-center justify-center bg-black">
-                <canvas
-                    ref={canvasRef}
-                    className={`w-full h-full object-contain transition-opacity duration-1000 ${isRunning ? 'opacity-100' : 'opacity-40 blur-md'}`}
-                    width={1920}
-                    height={1080}
-                />
+                {isWebGame ? (
+                    <iframe
+                        ref={iframeRef}
+                        src={gameUrl}
+                        className="w-full h-full border-0"
+                        allow="fullscreen; gamepad; accelerometer; gyroscope; clipboard-write"
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
+                        title="Web Game"
+                    />
+                ) : (
+                    <canvas
+                        ref={canvasRef}
+                        className={`w-full h-full object-contain transition-opacity duration-1000 ${isRunning ? 'opacity-100' : 'opacity-40 blur-md'}`}
+                        width={1920}
+                        height={1080}
+                    />
+                )}
             </div>
 
             {/* Overlay UI */}

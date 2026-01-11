@@ -17,6 +17,7 @@ import { authService } from '@/lib/firebase/auth-service';
 
 const Dashboard = React.lazy(() => import('./Dashboard').then((m) => ({ default: m.Dashboard })));
 const AppLibrary = React.lazy(() => import('./AppLibrary').then((m) => ({ default: m.AppLibrary })));
+const GamesBrowser = React.lazy(() => import('./GamesBrowser').then((m) => ({ default: m.GamesBrowser })));
 const ClusterPanel = React.lazy(() => import('./ClusterPanel').then((m) => ({ default: m.ClusterPanel })));
 const SettingsPanel = React.lazy(() => import('./Settings').then((m) => ({ default: m.SettingsPanel })));
 const AppRunner = React.lazy(() => import('./AppRunner').then((m) => ({ default: m.AppRunner })));
@@ -40,8 +41,9 @@ function PanelFallback({ label }: { label: string }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [isBooted, setIsBooted] = useState(false);
     const [user, setUser] = useState(() => authService.getCurrentUser());
-    const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'archives' | 'account' | 'cluster' | 'settings' | 'runner' | 'fabrik' | 'lan' | 'notebook'>('home');
+    const [activeTab, setActiveTab] = useState<'home' | 'apps' | 'games' | 'archives' | 'account' | 'cluster' | 'settings' | 'runner' | 'fabrik' | 'lan' | 'notebook'>('home');
     const [runnerAppId, setRunnerAppId] = useState<string | null>(null);
+    const [gameUrl, setGameUrl] = useState<string | null>(null);
     const pathname = usePathname();
     const router = useRouter();
     const [paletteOpen, setPaletteOpen] = useState(false);
@@ -104,6 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         () => [
             { id: 'home', label: 'Go: Dashboard', keywords: 'home nacho', hint: 'tab', onSelect: () => setActiveTab('home') },
             { id: 'apps', label: 'Go: App Library', keywords: 'apps install', hint: 'tab', onSelect: () => setActiveTab('apps') },
+            { id: 'games', label: 'Go: Games Browser (20,865 games)', keywords: 'games web html5 play', hint: 'tab', onSelect: () => setActiveTab('games') },
             { id: 'runner', label: 'Go: Runner', keywords: 'run app emulator', hint: 'tab', onSelect: () => setActiveTab('runner') },
             { id: 'archives', label: 'Go: Archives', keywords: 'archives backups', hint: 'tab', onSelect: () => setActiveTab('archives') },
             { id: 'account', label: 'Go: Account', keywords: 'auth profile friends', hint: 'tab', onSelect: () => setActiveTab('account') },
@@ -142,6 +145,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         />
                     </Suspense>
                 );
+            case 'games':
+                return (
+                    <Suspense fallback={<PanelFallback label="Games Browser" />}>
+                        <GamesBrowser
+                            onPlayGame={(url) => {
+                                setGameUrl(url);
+                                setActiveTab('runner');
+                            }}
+                        />
+                    </Suspense>
+                );
             case 'cluster':
                 return (
                     <Suspense fallback={<PanelFallback label="Cluster" />}>
@@ -159,7 +173,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Suspense fallback={<PanelFallback label="Runner" />}>
                         <AppRunner
                             appId={runnerAppId ?? undefined}
-                            onExit={() => setActiveTab('home')}
+                            gameUrl={gameUrl ?? undefined}
+                            onExit={() => {
+                                setActiveTab('home');
+                                setGameUrl(null);
+                            }}
                         />
                     </Suspense>
                 );
