@@ -62,7 +62,10 @@ export async function GET(req: Request) {
       expectedSha256: data.sha256,
     });
 
-    return new Response(bytes, {
+    // Convert Uint8Array to Buffer for Node.js runtime
+    const buffer = Buffer.from(bytes);
+
+    return new Response(buffer, {
       status: 200,
       headers: {
         "Content-Type": "application/octet-stream",
