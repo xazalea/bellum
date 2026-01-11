@@ -368,6 +368,10 @@ export class AudioEncoder {
       },
     });
     
+    if (!this.encoder) {
+      throw new Error('[AudioEncoder] Failed to create encoder');
+    }
+    
     this.encoder.configure({
       codec: codecString,
       sampleRate: config.sampleRate,
