@@ -5,6 +5,21 @@
 
 import { IRInstruction, IRBasicBlock, IRBuilder } from '../jit/ir';
 
+// Simplified instruction format for Dalvik bytecode translation
+interface SimplifiedInstruction {
+  type: string;
+  dest?: string;
+  src1?: string;
+  src2?: string;
+  value?: string | number | undefined;
+  target?: number;
+}
+
+interface SimplifiedBasicBlock {
+  id: number;
+  instructions: SimplifiedInstruction[];
+}
+
 interface HotMethod {
   methodName: string;
   executionCount: number;
@@ -115,7 +130,10 @@ export class ARTJITCompiler {
    */
   private dalvikToIR(bytecode: Uint8Array, numRegisters: number): IRBasicBlock[] {
     const blocks: IRBasicBlock[] = [];
-    let currentBlock = this.irBuilder.createBlock('entry');
+    let currentBlock: SimplifiedBasicBlock = {
+      id: 0,
+      instructions: [],
+    };
     
     let pc = 0;
     while (pc < bytecode.length) {
@@ -216,7 +234,7 @@ export class ARTJITCompiler {
           
         case 0x0E: // return-void
           currentBlock.instructions.push({ type: 'ret', value: undefined });
-          blocks.push(currentBlock);
+          blocks.push(this.irBuilder.createBlock(`block_${currentBlock.id}`));
           pc = bytecode.length;
           break;
           
@@ -227,7 +245,7 @@ export class ARTJITCompiler {
               type: 'ret',
               value: `r${vAA}`,
             });
-            blocks.push(currentBlock);
+            blocks.push(this.irBuilder.createBlock(`block_${currentBlock.id}`));
             pc = bytecode.length;
           }
           break;
