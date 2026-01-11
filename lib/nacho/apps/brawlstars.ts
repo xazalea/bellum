@@ -6,7 +6,7 @@
  */
 
 import { AndroidHAL } from '../android/hal';
-import { WebRTCPeer } from '../network/webrtc-p2p';
+import { WebRTCPeerManager } from '../network/webrtc-p2p';
 import { performanceMonitor } from '../profiling/performance-profiler';
 import { ARTInterpreter } from '../android/art-interpreter';
 
@@ -26,7 +26,7 @@ export interface BrawlStarsConfig {
 export class BrawlStarsRuntime {
   private config: BrawlStarsConfig;
   private hal: AndroidHAL;
-  private webrtc: WebRTCPeer | null = null;
+  private webrtc: WebRTCPeerManager | null = null;
   private isRunning: boolean = false;
   private touchPoints: Map<number, { x: number; y: number }> = new Map();
 

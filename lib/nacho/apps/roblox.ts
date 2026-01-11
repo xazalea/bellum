@@ -6,7 +6,7 @@
  */
 
 import { LuaVM, LuaTable, LuaValue } from '../lua/luajit';
-import { WebRTCPeer } from '../network/webrtc-p2p';
+import { WebRTCPeerManager } from '../network/webrtc-p2p';
 import { performanceMonitor } from '../profiling/performance-profiler';
 import { AndroidHAL } from '../android/hal';
 
@@ -284,7 +284,7 @@ export class RobloxRuntime {
   private api: RobloxAPI;
   private physics: RobloxPhysics;
   private hal: AndroidHAL;
-  private webrtc: WebRTCPeer | null = null;
+  private webrtc: WebRTCPeerManager | null = null;
   private isRunning: boolean = false;
   private scriptCode: string = '';
   private updateInterval: number | null = null;
