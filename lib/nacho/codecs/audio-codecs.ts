@@ -65,13 +65,15 @@ export class AudioDecoder {
       },
     });
     
-    if (this.decoder) {
-      this.decoder.configure({
-        codec: codecString,
-        sampleRate: config.sampleRate,
-        numberOfChannels: config.channels,
-      });
+    if (!this.decoder) {
+      throw new Error('[AudioDecoder] Failed to create decoder');
     }
+    
+    this.decoder.configure({
+      codec: codecString,
+      sampleRate: config.sampleRate,
+      numberOfChannels: config.channels,
+    });
     
     this.isInitialized = true;
     console.log(`[AudioDecoder] Initialized: ${codecString}`);

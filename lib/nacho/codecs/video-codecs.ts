@@ -63,6 +63,10 @@ export class VideoDecoder {
       },
     });
     
+    if (!this.decoder) {
+      throw new Error('[VideoDecoder] Failed to create decoder');
+    }
+    
     this.decoder.configure({
       codec: codecString,
       codedWidth: config.width,
@@ -291,6 +295,10 @@ export class VideoEncoder {
         console.error('[VideoEncoder] Error:', error);
       },
     });
+    
+    if (!this.encoder) {
+      throw new Error('[VideoEncoder] Failed to create encoder');
+    }
     
     this.encoder.configure({
       codec: codecString,
