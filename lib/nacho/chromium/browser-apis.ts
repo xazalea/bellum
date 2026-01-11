@@ -381,6 +381,15 @@ export class GeolocationManager {
         altitudeAccuracy: null,
         heading: null,
         speed: null,
+        toJSON: () => ({
+          latitude: 37.7749,
+          longitude: -122.4194,
+          accuracy: 100,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        }),
       },
       timestamp: Date.now(),
     };
