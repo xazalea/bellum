@@ -16,10 +16,11 @@ import { createNeuralCodec, WANeuralCodec } from '../neural/wasm-codec';
 import { AssetAnalyzer, AssetAnalysis } from './analyzer';
 import { StrategySelector, CompressionStrategy } from './strategy-selector';
 
-export type StorageBackend = 'telegram' | 'local' | 'cdn';
+export type StorageBackend = 'telegram' | 'discord' | 'local' | 'cdn';
 
 export interface StorageOptions {
-  backend: StorageBackend;
+  backend?: StorageBackend;
+  preferredBackends?: StorageBackend[]; // Try backends in order
   enableProceduralGeneration?: boolean;
   enableDeduplication?: boolean;
   enableReencoding?: boolean;
@@ -54,6 +55,8 @@ export class StoragePipeline {
 
   constructor(options: StorageOptions) {
     this.options = {
+      backend: options.backend || 'local',
+      preferredBackends: options.preferredBackends || ['discord', 'telegram', 'local'],
       enableProceduralGeneration: true,
       enableDeduplication: true,
       enableReencoding: true,

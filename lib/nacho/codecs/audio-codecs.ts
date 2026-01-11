@@ -89,7 +89,7 @@ export class AudioDecoder {
   /**
    * Get codec string for WebCodecs
    */
-  private getCodecString(codec: AudioCodec, sampleRate: number, channels: number): string {
+  public getCodecString(codec: AudioCodec, sampleRate: number, channels: number): string {
     switch (codec) {
       case AudioCodec.AAC:
         // AAC-LC

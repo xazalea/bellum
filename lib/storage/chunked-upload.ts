@@ -68,6 +68,17 @@ async function isTelegramEnabled(): Promise<boolean> {
   }
 }
 
+async function isDiscordEnabled(): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/discord/status`, { cache: "no-store" });
+    if (!res.ok) return false;
+    const j = (await res.json()) as { enabled?: boolean };
+    return !!j.enabled;
+  } catch {
+    return false;
+  }
+}
+
 export async function chunkedUploadFile(
   file: File,
   opts: {
@@ -114,6 +125,116 @@ export async function chunkedUploadFile(
   const totalChunks = Math.ceil(file.size / chunkBytes);
 
   const headers = await getAuthHeaders();
+
+  // Discord-backed storage (Vercel hosted) - try Discord first, then Telegram
+  const useDiscord = !base && (await isDiscordEnabled());
+  if (useDiscord) {
+    const uploadId = crypto.randomUUID();
+    // Discord webhook limit: 24MB per chunk (safe margin below 25MB)
+    const DISCORD_CHUNK_SIZE = 24 * 1024 * 1024;
+    const discordChunkBytes = Math.min(opts.chunkBytes ?? DISCORD_CHUNK_SIZE, DISCORD_CHUNK_SIZE);
+    const discordTotalChunks = Math.ceil(file.size / discordChunkBytes);
+    const chunks: Array<{ index: number; messageId: string; attachmentUrl: string; sizeBytes: number; sha256: string }> = new Array(discordTotalChunks);
+    let uploadedBytesGlobal = 0;
+
+    // Concurrency: 4 parallel uploads (Discord has lower rate limits)
+    const MAX_CONCURRENCY = 4;
+    const queue = Array.from({ length: discordTotalChunks }, (_, i) => i);
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const i = queue.shift();
+        if (i === undefined) break;
+
+        const start = i * discordChunkBytes;
+        const end = Math.min(file.size, start + discordChunkBytes);
+        const chunk = file.slice(start, end);
+
+        const payload = opts.compressChunks
+          ? await gzipCompressBlob(chunk)
+          : new Uint8Array(await chunk.arrayBuffer());
+
+        // Ensure ArrayBuffer-backed bytes
+        const sendBytes = new Uint8Array(payload.byteLength);
+        sendBytes.set(payload);
+
+        let res = await fetch(`/api/discord/upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "X-File-Name": file.name,
+            "X-Upload-Id": uploadId,
+            "X-Chunk-Index": String(i),
+            "X-Chunk-Total": String(discordTotalChunks),
+            ...headers,
+          },
+          body: sendBytes.buffer,
+        });
+
+        if (!res.ok) {
+          // Simple retry
+          await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+          res = await fetch(`/api/discord/upload`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "X-File-Name": file.name,
+              "X-Upload-Id": uploadId,
+              "X-Chunk-Index": String(i),
+              "X-Chunk-Total": String(discordTotalChunks),
+              ...headers,
+            },
+            body: sendBytes.buffer,
+          });
+
+          if (!res.ok) {
+            const t = await res.text().catch(() => "");
+            throw new Error(`Discord upload failed at chunk ${i}: ${res.status} ${t}`);
+          }
+        }
+
+        const j = (await res.json()) as { messageId: string; attachmentUrl: string; sha256: string };
+        chunks[i] = { 
+          index: i, 
+          messageId: j.messageId, 
+          attachmentUrl: j.attachmentUrl,
+          sizeBytes: sendBytes.byteLength,
+          sha256: j.sha256
+        };
+
+        uploadedBytesGlobal += end - start;
+        opts.onProgress?.({
+          chunkIndex: i,
+          totalChunks: discordTotalChunks,
+          uploadedBytes: uploadedBytesGlobal,
+          totalBytes: file.size
+        });
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(discordTotalChunks, MAX_CONCURRENCY) }, worker));
+
+    const manRes = await fetch(`/api/discord/manifest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify({
+        fileName: file.name,
+        totalBytes: file.size,
+        chunkBytes: discordChunkBytes,
+        totalChunks: discordTotalChunks,
+        createdAtUnixMs: Date.now(),
+        storedBytes: chunks.reduce((s, c) => s + c.sizeBytes, 0),
+        chunks,
+      }),
+    });
+    if (!manRes.ok) {
+      const t = await manRes.text().catch(() => "");
+      throw new Error(`Discord manifest store failed (${manRes.status}): ${t}`);
+    }
+    const manJson = (await manRes.json()) as { fileId: string };
+
+    return { uploadId, fileId: manJson.fileId, totalChunks: discordTotalChunks, storedBytes: chunks.reduce((s, c) => s + c.sizeBytes, 0) };
+  }
 
   // Telegram-backed storage (Vercel hosted)
   const useTelegram = !base && (await isTelegramEnabled());
