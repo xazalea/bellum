@@ -52,7 +52,7 @@ export class VideoDecoder {
    * Initialize WebCodecs decoder
    */
   private initDecoder(config: DecoderConfig): void {
-    const codecString = this.getCodecString(config.codec, config.width, config.height);
+    const codecString = VideoDecoder.getCodecString(config.codec, config.width, config.height);
     
     this.decoder = new (globalThis as any).VideoDecoder({
       output: (frame: any) => {
@@ -82,7 +82,7 @@ export class VideoDecoder {
   /**
    * Get codec string for WebCodecs
    */
-  private getCodecString(codec: VideoCodec, width: number, height: number): string {
+  public static getCodecString(codec: VideoCodec, width: number, height: number): string {
     switch (codec) {
       case VideoCodec.H264:
         // H.264 Baseline Profile
@@ -285,7 +285,7 @@ export class VideoEncoder {
    * Initialize WebCodecs encoder
    */
   private initEncoder(config: any): void {
-    const codecString = new VideoDecoder({ codec: config.codec, width: config.width, height: config.height } as any).getCodecString(config.codec, config.width, config.height);
+    const codecString = VideoDecoder.getCodecString(config.codec, config.width, config.height);
     
     this.encoder = new (globalThis as any).VideoEncoder({
       output: (chunk: any, metadata: any) => {
