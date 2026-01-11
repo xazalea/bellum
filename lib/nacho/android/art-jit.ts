@@ -78,8 +78,8 @@ export class ARTJITCompiler {
       const wasmBytes = this.irToWasm(optimizedIR, numRegisters);
       
       // Step 4: Compile and cache
-      // Ensure proper ArrayBuffer type for WebAssembly
-      const wasmBuffer = wasmBytes.buffer.slice(wasmBytes.byteOffset, wasmBytes.byteOffset + wasmBytes.byteLength);
+      // Create a proper ArrayBuffer for WebAssembly (not SharedArrayBuffer)
+      const wasmBuffer = new Uint8Array(wasmBytes).buffer as ArrayBuffer;
       const wasmModule = await WebAssembly.compile(wasmBuffer);
       const instance = await WebAssembly.instantiate(wasmModule, {
         env: {
