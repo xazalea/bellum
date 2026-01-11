@@ -222,7 +222,12 @@ export class AudioDecoder {
     );
     
     for (let ch = 0; ch < sample.channels; ch++) {
-      audioBuffer.copyToChannel(sample.data[ch], ch);
+      // Ensure Float32Array uses proper ArrayBuffer (handle SharedArrayBuffer)
+      const channelData = sample.data[ch];
+      const buffer = channelData.buffer instanceof SharedArrayBuffer 
+        ? new Float32Array(channelData) // Clone to new buffer if SharedArrayBuffer
+        : channelData;
+      audioBuffer.copyToChannel(buffer, ch);
     }
     
     const source = this.audioContext.createBufferSource();
@@ -468,7 +473,12 @@ export class AudioPlayer {
     );
     
     for (let ch = 0; ch < sample.channels; ch++) {
-      audioBuffer.copyToChannel(sample.data[ch], ch);
+      // Ensure Float32Array uses proper ArrayBuffer (handle SharedArrayBuffer)
+      const channelData = sample.data[ch];
+      const buffer = channelData.buffer instanceof SharedArrayBuffer 
+        ? new Float32Array(channelData) // Clone to new buffer if SharedArrayBuffer
+        : channelData;
+      audioBuffer.copyToChannel(buffer, ch);
     }
     
     const source = this.audioContext.createBufferSource();
