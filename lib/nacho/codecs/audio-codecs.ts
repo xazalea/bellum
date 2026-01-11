@@ -227,7 +227,7 @@ export class AudioDecoder {
       const buffer = channelData.buffer instanceof SharedArrayBuffer 
         ? new Float32Array(channelData) // Clone to new buffer if SharedArrayBuffer
         : channelData;
-      audioBuffer.copyToChannel(buffer, ch);
+      audioBuffer.copyToChannel(buffer as Float32Array, ch);
     }
     
     const source = this.audioContext.createBufferSource();
@@ -478,7 +478,7 @@ export class AudioPlayer {
       const buffer = channelData.buffer instanceof SharedArrayBuffer 
         ? new Float32Array(channelData) // Clone to new buffer if SharedArrayBuffer
         : channelData;
-      audioBuffer.copyToChannel(buffer, ch);
+      audioBuffer.copyToChannel(buffer as Float32Array, ch);
     }
     
     const source = this.audioContext.createBufferSource();
