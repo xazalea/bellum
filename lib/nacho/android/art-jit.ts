@@ -258,7 +258,7 @@ export class ARTJITCompiler {
     
     if (currentBlock.instructions.length > 0 && 
         currentBlock.instructions[currentBlock.instructions.length - 1].type !== 'ret') {
-      blocks.push(currentBlock);
+      blocks.push(this.irBuilder.createBlock(`block_${currentBlock.id}`));
     }
     
     return blocks;
