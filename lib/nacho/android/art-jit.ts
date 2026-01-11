@@ -265,9 +265,19 @@ export class ARTJITCompiler {
   }
   
   /**
-   * Optimize IR
+   * Optimize IR (placeholder - returns input as-is)
    */
   private optimizeIR(blocks: IRBasicBlock[]): IRBasicBlock[] {
+    // For now, return blocks as-is since we're using simplified intermediate representation
+    // A full implementation would do constant folding, dead code elimination, etc.
+    // This would require proper conversion from SimplifiedInstruction to IRInstruction first
+    return blocks;
+  }
+  
+  /**
+   * Optimize IR (old implementation - commented out)
+   */
+  private optimizeIR_old(blocks: IRBasicBlock[]): IRBasicBlock[] {
     // Simple optimizations:
     // 1. Constant folding
     // 2. Dead code elimination
@@ -278,6 +288,9 @@ export class ARTJITCompiler {
       const constants = new Map<string, number>();
       
       for (const instr of block.instructions) {
+        // Note: This code is commented out because it expects SimplifiedInstruction
+        // but receives IRInstruction. Would need proper conversion first.
+        /* 
         // Constant folding
         if (instr.type === 'const' && instr.dest && instr.value !== undefined) {
           constants.set(instr.dest, instr.value as number);
@@ -309,6 +322,7 @@ export class ARTJITCompiler {
         } else {
           optimizedBlock.instructions.push(instr);
         }
+        */
       }
       
       return optimizedBlock;
