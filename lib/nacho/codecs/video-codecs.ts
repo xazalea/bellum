@@ -199,8 +199,7 @@ export class VideoDecoder {
       return false;
     }
     
-    const decoder = new VideoDecoder({ codec, width: 1920, height: 1080 });
-    const codecString = decoder.getCodecString(codec, 1920, 1080);
+    const codecString = VideoDecoder.getCodecString(codec, 1920, 1080);
     
     const support = await (globalThis as any).VideoDecoder.isConfigSupported({
       codec: codecString,
