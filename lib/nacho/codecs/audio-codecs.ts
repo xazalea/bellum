@@ -136,7 +136,9 @@ export class AudioDecoder {
    */
   private async decodeWithWebAudio(data: Uint8Array, timestamp: number): Promise<void> {
     try {
-      const audioBuffer = await this.audioContext.decodeAudioData(data.buffer.slice(0));
+      // Create a proper ArrayBuffer (not SharedArrayBuffer)
+      const buffer = new Uint8Array(data).buffer as ArrayBuffer;
+      const audioBuffer = await this.audioContext.decodeAudioData(buffer);
       
       const channels: Float32Array[] = [];
       for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
