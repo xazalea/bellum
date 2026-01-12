@@ -244,25 +244,21 @@ export class WebRTCPeerManager {
     }
     
     // Convert SharedArrayBuffer to regular ArrayBuffer if needed
-    if (typeof data !== 'string') {
-      let dataToSend: Uint8Array;
-      if (data instanceof ArrayBuffer) {
-        dataToSend = new Uint8Array(data);
-      } else {
-        const uint8 = data as Uint8Array;
-        if (uint8.buffer instanceof SharedArrayBuffer) {
-          // Copy to regular ArrayBuffer
-          const regularBuffer = new ArrayBuffer(uint8.byteLength);
-          const regularView = new Uint8Array(regularBuffer);
-          regularView.set(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
-          dataToSend = regularView;
-        } else {
-          dataToSend = uint8;
-        }
-      }
-      peer.dataChannel.send(dataToSend);
-    } else {
+    if (typeof data === 'string') {
       peer.dataChannel.send(data);
+    } else if (data instanceof ArrayBuffer) {
+      peer.dataChannel.send(new Uint8Array(data));
+    } else {
+      const uint8 = data as Uint8Array;
+      if (uint8.buffer instanceof SharedArrayBuffer) {
+        // Copy to regular ArrayBuffer
+        const regularBuffer = new ArrayBuffer(uint8.byteLength);
+        const regularView = new Uint8Array(regularBuffer);
+        regularView.set(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
+        peer.dataChannel.send(regularView);
+      } else {
+        peer.dataChannel.send(uint8);
+      }
     }
   }
   
@@ -273,25 +269,21 @@ export class WebRTCPeerManager {
     for (const peer of this.peers.values()) {
       if (peer.dataChannel?.readyState === 'open') {
         // Convert SharedArrayBuffer to regular ArrayBuffer if needed
-        if (typeof data !== 'string') {
-          let dataToSend: Uint8Array;
-          if (data instanceof ArrayBuffer) {
-            dataToSend = new Uint8Array(data);
-          } else {
-            const uint8 = data as Uint8Array;
-            if (uint8.buffer instanceof SharedArrayBuffer) {
-              // Copy to regular ArrayBuffer
-              const regularBuffer = new ArrayBuffer(uint8.byteLength);
-              const regularView = new Uint8Array(regularBuffer);
-              regularView.set(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
-              dataToSend = regularView;
-            } else {
-              dataToSend = uint8;
-            }
-          }
-          peer.dataChannel.send(dataToSend);
-        } else {
+        if (typeof data === 'string') {
           peer.dataChannel.send(data);
+        } else if (data instanceof ArrayBuffer) {
+          peer.dataChannel.send(new Uint8Array(data));
+        } else {
+          const uint8 = data as Uint8Array;
+          if (uint8.buffer instanceof SharedArrayBuffer) {
+            // Copy to regular ArrayBuffer
+            const regularBuffer = new ArrayBuffer(uint8.byteLength);
+            const regularView = new Uint8Array(regularBuffer);
+            regularView.set(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
+            peer.dataChannel.send(regularView);
+          } else {
+            peer.dataChannel.send(uint8);
+          }
         }
       }
     }
