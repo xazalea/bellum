@@ -270,9 +270,15 @@ export class TLSContext {
     
     const fullSeed = new Uint8Array([...label, ...seed]);
     
+    // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+    const secretBuffer = secret.buffer instanceof SharedArrayBuffer
+      ? new Uint8Array(secret).buffer
+      : secret.buffer;
+    const secretData = new Uint8Array(secretBuffer, secret.byteOffset, secret.byteLength);
+    
     const key = await crypto.subtle.importKey(
       'raw',
-      secret,
+      secretData,
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign']
