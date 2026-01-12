@@ -211,7 +211,7 @@ class TextureStreaming {
     const height = Math.max(1, Math.floor(baseTexture.height * scale));
 
     const texture = this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
       usage: GPUTextureUsage.TEXTURE_BINDING | 
              GPUTextureUsage.COPY_DST |
@@ -450,7 +450,7 @@ export class SuperGPU {
 
     // Create actual texture
     const texture = this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format,
       usage: GPUTextureUsage.TEXTURE_BINDING | 
              GPUTextureUsage.STORAGE_BINDING |

@@ -300,7 +300,7 @@ export class LightingCache {
 
     // Create new buffer
     const buffer = this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format: 'rgba16float',
       usage: GPUTextureUsage.TEXTURE_BINDING | 
              GPUTextureUsage.STORAGE_BINDING |
@@ -424,7 +424,7 @@ export class ShadowMapCache {
 
     // Create new shadow map
     const texture = this.device.createTexture({
-      size: [size, size, 1],
+      size: { width: size, height: size, depthOrArrayLayers: 1 },
       format: 'depth32float',
       usage: GPUTextureUsage.TEXTURE_BINDING | 
              GPUTextureUsage.RENDER_ATTACHMENT
@@ -508,7 +508,7 @@ export class ReflectionProbeCache {
 
     // Create new probe
     const cubemap = this.device.createTexture({
-      size: [resolution, resolution, 6],
+      size: { width: resolution, height: resolution, depthOrArrayLayers: 6 },
       format: 'rgba16float',
       usage: GPUTextureUsage.TEXTURE_BINDING | 
              GPUTextureUsage.RENDER_ATTACHMENT,

@@ -341,7 +341,7 @@ export class TemporalIntegration {
     // Simplified conversion - in reality, would handle various formats
     // For now, create a placeholder texture
     return this.device.createTexture({
-      size: [1920, 1080, 1],
+      size: { width: 1920, height: 1080, depthOrArrayLayers: 1 },
       format: 'rgba16float',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
     });
@@ -354,7 +354,7 @@ export class TemporalIntegration {
     // In a real implementation, would use copyExternalImageToTexture
     // or shared resources. For now, create placeholder.
     return this.device.createTexture({
-      size: [1920, 1080, 1],
+      size: { width: 1920, height: 1080, depthOrArrayLayers: 1 },
       format: 'rgba16float',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
     });

@@ -319,7 +319,7 @@ export class CorrectionEngine {
 
     // Create output texture
     const correctedColor = this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format: 'rgba16float',
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
     });
@@ -396,7 +396,7 @@ export class CorrectionEngine {
     if (!this.motionMaskPipeline) {
       // Return dummy texture
       return this.device.createTexture({
-        size: [width, height, 1],
+        size: { width, height, depthOrArrayLayers: 1 },
         format: 'r16float',
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
       });
@@ -405,7 +405,7 @@ export class CorrectionEngine {
     const commandEncoder = this.device.createCommandEncoder();
 
     const motionMask = this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format: 'r16float',
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
     });
@@ -451,7 +451,7 @@ export class CorrectionEngine {
   ): Promise<GPUTexture> {
     if (!this.depthMaskPipeline) {
       return this.device.createTexture({
-        size: [width, height, 1],
+        size: { width, height, depthOrArrayLayers: 1 },
         format: 'r16float',
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
       });
@@ -460,7 +460,7 @@ export class CorrectionEngine {
     const commandEncoder = this.device.createCommandEncoder();
 
     const depthMask = this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format: 'r16float',
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
     });

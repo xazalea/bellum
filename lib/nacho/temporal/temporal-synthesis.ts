@@ -460,7 +460,7 @@ export class TemporalSynthesisEngine {
     format: GPUTextureFormat
   ): GPUTexture {
     return this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format: format,
       usage: GPUTextureUsage.TEXTURE_BINDING | 
              GPUTextureUsage.STORAGE_BINDING |

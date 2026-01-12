@@ -625,7 +625,11 @@ class VulkanImage {
     // Create GPU texture if not a swapchain image
     if (createInfo.usage !== 0) {
       this.texture = device.createTexture({
-        size: [createInfo.extent.width, createInfo.extent.height, createInfo.extent.depth],
+        size: { 
+          width: createInfo.extent.width, 
+          height: createInfo.extent.height, 
+          depthOrArrayLayers: createInfo.extent.depth 
+        },
         format: this.mapFormat(createInfo.format),
         usage: this.mapUsageFlags(createInfo.usage),
         dimension: this.mapImageType(createInfo.imageType),
