@@ -251,7 +251,8 @@ export class D3D11DeviceContext {
     if (this.renderPassEncoder) {
       for (let i = 0; i < buffers.length; i++) {
         if (buffers[i]) {
-          this.renderPassEncoder.setVertexBuffer(startSlot + i, buffers[i].buffer, offsets[i]);
+          // WebGPU API: setVertexBuffer(slot, buffer, offset?, size?)
+          (this.renderPassEncoder as any).setVertexBuffer(startSlot + i, buffers[i].buffer, offsets[i]);
         }
       }
     }
