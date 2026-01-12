@@ -217,6 +217,7 @@ export function GamesBrowser({ onPlayGame }: { onPlayGame?: (gameUrl: string) =>
           >
             {/* Game Thumbnail */}
             <div className="relative w-full aspect-[4/3] bg-white/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={proxyImageUrl(game.imageUrl)}
                 alt={game.id}
@@ -264,7 +265,7 @@ export function GamesBrowser({ onPlayGame }: { onPlayGame?: (gameUrl: string) =>
               🎉 All {games.length.toLocaleString()} games loaded!
             </p>
             <p className="text-green-300/60 text-sm mt-1">
-              You've reached the end of the collection
+              You&apos;ve reached the end of the collection
             </p>
           </div>
         </div>
