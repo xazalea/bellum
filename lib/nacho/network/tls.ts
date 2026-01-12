@@ -464,10 +464,19 @@ export class HTTPSClient {
     // In browser environment, use fetch API for actual HTTPS
     // This is a fallback for native-like HTTPS support
     try {
+      // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+      let bodyData: Uint8Array | undefined = undefined;
+      if (options.body) {
+        const bodyBuffer = options.body.buffer instanceof SharedArrayBuffer
+          ? new Uint8Array(options.body).buffer
+          : options.body.buffer;
+        bodyData = new Uint8Array(bodyBuffer, options.body.byteOffset, options.body.byteLength);
+      }
+      
       const response = await fetch(url, {
         method: options.method || 'GET',
         headers: options.headers,
-        body: options.body,
+        body: bodyData,
       });
       
       const headers: Record<string, string> = {};
