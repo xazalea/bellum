@@ -299,7 +299,11 @@ export class UDPSocket {
   async sendto(data: Uint8Array, address: SocketAddress): Promise<number> {
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
       // Send via WebRTC DataChannel
-      this.dataChannel.send(data);
+      // Convert SharedArrayBuffer-backed Uint8Array to regular ArrayBuffer
+      const buffer = data.buffer instanceof SharedArrayBuffer 
+        ? new Uint8Array(data).buffer 
+        : data.buffer;
+      this.dataChannel.send(new Uint8Array(buffer, data.byteOffset, data.byteLength));
     } else {
       // Mock send
       console.log(`[UDP] Sent ${data.length} bytes to ${address.host}:${address.port}`);
