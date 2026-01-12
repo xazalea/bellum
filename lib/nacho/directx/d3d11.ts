@@ -266,7 +266,8 @@ export class D3D11DeviceContext {
     
     if (this.renderPassEncoder) {
       const indexFormat = format === 1 ? 'uint16' : 'uint32'; // R16_UINT or R32_UINT
-      this.renderPassEncoder.setIndexBuffer(buffer.buffer, indexFormat, offset);
+      // WebGPU API: setIndexBuffer(buffer, indexFormat, offset?, size?)
+      (this.renderPassEncoder as any).setIndexBuffer(buffer.buffer, indexFormat, offset);
     }
   }
   
