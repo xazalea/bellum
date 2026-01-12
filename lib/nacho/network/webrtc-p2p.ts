@@ -257,7 +257,8 @@ export class WebRTCPeerManager {
         regularView.set(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
         peer.dataChannel.send(regularView);
       } else {
-        peer.dataChannel.send(uint8);
+        // Wrap in new Uint8Array to satisfy TypeScript
+        peer.dataChannel.send(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
       }
     }
   }
@@ -282,7 +283,8 @@ export class WebRTCPeerManager {
             regularView.set(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
             peer.dataChannel.send(regularView);
           } else {
-            peer.dataChannel.send(uint8);
+            // Wrap in new Uint8Array to satisfy TypeScript
+            peer.dataChannel.send(new Uint8Array(uint8.buffer, uint8.byteOffset, uint8.byteLength));
           }
         }
       }
