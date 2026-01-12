@@ -334,31 +334,32 @@ export class LuaVM {
 
     this.globals.set('string', stringLib);
 
-    // Math library
+    // Math library - wrap all functions to match LuaFunction signature
     const mathLib = new LuaTable();
-    mathLib.set('abs', Math.abs);
-    mathLib.set('acos', Math.acos);
-    mathLib.set('asin', Math.asin);
-    mathLib.set('atan', Math.atan);
-    mathLib.set('ceil', Math.ceil);
-    mathLib.set('cos', Math.cos);
-    mathLib.set('deg', (x: number) => x * 180 / Math.PI);
-    mathLib.set('exp', Math.exp);
-    mathLib.set('floor', Math.floor);
-    mathLib.set('log', Math.log);
-    mathLib.set('max', Math.max);
-    mathLib.set('min', Math.min);
+    mathLib.set('abs', ((x: LuaValue) => Math.abs(x as number)) as LuaFunction);
+    mathLib.set('acos', ((x: LuaValue) => Math.acos(x as number)) as LuaFunction);
+    mathLib.set('asin', ((x: LuaValue) => Math.asin(x as number)) as LuaFunction);
+    mathLib.set('atan', ((x: LuaValue) => Math.atan(x as number)) as LuaFunction);
+    mathLib.set('ceil', ((x: LuaValue) => Math.ceil(x as number)) as LuaFunction);
+    mathLib.set('cos', ((x: LuaValue) => Math.cos(x as number)) as LuaFunction);
+    mathLib.set('deg', ((x: LuaValue) => (x as number) * 180 / Math.PI) as LuaFunction);
+    mathLib.set('exp', ((x: LuaValue) => Math.exp(x as number)) as LuaFunction);
+    mathLib.set('floor', ((x: LuaValue) => Math.floor(x as number)) as LuaFunction);
+    mathLib.set('log', ((x: LuaValue) => Math.log(x as number)) as LuaFunction);
+    mathLib.set('max', ((...args: LuaValue[]) => Math.max(...args.map(x => x as number))) as LuaFunction);
+    mathLib.set('min', ((...args: LuaValue[]) => Math.min(...args.map(x => x as number))) as LuaFunction);
     mathLib.set('pi', Math.PI);
-    mathLib.set('pow', Math.pow);
-    mathLib.set('rad', (x: number) => x * Math.PI / 180);
-    mathLib.set('random', (...args: number[]) => {
-      if (args.length === 0) return Math.random();
-      if (args.length === 1) return Math.floor(Math.random() * args[0]) + 1;
-      return Math.floor(Math.random() * (args[1] - args[0] + 1)) + args[0];
-    });
-    mathLib.set('sin', Math.sin);
-    mathLib.set('sqrt', Math.sqrt);
-    mathLib.set('tan', Math.tan);
+    mathLib.set('pow', ((x: LuaValue, y: LuaValue) => Math.pow(x as number, y as number)) as LuaFunction);
+    mathLib.set('rad', ((x: LuaValue) => (x as number) * Math.PI / 180) as LuaFunction);
+    mathLib.set('random', ((...args: LuaValue[]) => {
+      const nums = args.map(x => x as number);
+      if (nums.length === 0) return Math.random();
+      if (nums.length === 1) return Math.floor(Math.random() * nums[0]) + 1;
+      return Math.floor(Math.random() * (nums[1] - nums[0] + 1)) + nums[0];
+    }) as LuaFunction);
+    mathLib.set('sin', ((x: LuaValue) => Math.sin(x as number)) as LuaFunction);
+    mathLib.set('sqrt', ((x: LuaValue) => Math.sqrt(x as number)) as LuaFunction);
+    mathLib.set('tan', ((x: LuaValue) => Math.tan(x as number)) as LuaFunction);
 
     this.globals.set('math', mathLib);
 
