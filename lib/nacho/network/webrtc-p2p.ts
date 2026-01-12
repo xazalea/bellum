@@ -243,7 +243,20 @@ export class WebRTCPeerManager {
       throw new Error('Data channel not open');
     }
     
-    peer.dataChannel.send(data);
+    // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+    if (typeof data !== 'string') {
+      const buffer = data instanceof ArrayBuffer 
+        ? data 
+        : (data as Uint8Array).buffer instanceof SharedArrayBuffer
+          ? new Uint8Array(data as Uint8Array).buffer
+          : (data as Uint8Array).buffer;
+      const dataToSend = data instanceof ArrayBuffer 
+        ? new Uint8Array(buffer)
+        : new Uint8Array(buffer, (data as Uint8Array).byteOffset, (data as Uint8Array).byteLength);
+      peer.dataChannel.send(dataToSend);
+    } else {
+      peer.dataChannel.send(data);
+    }
   }
   
   /**
@@ -252,7 +265,20 @@ export class WebRTCPeerManager {
   broadcast(data: ArrayBuffer | string): void {
     for (const peer of this.peers.values()) {
       if (peer.dataChannel?.readyState === 'open') {
-        peer.dataChannel.send(data);
+        // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+        if (typeof data !== 'string') {
+          const buffer = data instanceof ArrayBuffer 
+            ? data 
+            : (data as Uint8Array).buffer instanceof SharedArrayBuffer
+              ? new Uint8Array(data as Uint8Array).buffer
+              : (data as Uint8Array).buffer;
+          const dataToSend = data instanceof ArrayBuffer 
+            ? new Uint8Array(buffer)
+            : new Uint8Array(buffer, (data as Uint8Array).byteOffset, (data as Uint8Array).byteLength);
+          peer.dataChannel.send(dataToSend);
+        } else {
+          peer.dataChannel.send(data);
+        }
       }
     }
   }
