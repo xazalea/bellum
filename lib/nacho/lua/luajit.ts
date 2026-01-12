@@ -234,9 +234,10 @@ export class LuaVM {
       return condition;
     });
 
-    this.globals.set('error', (message: LuaValue, level?: number) => {
+    this.globals.set('error', ((...args: LuaValue[]) => {
+      const message = args[0];
       throw new Error(this.toString(message));
-    });
+    }) as LuaFunction);
 
     this.globals.set('pcall', (func: LuaValue, ...args: LuaValue[]) => {
       if (typeof func !== 'function') {
