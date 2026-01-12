@@ -553,14 +553,30 @@ export class P2PGameSession {
    * Send game data to peer
    */
   sendToPeer(remotePlayerId: string, data: Uint8Array): void {
-    this.peerManager.send(remotePlayerId, data);
+    // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+    if (data.buffer instanceof SharedArrayBuffer) {
+      const regularBuffer = new ArrayBuffer(data.byteLength);
+      const regularView = new Uint8Array(regularBuffer);
+      regularView.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+      this.peerManager.send(remotePlayerId, regularBuffer);
+    } else {
+      this.peerManager.send(remotePlayerId, data.buffer);
+    }
   }
   
   /**
    * Broadcast game data to all peers
    */
   broadcastGameData(data: Uint8Array): void {
-    this.peerManager.broadcast(data);
+    // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+    if (data.buffer instanceof SharedArrayBuffer) {
+      const regularBuffer = new ArrayBuffer(data.byteLength);
+      const regularView = new Uint8Array(regularBuffer);
+      regularView.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+      this.peerManager.broadcast(regularBuffer);
+    } else {
+      this.peerManager.broadcast(data.buffer);
+    }
   }
   
   /**
