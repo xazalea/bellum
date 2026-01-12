@@ -239,7 +239,7 @@ export class X86_64Emulator implements CPU {
         instr.mnemonic = 'MOV';
         instr.operands = [
           { type: 'reg', value: opcode - 0xB8 },
-          { type: 'imm', value: rexW ? this.memory.readU64(pc + 1) : this.memory.readU32(pc + 1) }
+          { type: 'imm', value: rexW ? Number(this.memory.readU64(pc + 1)) : this.memory.readU32(pc + 1) }
         ];
         instr.length = rexW ? 9 : 5;
         break;

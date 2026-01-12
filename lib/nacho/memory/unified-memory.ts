@@ -65,15 +65,17 @@ export class UnifiedMemory {
     readU8(ptr: number): number { return this.u8[ptr]; }
     writeU8(ptr: number, val: number): void { this.u8[ptr] = val; }
     
+    readU16(ptr: number): number { return this.view.getUint16(ptr, true); }
+    writeU16(ptr: number, val: number): void { this.view.setUint16(ptr, val, true); }
+    
     readU32(ptr: number): number { return this.view.getUint32(ptr, true); }
     writeU32(ptr: number, val: number): void { this.view.setUint32(ptr, val, true); }
     
+    readU64(ptr: number): bigint { return this.view.getBigUint64(ptr, true); }
+    writeU64(ptr: number, val: bigint): void { this.view.setBigUint64(ptr, val, true); }
+    
     readF32(ptr: number): number { return this.view.getFloat32(ptr, true); }
     writeF32(ptr: number, val: number): void { this.view.setFloat32(ptr, val, true); }
-
-    // Missing 16-bit accessors
-    readU16(ptr: number): number { return this.view.getUint16(ptr, true); }
-    writeU16(ptr: number, val: number): void { this.view.setUint16(ptr, val, true); }
 
     // Load data into memory
     load(ptr: number, data: Uint8Array): void {
