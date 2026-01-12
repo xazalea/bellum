@@ -276,7 +276,7 @@ class LateReprojection {
 
     // Create output texture
     const correctedColor = this.device.createTexture({
-      size: [width, height, 1],
+      size: { width, height, depthOrArrayLayers: 1 },
       format: 'rgba16float',
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
     });
