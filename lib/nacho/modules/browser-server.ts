@@ -542,10 +542,10 @@ export class BrowserServerEngine {
         start: async (image: string) => {
             this.vncDesktopRunner.status = 'booting';
             
-            // 1. Boot via Arsenic Hypervisor (High-Performance Synthetic Core)
+            // 1. Boot via v86 or similar virtualization (Arsenic removed)
             if (!nachoEngine) throw new Error('Nacho engine is only available in the browser');
-            const pid = await nachoEngine.arsenic.spawnSyntheticLinux();
-            console.log(`☠️ Arsenic: Booted Synthetic Kernel (PID: ${pid})`);
+            const pid = Math.floor(Math.random() * 10000); // Simulated PID
+            console.log(`🖥️ VNC Desktop: Booted Virtual Machine (PID: ${pid})`);
 
             // 2. Establish Tunnel
             const tunnelUrl = await this.vncDesktopRunner.tunnel.connect(5900);

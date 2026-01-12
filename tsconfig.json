@@ -32,15 +32,9 @@
   ],
   "exclude": [
     "node_modules",
-    "lib/arsenic",
-    "lib/arsenic/public",
-    "lib/arsenic/src",
-    "lib/arsenic/assets",
-    "lib/arsenic/games",
     "vendor",
     "public/unblocker",
-    "public/optimizers",
-    "public/arsenic"
+    "public/optimizers"
   ]
 }
 
