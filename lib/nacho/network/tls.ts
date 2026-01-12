@@ -198,6 +198,12 @@ export class TLSContext {
     // Use AES-128-GCM
     const iv = crypto.getRandomValues(new Uint8Array(12));
     
+    // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+    const plaintextBuffer = plaintext.buffer instanceof SharedArrayBuffer
+      ? new Uint8Array(plaintext).buffer
+      : plaintext.buffer;
+    const plaintextData = new Uint8Array(plaintextBuffer, plaintext.byteOffset, plaintext.byteLength);
+    
     const ciphertext = await crypto.subtle.encrypt(
       {
         name: 'AES-GCM',
@@ -205,7 +211,7 @@ export class TLSContext {
         tagLength: 128,
       },
       this.sessionKeys.clientWriteKey,
-      plaintext
+      plaintextData
     );
     
     // Prepend IV to ciphertext
@@ -228,6 +234,12 @@ export class TLSContext {
     const iv = ciphertext.slice(0, 12);
     const encrypted = ciphertext.slice(12);
     
+    // Convert SharedArrayBuffer to regular ArrayBuffer if needed
+    const encryptedBuffer = encrypted.buffer instanceof SharedArrayBuffer
+      ? new Uint8Array(encrypted).buffer
+      : encrypted.buffer;
+    const encryptedData = new Uint8Array(encryptedBuffer, encrypted.byteOffset, encrypted.byteLength);
+    
     const plaintext = await crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
@@ -235,7 +247,7 @@ export class TLSContext {
         tagLength: 128,
       },
       this.sessionKeys.serverWriteKey,
-      encrypted
+      encryptedData
     );
     
     return new Uint8Array(plaintext);
