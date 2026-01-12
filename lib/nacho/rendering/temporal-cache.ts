@@ -440,7 +440,9 @@ export class ShadowMapCache {
     // Evict if too many
     if (this.shadowMaps.size > this.maxMaps) {
       const firstKey = this.shadowMaps.keys().next().value;
-      this.shadowMaps.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.shadowMaps.delete(firstKey);
+      }
     }
 
     console.log(`[ShadowMapCache] Created shadow map: ${lightId} (${size}x${size})`);
@@ -524,7 +526,9 @@ export class ReflectionProbeCache {
 
     if (this.probes.size > this.maxProbes) {
       const firstKey = this.probes.keys().next().value;
-      this.probes.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.probes.delete(firstKey);
+      }
     }
 
     console.log(`[ReflectionProbeCache] Created probe: ${probeId}`);
