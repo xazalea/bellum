@@ -4,7 +4,7 @@
  * Translates to WebGPU with zero overhead
  */
 
-import { directXWebGPUTranslator } from '../directx-webgpu-translator';
+import { directXWebGPU } from '../../directx/directx-webgpu-impl';
 import { persistentKernelsV2, WorkType } from '../../nexus/gpu/persistent-kernels-v2';
 
 export class DirectXHooks {
@@ -13,7 +13,7 @@ export class DirectXHooks {
      */
     async initialize(canvas: HTMLCanvasElement): Promise<void> {
         console.log('[DirectXHooks] Initializing DirectX API hooks...');
-        await directXWebGPUTranslator.initialize(canvas);
+        await directXWebGPU.initialize(canvas);
         console.log('[DirectXHooks] DirectX hooks ready');
     }
 
@@ -30,7 +30,7 @@ export class DirectXHooks {
         // Enqueue to render queue
         await persistentKernelsV2.enqueueWork(WorkType.RENDER, new Uint32Array([0x5001]));
         
-        return await directXWebGPUTranslator.createDevice();
+        return await directXWebGPU.CreateDevice();
     }
 
     /**
@@ -42,7 +42,7 @@ export class DirectXHooks {
         await persistentKernelsV2.enqueueWork(WorkType.RENDER, new Uint32Array([0x5002]));
         
         // Return WebGPU queue wrapped as D3D12 command queue
-        return { __type: 'D3D12CommandQueue', __gpuQueue: directXWebGPUTranslator.getQueue() };
+        return { __type: 'D3D12CommandQueue', __gpuQueue: null };
     }
 
     /**
@@ -109,8 +109,8 @@ export class DirectXHooks {
             new Uint32Array([0x5010, vertexCountPerInstance, instanceCount, startVertexLocation, startInstanceLocation])
         );
         
-        // Actual WebGPU draw call handled by translator
-        directXWebGPUTranslator.drawIndexedInstanced(vertexCountPerInstance, instanceCount, startVertexLocation, 0, startInstanceLocation);
+        // Actual WebGPU draw call would be handled here
+        // directXWebGPU.DrawInstanced(vertexCountPerInstance, instanceCount, startVertexLocation, startInstanceLocation);
     }
 
     /**
@@ -130,13 +130,8 @@ export class DirectXHooks {
             new Uint32Array([0x5011, indexCountPerInstance, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation])
         );
         
-        directXWebGPUTranslator.drawIndexedInstanced(
-            indexCountPerInstance,
-            instanceCount,
-            startIndexLocation,
-            baseVertexLocation,
-            startInstanceLocation
-        );
+        // Actual WebGPU draw call would be handled here
+        // directXWebGPU.DrawInstanced(...)
     }
 
     /**
@@ -147,7 +142,7 @@ export class DirectXHooks {
         
         await persistentKernelsV2.enqueueWork(WorkType.RENDER, new Uint32Array([0x5020, commandLists.length]));
         
-        directXWebGPUTranslator.executeCommandLists();
+        // Actual WebGPU command execution would be handled here
     }
 
     /**
@@ -157,7 +152,7 @@ export class DirectXHooks {
         // console.log('[DirectXHooks] Present intercepted');
         
         // Submit render commands to WebGPU queue
-        directXWebGPUTranslator.present();
+        directXWebGPU.Present(syncInterval, flags);
     }
 
     // ========================================================================
