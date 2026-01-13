@@ -225,12 +225,16 @@ export async function benchmarkJITCompilation(): Promise<BenchmarkResult> {
             });
         }
         
+        // Prepare functions map
+        const functionsMap = new Map<string, BasicBlock>();
+        for (let i = 0; i < blocks.length; i++) {
+            functionsMap.set(`func_${i}`, blocks[i]);
+        }
+        
         // Measure compilation time
         const startTime = performance.now();
         
-        for (let i = 0; i < blocks.length; i++) {
-            await compiler.compileFunction(`func_${i}`, blocks[i]);
-        }
+        await compiler.compile(functionsMap);
         
         const endTime = performance.now();
         result.timeMs = endTime - startTime;
