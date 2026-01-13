@@ -182,7 +182,7 @@ export async function benchmarkGPUCompute(): Promise<BenchmarkResult> {
         bufferB.destroy();
         bufferC.destroy();
         readBuffer.destroy();
-        device.destroy();
+        // Note: GPUDevice doesn't have destroy() - it's auto-cleaned up
         
     } catch (error) {
         result.details.error = String(error);
