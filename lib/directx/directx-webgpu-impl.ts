@@ -249,13 +249,13 @@ export class DirectXWebGPUImpl {
         const wgsl = this.translateHLSLtoWGSL(shaderBytecode, stage);
         
         // Create shader module
-        const module = this.device.createShaderModule({
+        const shaderModule = this.device.createShaderModule({
             code: wgsl,
         });
         
-        this.shaderModules.set(cacheKey, module);
+        this.shaderModules.set(cacheKey, shaderModule);
         
-        return module;
+        return shaderModule;
     }
     
     /**
