@@ -440,4 +440,4 @@ export class Debugger {
 }
 
 // Export singleton
-export const debugger = new Debugger();
+export const nachoDebugger = new Debugger();

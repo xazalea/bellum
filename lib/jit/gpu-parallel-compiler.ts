@@ -397,9 +397,9 @@ export class GPUParallelCompiler {
             const wasmBytecode = this.encodeWASMModule(wasmData.slice(wasmOffset, wasmOffset + 1024 * 2));
 
             try {
-                const module = await WebAssembly.compile(wasmBytecode);
-                compiledModules.set(job.functionId, module);
-                this.compiledFunctions.set(job.functionId, module);
+                const wasmModule = await WebAssembly.compile(wasmBytecode);
+                compiledModules.set(job.functionId, wasmModule);
+                this.compiledFunctions.set(job.functionId, wasmModule);
                 job.status = 'completed';
             } catch (error) {
                 console.error(`[GPUParallelCompiler] Failed to compile WASM module for ${job.functionId}:`, error);
