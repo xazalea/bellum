@@ -24,13 +24,13 @@ export class DirectXHooks {
     /**
      * Hook: D3D12CreateDevice
      */
-    async hookD3D12CreateDevice(adapter: number, minimumFeatureLevel: number): Promise<GPUDevice | null> {
+    async hookD3D12CreateDevice(adapter: number, minimumFeatureLevel: number): Promise<number> {
         console.log('[DirectXHooks] D3D12CreateDevice intercepted');
         
         // Enqueue to render queue
         await persistentKernelsV2.enqueueWork(WorkType.RENDER, new Uint32Array([0x5001]));
         
-        return await directXWebGPU.CreateDevice();
+        return directXWebGPU.CreateDevice();
     }
 
     /**
