@@ -14,7 +14,7 @@ export interface D3D12Device {
     gpuDevice: GPUDevice;
     commandQueues: Map<number, D3D12CommandQueue>;
     pipelines: Map<number, GPURenderPipeline | GPUComputePipeline>;
-    resources: Map<number, GPUBuffer | GPUTexture>;
+    resources: Map<number, D3D12Resource>;
 }
 
 export interface D3D12CommandQueue {
