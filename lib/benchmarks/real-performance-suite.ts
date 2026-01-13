@@ -158,7 +158,8 @@ export async function benchmarkGPUCompute(): Promise<BenchmarkResult> {
         commandEncoder.copyBufferToBuffer(bufferC, 0, readBuffer, 0, a.byteLength);
         device.queue.submit([commandEncoder.finish()]);
         
-        await device.queue.onSubmittedWorkDone();
+        // Wait for GPU to complete
+        await (device.queue as any).onSubmittedWorkDone();
         
         const endTime = performance.now();
         result.timeMs = endTime - startTime;
