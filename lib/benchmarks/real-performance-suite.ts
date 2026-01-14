@@ -458,10 +458,14 @@ export async function runBenchmarkSuite(): Promise<BenchmarkSuite> {
     
     // Detect GPU
     try {
-        const adapter = await navigator.gpu.requestAdapter();
-        if (adapter) {
-            const info = await adapter.requestAdapterInfo();
-            suite.gpu = info.description || info.vendor || 'WebGPU Device';
+        if (navigator.gpu) {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+                const info = await adapter.requestAdapterInfo();
+                suite.gpu = info.description || info.vendor || 'WebGPU Device';
+            }
+        } else {
+            suite.gpu = 'WebGPU Not Available';
         }
     } catch (e) {
         suite.gpu = 'WebGPU Not Available';
