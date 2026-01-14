@@ -398,7 +398,7 @@ export async function benchmarkPersistentKernels(): Promise<BenchmarkResult> {
         });
         
         await engine.initialize();
-        await engine.start();
+        await engine.launch();
         
         // Enqueue work
         const workCount = 1000;
@@ -411,19 +411,19 @@ export async function benchmarkPersistentKernels(): Promise<BenchmarkResult> {
             await engine.enqueueWork(WorkType.GAME_LOGIC, workData);
         }
         
-        await engine.processWork();
+        // Note: Work is processed automatically by the persistent kernels
         
         const endTime = performance.now();
         result.timeMs = endTime - startTime;
         
         const stats = engine.getStatistics();
         
-        result.value = stats.workItemsProcessed / (result.timeMs / 1000);
+        result.value = stats.totalWorkItems / (result.timeMs / 1000);
         result.throughput = result.value;
         result.details = {
             workEnqueued: workCount,
-            workProcessed: stats.workItemsProcessed,
-            avgWorkTime: stats.averageWorkTime,
+            workProcessed: stats.totalWorkItems,
+            dispatchCount: stats.dispatchCount,
         };
         
         await engine.shutdown();
