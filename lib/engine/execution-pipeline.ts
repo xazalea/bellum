@@ -13,7 +13,7 @@
 import { binaryLoader, type LoadedBinary } from './binary-loader';
 import { virtualMemoryManager, MemoryProtection } from './memory-manager';
 import { virtualFileSystem } from './virtual-fs';
-import { staticRewriter } from '../rewriter/static-rewriter';
+import { staticBinaryRewriter } from '../rewriter/static-rewriter';
 import { fastInterpreter } from '../execution/fast-interpreter';
 import { hotPathProfiler, CodeTier } from '../execution/profiler';
 import { gpuParallelCompiler } from '../jit/gpu-parallel-compiler';
@@ -299,10 +299,13 @@ export class ExecutionPipeline {
 
     let rewrittenData: ArrayBuffer;
 
-    if (binary.type === 'PE') {
-      rewrittenData = await staticRewriter.rewritePE(binary.data);
-    } else if (binary.type === 'DEX') {
-      rewrittenData = await staticRewriter.rewriteDEX(binary.data);
+    if (binary.type === 'PE' || binary.type === 'DEX') {
+      const result = await staticBinaryRewriter.rewrite(new Uint8Array(binary.data));
+      if (!result.success) {
+        console.warn('[ExecutionPipeline] Binary rewrite failed, using original');
+        return binary;
+      }
+      rewrittenData = result.patchedBinary.buffer;
     } else {
       console.warn('[ExecutionPipeline] Unsupported binary type, skipping rewrite');
       return binary;
