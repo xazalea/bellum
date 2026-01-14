@@ -206,8 +206,36 @@ export class ExecutionPipeline {
       };
 
       // Stage 6: Install and launch via Android Framework
-      await androidFramework.installAPK(binary.data, apkPath);
-      await androidFramework.launchApp(apkPath);
+      // Extract package name from DEX file or use a default
+      const packageName = this.extractPackageName(dexFile) || `com.example.${Date.now()}`;
+      const mainActivityName = mainClass || 'MainActivity';
+      
+      // Install package via PackageManager
+      androidFramework.packageManager.installPackage({
+        packageName,
+        versionName: '1.0',
+        versionCode: 1,
+        applicationInfo: {
+          packageName,
+          name: packageName,
+          icon: '📱',
+          label: packageName,
+          sourceDir: apkPath,
+        },
+        activities: [
+          {
+            packageName,
+            name: mainActivityName,
+            label: mainActivityName,
+            icon: '📱',
+            launchMode: 'standard',
+          },
+        ],
+        services: [],
+        permissions: [],
+      });
+      
+      await androidFramework.launchApp(packageName);
 
       // Stage 7: Start monitoring
       if (options.enableProfiling) {
@@ -415,6 +443,21 @@ export class ExecutionPipeline {
     for (const [className, dalvikClass] of dexFile.classes) {
       if (dalvikClass.superClassName?.includes('Activity')) {
         return className;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Extract package name from DEX file
+   */
+  private extractPackageName(dexFile: DEXFile): string | null {
+    // Try to extract package name from class names
+    for (const className of dexFile.classes.keys()) {
+      // Android class names are in format: Lcom/package/name/ClassName;
+      if (className.startsWith('L') && className.includes('/')) {
+        const packagePath = className.slice(1, className.lastIndexOf('/'));
+        return packagePath.replace(/\//g, '.');
       }
     }
     return null;
