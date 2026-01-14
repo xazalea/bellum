@@ -39,7 +39,7 @@ export class DirectXWebGPUImpl {
         
         this.context.configure({
             device: this.device,
-            format: navigator.gpu.getPreferredCanvasFormat(),
+            format: navigator.gpu?.getPreferredCanvasFormat() || 'bgra8unorm',
             alphaMode: 'premultiplied',
         });
         
@@ -140,7 +140,7 @@ export class DirectXWebGPUImpl {
                 module: fragmentShader,
                 entryPoint: desc.PS.entryPoint || 'main',
                 targets: [{
-                    format: navigator.gpu.getPreferredCanvasFormat(),
+                    format: navigator.gpu?.getPreferredCanvasFormat() || 'bgra8unorm',
                 }],
             },
             primitive: {
