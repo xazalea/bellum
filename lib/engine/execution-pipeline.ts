@@ -87,7 +87,7 @@ export class ExecutionPipeline {
     await androidKernelGPU.initialize();
     await win32Subsystem.initialize();
     await androidFramework.initialize();
-    await gpuParallelCompiler.initialize(device);
+    await gpuParallelCompiler.initialize();
 
     console.log('[ExecutionPipeline] Initialized');
   }
