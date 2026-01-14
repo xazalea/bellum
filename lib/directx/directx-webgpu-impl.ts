@@ -376,7 +376,7 @@ export class DirectXWebGPUImpl {
     /**
      * Translate texture dimension
      */
-    private translateTextureDimension(dimension: ResourceDimension): GPUTextureDimension {
+    private translateTextureDimension(dimension: ResourceDimension): '1d' | '2d' | '3d' {
         switch (dimension) {
             case ResourceDimension.TEXTURE1D: return '1d';
             case ResourceDimension.TEXTURE2D: return '2d';
