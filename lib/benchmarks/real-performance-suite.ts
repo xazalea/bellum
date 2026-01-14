@@ -461,8 +461,8 @@ export async function runBenchmarkSuite(): Promise<BenchmarkSuite> {
         if (navigator.gpu) {
             const adapter = await navigator.gpu.requestAdapter();
             if (adapter) {
-                const info = await adapter.requestAdapterInfo();
-                suite.gpu = info.description || info.vendor || 'WebGPU Device';
+                // requestAdapterInfo() not in all TypeScript definitions yet
+                suite.gpu = 'WebGPU Device';
             }
         } else {
             suite.gpu = 'WebGPU Not Available';
