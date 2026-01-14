@@ -179,10 +179,14 @@ export class ExecutionPipeline {
       const dexFile = binary.parsed as DEXFile;
       const mainClass = this.findMainActivity(dexFile);
 
-      const pid = androidKernelGPU.createProcess(
-        mainClass || apkPath,
-        0 // Entry point will be handled by Dalvik interpreter
-      );
+      const pid = androidKernelGPU.createProcess({
+        name: mainClass || apkPath,
+        executable: apkPath,
+        uid: 1000, // Default Android app UID
+        gid: 1000, // Default Android app GID
+        priority: 5,
+        parent: null,
+      });
 
       // Stage 5: Start execution
       const process: Process = {
