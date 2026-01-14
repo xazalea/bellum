@@ -77,6 +77,7 @@ export class DirectXWebGPUImpl {
             this.buffers.set(resourceId, buffer);
         } else {
             // Create texture
+            const dimension = this.translateTextureDimension(desc.dimension);
             const texture = this.device.createTexture({
                 size: {
                     width: desc.width,
@@ -85,8 +86,8 @@ export class DirectXWebGPUImpl {
                 },
                 format: this.translateFormat(desc.format),
                 usage: this.translateTextureUsage(desc.flags),
-                dimension: this.translateTextureDimension(desc.dimension),
-            });
+                ...(dimension !== '2d' && { dimension }), // Only include if not default
+            } as GPUTextureDescriptor);
             
             this.textures.set(resourceId, texture);
         }
