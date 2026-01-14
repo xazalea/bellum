@@ -14,7 +14,7 @@ import { PersistentKernelEngineV2, WorkType } from '../nexus/gpu/persistent-kern
 import { GPUParallelCompiler } from '../jit/gpu-parallel-compiler';
 import { FastInterpreter } from '../execution/fast-interpreter';
 import { X86DecoderFull } from '../transpiler/lifter/decoders/x86-full';
-import { BasicBlock } from '../transpiler/lifter/types';
+import { BasicBlock, IROperand } from '../transpiler/lifter/types';
 
 export interface BenchmarkResult {
     name: string;
@@ -218,9 +218,25 @@ export async function benchmarkJITCompilation(): Promise<BenchmarkResult> {
                 startAddr: i * 100,
                 endAddr: i * 100 + 50,
                 instructions: [
-                    { id: 0, opcode: 'mov', addr: i * 100, operands: ['rax', 'rbx'] },
-                    { id: 1, opcode: 'add', addr: i * 100 + 5, operands: ['rax', '1'] },
-                    { id: 2, opcode: 'ret', addr: i * 100 + 10, operands: [] },
+                    { 
+                        id: 0, 
+                        opcode: 'mov', 
+                        addr: i * 100, 
+                        op1: { type: 'reg', value: 'rax' } as IROperand,
+                        op2: { type: 'reg', value: 'rbx' } as IROperand
+                    },
+                    { 
+                        id: 1, 
+                        opcode: 'add', 
+                        addr: i * 100 + 5, 
+                        op1: { type: 'reg', value: 'rax' } as IROperand,
+                        op2: { type: 'imm', value: 1 } as IROperand
+                    },
+                    { 
+                        id: 2, 
+                        opcode: 'ret', 
+                        addr: i * 100 + 10
+                    },
                 ],
                 successors: [],
             });
