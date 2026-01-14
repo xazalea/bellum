@@ -14,6 +14,7 @@ import { PersistentKernelEngineV2, WorkType } from '../nexus/gpu/persistent-kern
 import { GPUParallelCompiler } from '../jit/gpu-parallel-compiler';
 import { FastInterpreter } from '../execution/fast-interpreter';
 import { X86DecoderFull } from '../transpiler/lifter/decoders/x86-full';
+import { BasicBlock } from '../transpiler/lifter/types';
 
 export interface BenchmarkResult {
     name: string;
