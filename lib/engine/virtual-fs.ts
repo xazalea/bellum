@@ -71,12 +71,20 @@ export interface StorageProvider {
 export class VirtualFileSystem {
   private root: FileSystemDirectoryHandle | null = null;
   private openFiles: Map<string, FileHandle> = new Map();
-  private cache: Map<string, { data: Uint8Array; timestamp: number }> = new Map();
+  // Hybrid cache: LRU + LFU
+  private cache: Map<string, { 
+    data: Uint8Array; 
+    timestamp: number;
+    accessCount: number; // For LFU
+    lastAccess: number; // For LRU
+    pinned: boolean; // Hot set pinning
+  }> = new Map();
   private locks: Map<string, 'read' | 'write'> = new Map();
   private mountPoints: Map<string, MountPoint> = new Map();
 
   private readonly CACHE_TTL = 5000; // 5 seconds
   private readonly MAX_CACHE_SIZE = 100 * 1024 * 1024; // 100MB
+  private readonly HOT_SET_SIZE = 20; // Keep top 20 files pinned
 
   /**
    * Initialize file system
@@ -181,10 +189,16 @@ export class VirtualFileSystem {
   async readFile(path: string): Promise<Uint8Array> {
     const normalizedPath = this.normalizePath(path);
     
-    // Check cache
+    // Check cache with hybrid LRU+LFU
     const cached = this.cache.get(normalizedPath);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return cached.data;
+    if (cached) {
+      // Update access tracking
+      cached.lastAccess = Date.now();
+      cached.accessCount++;
+      
+      if (Date.now() - cached.timestamp < this.CACHE_TTL || cached.pinned) {
+        return cached.data;
+      }
     }
 
     console.log(`[VirtualFS] Reading file: ${normalizedPath}`);
@@ -211,6 +225,13 @@ export class VirtualFileSystem {
 
       // Cache the data
       this.cacheFile(normalizedPath, data);
+      
+      // Update access tracking
+      const cached = this.cache.get(normalizedPath);
+      if (cached) {
+        cached.lastAccess = Date.now();
+        cached.accessCount++;
+      }
 
       return data;
     } catch (error) {
@@ -247,7 +268,9 @@ export class VirtualFileSystem {
       const dirHandle = await this.getDirectoryHandle(dirPath, true);
       const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
       const writable = await fileHandle.createWritable();
-      await writable.write(data);
+      // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer) for write()
+      const bufferData = new Uint8Array(data);
+      await writable.write(bufferData);
       await writable.close();
 
       // Update cache
@@ -553,7 +576,7 @@ export class VirtualFileSystem {
   }
 
   /**
-   * Cache file data
+   * Cache file data with hybrid LRU+LFU policy
    */
   private cacheFile(path: string, data: Uint8Array): void {
     // Check cache size limit
@@ -563,14 +586,76 @@ export class VirtualFileSystem {
     }
 
     if (totalSize + data.length > this.MAX_CACHE_SIZE) {
-      // Evict oldest entries
-      this.evictCache();
+      // Evict using hybrid policy
+      this.evictCacheHybrid();
     }
 
+    // Check if this should be in hot set
+    const existing = this.cache.get(path);
+    const shouldPin = existing && existing.accessCount > 10; // Frequently accessed
+    
     this.cache.set(path, {
       data,
       timestamp: Date.now(),
+      accessCount: existing ? existing.accessCount + 1 : 1,
+      lastAccess: Date.now(),
+      pinned: shouldPin || false,
     });
+    
+    // Update hot set
+    this.updateHotSet();
+  }
+  
+  /**
+   * Update hot set (top N most frequently accessed files)
+   */
+  private updateHotSet(): void {
+    const entries = Array.from(this.cache.entries());
+    
+    // Sort by access count (LFU)
+    entries.sort((a, b) => b[1].accessCount - a[1].accessCount);
+    
+    // Unpin all
+    for (const entry of this.cache.values()) {
+      entry.pinned = false;
+    }
+    
+    // Pin top N
+    for (let i = 0; i < Math.min(this.HOT_SET_SIZE, entries.length); i++) {
+      entries[i][1].pinned = true;
+    }
+  }
+  
+  /**
+   * Evict cache using hybrid LRU+LFU policy
+   */
+  private evictCacheHybrid(): void {
+    const entries = Array.from(this.cache.entries());
+    
+    // Don't evict pinned (hot set) entries
+    const evictable = entries.filter(([_, entry]) => !entry.pinned);
+    
+    if (evictable.length === 0) return;
+    
+    // Score: balance between recency (LRU) and frequency (LFU)
+    // Lower score = better candidate for eviction
+    evictable.forEach(([path, entry]) => {
+      const age = Date.now() - entry.lastAccess;
+      const recencyScore = age / 1000; // seconds since last access
+      const frequencyScore = 1.0 / (entry.accessCount + 1); // inverse frequency
+      (entry as any).evictionScore = recencyScore * 0.6 + frequencyScore * 0.4;
+    });
+    
+    // Sort by eviction score (lowest = evict first)
+    evictable.sort((a, b) => (a[1] as any).evictionScore - (b[1] as any).evictionScore);
+    
+    // Remove oldest 25%
+    const toRemove = Math.ceil(evictable.length * 0.25);
+    for (let i = 0; i < toRemove; i++) {
+      this.cache.delete(evictable[i][0]);
+    }
+
+    console.log(`[VirtualFS] Evicted ${toRemove} cache entries (hybrid policy)`);
   }
 
   /**

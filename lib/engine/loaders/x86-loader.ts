@@ -1,67 +1,43 @@
+/**
+ * X86 Loader - Uses Nacho Transpiler Pipeline
+ * No v86 dependency - uses custom JIT/emulation stack
+ */
 
-import { V86Loader as V86Core, V86Config } from '../../emulators/v86-loader';
 import { puterClient } from '../../storage/hiberfile';
+import { NachoLoader } from './nacho-loader';
+import { FileType } from '../analyzers/binary-analyzer';
+import { executionPipeline } from '../execution-pipeline';
 
 export class X86Loader {
-    private emulator: any = null;
+    private nachoLoader: NachoLoader | null = null;
 
     async load(container: HTMLElement, exePath: string, memoryMB: number = 512) {
-        // Ensure v86 is loaded
-        await V86Core.load();
+        console.log(`[X86Loader] Loading ${exePath} using Nacho transpiler pipeline (no v86)`);
 
-        // Check for OS image
-        let hdaUrl: string | undefined;
         try {
-            // In a real engine, we would use a minimal Linux kernel (bzImage) + initrd with Wine
-            // For now, we fallback to the user's Windows 98 image if they have it
-            // Or a minimal FreeDOS image which is smaller/faster
-            const diskPath = 'windows98.img'; // Hardcoded preference for now
-            if (await puterClient.fileExists(diskPath)) {
-                 hdaUrl = await puterClient.getReadURL(diskPath);
-            } else {
-                 throw new Error('System Kernel (windows98.img) not found. Please upload it to Library.');
-            }
-        } catch (e: any) {
-            throw new Error(e.message);
+            // Use Nacho loader which uses the custom JIT/emulation stack
+            this.nachoLoader = new NachoLoader();
+            
+            // Set up status updates for UI feedback
+            this.nachoLoader.onStatusUpdate = (status: string, detail?: string) => {
+                console.log(`[X86Loader] ${status}: ${detail || ''}`);
+            };
+
+            // Load using Nacho transpiler (PE parsing, IR lifting, WASM compilation)
+            await this.nachoLoader.load(container, exePath, FileType.PE_EXE);
+
+            console.log('[X86Loader] Load complete via Nacho pipeline');
+            return this.nachoLoader;
+        } catch (error: any) {
+            console.error('[X86Loader] Failed to load:', error);
+            throw new Error(`Failed to load EXE: ${error.message}`);
         }
-
-        const config: V86Config = {
-            wasm_path: '/v86/v86.wasm',
-            memory_size: memoryMB * 1024 * 1024,
-            vga_memory_size: 8 * 1024 * 1024,
-            screen_container: container,
-            bios: { url: '/v86/bios/seabios.bin' },
-            vga_bios: { url: '/v86/bios/vgabios.bin' },
-            hda: { url: hdaUrl, async: true },
-            autostart: true,
-            filesystem: {
-                baseurl: '/',
-                basefs: '/'
-            }
-        };
-
-        this.emulator = V86Core.create(config);
-        
-        // "Injector" Logic
-        // Wait for boot, then try to run the EXE
-        // This is the "Zero Lag" trick: pre-inject commands
-        this.emulator.add_listener('serial0-output-char', (char: string) => {
-            // Monitor boot logs (if using serial console)
-        });
-
-        this.emulator.add_listener('emulator-ready', () => {
-            console.log('x86 Core Ready');
-            // If we had a way to inject the EXE file into the guest FS here, we would.
-            // v86 supports 9p filesystem, which we could use to mount the HiberFile.
-        });
-
-        return this.emulator;
     }
 
     stop() {
-        if (this.emulator) {
-            this.emulator.stop();
-            this.emulator.destroy();
+        if (this.nachoLoader) {
+            this.nachoLoader.stop();
+            this.nachoLoader = null;
         }
     }
 }

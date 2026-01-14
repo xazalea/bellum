@@ -4,12 +4,36 @@ import { DBT } from '../../src/nacho/jit/dbt';
 
 export interface ComputeJob {
     id: string;
-    type: 'COMPILE_CHUNK' | 'EXECUTE_TASK';
+    type: 'COMPILE_CHUNK' | 'EXECUTE_TASK' | 'SHADER_COMPILE' | 'ML_INFERENCE' | 'PHYSICS_SIM' | 'DECOMPRESS';
     payload: {
-        code: Uint8Array; // Bytecode or IR
-        arch: 'x86' | 'arm' | 'dalvik';
+        code?: Uint8Array; // Bytecode or IR
+        arch?: 'x86' | 'arm' | 'dalvik';
+        data?: Uint8Array; // Generic data payload
+        shaderSource?: string; // For shader compilation
+        modelWeights?: Uint8Array; // For ML inference
+        physicsData?: any; // For physics simulation
     };
+    priority: number; // 0-1, higher = more urgent
+    deadline?: number; // Timestamp when job must complete
     response?: any;
+}
+
+export interface DeviceCapabilities {
+    computeUnits: number;
+    memory: number;
+    gpuVRAM: number;
+    bandwidth: number; // bytes/s
+    battery?: number; // 0-1, null if N/A
+    thermalState: 'nominal' | 'fair' | 'serious' | 'critical';
+    supportedTaskTypes: ComputeJob['type'][];
+}
+
+export interface TaskSchedulingResult {
+    jobId: string;
+    assignedPeerId: string;
+    estimatedCompletionTime: number;
+    success: boolean;
+    error?: string;
 }
 
 export class FabricComputeService {

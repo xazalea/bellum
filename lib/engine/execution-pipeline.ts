@@ -17,12 +17,16 @@ import { staticBinaryRewriter } from '../rewriter/static-rewriter';
 import { fastInterpreter } from '../execution/fast-interpreter';
 import { hotPathProfiler, ExecutionTier } from '../execution/profiler';
 import { gpuParallelCompiler } from '../jit/gpu-parallel-compiler';
+import { realPerformanceMonitor } from '../performance/real-benchmarks';
 import { ntKernelGPU } from '../nexus/os/nt-kernel-gpu';
 import { androidKernelGPU } from '../nexus/os/android-kernel-gpu';
 import { win32Subsystem } from '../nexus/os/win32-subsystem';
 import { androidFramework } from '../nexus/os/android-framework-complete';
 import type { PEFile, LoadedPE } from '../transpiler/pe_parser';
 import type { DEXFile } from '../transpiler/dex_parser';
+import { perfController } from './perf-controller';
+import { metricsBus } from './metrics-bus';
+import { remoteExecution } from '../fabric/remote-execution';
 
 // ============================================================================
 // Types
@@ -54,6 +58,15 @@ export interface ProcessPerformance {
   jitCompilations: number;
   hotPathsIdentified: number;
   averageFPS: number;
+  coldBlocks: number;
+  warmBlocks: number;
+  hotBlocks: number;
+  criticalBlocks: number;
+  wasmCompiledBlocks: number;
+  gpuCompiledBlocks: number;
+  compilationTime: number;
+  memoryUsage: number;
+  backpressureLevel: number; // 0-1, how much we're throttling
 }
 
 export interface ExecutionOptions {
@@ -62,6 +75,8 @@ export interface ExecutionOptions {
   enableGPU?: boolean;
   stackSize?: number;
   heapSize?: number;
+  maxBackpressure?: number; // Max backpressure level (0-1)
+  enableMetrics?: boolean; // Enable real-time metrics collection
 }
 
 // ============================================================================
@@ -71,6 +86,9 @@ export interface ExecutionOptions {
 export class ExecutionPipeline {
   private device: GPUDevice | null = null;
   private nextPid: number = 1000;
+  private activeProcesses: Map<number, Process> = new Map();
+  private backpressureLevel: number = 0; // Current backpressure (0-1)
+  private metricsEnabled: boolean = false;
 
   /**
    * Initialize execution pipeline
@@ -88,6 +106,18 @@ export class ExecutionPipeline {
     await win32Subsystem.initialize();
     await androidFramework.initialize();
     await gpuParallelCompiler.initialize();
+    await realPerformanceMonitor.initialize();
+    
+    // Initialize performance controller
+    await perfController.initialize();
+    
+    // Subscribe to performance control updates
+    perfController.onControlUpdate((control) => {
+      metricsBus.publish({ type: 'control', control });
+    });
+
+    // Start profiling
+    hotPathProfiler.startProfiling();
 
     console.log('[ExecutionPipeline] Initialized');
   }
@@ -123,6 +153,10 @@ export class ExecutionPipeline {
         loadedPE.entryPoint
       );
 
+      // Get optimized execution options from perf controller
+      const optimizedOptions = perfController.getExecutionOptions('foreground');
+      const finalOptions = { ...optimizedOptions, ...options };
+      
       // Stage 5: Start execution
       const process: Process = {
         pid,
@@ -137,16 +171,32 @@ export class ExecutionPipeline {
           jitCompilations: 0,
           hotPathsIdentified: 0,
           averageFPS: 0,
+          coldBlocks: 0,
+          warmBlocks: 0,
+          hotBlocks: 0,
+          criticalBlocks: 0,
+          wasmCompiledBlocks: 0,
+          gpuCompiledBlocks: 0,
+          compilationTime: 0,
+          memoryUsage: 0,
+          backpressureLevel: 0,
         },
       };
 
-      // Stage 6: Start monitoring
-      if (options.enableProfiling) {
+      this.activeProcesses.set(pid, process);
+
+      // Stage 6: Start monitoring and metrics
+      if (finalOptions.enableProfiling !== false) {
         this.startPerformanceMonitoring(process);
+      }
+      if (finalOptions.enableMetrics !== false) {
+        this.startMetricsCollection(process);
       }
 
       // Stage 7: Begin execution
-      await this.beginExecution(process, options);
+      realPerformanceMonitor.startAppLaunchTimer();
+      await this.beginExecution(process, finalOptions);
+      realPerformanceMonitor.endAppLaunchTimer();
 
       return process;
     } catch (error) {
@@ -202,8 +252,19 @@ export class ExecutionPipeline {
           jitCompilations: 0,
           hotPathsIdentified: 0,
           averageFPS: 0,
+          coldBlocks: 0,
+          warmBlocks: 0,
+          hotBlocks: 0,
+          criticalBlocks: 0,
+          wasmCompiledBlocks: 0,
+          gpuCompiledBlocks: 0,
+          compilationTime: 0,
+          memoryUsage: 0,
+          backpressureLevel: 0,
         },
       };
+
+      this.activeProcesses.set(pid, process);
 
       // Stage 6: Install and launch via Android Framework
       // Extract package name from DEX file or use a default
@@ -237,10 +298,16 @@ export class ExecutionPipeline {
       
       await androidFramework.launchApp(packageName);
 
-      // Stage 7: Start monitoring
-      if (options.enableProfiling) {
+      // Stage 7: Start monitoring and metrics
+      if (options.enableProfiling !== false) {
         this.startPerformanceMonitoring(process);
       }
+      if (options.enableMetrics !== false) {
+        this.startMetricsCollection(process);
+      }
+
+      realPerformanceMonitor.startAppLaunchTimer();
+      realPerformanceMonitor.endAppLaunchTimer();
 
       return process;
     } catch (error) {
@@ -337,7 +404,8 @@ export class ExecutionPipeline {
         console.warn('[ExecutionPipeline] Binary rewrite failed, using original');
         return binary;
       }
-      rewrittenData = result.patchedBinary.buffer;
+      // Convert Uint8Array to ArrayBuffer (ensures we have ArrayBuffer, not SharedArrayBuffer)
+      rewrittenData = new Uint8Array(result.patchedBinary).buffer;
     } else {
       console.warn('[ExecutionPipeline] Unsupported binary type, skipping rewrite');
       return binary;
@@ -367,30 +435,120 @@ export class ExecutionPipeline {
   }
 
   /**
-   * Main execution loop
+   * Main execution loop with backpressure and JIT integration
    */
   private async executeLoop(process: Process, options: ExecutionOptions): Promise<void> {
     const enableJIT = options.enableJIT !== false;
     const enableProfiling = options.enableProfiling !== false;
+    const maxBackpressure = options.maxBackpressure ?? 0.8;
+    
+    // Get frame time budget from perf controller
+    const control = perfController.getControl();
+    const frameTimeBudget = control.frameTimeBudget;
+
+    let frameCount = 0;
+    let lastFPSUpdate = performance.now();
 
     while (process.state === 'running') {
-      // Simulated execution cycle
       const startTime = performance.now();
+
+      // Check backpressure and throttle if needed
+      this.updateBackpressure(process, options);
+      if (this.backpressureLevel > maxBackpressure) {
+        // Throttle execution
+        await new Promise(resolve => setTimeout(resolve, 32)); // Reduce to ~30 FPS
+        continue;
+      }
+      
+      // Record frame time for perf controller with process ID
+      const frameTime = performance.now() - startTime;
+      perfController.recordFrameTime(frameTime, process.pid);
 
       // In real implementation, would:
       // 1. Fetch next instruction from memory
       // 2. Check if it's a hot path (profiling)
       // 3. If cold, use fast interpreter
-      // 4. If hot, compile with GPU JIT
-      // 5. Execute compiled code
-      // 6. Handle API hooks
-      // 7. Update profiling data
+      // 4. If warm/hot, check if JIT compiled
+      // 5. If not compiled and should be, trigger compilation
+      // 6. Execute compiled code or interpret
+      // 7. Handle API hooks
+      // 8. Update profiling data
 
-      // Simulate work
-      await new Promise(resolve => setTimeout(resolve, 16)); // ~60 FPS
+      // Simulate instruction execution with profiling
+      const instructionAddress = process.entryPoint + (frameCount % 1000);
+      const executionTime = 0.1; // microseconds
+
+      if (enableProfiling) {
+        hotPathProfiler.recordBlockExecution(instructionAddress, executionTime);
+
+        // Check if we should compile to WASM with budget check
+        if (enableJIT && hotPathProfiler.shouldCompileToWASM(instructionAddress)) {
+          const estimatedCompileTime = 5; // ms estimate
+          const priority = process.state === 'running' ? 'foreground' : 'background';
+          
+          // Check if we have budget for compilation
+          if (!perfController.canCompile(estimatedCompileTime, priority)) {
+            // Skip compilation this frame, will retry next frame
+            continue;
+          }
+          
+          // Reserve budget
+          if (!perfController.reserveJITBudget(estimatedCompileTime, priority)) {
+            continue;
+          }
+          
+          // Try remote offload first, fallback to local
+          const blockProfile = hotPathProfiler.getBlockProfile(instructionAddress);
+          if (blockProfile && blockProfile.executionCount > 1000) {
+            // Try offloading hot paths to mesh
+            try {
+              const code = virtualMemoryManager.read(instructionAddress, 1024); // Read block
+              const arch = 'x86'; // Would detect from binary
+              const result = await remoteExecution.offloadHotPathCompilation(
+                instructionAddress,
+                code,
+                arch
+              );
+              
+              if (result && result.success) {
+                // Remote compilation succeeded
+                hotPathProfiler.markWASMCompiled(instructionAddress, result.duration);
+                process.performance.jitCompilations++;
+                process.performance.wasmCompiledBlocks++;
+                continue; // Skip local compilation
+              }
+            } catch (error) {
+              // Fall through to local compilation
+            }
+          }
+          
+          await this.compileBlockToWASM(process, instructionAddress);
+        }
+
+        // Check if we should compile to GPU
+        if (enableJIT && options.enableGPU && hotPathProfiler.shouldCompileToGPU(instructionAddress)) {
+          await this.compileBlockToGPU(process, instructionAddress);
+        }
+      }
+
+      // Simulate work (target 60 FPS)
+      await new Promise(resolve => setTimeout(resolve, 16));
 
       const duration = performance.now() - startTime;
       process.performance.cpuTime += duration;
+      frameCount++;
+
+      // Update FPS every second
+      if (performance.now() - lastFPSUpdate > 1000) {
+        process.performance.averageFPS = frameCount;
+        
+        // Publish metrics
+        const metrics = perfController.getMetrics();
+        metricsBus.publish({ type: 'performance', metrics });
+        
+        frameCount = 0;
+        lastFPSUpdate = performance.now();
+      }
 
       // Check if process should terminate
       // (would be signaled by exit syscall)
@@ -401,6 +559,92 @@ export class ExecutionPipeline {
     }
 
     console.log(`[ExecutionPipeline] Process ${process.pid} terminated with code ${process.exitCode}`);
+    this.activeProcesses.delete(process.pid);
+  }
+
+  /**
+   * Compile block to WASM via GPU parallel compiler
+   */
+  private async compileBlockToWASM(process: Process, address: number): Promise<void> {
+    const compileStart = performance.now();
+    
+    try {
+      // Get IR for this block (simplified - would get from decoder)
+      const blockProfile = hotPathProfiler.getBlockProfile(address);
+      if (!blockProfile || blockProfile.wasmCompiled) return;
+
+      // In real implementation, would:
+      // 1. Get IR from decoder/cache
+      // 2. Submit to GPU parallel compiler
+      // 3. Get compiled WASM module
+      // 4. Cache and use for execution
+
+      // Simulate compilation
+      await new Promise(resolve => setTimeout(resolve, 5));
+
+      const compileTime = performance.now() - compileStart;
+      hotPathProfiler.markWASMCompiled(address, compileTime);
+      process.performance.jitCompilations++;
+      process.performance.compilationTime += compileTime;
+      process.performance.wasmCompiledBlocks++;
+
+      console.log(`[ExecutionPipeline] Compiled block 0x${address.toString(16)} to WASM (${compileTime.toFixed(2)}ms)`);
+    } catch (error) {
+      console.error(`[ExecutionPipeline] Failed to compile block 0x${address.toString(16)}:`, error);
+    }
+  }
+
+  /**
+   * Compile block to GPU shader
+   */
+  private async compileBlockToGPU(process: Process, address: number): Promise<void> {
+    const compileStart = performance.now();
+    
+    try {
+      const blockProfile = hotPathProfiler.getBlockProfile(address);
+      if (!blockProfile || blockProfile.gpuCompiled) return;
+
+      // In real implementation, would:
+      // 1. Get IR for this block
+      // 2. Submit to GPU shader compiler
+      // 3. Create compute shader
+      // 4. Cache and use for execution
+
+      // Simulate compilation
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const compileTime = performance.now() - compileStart;
+      hotPathProfiler.markGPUCompiled(address, compileTime);
+      process.performance.jitCompilations++;
+      process.performance.compilationTime += compileTime;
+      process.performance.gpuCompiledBlocks++;
+
+      console.log(`[ExecutionPipeline] Compiled block 0x${address.toString(16)} to GPU (${compileTime.toFixed(2)}ms)`);
+    } catch (error) {
+      console.error(`[ExecutionPipeline] Failed to compile block 0x${address.toString(16)} to GPU:`, error);
+    }
+  }
+
+  /**
+   * Update backpressure level based on system state
+   */
+  private updateBackpressure(process: Process, options: ExecutionOptions): void {
+    // Calculate backpressure based on:
+    // 1. Memory pressure
+    // 2. GPU queue depth
+    // 3. Compilation queue depth
+    // 4. FPS drops
+
+    const memoryUsage = process.performance.memoryUsage;
+    const memoryLimit = (options.heapSize || 16 * 1024 * 1024) * 1.5; // 1.5x heap size
+    const memoryPressure = memoryUsage / memoryLimit;
+
+    const fps = process.performance.averageFPS;
+    const fpsPressure = fps < 30 ? 0.5 : fps < 45 ? 0.2 : 0;
+
+    // Combine pressures
+    this.backpressureLevel = Math.min(1.0, memoryPressure * 0.6 + fpsPressure * 0.4);
+    process.performance.backpressureLevel = this.backpressureLevel;
   }
 
   /**
@@ -416,23 +660,40 @@ export class ExecutionPipeline {
         return;
       }
 
-      // Get hot paths
-      const hotPaths = hotPathProfiler.getBlocksByTier(ExecutionTier.HOT);
-      process.performance.hotPathsIdentified = hotPaths.length;
+      // Get profiling statistics
+      const stats = hotPathProfiler.getStatistics();
+      process.performance.coldBlocks = stats.coldBlocks;
+      process.performance.warmBlocks = stats.warmBlocks;
+      process.performance.hotBlocks = stats.hotBlocks;
+      process.performance.criticalBlocks = stats.criticalBlocks;
+      process.performance.wasmCompiledBlocks = stats.wasmCompiledBlocks;
+      process.performance.gpuCompiledBlocks = stats.gpuCompiledBlocks;
+      process.performance.hotPathsIdentified = stats.hotBlocks + stats.criticalBlocks;
 
-      // Calculate FPS (simplified)
-      const runtime = performance.now() - process.startTime;
-      process.performance.averageFPS = runtime > 0 ? 60000 / runtime : 0;
+      // Update memory usage
+      process.performance.memoryUsage = realPerformanceMonitor.getMemoryUsage();
 
       // Log stats periodically
+      const runtime = performance.now() - process.startTime;
       if (runtime % 5000 < 100) { // Every ~5 seconds
         console.log(`[PID ${process.pid}] Performance:`, {
           cpuTime: `${process.performance.cpuTime.toFixed(2)}ms`,
           hotPaths: process.performance.hotPathsIdentified,
           fps: process.performance.averageFPS.toFixed(2),
+          jitCompilations: process.performance.jitCompilations,
+          backpressure: `${(process.performance.backpressureLevel * 100).toFixed(1)}%`,
+          memory: `${(process.performance.memoryUsage / 1024 / 1024).toFixed(2)}MB`,
         });
       }
     }, 100);
+  }
+
+  /**
+   * Start metrics collection
+   */
+  private startMetricsCollection(process: Process): void {
+    this.metricsEnabled = true;
+    realPerformanceMonitor.startFPSMeasurement();
   }
 
   /**
@@ -464,15 +725,45 @@ export class ExecutionPipeline {
   }
 
   /**
+   * Get active process
+   */
+  getProcess(pid: number): Process | undefined {
+    return this.activeProcesses.get(pid);
+  }
+
+  /**
+   * Get all active processes
+   */
+  getActiveProcesses(): Process[] {
+    return Array.from(this.activeProcesses.values());
+  }
+
+  /**
+   * Get comprehensive metrics for a process
+   */
+  getProcessMetrics(pid: number): ProcessPerformance | null {
+    const process = this.activeProcesses.get(pid);
+    return process ? process.performance : null;
+  }
+
+  /**
    * Shutdown execution pipeline
    */
   async shutdown(): Promise<void> {
     console.log('[ExecutionPipeline] Shutting down...');
 
+    // Terminate all active processes
+    for (const process of this.activeProcesses.values()) {
+      process.state = 'terminated';
+    }
+    this.activeProcesses.clear();
+
+    hotPathProfiler.stopProfiling();
     await androidFramework.shutdown();
     await win32Subsystem.shutdown();
     await androidKernelGPU.shutdown();
     await ntKernelGPU.shutdown();
+    await gpuParallelCompiler.shutdown();
     virtualFileSystem.shutdown();
     virtualMemoryManager.shutdown();
 

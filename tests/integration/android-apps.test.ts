@@ -4,6 +4,7 @@
  */
 
 import { executionPipeline } from '../../lib/engine/execution-pipeline';
+import { fabricCompute, ComputeJob } from '../../lib/fabric/compute';
 import { androidCompatibility } from '../../lib/compat/android-compat';
 
 export interface AndroidTestResult {

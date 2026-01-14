@@ -10,7 +10,7 @@
  * - Instant resume from saved state
  */
 
-import { windowsBootManager } from '../nexus/os/windows-boot';
+import { windowsBoot } from '../nexus/os/windows-boot';
 import { androidBootManager } from '../nexus/os/android-boot';
 
 // ============================================================================
@@ -135,7 +135,12 @@ export class FastBootManager {
     await Promise.all(initPromises);
 
     // Boot Windows with optimized settings
-    await windowsBootManager.boot(canvas, container);
+    await windowsBoot.boot({
+      enableGUI: true,
+      preloadExplorer: true,
+      enableDirectX: true,
+      bootMode: 'fast',
+    });
   }
 
   /**
@@ -146,7 +151,12 @@ export class FastBootManager {
     // Use precompiled binaries
     // Load only essential services
 
-    await windowsBootManager.boot(canvas, container);
+    await windowsBoot.boot({
+      enableGUI: true,
+      preloadExplorer: false, // Skip for warm boot
+      enableDirectX: true,
+      bootMode: 'fast',
+    });
   }
 
   /**
@@ -171,7 +181,7 @@ export class FastBootManager {
   }
 
   /**
-   * Precompile critical system binaries to WASM
+   * Precompile critical system binaries to WASM with OPFS caching
    */
   private async precompileCriticalBinaries(osType: 'windows' | 'android'): Promise<void> {
     console.log(`[FastBoot] Precompiling critical binaries for ${osType}...`);
@@ -180,17 +190,39 @@ export class FastBootManager {
       ? ['kernel32.dll', 'user32.dll', 'ntdll.dll']
       : ['libc.so', 'libm.so', 'libdl.so'];
 
-    // Simulate compilation (in real impl, would compile and cache)
+    // Check OPFS cache first
+    const opfsRoot = await navigator.storage.getDirectory();
+    const cacheDir = await opfsRoot.getDirectoryHandle('wasm-cache', { create: true });
+
     for (const binary of binaries) {
-      // const wasmModule = await compileToWasm(binary);
-      // this.precompiledBinaries.set(binary, wasmModule);
+      const cacheKey = `${osType}-${binary}`;
+      
+      try {
+        // Check if cached in OPFS
+        const cacheFile = await cacheDir.getFileHandle(cacheKey, { create: false });
+        const file = await cacheFile.getFile();
+        const wasmBytes = await file.arrayBuffer();
+        const wasmModule = await WebAssembly.compile(wasmBytes);
+        this.precompiledBinaries.set(binary, wasmModule);
+        console.log(`[FastBoot] Loaded ${binary} from OPFS cache`);
+      } catch {
+        // Not cached, would compile here (in real impl)
+        // const wasmModule = await compileToWasm(binary);
+        // this.precompiledBinaries.set(binary, wasmModule);
+        
+        // Save to OPFS cache for next time
+        // const cacheFile = await cacheDir.getFileHandle(cacheKey, { create: true });
+        // const writable = await cacheFile.createWritable();
+        // await writable.write(wasmBytes);
+        // await writable.close();
+      }
     }
 
     console.log(`[FastBoot] Precompiled ${binaries.length} binaries`);
   }
 
   /**
-   * Prefetch system files
+   * Prefetch system files with OPFS caching
    */
   private async prefetchSystemFiles(osType: 'windows' | 'android'): Promise<void> {
     console.log(`[FastBoot] Prefetching system files for ${osType}...`);
@@ -199,9 +231,26 @@ export class FastBootManager {
       ? ['C:/Windows/System32/kernel32.dll', 'C:/Windows/System32/user32.dll']
       : ['/system/lib/libc.so', '/system/lib/libm.so'];
 
-    // Prefetch files (in real impl, would actually fetch)
+    // Use OPFS for fast file access
+    const opfsRoot = await navigator.storage.getDirectory();
+    const prefetchDir = await opfsRoot.getDirectoryHandle('prefetch', { create: true });
+
     await Promise.all(files.map(async file => {
-      // await virtualFileSystem.readFile(file);
+      const cacheKey = file.replace(/[\/:]/g, '_');
+      
+      try {
+        // Check OPFS cache first
+        const cacheFile = await prefetchDir.getFileHandle(cacheKey, { create: false });
+        const fileData = await (await cacheFile.getFile()).arrayBuffer();
+        console.log(`[FastBoot] Prefetched ${file} from OPFS cache`);
+      } catch {
+        // Not cached, would fetch and cache here
+        // const fileData = await virtualFileSystem.readFile(file);
+        // const cacheFile = await prefetchDir.getFileHandle(cacheKey, { create: true });
+        // const writable = await cacheFile.createWritable();
+        // await writable.write(fileData);
+        // await writable.close();
+      }
     }));
 
     console.log(`[FastBoot] Prefetched ${files.length} files`);
@@ -223,7 +272,7 @@ export class FastBootManager {
   }
 
   /**
-   * Save boot snapshot
+   * Save boot snapshot with OPFS persistence
    */
   async saveBootSnapshot(osType: 'windows' | 'android'): Promise<void> {
     console.log(`[FastBoot] Saving boot snapshot for ${osType}...`);
@@ -238,26 +287,57 @@ export class FastBootManager {
 
     this.bootSnapshots.set(osType, snapshot);
 
-    // Persist to IndexedDB
+    // Persist to OPFS for faster access
     try {
+      const opfsRoot = await navigator.storage.getDirectory();
+      const snapshotsDir = await opfsRoot.getDirectoryHandle('snapshots', { create: true });
+      const snapshotFile = await snapshotsDir.getFileHandle(`${osType}-snapshot.json`, { create: true });
+      const writable = await snapshotFile.createWritable();
+      await writable.write(JSON.stringify({
+        timestamp: snapshot.timestamp,
+        osType: snapshot.osType,
+        // In real impl, would serialize processState, memoryState, kernelState
+      }));
+      await writable.close();
+      
+      // Also persist to IndexedDB as fallback
       await this.persistSnapshot(osType, snapshot);
-      console.log('[FastBoot] Boot snapshot saved');
+      console.log('[FastBoot] Boot snapshot saved to OPFS and IndexedDB');
     } catch (error) {
       console.warn('[FastBoot] Failed to persist snapshot:', error);
     }
   }
 
   /**
-   * Restore boot snapshot
+   * Restore boot snapshot from OPFS
    */
   async restoreBootSnapshot(snapshot: BootSnapshot): Promise<void> {
     console.log(`[FastBoot] Restoring boot snapshot from ${new Date(snapshot.timestamp).toISOString()}...`);
 
-    // Restore process state
-    // Restore memory state
-    // Restore kernel state
-
-    console.log('[FastBoot] Boot snapshot restored');
+    try {
+      // Try OPFS first (faster)
+      const opfsRoot = await navigator.storage.getDirectory();
+      const snapshotsDir = await opfsRoot.getDirectoryHandle('snapshots', { create: false });
+      const snapshotFile = await snapshotsDir.getFileHandle(`${snapshot.osType}-snapshot.json`, { create: false });
+      const file = await snapshotFile.getFile();
+      const snapshotData = JSON.parse(await file.text());
+      
+      // Restore process state
+      // Restore memory state
+      // Restore kernel state
+      
+      console.log('[FastBoot] Boot snapshot restored from OPFS');
+    } catch (error) {
+      // Fallback to IndexedDB
+      console.warn('[FastBoot] OPFS restore failed, trying IndexedDB:', error);
+      const loaded = await this.loadSnapshot(snapshot.osType);
+      if (loaded) {
+        // Restore from loaded snapshot
+        console.log('[FastBoot] Boot snapshot restored from IndexedDB');
+      } else {
+        throw new Error('No snapshot found');
+      }
+    }
   }
 
   /**

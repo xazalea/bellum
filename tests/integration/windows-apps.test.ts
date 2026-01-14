@@ -5,6 +5,8 @@
 
 import { executionPipeline } from '../../lib/engine/execution-pipeline';
 import { windowsCompatibility } from '../../lib/compat/windows-compat';
+import { fabricCompute, ComputeJob } from '../../lib/fabric/compute';
+import { realPerformanceMonitor } from '../../lib/performance/real-benchmarks';
 
 export interface TestResult {
   app: string;

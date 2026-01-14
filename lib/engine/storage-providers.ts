@@ -18,17 +18,143 @@ import type { StorageProvider, DirectoryEntry } from './virtual-fs';
 export class OPFSProvider implements StorageProvider {
   name = 'OPFS';
   private root: FileSystemDirectoryHandle | null = null;
+  private cache: Map<string, { data: Uint8Array; timestamp: number }> = new Map();
+  private readonly CACHE_TTL = 3600000; // 1 hour
+  private prefetchQueue: Set<string> = new Set();
+  private readAheadBuffer: Map<string, Uint8Array> = new Map();
+  private readonly READ_AHEAD_SIZE = 1024 * 1024; // 1MB read-ahead
 
   async initialize(): Promise<void> {
     this.root = await navigator.storage.getDirectory();
+    
+    // Pre-warm cache with frequently accessed files
+    await this.warmCache();
+  }
+
+  /**
+   * Warm cache with critical system files
+   */
+  private async warmCache(): Promise<void> {
+    try {
+      const criticalFiles = [
+        'wasm-cache/kernel32.dll',
+        'wasm-cache/user32.dll',
+        'prefetch/C:/Windows/System32/kernel32.dll',
+      ];
+
+      for (const file of criticalFiles) {
+        try {
+          const data = await this.readFile(file);
+          this.cache.set(file, { data, timestamp: Date.now() });
+        } catch {
+          // File doesn't exist yet, skip
+        }
+      }
+    } catch (error) {
+      console.warn('[OPFSProvider] Cache warming failed:', error);
+    }
   }
 
   async readFile(path: string): Promise<Uint8Array> {
     if (!this.root) throw new Error('OPFS not initialized');
     
+    // Check in-memory cache first
+    const cached = this.cache.get(path);
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
+      // Trigger read-ahead for next likely file
+      this.scheduleReadAhead(path);
+      return cached.data;
+    }
+    
+    // Check read-ahead buffer
+    const readAhead = this.readAheadBuffer.get(path);
+    if (readAhead) {
+      this.readAheadBuffer.delete(path);
+      this.cache.set(path, { data: readAhead, timestamp: Date.now() });
+      this.scheduleReadAhead(path);
+      return readAhead;
+    }
+    
     const handle = await this.getFileHandle(path, false);
     const file = await handle.getFile();
-    return new Uint8Array(await file.arrayBuffer());
+    const data = new Uint8Array(await file.arrayBuffer());
+    
+    // Update cache
+    this.cache.set(path, { data, timestamp: Date.now() });
+    
+    // Trigger read-ahead
+    this.scheduleReadAhead(path);
+    
+    return data;
+  }
+  
+  /**
+   * Schedule read-ahead for likely next file
+   */
+  private scheduleReadAhead(currentPath: string): void {
+    // In a real implementation, would predict next file based on access patterns
+    // For now, prefetch files in the same directory
+    const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+    if (dirPath && !this.prefetchQueue.has(dirPath)) {
+      this.prefetchQueue.add(dirPath);
+      this.performReadAhead(dirPath).catch(() => {
+        // Ignore errors
+      });
+    }
+  }
+  
+  /**
+   * Perform read-ahead for directory
+   */
+  private async performReadAhead(dirPath: string): Promise<void> {
+    try {
+      const entries = await this.listDirectory(dirPath);
+      
+      // Prefetch first few files in directory
+      for (const entry of entries.slice(0, 3)) {
+        if (!entry.isDirectory) {
+          const filePath = `${dirPath}/${entry.name}`;
+          
+          // Don't prefetch if already cached
+          if (!this.cache.has(filePath) && !this.readAheadBuffer.has(filePath)) {
+            try {
+              const handle = await this.getFileHandle(filePath, false);
+              const file = await handle.getFile();
+              
+              // Only read-ahead if file is reasonably sized
+              if (file.size <= this.READ_AHEAD_SIZE) {
+                const data = new Uint8Array(await file.arrayBuffer());
+                this.readAheadBuffer.set(filePath, data);
+              }
+            } catch {
+              // Ignore errors
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore errors
+    } finally {
+      this.prefetchQueue.delete(dirPath);
+    }
+  }
+  
+  /**
+   * Prefetch a specific file
+   */
+  async prefetchFile(path: string): Promise<void> {
+    if (this.cache.has(path) || this.readAheadBuffer.has(path)) {
+      return; // Already cached
+    }
+    
+    try {
+      const handle = await this.getFileHandle(path, false);
+      const file = await handle.getFile();
+      const data = new Uint8Array(await file.arrayBuffer());
+      this.readAheadBuffer.set(path, data);
+    } catch {
+      // Ignore errors
+    }
   }
 
   async writeFile(path: string, data: Uint8Array): Promise<void> {
@@ -36,8 +162,13 @@ export class OPFSProvider implements StorageProvider {
     
     const handle = await this.getFileHandle(path, true);
     const writable = await handle.createWritable();
-    await writable.write(data);
+    // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer) for write()
+    const bufferData = new Uint8Array(data);
+    await writable.write(bufferData);
     await writable.close();
+    
+    // Update cache
+    this.cache.set(path, { data: bufferData, timestamp: Date.now() });
   }
 
   async deleteFile(path: string): Promise<void> {
@@ -57,7 +188,10 @@ export class OPFSProvider implements StorageProvider {
     const dirHandle = await this.getDirectoryHandle(path, false);
     const entries: DirectoryEntry[] = [];
 
-    for await (const [name, handle] of dirHandle.entries()) {
+    // FileSystemDirectoryHandle.entries() exists at runtime but TypeScript types may be incomplete
+    // Use type assertion to access the entries() method
+    const dirHandleAny = dirHandle as any;
+    for await (const [name, handle] of dirHandleAny.entries()) {
       const isDirectory = handle.kind === 'directory';
       let size = 0;
       let lastModified = 0;
@@ -158,6 +292,15 @@ export class IndexedDBProvider implements StorageProvider {
       request.onerror = () => reject(request.error);
     });
   }
+  
+  /**
+   * Calculate content hash for integrity verification
+   */
+  async calculateHash(data: Uint8Array): Promise<string> {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
 
   async writeFile(path: string, data: Uint8Array): Promise<void> {
     if (!this.db) throw new Error('IndexedDB not initialized');
@@ -240,6 +383,27 @@ export class HTTPProvider implements StorageProvider {
     }
 
     return new Uint8Array(await response.arrayBuffer());
+  }
+  
+  /**
+   * Prefetch file (download and cache)
+   */
+  async prefetchFile(path: string): Promise<void> {
+    // HTTP provider doesn't cache, but we can trigger download
+    try {
+      await this.readFile(path);
+    } catch {
+      // Ignore errors
+    }
+  }
+  
+  /**
+   * Calculate content hash
+   */
+  async calculateHash(data: Uint8Array): Promise<string> {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   async writeFile(path: string, data: Uint8Array): Promise<void> {

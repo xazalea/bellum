@@ -322,7 +322,9 @@ export class VirtualMemoryManager {
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
 
-    this.device.queue.writeBuffer(gpuBuffer, 0, data);
+    // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer) for writeBuffer
+    const bufferData = new Uint8Array(data);
+    this.device.queue.writeBuffer(gpuBuffer, 0, bufferData);
 
     // Mark pages as GPU-mapped
     const startPage = this.pageAddress(address);

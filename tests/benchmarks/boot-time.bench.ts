@@ -6,7 +6,7 @@
  */
 
 import { fastBootManager } from '../../lib/engine/fast-boot';
-import { windowsBootManager } from '../../lib/nexus/os/windows-boot';
+import { windowsBoot } from '../../lib/nexus/os/windows-boot';
 import { androidBootManager } from '../../lib/nexus/os/android-boot';
 
 export interface BootBenchmarkResult {
@@ -33,7 +33,7 @@ export class BootTimeBenchmark {
     const coldBootTime = performance.now() - coldStart;
 
     // Cleanup
-    await windowsBootManager.shutdown();
+    await windowsBoot.shutdown();
 
     // Warm boot
     const warmStart = performance.now();
@@ -41,7 +41,7 @@ export class BootTimeBenchmark {
     const warmBootTime = performance.now() - warmStart;
 
     // Cleanup
-    await windowsBootManager.shutdown();
+    await windowsBoot.shutdown();
 
     // Instant resume
     const resumeStart = performance.now();

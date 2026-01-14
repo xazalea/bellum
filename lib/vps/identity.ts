@@ -3,7 +3,18 @@ export type VpsIdentity = {
   createdAt: number;
   publicKeyJwk: JsonWebKey;
   privateKeyJwk: JsonWebKey;
+  alias?: string; // Human-readable alias
+  nodePassport?: NodePassport; // Signed passport for cross-domain identity
 };
+
+export interface NodePassport {
+  nodeId: string;
+  publicKey: JsonWebKey;
+  signature: ArrayBuffer; // Signature over (nodeId + publicKey + timestamp)
+  timestamp: number;
+  issuer: string; // Self-issued
+  aliases: string[]; // Known aliases for this identity
+}
 
 const STORAGE_KEY = 'fabrik.vps.identity.v1';
 

@@ -86,9 +86,20 @@ export class FabricMesh {
       }
     });
 
-    // Announce ourselves on any existing channels.
+    // Announce ourselves on any existing channels with identity
     try {
-      node.broadcast({ type: "FABRIC_HELLO", payload: { nodeId: node.getId() } });
+      const { getOrCreateIdentity } = await import('../../vps/identity');
+      const identity = await getOrCreateIdentity();
+      
+      node.broadcast({
+        type: "FABRIC_HELLO",
+        payload: {
+          nodeId: node.getId(),
+          vpsId: identity.vpsId,
+          nodePassport: identity.nodePassport, // Include signed passport
+          alias: identity.alias,
+        }
+      });
     } catch {
       // ignore
     }

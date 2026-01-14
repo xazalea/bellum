@@ -569,7 +569,7 @@ export class ExecutionFabric {
   }
 
   /**
-   * Select best device for task
+   * Select best device for task (now integrates with Fabric compute mesh)
    */
   private selectDevice(task: Task): Device | null {
     // Check device affinity first
@@ -578,6 +578,34 @@ export class ExecutionFabric {
       if (preferred && preferred.status === 'connected' && preferred.workload < 0.8) {
         return preferred;
       }
+    }
+
+    // Try Fabric compute mesh first (for offloading to P2P peers)
+    const fabricServices = fabricMesh.getServices().filter(s => s.serviceId === 'compute-v1');
+    if (fabricServices.length > 0 && task.type === 'compute') {
+      // Prefer Fabric mesh for compute tasks
+      const fabricDevice: Device = {
+        id: 'fabric-mesh',
+        type: 'worker',
+        capabilities: {
+          computeUnits: fabricServices.length * 4, // Estimate
+          memory: 8 * 1024 * 1024 * 1024,
+          gpuVRAM: 2 * 1024 * 1024 * 1024,
+          bandwidth: 100 * 1024 * 1024,
+          battery: null,
+          thermalState: 'nominal',
+        },
+        connection: {
+          type: 'webrtc',
+          channel: null,
+          latency: 50, // Estimated P2P latency
+          bandwidth: 10 * 1024 * 1024,
+        },
+        status: 'connected',
+        lastHeartbeat: Date.now(),
+        workload: 0.3, // Fabric mesh has capacity
+      };
+      return fabricDevice;
     }
 
     // Find device with lowest workload that meets requirements
