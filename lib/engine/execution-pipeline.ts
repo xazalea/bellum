@@ -15,7 +15,7 @@ import { virtualMemoryManager, MemoryProtection } from './memory-manager';
 import { virtualFileSystem } from './virtual-fs';
 import { staticBinaryRewriter } from '../rewriter/static-rewriter';
 import { fastInterpreter } from '../execution/fast-interpreter';
-import { hotPathProfiler, CodeTier } from '../execution/profiler';
+import { hotPathProfiler, ExecutionTier } from '../execution/profiler';
 import { gpuParallelCompiler } from '../jit/gpu-parallel-compiler';
 import { ntKernelGPU } from '../nexus/os/nt-kernel-gpu';
 import { androidKernelGPU } from '../nexus/os/android-kernel-gpu';
@@ -385,7 +385,7 @@ export class ExecutionPipeline {
       }
 
       // Get hot paths
-      const hotPaths = hotPathProfiler.getHotPaths(CodeTier.HOT);
+      const hotPaths = hotPathProfiler.getBlocksByTier(ExecutionTier.HOT);
       process.performance.hotPathsIdentified = hotPaths.length;
 
       // Calculate FPS (simplified)

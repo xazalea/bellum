@@ -13,7 +13,7 @@
  */
 
 import type { BasicBlock, IRInstruction, IROpcode } from '../transpiler/lifter/types';
-import { CodeTier } from '../execution/profiler';
+import { ExecutionTier } from '../execution/profiler';
 
 // ============================================================================
 // Types
@@ -40,7 +40,7 @@ export class OptimizingJIT {
   /**
    * Compile with optimizations based on code tier
    */
-  compileWithOptimizations(blocks: BasicBlock[], tier: CodeTier): OptimizationResult {
+  compileWithOptimizations(blocks: BasicBlock[], tier: ExecutionTier): OptimizationResult {
     console.log(`[OptimizingJIT] Compiling with ${tier} optimizations...`);
     const startTime = performance.now();
 
@@ -54,14 +54,14 @@ export class OptimizingJIT {
     };
 
     // Apply optimizations based on tier
-    if (tier === CodeTier.WARM || tier === CodeTier.HOT || tier === CodeTier.CRITICAL) {
+    if (tier === ExecutionTier.WARM || tier === ExecutionTier.HOT || tier === ExecutionTier.CRITICAL) {
       // Dead code elimination (all tiers)
       const dceResult = this.eliminateDeadCode(optimized);
       optimized = dceResult.blocks;
       stats.instructionsRemoved += dceResult.removed;
     }
 
-    if (tier === CodeTier.HOT || tier === CodeTier.CRITICAL) {
+    if (tier === ExecutionTier.HOT || tier === ExecutionTier.CRITICAL) {
       // Constant propagation
       optimized = this.propagateConstants(optimized);
 
@@ -74,7 +74,7 @@ export class OptimizingJIT {
       stats.functionsInlined = inlineResult.inlined;
     }
 
-    if (tier === CodeTier.CRITICAL) {
+    if (tier === ExecutionTier.CRITICAL) {
       // Loop unrolling
       const unrollResult = this.unrollLoops(optimized);
       optimized = unrollResult.blocks;

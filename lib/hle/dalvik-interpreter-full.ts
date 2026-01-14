@@ -18,7 +18,7 @@
  */
 
 import { androidHooks } from '../api/hooks/android-hooks';
-import { hotPathProfiler, CodeTier } from '../execution/profiler';
+import { hotPathProfiler, ExecutionTier } from '../execution/profiler';
 
 export interface DalvikMethod {
     name: string;
@@ -141,11 +141,14 @@ export class DalvikInterpreter {
 
         // Check if hot path - should be JIT compiled
         const methodId = `${className}.${methodName}`;
-        hotPathProfiler.recordExecution(methodId, 0);
+        // Use a hash of the method name as entry point for profiling
+        const entryPoint = this.hashString(methodId);
+        const startTime = performance.now();
+        hotPathProfiler.recordFunctionExecution(entryPoint, methodId, 0);
         
-        const tier = hotPathProfiler.getTier(methodId);
-        if (tier === CodeTier.HOT || tier === CodeTier.CRITICAL) {
-            console.log(`[DalvikInterpreter] Method ${methodId} is ${tier}, should JIT compile`);
+        const profile = hotPathProfiler.getFunctionProfile(entryPoint);
+        if (profile && (profile.tier === ExecutionTier.HOT || profile.tier === ExecutionTier.CRITICAL)) {
+            console.log(`[DalvikInterpreter] Method ${methodId} is ${profile.tier}, should JIT compile`);
             // In full implementation, would invoke GPU JIT compiler here
         }
 
@@ -681,6 +684,19 @@ export class DalvikInterpreter {
             heapSize: this.heap.size,
             registeredClasses: this.classes.size,
         };
+    }
+
+    /**
+     * Hash string to number for use as entry point
+     */
+    private hashString(str: string): number {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash);
     }
 
     /**
