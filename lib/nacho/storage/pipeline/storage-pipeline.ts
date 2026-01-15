@@ -324,7 +324,7 @@ export class StoragePipeline {
   private async storeChunk(data: Uint8Array): Promise<string> {
     // Store chunk to backend (Telegram, local, etc.)
     const storageId = await this.uploadToBackend(data);
-    const hash = this.chunkGraph.addChunk(data, this.options.backend, storageId);
+    const hash = this.chunkGraph.addChunk(data, this.options.backend as 'local' | 'telegram' | 'cdn', storageId);
     return hash;
   }
 

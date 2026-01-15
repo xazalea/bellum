@@ -248,7 +248,7 @@ class VulkanPhysicalDevice {
       deviceType: 2, // VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
       vendorID: 0x10DE, // Fake NVIDIA vendor ID
       deviceID: 0x1234,
-      limits: this.device.limits,
+      limits: (this.device as any).limits || {},
       features: this.adapter.features,
     };
   }
@@ -552,7 +552,7 @@ class VulkanSwapchain {
       case VkFormat.VK_FORMAT_R8G8B8A8_UNORM:
         return 'rgba8unorm';
       case VkFormat.VK_FORMAT_R8G8B8A8_SRGB:
-        return 'rgba8unorm-srgb';
+        return 'rgba8unorm' as GPUTextureFormat; // SRGB handled via color space, using unorm format
       default:
         return 'bgra8unorm';
     }
@@ -632,7 +632,6 @@ class VulkanImage {
         },
         format: this.mapFormat(createInfo.format),
         usage: this.mapUsageFlags(createInfo.usage),
-        dimension: this.mapImageType(createInfo.imageType),
         mipLevelCount: createInfo.mipLevels,
       });
     }
@@ -643,7 +642,7 @@ class VulkanImage {
       case VkFormat.VK_FORMAT_R8G8B8A8_UNORM:
         return 'rgba8unorm';
       case VkFormat.VK_FORMAT_R8G8B8A8_SRGB:
-        return 'rgba8unorm-srgb';
+        return 'rgba8unorm' as GPUTextureFormat; // SRGB handled via color space, using unorm format
       case VkFormat.VK_FORMAT_B8G8R8A8_UNORM:
         return 'bgra8unorm';
       case VkFormat.VK_FORMAT_D32_SFLOAT:
@@ -666,14 +665,6 @@ class VulkanImage {
     return gpuUsage;
   }
 
-  private mapImageType(type: number): GPUTextureDimension {
-    switch (type) {
-      case 0: return '1d';
-      case 1: return '2d';
-      case 2: return '3d';
-      default: return '2d';
-    }
-  }
 
   getGPUTexture(): GPUTexture | null {
     return this.texture;

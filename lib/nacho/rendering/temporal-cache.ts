@@ -512,9 +512,8 @@ export class ReflectionProbeCache {
     const cubemap = this.device.createTexture({
       size: { width: resolution, height: resolution, depthOrArrayLayers: 6 },
       format: 'rgba16float',
-      usage: GPUTextureUsage.TEXTURE_BINDING | 
-             GPUTextureUsage.RENDER_ATTACHMENT,
-      dimension: '2d'
+      usage: GPUTextureUsage.TEXTURE_BINDING |
+             GPUTextureUsage.RENDER_ATTACHMENT
     });
 
     this.probes.set(probeId, {

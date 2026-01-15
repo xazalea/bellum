@@ -180,8 +180,9 @@ export class OptimizingJIT {
           liveInstructions.unshift(instr);
           
           // Mark source operands as used
-          if (instr.operands) {
-            for (const operand of instr.operands) {
+          const operands = [instr.op1, instr.op2, instr.op3].filter(op => op !== undefined);
+          if (operands.length > 0) {
+            for (const operand of operands) {
               if (typeof operand === 'string') {
                 usedRegisters.add(operand);
               }
@@ -219,19 +220,21 @@ export class OptimizingJIT {
 
       for (const instr of block.instructions) {
         // Track constant assignments
-        if (instr.opcode === 'MOV' as IROpcode && typeof instr.operands?.[1] === 'number') {
-          constants.set(instr.operands[0], instr.operands[1]);
+        if (instr.opcode === 'MOV' as IROpcode && typeof instr.op2 === 'number') {
+          constants.set(instr.op1 as any, instr.op2);
         }
 
         // Replace constant uses
         const optimizedInstr = { ...instr };
-        if (optimizedInstr.operands) {
-          optimizedInstr.operands = optimizedInstr.operands.map(op => {
-            if (typeof op === 'string' && constants.has(op)) {
-              return constants.get(op);
-            }
-            return op;
-          });
+        // Replace constants in op1, op2, op3
+        if (optimizedInstr.op1 && typeof optimizedInstr.op1 === 'string' && constants.has(optimizedInstr.op1)) {
+          optimizedInstr.op1 = constants.get(optimizedInstr.op1) as any;
+        }
+        if (optimizedInstr.op2 && typeof optimizedInstr.op2 === 'string' && constants.has(optimizedInstr.op2)) {
+          optimizedInstr.op2 = constants.get(optimizedInstr.op2) as any;
+        }
+        if (optimizedInstr.op3 && typeof optimizedInstr.op3 === 'string' && constants.has(optimizedInstr.op3)) {
+          optimizedInstr.op3 = constants.get(optimizedInstr.op3) as any;
         }
 
         newInstructions.push(optimizedInstr);
@@ -270,8 +273,9 @@ export class OptimizingJIT {
             id: block.instructions[i].id,
             opcode: 'SIMD_ADD' as IROpcode,
             addr: block.instructions[i].addr,
-            bytes: new Uint8Array(),
-            operands: vectorGroup.flatMap(instr => instr.operands || []),
+            op1: vectorGroup[0]?.op1,
+            op2: vectorGroup[0]?.op2,
+            op3: vectorGroup[0]?.op3,
           });
           
           i += vectorGroup.length;
@@ -313,7 +317,8 @@ export class OptimizingJIT {
           newInstructions.push({
             ...instr,
             opcode: 'MOV' as IROpcode,
-            operands: [instr.operands?.[0], prevInstr.operands?.[0]],
+            op1: instr.op1,
+            op2: prevInstr.op1,
           });
         } else {
           if (exprKey) {
@@ -339,8 +344,8 @@ export class OptimizingJIT {
 
   private findCallTarget(instr: IRInstruction, blocks: BasicBlock[]): BasicBlock | null {
     // Find the target basic block of a CALL instruction
-    if (instr.operands && instr.operands.length > 0) {
-      const targetAddr = parseInt(String(instr.operands[0]).replace('0x', ''), 16);
+    if (instr.op1) {
+      const targetAddr = parseInt(String(instr.op1).replace('0x', ''), 16);
       return blocks.find(b => b.startAddr === targetAddr) || null;
     }
     return null;
@@ -355,9 +360,9 @@ export class OptimizingJIT {
     // Simplified loop detection
     // Look for backward jumps
     for (const instr of block.instructions) {
-      if (instr.opcode === 'JMP' as IROpcode && instr.operands) {
-        const targetAddr = parseInt(String(instr.operands[0]).replace('0x', ''), 16);
-        if (targetAddr < instr.addr) {
+      if (instr.opcode === 'JMP' as IROpcode && instr.op1) {
+        const targetAddr = parseInt(String(instr.op1).replace('0x', ''), 16);
+        if (instr.addr !== undefined && targetAddr < instr.addr) {
           // Backward jump - potential loop
           return { tripCount: 4 }; // Assume small trip count
         }
@@ -383,8 +388,8 @@ export class OptimizingJIT {
 
   private isInstructionLive(instr: IRInstruction, usedRegisters: Set<string>): boolean {
     // Check if instruction writes to a used register
-    if (instr.operands && instr.operands.length > 0) {
-      const dest = instr.operands[0];
+    if (instr.op1) {
+      const dest = instr.op1;
       return typeof dest === 'string' && usedRegisters.has(dest);
     }
     return false;
@@ -392,8 +397,8 @@ export class OptimizingJIT {
 
   private hasSideEffects(instr: IRInstruction): boolean {
     // Instructions with side effects (memory, I/O, control flow)
-    const sideEffectOpcodes: IROpcode[] = ['STORE', 'CALL', 'RET', 'JMP', 'SYSCALL'] as IROpcode[];
-    return sideEffectOpcodes.includes(instr.opcode);
+    const sideEffectOpcodes: IROpcode[] = ['STORE', 'CALL', 'RET', 'JMP', 'SYSCALL'] as unknown as IROpcode[];
+    return sideEffectOpcodes.includes(instr.opcode as IROpcode);
   }
 
   private findVectorizableGroup(instructions: IRInstruction[], start: number): IRInstruction[] {
@@ -414,14 +419,14 @@ export class OptimizingJIT {
 
   private isVectorizable(instr: IRInstruction): boolean {
     // Check if instruction can be vectorized
-    const vectorizableOpcodes: IROpcode[] = ['ADD', 'SUB', 'MUL', 'DIV'] as IROpcode[];
-    return vectorizableOpcodes.includes(instr.opcode);
+    const vectorizableOpcodes: IROpcode[] = ['ADD', 'SUB', 'MUL', 'DIV'] as unknown as IROpcode[];
+    return vectorizableOpcodes.includes(instr.opcode as IROpcode);
   }
 
   private getExpressionKey(instr: IRInstruction): string | null {
     // Create unique key for expression
-    if (instr.operands && instr.operands.length >= 2) {
-      return `${instr.opcode}:${instr.operands.slice(1).join(',')}`;
+    if (instr.op2) {
+      return `${instr.opcode}:${instr.op2},${instr.op3 || ''}`;
     }
     return null;
   }

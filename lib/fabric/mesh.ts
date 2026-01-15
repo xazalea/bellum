@@ -4,7 +4,9 @@ export type FabricWireMessage =
   | { type: "FABRIC_HELLO"; payload: { nodeId: string } }
   | { type: "FABRIC_SERVICE_AD"; payload: { nodeId: string; serviceId: string; serviceName: string } }
   | { type: "FABRIC_RPC_REQ"; payload: { id: string; serviceId: string; request: unknown } }
-  | { type: "FABRIC_RPC_RES"; payload: { id: string; ok: boolean; response?: unknown; error?: string } };
+  | { type: "FABRIC_RPC_RES"; payload: { id: string; ok: boolean; response?: unknown; error?: string } }
+  | { type: "FABRIC_PING"; payload: { id: string; sentAt: number } }
+  | { type: "FABRIC_PONG"; payload: { id: string; sentAt: number; receivedAt: number } };
 
 type RawFrameKind = "STREAM_CHUNK" | "STREAM_END";
 type RawFrameHeader =
@@ -24,12 +26,28 @@ export interface FabricServiceAd {
   lastSeenAt: number;
 }
 
+export interface FabricPeerStats {
+  peerId: string;
+  lastSeenAt: number;
+  lastPingAt: number;
+  lastPongAt: number;
+  rttMs: number;
+  avgRttMs: number;
+  jitterMs: number;
+  pingFailures: number;
+  bytesSent: number;
+  bytesReceived: number;
+  throughputBps: number;
+}
+
 export class FabricMesh {
   private peers = new Map<string, FabricPeer>();
   private peerNodeIds = new Map<string, string>(); // peerId -> nodeId
   private services = new Map<string, FabricServiceAd>();
   private rpcResolvers = new Map<string, (res: { ok: boolean; response?: unknown; error?: string }) => void>();
   private rpcHandlers: ((req: { id: string; serviceId: string; request: unknown; fromPeerId: string }) => void)[] = [];
+  private peerStats = new Map<string, FabricPeerStats>();
+  private pingInterval: number | null = null;
   private streamReceivers = new Map<
     string,
     {
@@ -48,6 +66,8 @@ export class FabricMesh {
 
     node.onMessage((msg: PeerMessage, from: string) => {
       this.peers.set(from, { peerId: from, lastSeenAt: Date.now() });
+      this.ensurePeerStats(from);
+      this.peerStats.get(from)!.lastSeenAt = Date.now();
 
       const wire = msg as unknown as FabricWireMessage;
       if (wire.type === "FABRIC_HELLO") {
@@ -72,6 +92,14 @@ export class FabricMesh {
           r({ ok, response, error });
         }
       }
+
+      if (wire.type === "FABRIC_PING") {
+        this.handlePing(from, wire.payload);
+      }
+
+      if (wire.type === "FABRIC_PONG") {
+        this.handlePong(from, wire.payload);
+      }
     });
 
     // High-throughput raw frames (binary, chunked) for "bandwidth mode".
@@ -80,16 +108,34 @@ export class FabricMesh {
         const parsed = this.parseRawFrame(buf);
         if (!parsed) return;
         const { header, payload } = parsed;
+        this.recordBytesReceived(from, payload.byteLength);
         this.onRawFrame(from, header, payload);
       } catch {
         // ignore malformed frames
       }
     });
 
-    // Announce ourselves on any existing channels with identity
+    // Announce ourselves on any existing channels with identity (async, fire and forget)
+    this.initializeIdentity().catch(() => {
+      // ignore errors
+    });
+
+    this.startPingLoop();
+  }
+
+  /**
+   * Initialize identity asynchronously
+   */
+  private async initializeIdentity(): Promise<void> {
+    const node = p2pNode;
+    if (!node) return;
+
     try {
-      const { getOrCreateIdentity } = await import('../../vps/identity');
-      const identity = await getOrCreateIdentity();
+      const { loadVpsIdentity, createVpsIdentity } = await import('../vps/identity');
+      let identity = loadVpsIdentity();
+      if (!identity) {
+        identity = await createVpsIdentity();
+      }
       
       node.broadcast({
         type: "FABRIC_HELLO",
@@ -126,6 +172,10 @@ export class FabricMesh {
   // For debug/UX: map a WebRTC peerId to the peer-reported fabric nodeId.
   getPeerNodeId(peerId: string): string | null {
     return this.peerNodeIds.get(peerId) ?? null;
+  }
+
+  getPeerStats(peerId: string): FabricPeerStats | null {
+    return this.peerStats.get(peerId) ?? null;
   }
 
   advertiseService(serviceId: string, serviceName: string) {
@@ -190,6 +240,47 @@ export class FabricMesh {
   }
 
   /**
+   * Adaptive high-throughput transfer: picks chunk size + pacing from peer RTT.
+   */
+  async sendBytesAdaptive(
+    toPeerId: string,
+    bytes: Uint8Array,
+    opts?: { minChunkBytes?: number; maxChunkBytes?: number; timeoutMs?: number; windowChunks?: number }
+  ): Promise<void> {
+    const stats = this.peerStats.get(toPeerId);
+    const rtt = stats?.avgRttMs || stats?.rttMs || 50;
+    const minChunk = opts?.minChunkBytes ?? 16 * 1024;
+    const maxChunk = opts?.maxChunkBytes ?? 512 * 1024;
+
+    // Larger chunks for low-latency peers, smaller for high-latency peers.
+    const adaptiveChunk = rtt < 30 ? 256 * 1024 : rtt < 80 ? 128 * 1024 : 64 * 1024;
+    const chunkBytes = Math.max(minChunk, Math.min(adaptiveChunk, maxChunk));
+    const windowChunks = opts?.windowChunks ?? (rtt < 50 ? 8 : 4);
+
+    const node = p2pNode;
+    if (!node) throw new Error("P2P not available");
+
+    const streamId = crypto.randomUUID();
+    const total = Math.max(1, Math.ceil(bytes.byteLength / chunkBytes));
+
+    for (let i = 0; i < total; i++) {
+      const start = i * chunkBytes;
+      const end = Math.min(bytes.byteLength, start + chunkBytes);
+      const payload = bytes.subarray(start, end);
+      const frame = this.buildRawFrame({ kind: "STREAM_CHUNK", streamId, index: i, total }, payload);
+      node.sendRaw(toPeerId, frame);
+      this.recordBytesSent(toPeerId, payload.byteLength);
+
+      if ((i + 1) % windowChunks === 0) {
+        // Yield to avoid saturating the channel.
+        await new Promise(resolve => setTimeout(resolve, Math.min(10, rtt / 8)));
+      }
+    }
+
+    node.sendRaw(toPeerId, this.buildRawFrame({ kind: "STREAM_END", streamId, total }, new Uint8Array()));
+  }
+
+  /**
    * Ultra-high throughput transfer primitive: send bytes in fixed-size chunks
    * using binary DataChannel frames (no base64).
    */
@@ -207,6 +298,7 @@ export class FabricMesh {
       const payload = bytes.subarray(start, end);
       const frame = this.buildRawFrame({ kind: "STREAM_CHUNK", streamId, index: i, total }, payload);
       node.sendRaw(toPeerId, frame);
+      this.recordBytesSent(toPeerId, payload.byteLength);
     }
 
     // End marker lets receiver know it can finalize even if last chunk is tiny.
@@ -237,6 +329,87 @@ export class FabricMesh {
         timeout
       });
     });
+  }
+
+  private startPingLoop(): void {
+    if (this.pingInterval !== null) return;
+    this.pingInterval = window.setInterval(() => {
+      for (const peer of this.peers.keys()) {
+        this.sendPing(peer);
+      }
+    }, 4000);
+  }
+
+  private sendPing(toPeerId: string): void {
+    const node = p2pNode;
+    if (!node) return;
+    const id = crypto.randomUUID();
+    const sentAt = performance.now();
+    this.ensurePeerStats(toPeerId);
+    this.peerStats.get(toPeerId)!.lastPingAt = sentAt;
+    node.send(toPeerId, {
+      type: "FABRIC_PING",
+      payload: { id, sentAt }
+    } as unknown as PeerMessage);
+  }
+
+  private handlePing(fromPeerId: string, payload: { id: string; sentAt: number }): void {
+    const node = p2pNode;
+    if (!node) return;
+    node.send(fromPeerId, {
+      type: "FABRIC_PONG",
+      payload: { id: payload.id, sentAt: payload.sentAt, receivedAt: performance.now() }
+    } as unknown as PeerMessage);
+  }
+
+  private handlePong(fromPeerId: string, payload: { id: string; sentAt: number; receivedAt: number }): void {
+    this.ensurePeerStats(fromPeerId);
+    const stats = this.peerStats.get(fromPeerId)!;
+    const now = performance.now();
+    const rtt = now - payload.sentAt;
+    stats.lastPongAt = now;
+    stats.rttMs = rtt;
+    stats.avgRttMs = stats.avgRttMs === 0 ? rtt : stats.avgRttMs * 0.8 + rtt * 0.2;
+    const jitter = Math.abs(rtt - stats.avgRttMs);
+    stats.jitterMs = stats.jitterMs === 0 ? jitter : stats.jitterMs * 0.7 + jitter * 0.3;
+  }
+
+  private ensurePeerStats(peerId: string): void {
+    if (this.peerStats.has(peerId)) return;
+    this.peerStats.set(peerId, {
+      peerId,
+      lastSeenAt: Date.now(),
+      lastPingAt: 0,
+      lastPongAt: 0,
+      rttMs: 0,
+      avgRttMs: 0,
+      jitterMs: 0,
+      pingFailures: 0,
+      bytesSent: 0,
+      bytesReceived: 0,
+      throughputBps: 0
+    });
+  }
+
+  private recordBytesSent(peerId: string, bytes: number): void {
+    this.ensurePeerStats(peerId);
+    const stats = this.peerStats.get(peerId)!;
+    stats.bytesSent += bytes;
+    this.updateThroughput(stats);
+  }
+
+  private recordBytesReceived(peerId: string, bytes: number): void {
+    this.ensurePeerStats(peerId);
+    const stats = this.peerStats.get(peerId)!;
+    stats.bytesReceived += bytes;
+    this.updateThroughput(stats);
+  }
+
+  private updateThroughput(stats: FabricPeerStats): void {
+    const now = performance.now();
+    const deltaMs = Math.max(1, now - stats.lastSeenAt);
+    const totalBytes = stats.bytesSent + stats.bytesReceived;
+    stats.throughputBps = (totalBytes * 1000) / deltaMs;
   }
 
   private onRawFrame(fromPeerId: string, header: RawFrameHeader, payload: Uint8Array) {

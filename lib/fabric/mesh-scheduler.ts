@@ -157,6 +157,7 @@ export class MeshScheduler {
     if (!localNodeId) return;
     
     const capabilities = this.detectLocalCapabilities();
+    const localStats = fabricMesh.getPeerStats(localNodeId);
     
     // Store our own capabilities
     this.capabilities.set(localNodeId, {
@@ -164,8 +165,16 @@ export class MeshScheduler {
       peerId: localNodeId,
       nodeId: localNodeId,
       lastHeartbeat: Date.now(),
-      latency: 0,
+      latency: localStats?.avgRttMs ?? 0,
+      latencyVariance: localStats?.jitterMs ?? 0,
       currentLoad: this.calculateCurrentLoad(),
+      successRate: 1.0,
+      totalJobsCompleted: 0,
+      totalJobsFailed: 0,
+      averageResponseTime: 0,
+      availability: 1.0,
+      lastSuccessTime: Date.now(),
+      lastFailureTime: 0,
     });
     
     // Broadcast capability update via service ad
@@ -189,7 +198,7 @@ export class MeshScheduler {
       memory: deviceMemory,
       gpuVRAM: 2 * 1024 * 1024 * 1024, // Estimate
       bandwidth: 100 * 1024 * 1024, // 100 MB/s estimate
-      battery: null,
+      battery: undefined,
       thermalState: 'nominal',
       supportedTaskTypes: [
         'COMPILE_CHUNK',
@@ -228,8 +237,14 @@ export class MeshScheduler {
           
           if (existing) {
             existing.lastHeartbeat = Date.now();
+            const stats = fabricMesh.getPeerStats(service.peerId);
+            if (stats) {
+              existing.latency = stats.avgRttMs || existing.latency;
+              existing.latencyVariance = stats.jitterMs || existing.latencyVariance;
+            }
           } else {
             // Create new capability entry with defaults
+            const stats = fabricMesh.getPeerStats(service.peerId);
             this.capabilities.set(service.nodeId, {
               peerId: service.peerId,
               nodeId: service.nodeId,
@@ -237,11 +252,11 @@ export class MeshScheduler {
               memory: 4 * 1024 * 1024 * 1024,
               gpuVRAM: 1 * 1024 * 1024 * 1024,
               bandwidth: 50 * 1024 * 1024,
-              battery: null,
+              battery: undefined,
               thermalState: 'nominal',
             lastHeartbeat: Date.now(),
-            latency: 50, // Estimate
-            latencyVariance: 10,
+              latency: stats?.avgRttMs ?? 50, // Estimate
+              latencyVariance: stats?.jitterMs ?? 10,
             currentLoad: 0,
             supportedTaskTypes: ['COMPILE_CHUNK', 'EXECUTE_TASK'],
             successRate: 1.0,
@@ -510,8 +525,11 @@ export class MeshScheduler {
       
       this.activeStreams.set(streamId, receiver);
       
-      // Send job via streaming
-      fabricMesh.sendBytes(peer.peerId, jobBytes)
+      // Send job via adaptive streaming
+      const send = fabricMesh.sendBytesAdaptive
+        ? fabricMesh.sendBytesAdaptive(peer.peerId, jobBytes)
+        : fabricMesh.sendBytes(peer.peerId, jobBytes);
+      send
         .then(() => {
           // Wait for response stream
           fabricMesh.receiveBytes(streamId, peer.peerId, 1, 30000)

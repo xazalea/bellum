@@ -38,6 +38,8 @@ export interface IntegrationConfig {
 export interface EmulatorFrame {
   colorBuffer: GPUTexture;
   depthBuffer: GPUTexture;
+  width: number;
+  height: number;
   camera: Camera;
   timestamp: number;
 }
@@ -192,8 +194,8 @@ export class TemporalIntegration {
     const motionData = await this.motionVectors.generateMotionVectors(
       emulatorFrame.camera,
       emulatorFrame.depthBuffer,
-      emulatorFrame.colorBuffer.width,
-      emulatorFrame.colorBuffer.height
+      emulatorFrame.width,
+      emulatorFrame.height
     );
 
     // Create authoritative frame
@@ -201,6 +203,8 @@ export class TemporalIntegration {
       colorBuffer: emulatorFrame.colorBuffer,
       depthBuffer: emulatorFrame.depthBuffer,
       motionVectors: motionData.motionTexture,
+      width: emulatorFrame.width,
+      height: emulatorFrame.height,
       timestamp: emulatorFrame.timestamp,
       isAuthoritative: true,
       confidence: 1.0
@@ -289,6 +293,8 @@ export class TemporalIntegration {
     this.interceptor.interceptFrame({
       colorBuffer: gpuColor,
       depthBuffer: gpuDepth,
+      width: 1920, // TODO: Extract from source texture
+      height: 1080, // TODO: Extract from source texture
       camera,
       timestamp: performance.now()
     });
@@ -309,6 +315,8 @@ export class TemporalIntegration {
     this.interceptor.interceptFrame({
       colorBuffer: gpuColor,
       depthBuffer: gpuDepth,
+      width: 1920, // TODO: Extract from source texture
+      height: 1080, // TODO: Extract from source texture
       camera,
       timestamp: performance.now()
     });
@@ -329,6 +337,8 @@ export class TemporalIntegration {
     this.interceptor.interceptFrame({
       colorBuffer: gpuColor,
       depthBuffer: gpuDepth,
+      width: 1920, // TODO: Extract from source texture
+      height: 1080, // TODO: Extract from source texture
       camera,
       timestamp: performance.now()
     });

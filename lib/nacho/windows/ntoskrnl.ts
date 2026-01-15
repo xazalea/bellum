@@ -167,10 +167,10 @@ export class NTKernel {
     const threadId = this.threadManager.createThread(
       () => {
         // Thread entry point - would execute code at startAddress
-        console.log(`[NTKernel] Thread ${threadId} started at 0x${startAddress.toString(16)}`);
+        console.log(`[NTKernel] Thread started at 0x${startAddress.toString(16)}`);
       },
       1024 * 1024, // 1MB stack
-      `Thread-P${processId}-T${threadId}`
+      `Thread-P${processId}`
     );
     
     if (threadId) {

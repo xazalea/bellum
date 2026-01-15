@@ -57,8 +57,21 @@ export class User32 {
     return hwnd;
   }
   
-  CreateWindowExW(...args: any[]): number {
-    return this.CreateWindowExA(...args);
+  CreateWindowExW(
+    exStyle: number,
+    className: string,
+    windowName: string,
+    style: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    parent: number,
+    menu: number,
+    instance: number,
+    param: any
+  ): number {
+    return this.CreateWindowExA(exStyle, className, windowName, style, x, y, width, height, parent, menu, instance, param);
   }
   
   DestroyWindow(hwnd: number): boolean {

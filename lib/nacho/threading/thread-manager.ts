@@ -3,7 +3,7 @@
  * Implements multi-threading with synchronization primitives
  */
 
-import { VirtualMemoryManager } from '../memory/advanced-memory';
+import { VirtualMemoryManager, MemoryProtection, AllocationType } from '../memory/advanced-memory';
 
 // Thread States
 export enum ThreadState {
@@ -289,8 +289,8 @@ export class ThreadManager {
     const stackBase = this.vmm.allocate(
       0,
       stackSize,
-      0x00001000, // COMMIT
-      6 // READ_WRITE
+      AllocationType.COMMIT,
+      MemoryProtection.READ_WRITE
     );
     
     if (stackBase === 0) {

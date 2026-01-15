@@ -356,11 +356,7 @@ export class PerfController {
       maxJITQueueSize: 50,
       jitCompilationRate: enableJIT ? 10 : 0, // 10 compilations per second max
       jitFrameBudget: this.jitBudget.frameBudget,
-      jitQueueStatus: {
-        foregroundQueue: jitQueueStatus.foregroundQueue,
-        backgroundQueue: jitQueueStatus.backgroundQueue,
-        currentFrameSpent: jitQueueStatus.currentFrameSpent,
-      },
+      jitQueueStatus: this.getJITQueueStatus(),
     };
     
     // Notify callbacks

@@ -40,6 +40,7 @@ export class GPUParallelCompiler {
     private compilationPipeline: GPUComputePipeline | null = null;
     private irBuffer: GPUBuffer | null = null;
     private wasmOutputBuffer: GPUBuffer | null = null;
+    private wasmOutputBufferSize: number = 0;
     
     // Statistics
     private totalCompilations: number = 0;
@@ -303,9 +304,9 @@ export class GPUParallelCompiler {
                 const instrOffset = baseOffset + j * 4;
 
                 irData[instrOffset] = this.opcodeToU32(instr.opcode);
-                irData[instrOffset + 1] = this.operandToU32(instr.operands?.[0]);
-                irData[instrOffset + 2] = this.operandToU32(instr.operands?.[1]);
-                irData[instrOffset + 3] = this.operandToU32(instr.operands?.[2]);
+                irData[instrOffset + 1] = this.operandToU32(instr.op1);
+                irData[instrOffset + 2] = this.operandToU32(instr.op2);
+                irData[instrOffset + 3] = this.operandToU32(instr.op3);
             }
         }
 
@@ -356,8 +357,17 @@ export class GPUParallelCompiler {
         // Submit to GPU
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Wait for completion
-        await this.device.queue.onSubmittedWorkDone();
+        // Wait for completion (onSubmittedWorkDone may not be available in all browsers)
+        try {
+          if ('onSubmittedWorkDone' in this.device.queue) {
+            await (this.device.queue as any).onSubmittedWorkDone();
+          } else {
+            // Fallback: wait a bit for work to complete
+            await new Promise(resolve => setTimeout(resolve, 1));
+          }
+        } catch {
+          // Ignore errors
+        }
 
         // Cleanup
         statusBuffer.destroy();
@@ -373,13 +383,13 @@ export class GPUParallelCompiler {
 
         // Create staging buffer for readback
         const stagingBuffer = this.device.createBuffer({
-            size: this.wasmOutputBuffer.size,
+            size: this.wasmOutputBufferSize,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
 
         // Copy from GPU to staging buffer
         const commandEncoder = this.device.createCommandEncoder();
-        commandEncoder.copyBufferToBuffer(this.wasmOutputBuffer, 0, stagingBuffer, 0, this.wasmOutputBuffer.size);
+        commandEncoder.copyBufferToBuffer(this.wasmOutputBuffer, 0, stagingBuffer, 0, this.wasmOutputBufferSize);
         this.device.queue.submit([commandEncoder.finish()]);
 
         // Map and read
@@ -397,7 +407,11 @@ export class GPUParallelCompiler {
             const wasmBytecode = this.encodeWASMModule(wasmData.slice(wasmOffset, wasmOffset + 1024 * 2));
 
             try {
-                const wasmModule = await WebAssembly.compile(wasmBytecode);
+                // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer)
+                const buffer = wasmBytecode.buffer instanceof ArrayBuffer
+                  ? wasmBytecode.buffer.slice(wasmBytecode.byteOffset, wasmBytecode.byteOffset + wasmBytecode.byteLength)
+                  : new Uint8Array(wasmBytecode).buffer;
+                const wasmModule = await WebAssembly.compile(buffer);
                 compiledModules.set(job.functionId, wasmModule);
                 this.compiledFunctions.set(job.functionId, wasmModule);
                 job.status = 'completed';

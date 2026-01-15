@@ -273,8 +273,8 @@ export class GDI32 {
     return true;
   }
   
-  TextOutW(...args: any[]): boolean {
-    return this.TextOutA(...args);
+  TextOutW(hdc: number, x: number, y: number, text: string, length: number): boolean {
+    return this.TextOutA(hdc, x, y, text, length);
   }
   
   DrawTextA(hdc: number, text: string, count: number, rect: any, format: number): number {

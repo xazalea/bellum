@@ -75,6 +75,9 @@ export class FabricComputeService {
 
         if (job.type === 'COMPILE_CHUNK') {
             // Emulate compiling a remote chunk
+            if (!job.payload.code) {
+                throw new Error('COMPILE_CHUNK job missing code payload');
+            }
             const buffer = job.payload.code.buffer;
 
             // In a real scenario, we'd invoke the DBT here and return optimized IR or WASM.
@@ -120,7 +123,8 @@ export class FabricComputeService {
         const job: ComputeJob = {
             id: crypto.randomUUID(),
             type: 'COMPILE_CHUNK',
-            payload: { code, arch }
+            payload: { code, arch },
+            priority: 0.7
         };
 
         const result = await fabricMesh.rpcCall(target.serviceId, job);

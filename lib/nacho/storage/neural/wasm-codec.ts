@@ -209,7 +209,11 @@ export class WANeuralCodec {
     // In production, this would load the actual compiled WASM
     // For now, create a minimal stub module
     const wasmCode = this.createStubWASM();
-    return WebAssembly.compile(wasmCode);
+    // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer)
+    const buffer = wasmCode.buffer instanceof ArrayBuffer
+      ? wasmCode.buffer.slice(wasmCode.byteOffset, wasmCode.byteOffset + wasmCode.byteLength)
+      : new Uint8Array(wasmCode).buffer;
+    return WebAssembly.compile(buffer);
   }
 
   /**

@@ -280,11 +280,12 @@ export class ParametricAnimationCurves {
       };
     }
 
-    if (this.isPoint3D(point)) {
+    if (this.isPoint3D(point as any)) {
+      const p3d = point as Point3D;
       return {
-        x: point.x * scalar,
-        y: point.y * scalar,
-        z: point.z * scalar,
+        x: p3d.x * scalar,
+        y: p3d.y * scalar,
+        z: p3d.z * scalar,
       };
     }
 
@@ -299,26 +300,32 @@ export class ParametricAnimationCurves {
     const first = points[0];
 
     if (typeof first === 'number') {
-      return points.reduce((sum, p) => sum + (p as number), 0);
+      return points.reduce((sum: number, p) => (typeof p === 'number' ? sum + p : sum), 0);
     }
 
     if (this.isPoint2D(first)) {
       return points.reduce(
-        (sum, p) => ({
-          x: sum.x + (p as Point2D).x,
-          y: sum.y + (p as Point2D).y,
-        }),
+        (sum: Point2D, p) => {
+          const p2d = this.isPoint2D(p) ? p : { x: 0, y: 0 };
+          return {
+            x: sum.x + p2d.x,
+            y: sum.y + p2d.y,
+          };
+        },
         { x: 0, y: 0 }
       );
     }
 
-    if (this.isPoint3D(first)) {
+    if (this.isPoint3D(first as any)) {
       return points.reduce(
-        (sum, p) => ({
-          x: sum.x + (p as Point3D).x,
-          y: sum.y + (p as Point3D).y,
-          z: sum.z + (p as Point3D).z,
-        }),
+        (sum: Point3D, p) => {
+          const p3d = this.isPoint3D(p as any) ? (p as Point3D) : { x: 0, y: 0, z: 0 };
+          return {
+            x: sum.x + p3d.x,
+            y: sum.y + p3d.y,
+            z: sum.z + p3d.z,
+          };
+        },
         { x: 0, y: 0, z: 0 }
       );
     }

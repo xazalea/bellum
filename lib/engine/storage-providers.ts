@@ -297,7 +297,11 @@ export class IndexedDBProvider implements StorageProvider {
    * Calculate content hash for integrity verification
    */
   async calculateHash(data: Uint8Array): Promise<string> {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    // Ensure we have a regular ArrayBuffer, not SharedArrayBuffer
+    const buffer = data.buffer instanceof ArrayBuffer 
+      ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+      : new Uint8Array(data).buffer;
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
@@ -401,7 +405,11 @@ export class HTTPProvider implements StorageProvider {
    * Calculate content hash
    */
   async calculateHash(data: Uint8Array): Promise<string> {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    // Ensure we have a regular ArrayBuffer, not SharedArrayBuffer
+    const buffer = data.buffer instanceof ArrayBuffer 
+      ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
+      : new Uint8Array(data).buffer;
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }

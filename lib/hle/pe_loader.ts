@@ -13,7 +13,8 @@ export class PELoader {
 
   load(buffer: ArrayBuffer): void {
     const parser = new PEParser(buffer);
-    const { peHeader, optionalHeader, sections } = parser.parse();
+    const peFile = parser.parse();
+    const { fileHeader, optionalHeader, sections } = peFile;
 
     console.log(`Loading PE: Base=${optionalHeader.imageBase.toString(16)} Entry=${optionalHeader.addressOfEntryPoint.toString(16)}`);
 

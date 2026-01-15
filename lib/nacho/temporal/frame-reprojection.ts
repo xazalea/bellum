@@ -422,7 +422,7 @@ export class FrameReprojection {
 
     const confidenceMap = this.device.createTexture({
       size: { width, height, depthOrArrayLayers: 1 },
-      format: 'r16float',
+      format: 'rgba16float' as GPUTextureFormat,
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING
     });
 

@@ -113,10 +113,12 @@ export class FastInterpreter {
             const blockTime = blockEnd - blockStart;
 
             // Profile execution
-            hotPathProfiler.recordBlockExecution(instr.addr, blockTime);
+            if (instr.addr !== undefined) {
+              hotPathProfiler.recordBlockExecution(instr.addr, blockTime);
+            }
 
             // Check if block should be promoted to JIT
-            if (hotPathProfiler.shouldCompileToWASM(instr.addr)) {
+            if (instr.addr !== undefined && hotPathProfiler.shouldCompileToWASM(instr.addr)) {
                 hotBlocks.push(instr.addr);
             }
 

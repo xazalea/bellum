@@ -51,8 +51,8 @@ export class DalvikInterpreter {
     private nextObjectId: number = 1;
     
     // Execution state
-    private registers: Int32Array = new Int32Array(256); // Max registers
-    private stack: any[] = [];
+    protected registers: Int32Array = new Int32Array(256); // Max registers
+    protected stack: any[] = [];
     
     // Statistics
     private instructionCount: number = 0;
@@ -273,7 +273,8 @@ export class DalvikInterpreter {
                     {
                         const vA = code[pc + 1];
                         const stringId = code[pc + 2] | (code[pc + 3] << 8);
-                        this.registers[vA] = `String[${stringId}]`; // Mock string
+                        // Store string ID as number (strings stored separately in heap)
+                        this.registers[vA] = stringId;
                         pc += 2;
                     }
                     break;
@@ -282,7 +283,8 @@ export class DalvikInterpreter {
                     {
                         const vA = code[pc + 1];
                         const typeId = code[pc + 2] | (code[pc + 3] << 8);
-                        this.registers[vA] = `Class[${typeId}]`; // Mock class
+                        // Store class ID as number (classes stored separately)
+                        this.registers[vA] = typeId;
                         pc += 2;
                     }
                     break;

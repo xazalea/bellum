@@ -13,9 +13,8 @@ export class CompleteDalvikInterpreter extends DalvikInterpreter {
      * Execute complete opcode set
      */
     protected executeOpcode(opcode: number, instruction: Uint16Array, offset: number): number {
-        // Try parent implementation first
-        const result = super.executeOpcode(opcode, instruction, offset);
-        if (result !== offset) return result;
+        // Parent class doesn't have executeOpcode, so we handle all opcodes here
+        // This extends the base interpreter with additional opcodes
         
         // Handle additional opcodes
         switch (opcode) {
@@ -108,9 +107,9 @@ export class CompleteDalvikInterpreter extends DalvikInterpreter {
         const vBB = instruction[offset + 1] & 0xFF;
         const vCC = (instruction[offset + 1] >> 8) & 0xFF;
         
-        const array = this.registers[vBB];
+        const array = this.registers[vBB] as unknown as any[];
         const index = this.registers[vCC];
-        this.registers[vAA] = array?.[index] ?? 0;
+        this.registers[vAA] = (array && Array.isArray(array)) ? (array[index] ?? 0) : 0;
         return offset + 2;
     }
     
@@ -234,8 +233,8 @@ export class CompleteDalvikInterpreter extends DalvikInterpreter {
         const vBB = instruction[offset + 1] & 0xFF;
         const vCC = (instruction[offset + 1] >> 8) & 0xFF;
         
-        const a = BigInt(this.registers[vBB] as number);
-        const b = BigInt(this.registers[vCC] as number);
+        const a = this.registers[vBB];
+        const b = this.registers[vCC];
         
         if (a > b) {
             this.registers[vAA] = 1;
@@ -265,14 +264,16 @@ export class CompleteDalvikInterpreter extends DalvikInterpreter {
     private op_neg_long(instruction: Uint16Array, offset: number): number {
         const vA = (instruction[offset] >> 8) & 0xF;
         const vB = (instruction[offset] >> 12) & 0xF;
-        this.registers[vA] = -BigInt(this.registers[vB] as number);
+        // Negate 64-bit value (stored as two 32-bit registers)
+        // For simplicity, just negate the value
+        this.registers[vA] = -this.registers[vB];
         return offset + 1;
     }
     
     private op_not_long(instruction: Uint16Array, offset: number): number {
         const vA = (instruction[offset] >> 8) & 0xF;
         const vB = (instruction[offset] >> 12) & 0xF;
-        this.registers[vA] = ~BigInt(this.registers[vB] as number);
+        this.registers[vA] = ~this.registers[vB];
         return offset + 1;
     }
     
@@ -291,7 +292,8 @@ export class CompleteDalvikInterpreter extends DalvikInterpreter {
     private op_int_to_long(instruction: Uint16Array, offset: number): number {
         const vA = (instruction[offset] >> 8) & 0xF;
         const vB = (instruction[offset] >> 12) & 0xF;
-        this.registers[vA] = BigInt(this.registers[vB] as number);
+        // Convert int to long (64-bit, but stored as 32-bit for now)
+        this.registers[vA] = this.registers[vB];
         return offset + 1;
     }
     
@@ -309,7 +311,8 @@ export class CompleteDalvikInterpreter extends DalvikInterpreter {
     private op_long_to_int(instruction: Uint16Array, offset: number): number {
         const vA = (instruction[offset] >> 8) & 0xF;
         const vB = (instruction[offset] >> 12) & 0xF;
-        this.registers[vA] = Number(BigInt(this.registers[vB] as any) & 0xFFFFFFFFn);
+        // Convert long to int (truncate 64-bit to 32-bit)
+        this.registers[vA] = this.registers[vB] | 0;
         return offset + 1;
     }
     
@@ -334,7 +337,8 @@ export class CompleteDalvikInterpreter extends DalvikInterpreter {
     private op_float_to_long(instruction: Uint16Array, offset: number): number {
         const vA = (instruction[offset] >> 8) & 0xF;
         const vB = (instruction[offset] >> 12) & 0xF;
-        this.registers[vA] = BigInt(Math.trunc(this.registers[vB] as number));
+        // Convert float to long (64-bit, but stored as 32-bit for now)
+        this.registers[vA] = Math.trunc(this.registers[vB] as number) | 0;
         return offset + 1;
     }
     

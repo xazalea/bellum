@@ -358,7 +358,7 @@ export class MotionVectorGenerator {
     // Create output motion texture
     const motionTexture = this.device.createTexture({
       size: { width, height, depthOrArrayLayers: 1 },
-      format: 'rg16float',
+      format: 'rgba16float' as GPUTextureFormat, // Using rgba16float (motion vectors use first 2 channels)
       usage: GPUTextureUsage.STORAGE_BINDING | 
              GPUTextureUsage.TEXTURE_BINDING |
              GPUTextureUsage.COPY_SRC

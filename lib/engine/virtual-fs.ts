@@ -352,7 +352,9 @@ export class VirtualFileSystem {
       const dirHandle = await this.getDirectoryHandle(normalizedPath, false);
       const entries: DirectoryEntry[] = [];
 
-      for await (const [name, handle] of dirHandle.entries()) {
+      // TypeScript doesn't always recognize entries() on FileSystemDirectoryHandle
+      const dirHandleAny = dirHandle as any;
+      for await (const [name, handle] of dirHandleAny.entries()) {
         const isDirectory = handle.kind === 'directory';
         let size = 0;
         let lastModified = 0;

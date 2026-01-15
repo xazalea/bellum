@@ -17,6 +17,8 @@
  * - Graceful degradation
  */
 
+import { fabricMesh } from '../../fabric/mesh';
+
 export interface Device {
   id: string;
   type: 'host' | 'worker';
@@ -233,9 +235,17 @@ class WebRTCDiscovery {
 class SharedWorkerComm {
   private workers: Map<string, Worker> = new Map();
   private nextWorkerId: number = 0;
+  private workerBusy: Map<string, number> = new Map();
+  private pendingTasks: Array<{
+    task: Task;
+    resolve: (result: TaskResult) => void;
+    reject: (error: Error) => void;
+  }> = [];
+  private dispatchInterval: number | null = null;
 
   constructor() {
     console.log('[SharedWorkerComm] Initialized');
+    this.startDispatchLoop();
   }
 
   /**
@@ -248,15 +258,17 @@ class SharedWorkerComm {
     const workerCode = `
       self.onmessage = function(e) {
         const { taskId, type, data } = e.data;
+        const start = performance.now();
         
         // Process task
         const result = processTask(type, data);
+        const duration = performance.now() - start;
         
         // Send result back
         self.postMessage({
           taskId,
           result,
-          duration: 10, // Would measure actual duration
+          duration,
           success: true
         });
       };
@@ -281,6 +293,7 @@ class SharedWorkerComm {
     const worker = new Worker(workerUrl);
     
     this.workers.set(workerId, worker);
+    this.workerBusy.set(workerId, 0);
     
     console.log(`[SharedWorkerComm] Spawned worker: ${workerId}`);
     
@@ -298,12 +311,15 @@ class SharedWorkerComm {
     }
 
     return new Promise((resolve, reject) => {
+      this.workerBusy.set(workerId, (this.workerBusy.get(workerId) || 0) + 1);
       const timeout = setTimeout(() => {
+        this.workerBusy.set(workerId, Math.max(0, (this.workerBusy.get(workerId) || 1) - 1));
         reject(new Error('Task timeout'));
       }, task.deadline - Date.now());
 
       worker.onmessage = (e) => {
         clearTimeout(timeout);
+        this.workerBusy.set(workerId, Math.max(0, (this.workerBusy.get(workerId) || 1) - 1));
         resolve({
           taskId: task.id,
           deviceId: workerId,
@@ -323,6 +339,52 @@ class SharedWorkerComm {
   }
 
   /**
+   * Send task to least busy worker, or queue if saturated
+   */
+  sendTaskAuto(task: Task): Promise<TaskResult> {
+    const workerId = this.getLeastBusyWorker();
+    if (!workerId) {
+      return new Promise((resolve, reject) => {
+        this.pendingTasks.push({ task, resolve, reject });
+      });
+    }
+    return this.sendTask(workerId, task);
+  }
+
+  /**
+   * Get least busy worker
+   */
+  private getLeastBusyWorker(): string | null {
+    let bestWorker: string | null = null;
+    let bestLoad = Infinity;
+
+    for (const [workerId, worker] of this.workers) {
+      const load = this.workerBusy.get(workerId) || 0;
+      if (load < bestLoad) {
+        bestLoad = load;
+        bestWorker = workerId;
+      }
+    }
+
+    return bestWorker;
+  }
+
+  /**
+   * Dispatch pending tasks when workers become available
+   */
+  private startDispatchLoop(): void {
+    if (this.dispatchInterval !== null) return;
+    this.dispatchInterval = window.setInterval(() => {
+      if (this.pendingTasks.length === 0) return;
+      const workerId = this.getLeastBusyWorker();
+      if (!workerId) return;
+      const next = this.pendingTasks.shift();
+      if (!next) return;
+      this.sendTask(workerId, next.task).then(next.resolve).catch(next.reject);
+    }, 10);
+  }
+
+  /**
    * Terminate worker
    */
   terminateWorker(workerId: string): void {
@@ -331,6 +393,7 @@ class SharedWorkerComm {
     if (worker) {
       worker.terminate();
       this.workers.delete(workerId);
+      this.workerBusy.delete(workerId);
       console.log(`[SharedWorkerComm] Terminated worker: ${workerId}`);
     }
   }
@@ -340,6 +403,10 @@ class SharedWorkerComm {
    */
   getWorkerCount(): number {
     return this.workers.size;
+  }
+
+  getWorkerLoad(workerId: string): number {
+    return this.workerBusy.get(workerId) || 0;
   }
 }
 
@@ -351,6 +418,7 @@ export class ExecutionFabric {
   private taskQueue: Task[] = [];
   private activeTasks: Map<string, Task> = new Map();
   private taskResults: Map<string, TaskResult> = new Map();
+  private maxConcurrentTasks: number = Math.max(4, (navigator.hardwareConcurrency || 4) * 2);
   
   // Communication layers
   private webrtc: WebRTCDiscovery;
@@ -483,8 +551,9 @@ export class ExecutionFabric {
   submitTask(task: Task): Promise<TaskResult> {
     this.taskQueue.push(task);
     this.activeTasks.set(task.id, task);
-    
-    return this.scheduleTask(task);
+    this.taskQueue.sort((a, b) => b.priority - a.priority);
+
+    return this.processQueue();
   }
 
   /**
@@ -506,7 +575,7 @@ export class ExecutionFabric {
       let result: TaskResult;
       
       if (device.connection.type === 'shared-worker') {
-        result = await this.workers.sendTask(device.id, task);
+        result = await this.workers.sendTaskAuto(task);
       } else if (device.connection.type === 'webrtc') {
         result = await this.executeTaskViaWebRTC(device, task);
       } else {
@@ -531,6 +600,22 @@ export class ExecutionFabric {
       
       throw error;
     }
+  }
+
+  /**
+   * Process task queue with concurrency limits
+   */
+  private async processQueue(): Promise<TaskResult> {
+    // If too many active tasks, wait briefly
+    while (this.activeTasks.size >= this.maxConcurrentTasks) {
+      await new Promise(resolve => setTimeout(resolve, 5));
+    }
+
+    const task = this.taskQueue.shift();
+    if (!task) throw new Error('No task available');
+
+    const result = await this.scheduleTask(task);
+    return result;
   }
 
   /**
@@ -614,6 +699,10 @@ export class ExecutionFabric {
 
     for (const device of this.devices.values()) {
       if (device.status !== 'connected') continue;
+      if (device.connection.type === 'shared-worker') {
+        const workerLoad = this.workers.getWorkerLoad(device.id);
+        device.workload = Math.min(1.0, workerLoad / 2); // Normalize
+      }
       if (device.workload > 0.9) continue; // Too busy
       
       // Calculate score

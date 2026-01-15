@@ -285,7 +285,7 @@ export class DegradationManager {
     this.perfMonitor.recordFrame(timestamp);
     
     // Get performance metrics
-    const metrics = this.getMetrics();
+    const metrics = this.getMetricsInternal();
     
     // Determine if we need to degrade or recover
     const shouldDegrade = this.shouldDegrade(metrics);
@@ -304,9 +304,9 @@ export class DegradationManager {
   }
 
   /**
-   * Get current performance metrics
+   * Get current performance metrics (internal implementation)
    */
-  private getMetrics(): PerformanceMetrics {
+  private getMetricsInternal(): PerformanceMetrics {
     const memory = this.loadMonitor.getMemoryUsage();
     
     return {
@@ -419,10 +419,10 @@ export class DegradationManager {
   }
 
   /**
-   * Get performance metrics
+   * Get performance metrics (public wrapper)
    */
-  getMetrics(): PerformanceMetrics {
-    return this.getMetrics();
+  public getMetrics(): PerformanceMetrics {
+    return this.getMetricsInternal();
   }
 
   /**

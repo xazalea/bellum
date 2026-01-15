@@ -30,7 +30,7 @@ export interface MeshParams {
 
   // Cylinder/Capsule
   radialSegments?: number;
-  heightSegments?: number;
+  // heightSegments is already defined above for Sphere/Icosphere
   openEnded?: boolean;
 
   // Torus

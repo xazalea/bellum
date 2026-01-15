@@ -296,10 +296,11 @@ export class WindowsRegistry {
   private importKey(key: RegistryKey, data: any): void {
     if (data.values) {
       for (const [name, valueData] of Object.entries(data.values as any)) {
+        const value = valueData as { type: number; data: any };
         key.values.set(name, {
           name,
-          type: valueData.type,
-          data: valueData.data,
+          type: value.type,
+          data: value.data,
         });
       }
     }

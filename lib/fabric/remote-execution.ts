@@ -144,11 +144,13 @@ export class RemoteExecution {
     localFallback: boolean
   ): Promise<RemoteExecutionResult> {
     try {
+      const jobClass = job.deadline && job.deadline - Date.now() < 5000 ? 'interactive' : 'batch';
       // Schedule job
       const scheduleResult = await meshScheduler.scheduleJob(
         job,
-        'balanced',
-        job.deadline ? job.deadline - Date.now() : undefined
+        'scored',
+        job.deadline ? job.deadline - Date.now() : undefined,
+        { jobClass }
       );
       
       if (!scheduleResult.success) {

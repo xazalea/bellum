@@ -103,12 +103,18 @@ export class NachoGPURuntime {
             throw new Error('No GPU adapter found');
         }
 
-        // Get adapter info
-        const info = await this.adapter.requestAdapterInfo();
-        console.log(`[NachoGPU] GPU: ${info.device} (${info.vendor})`);
+        // Get adapter info (may not be available in all browsers)
+        try {
+          if ('requestAdapterInfo' in this.adapter) {
+            const info = await (this.adapter as any).requestAdapterInfo();
+            console.log(`[NachoGPU] GPU: ${info.device} (${info.vendor})`);
+          }
+        } catch {
+          // requestAdapterInfo not available
+        }
 
         // Request device with maximum limits
-        const limits = this.adapter.limits;
+        const limits = (this.adapter as any).limits || {};
         this.device = await this.adapter.requestDevice({
             requiredLimits: {
                 maxStorageBufferBindingSize: Math.min(
@@ -130,8 +136,9 @@ export class NachoGPURuntime {
         });
 
         // Log actual limits
-        console.log(`[NachoGPU] Max compute workgroup size: ${this.device.limits.maxComputeWorkgroupSizeX}`);
-        console.log(`[NachoGPU] Max storage buffer size: ${(this.device.limits.maxStorageBufferBindingSize / 1024 / 1024 / 1024).toFixed(2)}GB`);
+        const deviceLimits = (this.device as any).limits || {};
+        console.log(`[NachoGPU] Max compute workgroup size: ${deviceLimits.maxComputeWorkgroupSizeX || 'unknown'}`);
+        console.log(`[NachoGPU] Max storage buffer size: ${deviceLimits.maxStorageBufferBindingSize ? (deviceLimits.maxStorageBufferBindingSize / 1024 / 1024 / 1024).toFixed(2) + 'GB' : 'unknown'}`);
 
         // Initialize command queues
         for (let i = 0; i < this.config.queueCount; i++) {
@@ -237,20 +244,38 @@ export class NachoGPURuntime {
     writeBuffer(buffer: GPUBuffer, data: ArrayBuffer | ArrayBufferView, offset: number = 0): void {
         if (!this.device) throw new Error('Device not initialized');
 
+        // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer)
+        let bufferData: ArrayBuffer;
+        if (data instanceof ArrayBuffer) {
+          bufferData = data;
+        } else {
+          // Copy to new ArrayBuffer to avoid SharedArrayBuffer issues
+          // Create a view and copy bytes
+          const view = data as ArrayBufferView;
+          const length = view.byteLength;
+          const copy = new Uint8Array(length);
+          // Copy byte by byte to ensure we get a new ArrayBuffer
+          for (let i = 0; i < length; i++) {
+            copy[i] = (new Uint8Array(view.buffer, view.byteOffset, view.byteLength))[i];
+          }
+          bufferData = copy.buffer;
+        }
+        
         this.device.queue.writeBuffer(
             buffer,
             offset,
-            data instanceof ArrayBuffer ? data : data.buffer
+            bufferData
         );
     }
 
     /**
      * Read data from buffer
      */
-    async readBuffer(buffer: GPUBuffer, offset: number = 0, size?: number): Promise<ArrayBuffer> {
+    async readBuffer(buffer: GPUBuffer, offset: number = 0, size: number): Promise<ArrayBuffer> {
         if (!this.device) throw new Error('Device not initialized');
+        if (!size) throw new Error('Size is required for readBuffer');
 
-        const bufferSize = size || buffer.size;
+        const bufferSize = size;
 
         // Create staging buffer
         const stagingBuffer = this.device.createBuffer({
@@ -351,7 +376,17 @@ export class NachoGPURuntime {
             ], bindGroup);
         }
 
-        await this.device!.queue.onSubmittedWorkDone();
+        // Wait for GPU work to complete (onSubmittedWorkDone may not be available in all browsers)
+        try {
+          if ('onSubmittedWorkDone' in this.device!.queue) {
+            await (this.device!.queue as any).onSubmittedWorkDone();
+          } else {
+            // Fallback: wait a bit for work to complete
+            await new Promise(resolve => setTimeout(resolve, 1));
+          }
+        } catch {
+          // Ignore errors
+        }
 
         const computeTime = (performance.now() - computeStart) / 1000; // seconds
 

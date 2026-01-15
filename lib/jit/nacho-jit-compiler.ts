@@ -162,7 +162,11 @@ export class NachoJITCompiler {
             const wasmBytes = await this.generateWASM(optimizedIR, tier);
             
             // Compile WASM module
-            func.wasmModule = await WebAssembly.compile(wasmBytes);
+            // Ensure we have a proper ArrayBuffer (not SharedArrayBuffer)
+            const buffer = wasmBytes.buffer instanceof ArrayBuffer
+              ? wasmBytes.buffer.slice(wasmBytes.byteOffset, wasmBytes.byteOffset + wasmBytes.byteLength)
+              : new Uint8Array(wasmBytes).buffer;
+            func.wasmModule = await WebAssembly.compile(buffer);
             func.wasmInstance = await WebAssembly.instantiate(func.wasmModule);
             
             func.compilationTime = performance.now() - startTime;

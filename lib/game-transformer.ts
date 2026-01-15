@@ -271,8 +271,8 @@ export class GameTransformer {
     try {
         const buffer = await file.arrayBuffer();
         const parser = new PEParser(buffer);
-        const { peHeader, sections } = parser.parse();
-        console.log(`Parsed PE: Machine=${peHeader.machine}, Sections=${sections.length}`);
+        const peFile = parser.parse();
+        console.log(`Parsed PE: Machine=${peFile.fileHeader.machine}, Sections=${peFile.sections.length}`);
     } catch (e) {
         console.warn("Not a valid PE file or parse failed:", e);
     }

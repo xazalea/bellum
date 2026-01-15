@@ -159,9 +159,9 @@ export async function startNacho(
 // Export all types
 export {
     NachoRuntime,
-    NachoConfig,
-    NachoStatus,
-    OSType,
+    type NachoConfig,
+    type NachoStatus,
+    type OSType,
     NachoJITCompiler,
     NachoGPURuntime,
     NachoBinaryExecutor

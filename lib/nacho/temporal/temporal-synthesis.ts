@@ -16,6 +16,8 @@ export interface Frame {
   colorBuffer: GPUTexture;
   depthBuffer: GPUTexture;
   motionVectors: GPUTexture;
+  width: number;
+  height: number;
   timestamp: number;
   isAuthoritative: boolean;
   confidence: number;
@@ -363,21 +365,21 @@ export class TemporalSynthesisEngine {
 
     // Create output textures
     const outputColor = this.createTemporaryTexture(
-      authoritativeFrame.colorBuffer.width,
-      authoritativeFrame.colorBuffer.height,
+      authoritativeFrame.width,
+      authoritativeFrame.height,
       'rgba16float'
     );
 
     const outputDepth = this.createTemporaryTexture(
-      authoritativeFrame.depthBuffer.width,
-      authoritativeFrame.depthBuffer.height,
+      authoritativeFrame.width,
+      authoritativeFrame.height,
       'depth32float'
     );
 
     const outputMotion = this.createTemporaryTexture(
-      authoritativeFrame.motionVectors.width,
-      authoritativeFrame.motionVectors.height,
-      'rg16float'
+      authoritativeFrame.width,
+      authoritativeFrame.height,
+      'rgba16float' as GPUTextureFormat // Using rgba16float (motion vectors use first 2 channels)
     );
 
     // Reproject previous frame
@@ -400,8 +402,8 @@ export class TemporalSynthesisEngine {
       computePass.setPipeline(this.reprojectionPipeline);
       computePass.setBindGroup(0, bindGroup);
       
-      const workgroupsX = Math.ceil(outputColor.width / 8);
-      const workgroupsY = Math.ceil(outputColor.height / 8);
+      const workgroupsX = Math.ceil(authoritativeFrame.width / 8);
+      const workgroupsY = Math.ceil(authoritativeFrame.height / 8);
       computePass.dispatchWorkgroups(workgroupsX, workgroupsY);
       computePass.end();
     }
@@ -429,8 +431,8 @@ export class TemporalSynthesisEngine {
       computePass.setPipeline(this.blendPipeline);
       computePass.setBindGroup(0, blendBindGroup);
       
-      const workgroupsX = Math.ceil(outputColor.width / 8);
-      const workgroupsY = Math.ceil(outputColor.height / 8);
+      const workgroupsX = Math.ceil(authoritativeFrame.width / 8);
+      const workgroupsY = Math.ceil(authoritativeFrame.height / 8);
       computePass.dispatchWorkgroups(workgroupsX, workgroupsY);
       computePass.end();
     }
@@ -445,6 +447,8 @@ export class TemporalSynthesisEngine {
       colorBuffer: outputColor,
       depthBuffer: outputDepth,
       motionVectors: outputMotion,
+      width: authoritativeFrame.width,
+      height: authoritativeFrame.height,
       timestamp: this.clockSystem.getVisualTime(),
       isAuthoritative: false,
       confidence: confidence
