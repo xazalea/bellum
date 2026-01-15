@@ -365,8 +365,8 @@ export class User32 {
     return 1; // IDOK
   }
   
-  MessageBoxW(...args: any[]): number {
-    return this.MessageBoxA(...args);
+  MessageBoxW(hwnd: number, text: string, caption: string, type: number): number {
+    return this.MessageBoxA(hwnd, text, caption, type);
   }
   
   // ===== DEVICE CONTEXT =====
