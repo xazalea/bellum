@@ -1,5 +1,6 @@
 import { authService } from "@/lib/firebase/auth-service";
 import { getClusterBase } from "@/lib/cluster/cluster-base";
+import { fetchDiscordManifest, chunkedDownloadDiscordFile } from "./chunked-download-discord";
 
 export interface ClusterFileManifest {
   fileId: string;
@@ -42,6 +43,17 @@ async function isTelegramEnabled(): Promise<boolean> {
   }
 }
 
+async function isDiscordEnabled(): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/discord/status`, { cache: "no-store" });
+    if (!res.ok) return false;
+    const j = (await res.json()) as { enabled?: boolean };
+    return !!j.enabled;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchClusterManifest(
   fileId: string,
   scope: ClusterFileScope = "user"
@@ -51,26 +63,49 @@ export async function fetchClusterManifest(
   const base = getClusterBase();
   const headers = await getAuthHeaders();
 
-  // Telegram-backed: fileId is the Telegram file_id of the manifest json.
-  if (!base && (await isTelegramEnabled())) {
-    const res = await fetch(`/api/telegram/manifest?fileId=${encodeURIComponent(fileId)}`, {
-      headers,
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(`Manifest fetch failed (${res.status}): ${t}`);
+  if (!base) {
+    // Telegram-backed
+    if (await isTelegramEnabled()) {
+      const res = await fetch(`/api/telegram/manifest?fileId=${encodeURIComponent(fileId)}`, {
+        headers,
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        // Fallthrough to check Discord if Telegram fails? 
+        // Or assume if Telegram enabled, it must be there?
+        // Let's assume strict separation for now or just check Discord if res is 404?
+        // For now, simpler to just use Discord if Telegram disabled.
+        // But what if both enabled?
+        // We'll prioritize Telegram, then Discord.
+      } else {
+        const j = (await res.json()) as any;
+        return {
+          fileId,
+          fileName: String(j.fileName || "file"),
+          totalBytes: Number(j.totalBytes || 0),
+          chunkBytes: Number(j.chunkBytes || 0),
+          totalChunks: Number(j.totalChunks || (Array.isArray(j.chunks) ? j.chunks.length : 0)),
+          createdAtUnixMs: Number(j.createdAtUnixMs || Date.now()),
+        };
+      }
     }
-    const j = (await res.json()) as any;
-    // Normalize to existing manifest type.
-    return {
-      fileId,
-      fileName: String(j.fileName || "file"),
-      totalBytes: Number(j.totalBytes || 0),
-      chunkBytes: Number(j.chunkBytes || 0),
-      totalChunks: Number(j.totalChunks || (Array.isArray(j.chunks) ? j.chunks.length : 0)),
-      createdAtUnixMs: Number(j.createdAtUnixMs || Date.now()),
-    };
+
+    // Discord-backed
+    if (await isDiscordEnabled()) {
+      try {
+        const dm = await fetchDiscordManifest(fileId);
+        return {
+          fileId: dm.fileId,
+          fileName: dm.fileName,
+          totalBytes: dm.totalBytes,
+          chunkBytes: dm.chunkBytes,
+          totalChunks: dm.totalChunks,
+          createdAtUnixMs: dm.createdAt,
+        };
+      } catch (e) {
+        // If Discord fetch fails, fall through to default error
+      }
+    }
   }
 
   const path = scope === "public" ? `/api/public/files/${fileId}/manifest` : `/api/files/${fileId}/manifest`;
@@ -103,8 +138,29 @@ export async function downloadClusterFile(
   const base = getClusterBase();
   const headers = await getAuthHeaders();
   const scope = opts.scope ?? "user";
+  
+  // Determine backend
   const telegramMode = !base && (await isTelegramEnabled());
+  const discordMode = !base && !telegramMode && (await isDiscordEnabled());
+
+  // Handle Discord Download
+  if (discordMode) {
+    const blob = await chunkedDownloadDiscordFile(fileId, {
+      onProgress: (p) => opts.onProgress?.({ chunkIndex: p.chunkIndex, totalChunks: p.totalChunks }),
+    });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    // We need fileName. Fetch manifest again or optimize? 
+    // chunkedDownloadDiscordFile fetches manifest internally but doesn't return it.
+    // fetchDiscordManifest is cached usually.
+    const manifest = await fetchDiscordManifest(fileId);
+    
+    return { fileName: manifest.fileName, bytes };
+  }
+
+  // Handle Telegram / Default Cluster
   const manifest = await fetchClusterManifest(fileId, scope);
+  
+  // Re-check telegramMode in case fetchClusterManifest succeeded via Telegram
   const chunkBase = telegramMode
     ? ""
     : scope === "public"
@@ -170,4 +226,3 @@ export async function promoteClusterFileToPublic(fileId: string): Promise<void> 
     throw new Error(`Make-public failed (${res.status}): ${t}`);
   }
 }
-

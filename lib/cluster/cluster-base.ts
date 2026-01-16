@@ -1,4 +1,4 @@
-const SHARED_CLUSTER_BASE = 'https://nachooo.vercel.app';
+const SHARED_CLUSTER_BASE = '';
 
 function normalizeCandidate(input: string): string | null {
   const trimmed = input.trim();
