@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 
 // Pixel Art SVGs
 const Fish1 = () => (
@@ -81,13 +81,13 @@ export function SeaLifeBackground() {
     };
   }, []);
 
-  const fishVariants = {
+  const fishVariants: Variants = {
     swimRight: {
       x: [ -100, typeof window !== 'undefined' ? window.innerWidth + 100 : 2000 ],
       transition: {
         duration: 20,
         repeat: Infinity,
-        ease: "linear",
+        ease: "linear" as const,
         delay: 0,
       }
     },
@@ -96,7 +96,7 @@ export function SeaLifeBackground() {
         transition: {
           duration: 25,
           repeat: Infinity,
-          ease: "linear",
+          ease: "linear" as const,
           delay: 0,
         }
     },
@@ -105,18 +105,18 @@ export function SeaLifeBackground() {
         transition: {
             duration: 4,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut" as const
         }
     }
   };
 
-  const jellyfishVariants = {
+  const jellyfishVariants: Variants = {
     float: {
         y: [-50, typeof window !== 'undefined' ? window.innerHeight + 50 : 1000],
         transition: {
             duration: 40,
             repeat: Infinity,
-            ease: "linear"
+            ease: "linear" as const
         }
     },
     pulse: {
@@ -124,7 +124,7 @@ export function SeaLifeBackground() {
         transition: {
             duration: 3,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut" as const
         }
     }
   };
