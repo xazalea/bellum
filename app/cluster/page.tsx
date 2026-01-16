@@ -19,9 +19,9 @@ export default function ClusterPage() {
                 <span className="w-2 h-2 bg-green-900 rounded-full animate-pulse shadow-[0_0_8px_#14532d]"></span>
               </div>
               <div className="h-32 bg-black/20 border border-[#1F2937]/20 p-2 font-retro text-sm space-y-1">
-                <div className="text-[#64748B]">> uptime: 24d 1h</div>
-                <div className="text-[#64748B]">> load: 0.45</div>
-                <div className="text-[#64748B]">> tasks: 12 active</div>
+                <div className="text-[#64748B]">&gt; uptime: 24d 1h</div>
+                <div className="text-[#64748B]">&gt; load: 0.45</div>
+                <div className="text-[#64748B]">&gt; tasks: 12 active</div>
               </div>
               <Button className="w-full text-xs">Manage Node</Button>
             </Card>

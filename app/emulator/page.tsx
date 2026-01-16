@@ -13,16 +13,16 @@ export default function EmulatorPage() {
   return (
     <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
       <div className="w-full max-w-5xl space-y-8">
-        <header className="space-y-2 border-b-2 border-[#4A7BA7]/30 pb-6">
-          <h1 className="text-3xl font-pixel text-[#E2E8F0]">Retro Emulator</h1>
-          <p className="font-retro text-xl text-[#94A3B8]">Classic systems in your browser.</p>
+        <header className="space-y-2 border-b-2 border-[#1F2937]/30 pb-6">
+          <h1 className="text-3xl font-pixel text-[#94A3B8]">Retro Emulator</h1>
+          <p className="font-retro text-xl text-[#64748B]">Classic systems in your browser.</p>
         </header>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {systems.map((sys) => (
-            <Card key={sys.name} variant="hover" className="flex flex-col items-center justify-center space-y-4 aspect-square cursor-pointer">
-              <span className="material-symbols-outlined text-5xl text-[#7DD3FC]">{sys.icon}</span>
-              <span className="font-pixel text-sm">{sys.name}</span>
+            <Card key={sys.name} variant="hover" className="flex flex-col items-center justify-center space-y-4 aspect-square cursor-pointer border-[#1F2937]/30 hover:border-[#374151]">
+              <span className="material-symbols-outlined text-5xl text-[#475569]">{sys.icon}</span>
+              <span className="font-pixel text-sm text-[#94A3B8]">{sys.name}</span>
             </Card>
           ))}
         </div>
