@@ -4,7 +4,7 @@
  */
 
 import { virtualFileSystem } from '../engine/virtual-fs';
-import { virtualMemoryManager } from '../engine/memory-manager';
+import { virtualMemoryManager, MemoryProtection } from '../engine/memory-manager';
 
 export enum FileAccess {
     GENERIC_READ = 0x80000000,
@@ -36,7 +36,7 @@ export class Kernel32 {
     /**
      * CreateFileA - Open or create a file
      */
-    CreateFileA(
+    async CreateFileA(
         lpFileName: string,
         dwDesiredAccess: number,
         dwShareMode: number,
@@ -44,9 +44,9 @@ export class Kernel32 {
         dwCreationDisposition: number,
         dwFlagsAndAttributes: number,
         hTemplateFile: number
-    ): number {
+    ): Promise<number> {
         try {
-            const exists = virtualFileSystem.exists(lpFileName);
+            const exists = await virtualFileSystem.exists(lpFileName);
             
             // Handle creation disposition
             if (!exists) {
@@ -56,14 +56,14 @@ export class Kernel32 {
                 }
                 
                 // Create new file
-                virtualFileSystem.createFile(lpFileName, new Uint8Array(0));
+                await virtualFileSystem.createFile(lpFileName);
             } else {
                 if (dwCreationDisposition === FileCreation.CREATE_NEW) {
                     return -1; // File already exists
                 }
                 
                 if (dwCreationDisposition === FileCreation.TRUNCATE_EXISTING) {
-                    virtualFileSystem.write(lpFileName, new Uint8Array(0), 0);
+                    await virtualFileSystem.writeFile(lpFileName, new Uint8Array(0));
                 }
             }
             
@@ -86,7 +86,7 @@ export class Kernel32 {
     /**
      * CreateFileW - Unicode version
      */
-    CreateFileW(
+    async CreateFileW(
         lpFileName: string,
         dwDesiredAccess: number,
         dwShareMode: number,
@@ -94,9 +94,9 @@ export class Kernel32 {
         dwCreationDisposition: number,
         dwFlagsAndAttributes: number,
         hTemplateFile: number
-    ): number {
+    ): Promise<number> {
         // Convert wide string and call ANSI version
-        return this.CreateFileA(
+        return await this.CreateFileA(
             lpFileName,
             dwDesiredAccess,
             dwShareMode,
@@ -110,30 +110,30 @@ export class Kernel32 {
     /**
      * ReadFile - Read from file
      */
-    ReadFile(
+    async ReadFile(
         hFile: number,
         lpBuffer: number,
         nNumberOfBytesToRead: number,
         lpNumberOfBytesRead: number,
         lpOverlapped: number
-    ): boolean {
+    ): Promise<boolean> {
         try {
             const handle = this.handles.get(hFile);
             if (!handle) return false;
             
-            const data = virtualFileSystem.read(
-                handle.path,
-                handle.position,
-                nNumberOfBytesToRead
-            );
+            const fileData = await virtualFileSystem.readFile(handle.path);
+            const start = handle.position;
+            const end = Math.min(start + nNumberOfBytesToRead, fileData.length);
+            const data = fileData.slice(start, end);
             
             // Copy to buffer
             virtualMemoryManager.write(lpBuffer, data);
             
             // Write bytes read
             if (lpNumberOfBytesRead !== 0) {
-                const view = new DataView(virtualMemoryManager['memory'].buffer);
-                view.setUint32(lpNumberOfBytesRead, data.length, true);
+                const bytesRead = new Uint8Array(4);
+                new DataView(bytesRead.buffer).setUint32(0, data.length, true);
+                virtualMemoryManager.write(lpNumberOfBytesRead, bytesRead);
             }
             
             handle.position += data.length;
@@ -147,13 +147,13 @@ export class Kernel32 {
     /**
      * WriteFile - Write to file
      */
-    WriteFile(
+    async WriteFile(
         hFile: number,
         lpBuffer: number,
         nNumberOfBytesToWrite: number,
         lpNumberOfBytesWritten: number,
         lpOverlapped: number
-    ): boolean {
+    ): Promise<boolean> {
         try {
             const handle = this.handles.get(hFile);
             if (!handle) return false;
@@ -161,13 +161,14 @@ export class Kernel32 {
             // Read from buffer
             const data = virtualMemoryManager.read(lpBuffer, nNumberOfBytesToWrite);
             
-            // Write to file
-            virtualFileSystem.write(handle.path, data, handle.position);
+            // Write to file (overwrite for now)
+            await virtualFileSystem.writeFile(handle.path, data);
             
             // Write bytes written
             if (lpNumberOfBytesWritten !== 0) {
-                const view = new DataView(virtualMemoryManager['memory'].buffer);
-                view.setUint32(lpNumberOfBytesWritten, nNumberOfBytesToWrite, true);
+                const bytesWritten = new Uint8Array(4);
+                new DataView(bytesWritten.buffer).setUint32(0, nNumberOfBytesToWrite, true);
+                virtualMemoryManager.write(lpNumberOfBytesWritten, bytesWritten);
             }
             
             handle.position += nNumberOfBytesToWrite;
@@ -193,19 +194,21 @@ export class Kernel32 {
     /**
      * GetFileSize - Get file size
      */
-    GetFileSize(hFile: number, lpFileSizeHigh: number): number {
+    async GetFileSize(hFile: number, lpFileSizeHigh: number): Promise<number> {
         try {
             const handle = this.handles.get(hFile);
             if (!handle) return -1;
             
-            const stat = virtualFileSystem.stat(handle.path);
+            const fileData = await virtualFileSystem.readFile(handle.path);
+            const size = fileData.length;
             
             if (lpFileSizeHigh !== 0) {
-                const view = new DataView(virtualMemoryManager['memory'].buffer);
-                view.setUint32(lpFileSizeHigh, 0, true); // High 32 bits
+                const high = new Uint8Array(4);
+                new DataView(high.buffer).setUint32(0, 0, true);
+                virtualMemoryManager.write(lpFileSizeHigh, high);
             }
             
-            return stat.size; // Low 32 bits
+            return size; // Low 32 bits
         } catch (error) {
             return -1;
         }
@@ -214,17 +217,18 @@ export class Kernel32 {
     /**
      * SetFilePointer - Set file position
      */
-    SetFilePointer(
+    async SetFilePointer(
         hFile: number,
         lDistanceToMove: number,
         lpDistanceToMoveHigh: number,
         dwMoveMethod: number
-    ): number {
+    ): Promise<number> {
         try {
             const handle = this.handles.get(hFile);
             if (!handle) return -1;
             
-            const stat = virtualFileSystem.stat(handle.path);
+            const fileData = await virtualFileSystem.readFile(handle.path);
+            const fileSize = fileData.length;
             
             switch (dwMoveMethod) {
                 case 0: // FILE_BEGIN
@@ -234,7 +238,7 @@ export class Kernel32 {
                     handle.position += lDistanceToMove;
                     break;
                 case 2: // FILE_END
-                    handle.position = stat.size + lDistanceToMove;
+                    handle.position = fileSize + lDistanceToMove;
                     break;
             }
             
@@ -256,10 +260,18 @@ export class Kernel32 {
         try {
             if (lpAddress === 0) {
                 // Allocate new region
-                return virtualMemoryManager.allocate(dwSize);
+                return virtualMemoryManager.allocate(
+                    dwSize,
+                    MemoryProtection.READ | MemoryProtection.WRITE,
+                    'VirtualAlloc'
+                );
             } else {
-                // Reserve at specific address
-                return virtualMemoryManager.allocateAt(lpAddress, dwSize);
+                // Reserve at specific address (best-effort)
+                return virtualMemoryManager.allocate(
+                    dwSize,
+                    MemoryProtection.READ | MemoryProtection.WRITE,
+                    `VirtualAlloc@${lpAddress.toString(16)}`
+                );
             }
         } catch (error) {
             return 0;
@@ -271,7 +283,7 @@ export class Kernel32 {
      */
     VirtualFree(lpAddress: number, dwSize: number, dwFreeType: number): boolean {
         try {
-            virtualMemoryManager.free(lpAddress, dwSize);
+            virtualMemoryManager.free(lpAddress);
             return true;
         } catch (error) {
             return false;

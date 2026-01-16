@@ -1,51 +1,53 @@
 import { ImageResponse } from 'next/og';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 
-/* eslint-disable @next/next/no-img-element */
+export const runtime = 'edge';
 
-export const runtime = 'nodejs';
-
-export const size = { width: 64, height: 64 };
+export const size = {
+  width: 32,
+  height: 32,
+};
 export const contentType = 'image/png';
 
-export default async function Icon() {
-  const file = await fs.readFile(path.join(process.cwd(), 'public', 'branding', 'nacho.jpeg'));
-  const src = `data:image/jpeg;base64,${file.toString('base64')}`;
-
+export default function Icon() {
   return new ImageResponse(
     (
       <div
         style={{
+          fontSize: 24,
+          background: 'transparent',
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#232634', // Catppuccin Frappe crust
         }}
       >
-        <div
-          style={{
-            width: 56,
-            height: 56,
-            display: 'flex',
-            borderRadius: 9999,
-            overflow: 'hidden',
-            border: '4px solid rgba(186,187,241,0.9)', // frappe lavender
-          }}
+        {/* Pixel Art Submarine constructed with CSS/divs or SVG */}
+        <svg
+            width="32"
+            height="32"
+            viewBox="0 0 32 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
         >
-          <img
-            src={src}
-            alt=""
-            width={56}
-            height={56}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </div>
+             {/* Submarine Body */}
+            <rect x="8" y="14" width="16" height="8" rx="2" fill="#F472B6" />
+             {/* Conning Tower */}
+            <rect x="14" y="10" width="6" height="4" fill="#F472B6" />
+             {/* Periscope */}
+            <rect x="16" y="6" width="2" height="4" fill="#F472B6" />
+            <rect x="18" y="6" width="4" height="2" fill="#F472B6" />
+             {/* Window */}
+            <rect x="20" y="16" width="2" height="2" fill="#A8B4D0" />
+            <rect x="14" y="16" width="2" height="2" fill="#A8B4D0" />
+            
+             {/* Propeller */}
+            <rect x="4" y="16" width="4" height="4" fill="#64748B" />
+        </svg>
       </div>
     ),
-    { ...size },
+    {
+      ...size,
+    }
   );
 }
-

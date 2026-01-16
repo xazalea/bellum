@@ -229,7 +229,7 @@ export class RenderOptimizer {
 
     // Create GPU texture
     const gpuTexture = this.device.createTexture({
-      size: [atlasSize, atlasSize, 1],
+      size: { width: atlasSize, height: atlasSize, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
@@ -242,10 +242,10 @@ export class RenderOptimizer {
       // Copy texture data to atlas
       if (texture.data instanceof Uint8Array) {
         this.device.queue.writeTexture(
-          { texture: gpuTexture, origin: [region.x, region.y, 0] },
+          { texture: gpuTexture, origin: { x: region.x, y: region.y, z: 0 } },
           texture.data,
           { bytesPerRow: texture.width * 4 },
-          [texture.width, texture.height, 1]
+          { width: texture.width, height: texture.height, depthOrArrayLayers: 1 }
         );
       }
     }

@@ -190,7 +190,18 @@ export async function chunkedDownloadDiscordFile(
   }
 
   // Reassemble file
-  const blob = new Blob(chunkData, { type: "application/octet-stream" });
+  // Convert Uint8Array[] to BlobPart[] (ensure ArrayBuffer, not SharedArrayBuffer)
+  const blobParts: BlobPart[] = chunkData.map(chunk => {
+    if (!chunk) return new Uint8Array(0);
+    if (chunk.buffer instanceof SharedArrayBuffer) {
+      // Create a new ArrayBuffer by copying
+      const copy = new Uint8Array(chunk.length);
+      copy.set(chunk);
+      return copy.buffer;
+    }
+    return chunk as BlobPart;
+  });
+  const blob = new Blob(blobParts, { type: "application/octet-stream" });
   return blob;
 }
 

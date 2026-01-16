@@ -301,7 +301,7 @@ export class TitanGPUEngine {
             textureCompute: boolean;
             hyperthreading: boolean;
         };
-        performance: ReturnType<typeof this.getPerformanceStatistics>;
+        performance: ReturnType<TitanGPUEngine['getPerformanceStatistics']>;
     } {
         return {
             initialized: this.isInitialized,

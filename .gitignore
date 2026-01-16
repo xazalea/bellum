@@ -46,3 +46,7 @@ public/unblocker/assets/games/
 
 # Cherri full-site snapshot is generated from vendor/cherri (submodule)
 public/unblocker/
+.pnpm-store
+
+.pnpm-store/
+vendor/open-saas/template/app/.pnpm-store/

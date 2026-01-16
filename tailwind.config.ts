@@ -10,7 +10,7 @@ const config: Config = {
     extend: {
       colors: {
         nacho: {
-          // Nacho UI Palette
+          // Challenger Deep Palette
           bg: '#0B0F1A',
           card: '#141A26',
           'card-hover': '#1D2433',
@@ -36,19 +36,21 @@ const config: Config = {
         surface: '#1D2433',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'sans-serif'],
-        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        sans: ['"VT323"', 'monospace'], // Default body to pixel-ish mono
+        display: ['"Press Start 2P"', 'cursive'], // Headers
+        body: ['"VT323"', 'monospace'],
+        pixel: ['"Press Start 2P"', 'cursive'],
+        retro: ['"VT323"', 'monospace'],
       },
       borderRadius: {
-        'nacho': '1.5rem', // 24px
-        'nacho-lg': '2rem', // 32px
-        'nacho-sm': '1rem', // 16px
+        'nacho': '0', // Pixel art usually has sharp corners, or small steps
+        'nacho-lg': '0',
+        'nacho-sm': '0',
       },
       boxShadow: {
-        'nacho': '0 4px 20px -2px rgba(0, 0, 0, 0.25)',
-        'nacho-hover': '0 10px 30px -4px rgba(0, 0, 0, 0.35)',
-        glow: '0 0 25px rgba(168, 180, 208, 0.2)',
+        'nacho': '4px 4px 0px 0px rgba(0, 0, 0, 0.5)', // Hard pixel shadow
+        'nacho-hover': '6px 6px 0px 0px rgba(0, 0, 0, 0.5)',
+        glow: '0 0 10px rgba(168, 180, 208, 0.5)',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
@@ -62,6 +64,7 @@ const config: Config = {
         'ripple': 'ripple 0.6s ease-out',
         'glow': 'glow 2s ease-in-out infinite',
         'shimmer': 'shimmer 2s linear infinite',
+        'float': 'float 6s ease-in-out infinite',
       },
       keyframes: {
         slideUp: {
@@ -84,6 +87,10 @@ const config: Config = {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        float: {
+            '0%, 100%': { transform: 'translateY(0)' },
+            '50%': { transform: 'translateY(-10px)' },
+        }
       },
     },
   },

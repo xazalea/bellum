@@ -63,7 +63,12 @@ export class ZeroCopyMemoryManager {
         const gpuBuffer = this.gpuMappedBuffers.get(name);
 
         if (sharedBuffer && gpuBuffer && this.device) {
-            this.device.queue.writeBuffer(gpuBuffer, 0, sharedBuffer);
+            // Convert SharedArrayBuffer to ArrayBuffer for writeBuffer
+            // Create a new ArrayBuffer by copying the data
+            const uint8View = new Uint8Array(sharedBuffer);
+            const buffer = new ArrayBuffer(uint8View.length);
+            new Uint8Array(buffer).set(uint8View);
+            this.device.queue.writeBuffer(gpuBuffer, 0, buffer);
         }
     }
 

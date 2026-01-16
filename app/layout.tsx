@@ -1,27 +1,27 @@
 import type { Metadata } from 'next';
-import { Noto_Sans, Space_Grotesk } from 'next/font/google';
+import { Press_Start_2P, VT323 } from 'next/font/google';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 import { NachoCursor } from '@/components/NachoCursor';
+import { SeaLifeBackground } from '@/components/SeaLifeBackground';
 import { cn } from '@/lib/utils';
 
-const fontDisplay = Space_Grotesk({
+const fontPixel = Press_Start_2P({
+  weight: '400',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-display',
+  variable: '--font-pixel',
 });
 
-const fontBody = Noto_Sans({
+const fontRetro = VT323({
+  weight: '400',
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-body',
+  variable: '--font-retro',
 });
 
 export const metadata: Metadata = {
-  title: 'Nacho UI - Minimal. Matte. Modern.',
-  description: 'A design system showcase built on the philosophy of soft pastel tones, high-radius components, and a flat yet tactile interface.',
-  keywords: ['nacho', 'ui', 'design system', 'react', 'tailwind'],
-  authors: [{ name: 'nacho' }],
+  title: 'challenger deep. - explore the depths.',
+  description: 'A pixelated journey into distributed computing. Secure. Private. Deep.',
+  keywords: ['challenger deep', 'pixel art', 'distributed computing', 'privacy'],
   icons: {
     icon: [{ url: '/icon' }],
     apple: [{ url: '/apple-icon' }],
@@ -41,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontDisplay.variable, fontBody.variable, "dark")}>
+    <html lang="en" className={cn(fontPixel.variable, fontRetro.variable, "dark")}>
       <head>
         {/* Material Symbols */}
         <link
@@ -49,7 +49,8 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
       </head>
-      <body className="min-h-screen w-full flex flex-col bg-nacho-bg text-nacho-text font-body antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
+      <body className="min-h-screen w-full flex flex-col font-retro antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
+        <SeaLifeBackground />
         <NachoCursor />
         {children}
         <ClientInit />

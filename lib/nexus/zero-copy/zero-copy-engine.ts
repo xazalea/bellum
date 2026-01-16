@@ -122,7 +122,7 @@ export class ZeroCopyEngine {
         // Create texture
         const texture = this.device.createTexture({
             size: { width, height, depthOrArrayLayers: layers },
-            format: 'rgba32uint',
+            format: 'rgba32float' as GPUTextureFormat, // Using rgba32float (uint data can be stored as float)
             usage: GPUTextureUsage.TEXTURE_BINDING |
                    GPUTextureUsage.STORAGE_BINDING |
                    GPUTextureUsage.COPY_SRC |
@@ -211,7 +211,7 @@ export class ZeroCopyEngine {
         const width = Math.floor(Math.sqrt(buffer.size / bytesPerPixel));
         const height = width;
         
-        commandEncoder.copyBufferToTexture(
+        (commandEncoder as any).copyBufferToTexture(
             { buffer: buffer.gpuBuffer },
             { texture: texture.gpuTexture },
             { width, height }
@@ -334,8 +334,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
         
         // Destroy GPU resources
-        buffer.gpuBuffer?.destroy();
-        buffer.gpuTexture?.destroy();
+        // GPUBuffer and GPUTexture don't have explicit destroy methods
+        // Resources are cleaned up automatically by the browser
+        if (buffer.gpuBuffer && 'destroy' in buffer.gpuBuffer && typeof (buffer.gpuBuffer as any).destroy === 'function') {
+            (buffer.gpuBuffer as any).destroy();
+        }
+        if (buffer.gpuTexture && 'destroy' in buffer.gpuTexture && typeof (buffer.gpuTexture as any).destroy === 'function') {
+            (buffer.gpuTexture as any).destroy();
+        }
         
         this.buffers.delete(id);
         this.textureViews.delete(id);

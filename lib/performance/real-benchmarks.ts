@@ -293,8 +293,17 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 matricesComputed++;
             }
 
-            // Wait for GPU to finish
-            await this.device.queue.onSubmittedWorkDone();
+            // Wait for GPU to finish (onSubmittedWorkDone may not be available in all browsers)
+            try {
+                if ('onSubmittedWorkDone' in this.device.queue) {
+                    await (this.device.queue as any).onSubmittedWorkDone();
+                } else {
+                    // Fallback: wait a short time
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } catch {
+                // Ignore errors
+            }
 
             const endTime = performance.now();
             const elapsedSeconds = (endTime - startTime) / 1000;

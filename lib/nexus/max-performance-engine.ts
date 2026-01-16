@@ -148,7 +148,7 @@ export class MaxPerformanceEngine {
         }
 
         // Request maximum limits
-        const limits = await adapter.limits;
+        const limits = (adapter as any).limits || {};
         
         this.device = await adapter.requestDevice({
             requiredFeatures: ['timestamp-query' as GPUFeatureName].filter(f => 
@@ -286,9 +286,9 @@ function processWork(data) {
 
         this.isRunning = true;
         
-        // Start persistent kernels
+        // Initialize persistent kernels
         if (this.config.enablePersistentKernels) {
-            await this.persistentKernels.start();
+            await this.persistentKernels.initialize();
         }
         
         // Start FPS monitoring
@@ -332,7 +332,10 @@ function processWork(data) {
         // Get GPU stats
         const kernelStats = this.persistentKernels.getStatistics();
         this.stats.workItemsProcessed = kernelStats.totalWorkItems;
-        this.stats.dispatchLatencyMs = kernelStats.averageLatency;
+        // Calculate average latency from available stats
+        this.stats.dispatchLatencyMs = kernelStats.runningTime > 0 && kernelStats.totalWorkItems > 0
+            ? (kernelStats.runningTime / kernelStats.totalWorkItems)
+            : 0;
         this.stats.gpuUtilization = await realPerformanceMonitor.getGPUUtilization();
         
         // Get memory stats
@@ -349,10 +352,7 @@ function processWork(data) {
     async submitGPUWork(workType: WorkType, data: Uint32Array): Promise<void> {
         const startTime = performance.now();
         
-        await this.persistentKernels.submitWork({
-            type: workType,
-            data,
-        });
+        await this.persistentKernels.enqueueWork(workType, data);
         
         const latency = performance.now() - startTime;
         if (latency > 1) {
@@ -430,7 +430,7 @@ function processWork(data) {
         this.isRunning = false;
         
         // Stop persistent kernels
-        await this.persistentKernels.stop();
+        await this.persistentKernels.terminate();
         
         console.log('[MaxPerf] Engine stopped');
     }

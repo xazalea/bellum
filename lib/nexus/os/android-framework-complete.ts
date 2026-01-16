@@ -665,7 +665,10 @@ export class SurfaceFlinger {
     destroySurface(surfaceId: number): void {
         const surface = this.surfaces.get(surfaceId);
         if (surface) {
-            surface.gpuTexture?.destroy();
+            // GPUTexture doesn't have an explicit destroy method
+            if (surface.gpuTexture && 'destroy' in surface.gpuTexture && typeof (surface.gpuTexture as any).destroy === 'function') {
+                (surface.gpuTexture as any).destroy();
+            }
             this.surfaces.delete(surfaceId);
             console.log(`[SurfaceFlinger] Destroyed surface ${surfaceId}`);
         }

@@ -487,7 +487,9 @@ export class HLSLToWGSLTranslator {
     // Evict old entries if cache is full
     if (this.cache.size >= this.CACHE_SIZE) {
       const oldestKey = this.cache.keys().next().value;
-      this.cache.delete(oldestKey);
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey);
+      }
     }
 
     this.cache.set(hlslHash, {

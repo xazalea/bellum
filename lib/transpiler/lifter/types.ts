@@ -27,7 +27,18 @@ export enum IROpcode {
     DIV = 'div',
     RET = 'ret',
     MOV = 'mov',
-    BR = 'br'
+    BR = 'br',
+    AND = 'and',
+    OR = 'or',
+    XOR = 'xor',
+    CMP = 'cmp',
+    LOAD = 'load',
+    STORE = 'store',
+    CALL = 'call',
+    JMP = 'jmp',
+    POP = 'pop',
+    ADC = 'adc',
+    UNKNOWN = 'unknown'
 }
 
 export interface IROperand {
@@ -44,6 +55,8 @@ export interface IRInstruction {
     op3?: IROperand;
     addr?: number; // Original address
     meta?: any;    // Optimizer metadata
+    bytes?: Uint8Array;
+    operands?: any[];
 }
 
 export interface BasicBlock {

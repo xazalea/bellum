@@ -287,7 +287,7 @@ export class InstantBootSystem {
             // Render cached texture to canvas
             if (this.device) {
                 const ctx = target.getContext('webgpu');
-                if (ctx) {
+                if (ctx && navigator.gpu) {
                     ctx.configure({
                         device: this.device,
                         format: navigator.gpu.getPreferredCanvasFormat()

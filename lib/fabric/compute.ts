@@ -130,6 +130,13 @@ export class FabricComputeService {
         const result = await fabricMesh.rpcCall(target.serviceId, job);
         return result;
     }
+
+    /**
+     * Submit a generic compute job
+     */
+    public async submitJob(job: ComputeJob): Promise<any> {
+        return this.handleComputeRequest(job);
+    }
 }
 
 export const fabricCompute = FabricComputeService.getInstance();

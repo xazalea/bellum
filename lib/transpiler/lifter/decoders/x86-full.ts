@@ -466,7 +466,8 @@ export class X86DecoderFull implements Decoder {
         const lastAddr = lastInstr.addr;
 
         // Calculate next instruction address
-        const nextAddr = lastAddr + 4; // Simplified - should calculate actual instruction length
+        const safeLastAddr = lastAddr ?? 0;
+        const nextAddr = safeLastAddr + 4; // Simplified - should calculate actual instruction length
 
         // Conditional jumps have two successors
         if (lastInstr.opcode.startsWith('j') && lastInstr.opcode !== 'jmp') {

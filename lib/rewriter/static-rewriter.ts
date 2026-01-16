@@ -97,8 +97,13 @@ export class StaticBinaryRewriter {
         console.log('[Static Rewriter] Rewriting PE binary...');
 
         try {
-            const parser = new PEParser(binary.buffer);
-            const { peHeader, optionalHeader, sections } = parser.parse();
+            // Convert to ArrayBuffer if it's a SharedArrayBuffer
+            const buffer = binary.buffer instanceof SharedArrayBuffer
+                ? new Uint8Array(binary).buffer
+                : binary.buffer;
+            const parser = new PEParser(buffer);
+            const peFile = parser.parse();
+            const { fileHeader, optionalHeader, sections } = peFile;
 
             // Make a copy to modify
             const patched = new Uint8Array(binary);
@@ -324,7 +329,11 @@ export class StaticBinaryRewriter {
         console.log('[Static Rewriter] Rewriting DEX binary...');
 
         try {
-            const parser = new DEXParser(binary.buffer);
+            // Convert to ArrayBuffer if it's a SharedArrayBuffer
+            const buffer = binary.buffer instanceof SharedArrayBuffer
+                ? new Uint8Array(binary).buffer
+                : binary.buffer;
+            const parser = new DEXParser(buffer);
             const header = parser.parseHeader();
 
             // Make a copy to modify

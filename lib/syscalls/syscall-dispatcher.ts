@@ -4,7 +4,7 @@
  * This is the critical missing piece for real execution
  */
 
-import { virtualMemoryManager } from '../engine/memory-manager';
+import { virtualMemoryManager, MemoryProtection } from '../engine/memory-manager';
 import { virtualFileSystem } from '../engine/virtual-fs';
 
 // System call numbers (Linux x86_64)
@@ -69,27 +69,27 @@ export class SyscallDispatcher {
     /**
      * Dispatch system call
      */
-    dispatch(context: SyscallContext): number {
+    async dispatch(context: SyscallContext): Promise<number> {
         const syscallNum = context.rax;
         
         try {
             switch (syscallNum) {
                 case SyscallNumber.READ:
-                    return this.sys_read(context);
+                    return await this.sys_read(context);
                 case SyscallNumber.WRITE:
-                    return this.sys_write(context);
+                    return await this.sys_write(context);
                 case SyscallNumber.OPEN:
-                    return this.sys_open(context);
+                    return await this.sys_open(context);
                 case SyscallNumber.CLOSE:
                     return this.sys_close(context);
                 case SyscallNumber.STAT:
-                    return this.sys_stat(context);
+                    return await this.sys_stat(context);
                 case SyscallNumber.FSTAT:
-                    return this.sys_fstat(context);
+                    return await this.sys_fstat(context);
                 case SyscallNumber.LSEEK:
-                    return this.sys_lseek(context);
+                    return await this.sys_lseek(context);
                 case SyscallNumber.MMAP:
-                    return this.sys_mmap(context);
+                    return await this.sys_mmap(context);
                 case SyscallNumber.MUNMAP:
                     return this.sys_munmap(context);
                 case SyscallNumber.BRK:
@@ -115,7 +115,7 @@ export class SyscallDispatcher {
     /**
      * sys_read - read from file descriptor
      */
-    private sys_read(context: SyscallContext): number {
+    private async sys_read(context: SyscallContext): Promise<number> {
         const fd = context.rdi;
         const buf = context.rsi;
         const count = context.rdx;
@@ -130,7 +130,11 @@ export class SyscallDispatcher {
         }
         
         try {
-            const data = virtualFileSystem.read(file.path, file.position, count);
+            const fileData = await virtualFileSystem.readFile(file.path);
+            // Slice data based on position and count
+            const start = file.position || 0;
+            const end = Math.min(start + count, fileData.length);
+            const data = fileData.slice(start, end);
             
             // Copy to user buffer
             for (let i = 0; i < data.length; i++) {
@@ -147,7 +151,7 @@ export class SyscallDispatcher {
     /**
      * sys_write - write to file descriptor
      */
-    private sys_write(context: SyscallContext): number {
+    private async sys_write(context: SyscallContext): Promise<number> {
         const fd = context.rdi;
         const buf = context.rsi;
         const count = context.rdx;
@@ -169,7 +173,9 @@ export class SyscallDispatcher {
         }
         
         try {
-            virtualFileSystem.write(file.path, data, file.position);
+            // For now, writeFile overwrites the entire file
+            // TODO: Implement proper position-based writing
+            await virtualFileSystem.writeFile(file.path, data);
             file.position += count;
             return count;
         } catch (error) {
@@ -180,7 +186,7 @@ export class SyscallDispatcher {
     /**
      * sys_open - open file
      */
-    private sys_open(context: SyscallContext): number {
+    private async sys_open(context: SyscallContext): Promise<number> {
         const pathname = context.rdi;
         const flags = context.rsi;
         const mode = context.rdx;
@@ -199,7 +205,7 @@ export class SyscallDispatcher {
             
             // Handle O_CREAT
             if (!exists && (flags & 0x40)) {
-                virtualFileSystem.createFile(path, new Uint8Array(0));
+                await virtualFileSystem.createFile(path);
             } else if (!exists) {
                 return -2; // ENOENT
             }
@@ -235,7 +241,7 @@ export class SyscallDispatcher {
     /**
      * sys_stat - get file status
      */
-    private sys_stat(context: SyscallContext): number {
+    private async sys_stat(context: SyscallContext): Promise<number> {
         const pathname = context.rdi;
         const statbuf = context.rsi;
         
@@ -248,7 +254,16 @@ export class SyscallDispatcher {
         }
         
         try {
-            const stat = virtualFileSystem.stat(path);
+            const exists = await virtualFileSystem.exists(path);
+            if (!exists) return -2; // ENOENT
+            const data = await virtualFileSystem.readFile(path);
+            const stat = {
+                dev: 0,
+                ino: 0,
+                mode: 0o100644,
+                nlink: 1,
+                size: data.length
+            };
             
             // Write stat structure to memory
             const view = new DataView(context.memory.buffer, statbuf);
@@ -267,7 +282,7 @@ export class SyscallDispatcher {
     /**
      * sys_fstat - get file status by fd
      */
-    private sys_fstat(context: SyscallContext): number {
+    private async sys_fstat(context: SyscallContext): Promise<number> {
         const fd = context.rdi;
         const statbuf = context.rsi;
         
@@ -275,7 +290,16 @@ export class SyscallDispatcher {
         if (!file) return -9; // EBADF
         
         try {
-            const stat = virtualFileSystem.stat(file.path);
+            const exists = await virtualFileSystem.exists(file.path);
+            if (!exists) return -2; // ENOENT
+            const data = await virtualFileSystem.readFile(file.path);
+            const stat = {
+                dev: 0,
+                ino: 0,
+                mode: 0o100644,
+                nlink: 1,
+                size: data.length
+            };
             
             // Write stat structure
             const view = new DataView(context.memory.buffer, statbuf);
@@ -294,7 +318,7 @@ export class SyscallDispatcher {
     /**
      * sys_lseek - reposition file offset
      */
-    private sys_lseek(context: SyscallContext): number {
+    private async sys_lseek(context: SyscallContext): Promise<number> {
         const fd = context.rdi;
         const offset = context.rsi;
         const whence = context.rdx;
@@ -303,7 +327,8 @@ export class SyscallDispatcher {
         if (!file) return -9; // EBADF
         
         try {
-            const stat = virtualFileSystem.stat(file.path);
+            const exists = await virtualFileSystem.exists(file.path);
+            const fileSize = exists ? (await virtualFileSystem.readFile(file.path)).length : 0;
             
             switch (whence) {
                 case 0: // SEEK_SET
@@ -313,7 +338,7 @@ export class SyscallDispatcher {
                     file.position += offset;
                     break;
                 case 2: // SEEK_END
-                    file.position = stat.size + offset;
+                    file.position = fileSize + offset;
                     break;
                 default:
                     return -22; // EINVAL
@@ -328,7 +353,7 @@ export class SyscallDispatcher {
     /**
      * sys_mmap - map memory
      */
-    private sys_mmap(context: SyscallContext): number {
+    private async sys_mmap(context: SyscallContext): Promise<number> {
         const addr = context.rdi;
         const length = context.rsi;
         const prot = context.rdx;
@@ -338,13 +363,20 @@ export class SyscallDispatcher {
         
         try {
             // Allocate memory region
-            const address = virtualMemoryManager.allocate(length);
+            const address = virtualMemoryManager.allocate(
+                length,
+                MemoryProtection.READ | MemoryProtection.WRITE,
+                'syscall-mmap'
+            );
             
             // If mapping a file, read its contents
             if (fd !== -1) {
                 const file = this.openFiles.get(fd);
                 if (file) {
-                    const data = virtualFileSystem.read(file.path, offset, length);
+                    const fileData = await virtualFileSystem.readFile(file.path);
+                    const start = Math.min(offset, fileData.length);
+                    const end = Math.min(start + length, fileData.length);
+                    const data = fileData.slice(start, end);
                     virtualMemoryManager.write(address, data);
                 }
             }
@@ -363,7 +395,7 @@ export class SyscallDispatcher {
         const length = context.rsi;
         
         try {
-            virtualMemoryManager.free(addr, length);
+            virtualMemoryManager.free(addr);
             return 0;
         } catch (error) {
             return -22; // EINVAL
@@ -376,9 +408,9 @@ export class SyscallDispatcher {
     private sys_brk(context: SyscallContext): number {
         const addr = context.rdi;
         
-        // Simple implementation: return current break
-        // In reality, would expand heap
-        return virtualMemoryManager.getHeapEnd();
+        // Simple implementation: return requested break or 0
+        // In reality, would expand/shrink a managed heap
+        return addr || 0;
     }
     
     /**

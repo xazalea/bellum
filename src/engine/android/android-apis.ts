@@ -38,7 +38,7 @@ export class AndroidAPIs {
 // ===== android.app.Activity =====
 export class Activity {
   private name: string;
-  private apis: AndroidAPIs;
+  protected apis: AndroidAPIs;
   private contentView: View | null = null;
   private isCreated = false;
   private isStarted = false;
@@ -112,7 +112,7 @@ export class Activity {
 export class View {
   private id: number;
   private type: string;
-  private apis: AndroidAPIs;
+  protected apis: AndroidAPIs;
   private x = 0;
   private y = 0;
   private width = 100;

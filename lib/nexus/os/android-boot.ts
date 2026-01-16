@@ -48,13 +48,9 @@ export class AndroidBootManager {
         const stage1Start = performance.now();
         console.log('[AndroidBoot] Stage 1: Initializing WebGPU and persistent kernels...');
         
-        const device = await this.initializeWebGPU();
-        await persistentKernelsV2.initialize({
-            device,
-            maxWorkItems: 100000,
-            workgroupSize: 256,
-            queueSize: 10000,
-        });
+        await this.initializeWebGPU();
+        // persistentKernelsV2.initialize() gets the device internally
+        await persistentKernelsV2.initialize();
         await persistentKernelsV2.launch();
         
         const stage1Time = performance.now() - stage1Start;

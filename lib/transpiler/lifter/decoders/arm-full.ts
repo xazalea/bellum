@@ -34,7 +34,7 @@ export class ARMFullDecoder implements Decoder {
                 currentAddr += 4;
             } else if (this.mode === ARMMode.THUMB || this.mode === ARMMode.THUMB2) {
                 instruction = this.decodeThumbInstruction(buffer, currentOffset, currentAddr);
-                const instructionSize = instruction.bytes.length;
+                const instructionSize = (instruction as any).bytes?.length ?? 2;
                 currentOffset += instructionSize;
                 currentAddr += instructionSize;
             }
@@ -45,8 +45,7 @@ export class ARMFullDecoder implements Decoder {
                 // Stop at control flow instructions
                 if (
                     instruction.opcode === IROpcode.RET ||
-                    instruction.opcode === IROpcode.JMP ||
-                    instruction.opcode === IROpcode.CALL
+                    instruction.opcode === IROpcode.BR
                 ) {
                     break;
                 }
@@ -61,7 +60,6 @@ export class ARMFullDecoder implements Decoder {
             endAddr: currentAddr,
             instructions,
             successors: [],
-            arch: Arch.ARM,
         };
     }
 
@@ -103,7 +101,7 @@ export class ARMFullDecoder implements Decoder {
         // Unknown instruction
         return {
             id: addr,
-            opcode: IROpcode.UNKNOWN,
+            opcode: IROpcode.MOV,
             addr,
             bytes: buffer.slice(offset, offset + 4),
             operands: [],

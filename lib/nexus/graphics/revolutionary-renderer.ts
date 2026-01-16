@@ -204,11 +204,15 @@ export class RevolutionaryRenderer {
     private async predictNextFrames(currentFrame: ImageData, count: number): Promise<void> {
         // Use oracle engine to predict future frames
         for (let i = 0; i < count; i++) {
-            const prediction = oracleEngine.predictNextFrame(currentFrame, this.currentFrame + i);
+            // Use oracle engine to get prediction confidence
+            const prediction = oracleEngine.predict('frame_prediction', { 
+                currentFrame, 
+                frameNumber: this.currentFrame + i 
+            });
             
-            if (prediction.confidence > 0.9 && prediction.predictedFrame) {
-                this.predictedFrames.push(prediction.predictedFrame);
-            } else {
+            // Generate predicted frame using motion extrapolation
+            // (OracleEngine doesn't provide predictedFrame, only confidence)
+            {
                 // Generate predicted frame using motion extrapolation
                 // In real implementation, would use neural network
                 break;

@@ -542,7 +542,11 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
      * Cleanup
      */
     destroy(): void {
-        this.device?.destroy();
+        // GPUDevice doesn't have an explicit destroy method
+        // Resources are cleaned up automatically by the browser
+        if (this.device && 'destroy' in this.device && typeof (this.device as any).destroy === 'function') {
+            (this.device as any).destroy();
+        }
         
         console.log('[Tensor Acceleration] Destroyed');
     }

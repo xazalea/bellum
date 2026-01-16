@@ -8,7 +8,7 @@
  * - DirectX: Delegated to DirectX-WebGPU translator
  */
 
-import { directXWebGPUTranslator } from '../../api/directx-webgpu-translator';
+import { directxWebGPUTranslator } from '../../api/directx-webgpu-translator';
 
 // ============================================================================
 // Window Management Types (User32.dll)
@@ -856,7 +856,19 @@ export class Win32Subsystem {
     // ========================================================================
 
     async D3D12CreateDevice(adapter: number, minimumFeatureLevel: number): Promise<GPUDevice | null> {
-        return await directXWebGPUTranslator.createDevice();
+        // Initialize translator if not already initialized
+        await directxWebGPUTranslator.initialize();
+        
+        // Get device directly from WebGPU
+        if (typeof navigator !== 'undefined' && navigator.gpu) {
+            const gpuAdapter = await navigator.gpu.requestAdapter({
+                powerPreference: 'high-performance'
+            });
+            if (gpuAdapter) {
+                return await gpuAdapter.requestDevice();
+            }
+        }
+        return null;
     }
 
     // ========================================================================

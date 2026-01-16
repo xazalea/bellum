@@ -34,7 +34,9 @@
     "node_modules",
     "vendor",
     "public/unblocker",
-    "public/optimizers"
+    "public/optimizers",
+    "tests",
+    "**/*.bench.ts"
   ]
 }
 

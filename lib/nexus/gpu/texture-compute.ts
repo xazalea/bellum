@@ -85,7 +85,7 @@ export class TextureComputeEngine {
         if (!this.device) throw new Error('Device not initialized');
 
         // Point sampler for exact lookups
-        this.samplerCache.set('point', this.device.createSampler({
+        this.samplerCache.set('point', (this.device as any).createSampler({
             magFilter: 'nearest',
             minFilter: 'nearest',
             mipmapFilter: 'nearest',
@@ -94,7 +94,7 @@ export class TextureComputeEngine {
         }));
 
         // Linear sampler for interpolated access
-        this.samplerCache.set('linear', this.device.createSampler({
+        this.samplerCache.set('linear', (this.device as any).createSampler({
             magFilter: 'linear',
             minFilter: 'linear',
             mipmapFilter: 'linear',
@@ -103,7 +103,7 @@ export class TextureComputeEngine {
         }));
 
         // Anisotropic sampler for high-quality filtering
-        this.samplerCache.set('anisotropic', this.device.createSampler({
+        this.samplerCache.set('anisotropic', (this.device as any).createSampler({
             magFilter: 'linear',
             minFilter: 'linear',
             mipmapFilter: 'linear',
@@ -126,11 +126,10 @@ export class TextureComputeEngine {
                 height: this.config.maxTextureSize,
                 depthOrArrayLayers: 4 // 4 layers for collision handling
             },
-            format: 'rgba32uint', // 4x 32-bit integers per pixel
+            format: 'rgba32float' as GPUTextureFormat, // Using rgba32float (uint data can be stored as float)
             usage: GPUTextureUsage.TEXTURE_BINDING | 
                    GPUTextureUsage.STORAGE_BINDING |
-                   GPUTextureUsage.COPY_DST,
-            dimension: '2d'
+                   GPUTextureUsage.COPY_DST
         });
 
         // B-tree texture for ordered data
@@ -140,11 +139,10 @@ export class TextureComputeEngine {
                 height: this.config.maxTextureSize,
                 depthOrArrayLayers: 16 // Multilevel B-tree
             },
-            format: 'rgba32uint',
+            format: 'rgba32float' as GPUTextureFormat, // Using rgba32float (uint data can be stored as float)
             usage: GPUTextureUsage.TEXTURE_BINDING |
                    GPUTextureUsage.STORAGE_BINDING |
-                   GPUTextureUsage.COPY_DST,
-            dimension: '2d'
+                   GPUTextureUsage.COPY_DST
         });
 
         // Spatial hash texture for 3D spatial queries
@@ -154,11 +152,10 @@ export class TextureComputeEngine {
                 height: this.config.maxTextureSize,
                 depthOrArrayLayers: this.config.maxTextureSize / 16 // 3D texture
             },
-            format: 'rgba32uint',
+            format: 'rgba32float' as GPUTextureFormat, // Using rgba32float (uint data can be stored as float)
             usage: GPUTextureUsage.TEXTURE_BINDING |
                    GPUTextureUsage.STORAGE_BINDING |
                    GPUTextureUsage.COPY_DST,
-            dimension: '3d' as any
         });
 
         console.log('[TITAN] Created texture-based data structures');
@@ -172,7 +169,7 @@ export class TextureComputeEngine {
 // Hash Table in GPU Texture
 // 1 billion entries, O(1) lookup via texture sampling
 
-@group(0) @binding(0) var hash_table: texture_storage_2d_array<rgba32uint, read_write>;
+@group(0) @binding(0) var hash_table: texture_storage_2d_array<rgba32float, read_write>;
 @group(0) @binding(1) var table_sampler: sampler;
 
 // Hash function (FNV-1a)
@@ -269,7 +266,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // B-tree in GPU Texture
 // Ordered data structure for range queries
 
-@group(0) @binding(0) var btree: texture_storage_2d_array<rgba32uint, read_write>;
+@group(0) @binding(0) var btree: texture_storage_2d_array<rgba32float, read_write>;
 
 struct BTreeNode {
     keys: array<u32, 15>,
@@ -343,7 +340,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // Spatial Hash in 3D Texture
 // For collision detection and spatial queries
 
-@group(0) @binding(0) var spatial_hash: texture_storage_3d<rgba32uint, read_write>;
+@group(0) @binding(0) var spatial_hash: texture_storage_3d<rgba32float, read_write>;
 
 // Hash 3D position to grid cell
 fn spatial_hash_fn(pos: vec3<f32>, cell_size: f32) -> vec3<u32> {
@@ -426,11 +423,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         const texture = this.device.createTexture({
             size: { width, height, depthOrArrayLayers: layers },
-            format: 'rgba32uint',
+            format: 'rgba32float' as GPUTextureFormat, // Using rgba32float (uint data can be stored as float)
             usage: GPUTextureUsage.TEXTURE_BINDING |
                    GPUTextureUsage.COPY_DST |
                    GPUTextureUsage.STORAGE_BINDING,
-            dimension: layers > 1 ? '2d' : '2d'
         });
 
         // Write data to texture
@@ -499,12 +495,20 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
      * Cleanup
      */
     destroy(): void {
-        this.hashTableTexture?.destroy();
-        this.btreeTexture?.destroy();
-        this.spatialHashTexture?.destroy();
+        // GPUTexture doesn't have an explicit destroy method
+        // Resources are cleaned up automatically by the browser
+        const destroyTexture = (texture: GPUTexture | null) => {
+            if (texture && 'destroy' in texture && typeof (texture as any).destroy === 'function') {
+                (texture as any).destroy();
+            }
+        };
+        
+        destroyTexture(this.hashTableTexture);
+        destroyTexture(this.btreeTexture);
+        destroyTexture(this.spatialHashTexture);
         
         for (const texture of this.textureCache.values()) {
-            texture.destroy();
+            destroyTexture(texture);
         }
         
         this.textureCache.clear();

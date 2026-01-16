@@ -10,6 +10,38 @@
  * Expected Performance: 1+ PetaFLOPS (1000+ TeraFLOPS) base
  */
 
+export interface GPULimits {
+    maxBufferSize?: number;
+    maxTextureDimension1D?: number;
+    maxTextureDimension2D?: number;
+    maxTextureDimension3D?: number;
+    maxTextureArrayLayers?: number;
+    maxBindGroups?: number;
+    maxDynamicUniformBuffersPerPipelineLayout?: number;
+    maxDynamicStorageBuffersPerPipelineLayout?: number;
+    maxSampledTexturesPerShaderStage?: number;
+    maxSamplersPerShaderStage?: number;
+    maxStorageBuffersPerShaderStage?: number;
+    maxStorageTexturesPerShaderStage?: number;
+    maxUniformBuffersPerShaderStage?: number;
+    maxUniformBufferBindingSize?: number;
+    maxStorageBufferBindingSize?: number;
+    minUniformBufferOffsetAlignment?: number;
+    minStorageBufferOffsetAlignment?: number;
+    maxVertexBuffers?: number;
+    maxVertexAttributes?: number;
+    maxVertexBufferArrayStride?: number;
+    maxInterStageShaderVariables?: number;
+    maxColorAttachments?: number;
+    maxComputeWorkgroupStorageSize?: number;
+    maxComputeInvocationsPerWorkgroup?: number;
+    maxComputeWorkgroupSizeX?: number;
+    maxComputeWorkgroupSizeY?: number;
+    maxComputeWorkgroupSizeZ?: number;
+    maxComputeWorkgroupsPerDimension?: number;
+    [key: string]: number | undefined;
+}
+
 export interface GPUInfo {
     adapter: GPUAdapter;
     device: GPUDevice;
@@ -79,6 +111,10 @@ export class MultiGPUCluster {
      * Discover all available GPUs in the system
      */
     private async discoverGPUs(): Promise<void> {
+        if (!navigator.gpu) {
+            throw new Error('WebGPU is not supported in this environment');
+        }
+        
         // Request all available adapters
         // Note: WebGPU currently only exposes one adapter, but this is future-proofed
         
@@ -130,7 +166,9 @@ export class MultiGPUCluster {
             }
         });
         
-        const info = await adapter.requestAdapterInfo();
+        const info = 'requestAdapterInfo' in adapter 
+            ? await (adapter as any).requestAdapterInfo() 
+            : { vendor: 'unknown', architecture: 'unknown', device: 'unknown', description: 'Unknown GPU' };
         
         // Estimate TeraFLOPS based on GPU type
         const teraFLOPS = this.estimateTeraFLOPS(adapter, type);
@@ -143,8 +181,8 @@ export class MultiGPUCluster {
             device,
             id: this.nextGPUID++,
             name: info.description || `GPU ${this.nextGPUID}`,
-            limits: device.limits as GPULimits,
-            features: new Set(device.features),
+            limits: ((device as any).limits || {}) as GPULimits,
+            features: new Set((device as any).features || []),
             teraFLOPS,
             memorySize,
             type
@@ -473,7 +511,11 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
      */
     destroy(): void {
         for (const gpu of this.gpus.values()) {
-            gpu.device.destroy();
+            // GPUDevice doesn't have an explicit destroy method
+            // Resources are cleaned up automatically by the browser
+            if ('destroy' in gpu.device && typeof (gpu.device as any).destroy === 'function') {
+                (gpu.device as any).destroy();
+            }
         }
         
         this.gpus.clear();

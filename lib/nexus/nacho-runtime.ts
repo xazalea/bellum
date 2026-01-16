@@ -414,5 +414,4 @@ export async function initializeNacho(canvas: HTMLCanvasElement, container: HTML
     await nachoRuntime.boot(osType);
 }
 
-// Export for programmatic access
-export { NachoRuntime, NachoConfig, NachoStatus, OSType };
+// All exports are already declared above (NachoRuntime class, NachoConfig, NachoStatus, OSType types)

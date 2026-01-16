@@ -74,7 +74,7 @@ export class GPUFilesystem {
         // Inode table texture (100,000 inodes)
         this.inodeTexture = this.device.createTexture({
             size: { width: 4096, height: 4096 },
-            format: 'rgba32uint',
+            format: 'rgba32float' as GPUTextureFormat, // Using rgba32float (uint data can be stored as float)
             usage: GPUTextureUsage.TEXTURE_BINDING | 
                    GPUTextureUsage.STORAGE_BINDING |
                    GPUTextureUsage.COPY_DST
@@ -87,7 +87,7 @@ export class GPUFilesystem {
                 height: 4096,
                 depthOrArrayLayers: 1024 // 1024 layers
             },
-            format: 'rgba32uint',
+            format: 'rgba32float' as GPUTextureFormat, // Using rgba32float (uint data can be stored as float)
             usage: GPUTextureUsage.TEXTURE_BINDING |
                    GPUTextureUsage.STORAGE_BINDING |
                    GPUTextureUsage.COPY_DST
@@ -227,8 +227,8 @@ struct Inode {
     reserved1: u32,
 }
 
-@group(0) @binding(0) var inode_table: texture_storage_2d<rgba32uint, read_write>;
-@group(0) @binding(1) var data_storage: texture_storage_2d_array<rgba32uint, read_write>;
+@group(0) @binding(0) var inode_table: texture_storage_2d<rgba32float, read_write>;
+@group(0) @binding(1) var data_storage: texture_storage_2d_array<rgba32float, read_write>;
 
 // Load inode from texture
 fn load_inode(inode_id: u32) -> Inode {
@@ -304,8 +304,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
      * Destroy filesystem
      */
     destroy(): void {
-        this.inodeTexture?.destroy();
-        this.dataTexture?.destroy();
+        // GPUTexture doesn't have an explicit destroy method
+        // Resources are cleaned up automatically by the browser
+        if (this.inodeTexture && 'destroy' in this.inodeTexture && typeof (this.inodeTexture as any).destroy === 'function') {
+            (this.inodeTexture as any).destroy();
+        }
+        if (this.dataTexture && 'destroy' in this.dataTexture && typeof (this.dataTexture as any).destroy === 'function') {
+            (this.dataTexture as any).destroy();
+        }
         
         this.inodeTable.clear();
         this.directoryTree.clear();

@@ -436,7 +436,9 @@ export class GLSLToWGSLTranslator {
   private cacheTranslation(hash: string, wgsl: string): void {
     if (this.cache.size >= this.CACHE_SIZE) {
       const oldestKey = this.cache.keys().next().value;
-      this.cache.delete(oldestKey);
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey);
+      }
     }
 
     this.cache.set(hash, wgsl);

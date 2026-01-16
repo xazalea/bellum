@@ -484,8 +484,17 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         const flag = new Uint32Array([1]);
         this.device.queue.writeBuffer(this.terminateFlag, 0, flag.buffer);
 
-        // Wait for GPU to finish
-        await this.device.queue.onSubmittedWorkDone();
+        // Wait for GPU to finish (onSubmittedWorkDone may not be available in all browsers)
+        try {
+            if ('onSubmittedWorkDone' in this.device.queue) {
+                await (this.device.queue as any).onSubmittedWorkDone();
+            } else {
+                // Fallback: wait a short time
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        } catch {
+            // Ignore errors
+        }
 
         this.isRunning = false;
         console.log('[Persistent Kernels V2] Terminated successfully');
