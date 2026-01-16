@@ -1,219 +1,110 @@
-"use client";
+'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
-import { LayoutGrid, Settings, X, Terminal, Boxes, Sparkles, User, Trophy, Network, NotebookPen, Gamepad2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface DynamicIslandProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-  onOpenRunner?: () => void;
-  onOpenAchievements?: () => void;
-}
+const NAV_ITEMS = [
+  { name: 'Home', href: '/' },
+  { name: 'Android', href: '/android' },
+  { name: 'Cluster', href: '/cluster' },
+  { name: 'Compiler', href: '/compiler' },
+  { name: 'Emulator', href: '/emulator' },
+  { name: 'Linux', href: '/linux' },
+  { name: 'Windows', href: '/windows' },
+  { name: 'VPS', href: '/vps' },
+  { name: 'Unblocker', href: '/unblocker' },
+];
 
-export const DynamicIsland: React.FC<DynamicIslandProps> = ({ activeTab, onTabChange, onOpenRunner, onOpenAchievements }) => {
+export function DynamicIsland() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [idleMs, setIdleMs] = useState<number>(0);
-  const lastActiveRef = useRef<number>(Date.now());
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pathname = usePathname();
 
-  useEffect(() => {
-    const onAnyActivity = () => {
-      lastActiveRef.current = Date.now();
-      setIdleMs(0);
-    };
+  const resetTimer = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setIsExpanded(false);
+    }, 3000);
+  };
 
-    window.addEventListener('mousemove', onAnyActivity);
-    window.addEventListener('keydown', onAnyActivity);
-    window.addEventListener('pointerdown', onAnyActivity);
+  const handleInteraction = () => {
+    setIsExpanded(true);
+    resetTimer();
+  };
 
-    const idleTimer = window.setInterval(() => {
-      setIdleMs(Date.now() - lastActiveRef.current);
-    }, 250);
-
-    return () => {
-      window.removeEventListener('mousemove', onAnyActivity);
-      window.removeEventListener('keydown', onAnyActivity);
-      window.removeEventListener('pointerdown', onAnyActivity);
-      window.clearInterval(idleTimer);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isExpanded) return;
-    // Collapse after inactivity
-    if (idleMs > 4500) setIsExpanded(false);
-  }, [idleMs, isExpanded]);
-
-  const primaryNav = useMemo(
-    () => [
-      { id: 'home', icon: LayoutGrid, label: 'Home' },
-      { id: 'apps', icon: Boxes, label: 'Apps' },
-      { id: 'games', icon: Gamepad2, label: 'Games' },
-      { id: 'runner', icon: Terminal, label: 'Run' },
-      { id: 'fabrik', icon: Sparkles, label: 'Fabrik' },
-      { id: 'lan', icon: Network, label: 'LAN' },
-      { id: 'notebook', icon: NotebookPen, label: 'Notebook' },
-    ],
-    [],
-  );
-
-  const activeLabel = useMemo(() => {
-    return primaryNav.find((x) => x.id === activeTab)?.label ?? 'Nacho';
-  }, [activeTab, primaryNav]);
-
-  const versionBadge = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_BUILD_VERSION ?? 'local';
-    if (raw === 'local' || raw === 'unknown') {
-      return 'local';
-    }
-    return raw.startsWith('v') ? raw : `v${raw}`;
-  }, []);
-  const versionLabel = versionBadge === 'local' ? 'local build' : versionBadge;
+  // Keep expanded if current page is not home, or initially?
+  // User asked for "dynamic island that moves and shrinks if not in use"
+  // So standard behavior is collapsed -> expand on interaction -> collapse after delay
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 select-none">
+    <div className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
       <motion.div
-        layout
+        className={cn(
+          "pointer-events-auto bg-[#030508]/90 backdrop-blur-md border-2 border-[#1F2937] shadow-xl overflow-hidden",
+          "transition-colors duration-300 hover:border-[#374151]"
+        )}
         initial={false}
         animate={{
-          width: isExpanded ? 460 : 210,
-          height: isExpanded ? 220 : 40,
-          borderRadius: isExpanded ? 34 : 999,
+          width: isExpanded ? 600 : 220,
+          height: isExpanded ? 'auto' : 48,
+          borderRadius: 24, // Pixelated look prefers slightly blocky but rounded allows island feel
         }}
-        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-        className="bg-[rgba(41,44,60,0.88)] backdrop-blur-xl border-2 border-white/10 shadow-2xl overflow-hidden relative"
-        onMouseEnter={() => { lastActiveRef.current = Date.now(); }}
-        onClick={() => !isExpanded && setIsExpanded(true)}
+        onMouseEnter={handleInteraction}
+        onMouseMove={resetTimer}
+        onMouseLeave={() => {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          timeoutRef.current = setTimeout(() => setIsExpanded(false), 800);
+        }}
+        style={{
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
+        }}
       >
-        {!isExpanded && (
-          <motion.div
-            className="w-full h-full flex items-center justify-center gap-3 px-4 cursor-pointer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+        <div className="flex flex-col w-full">
+          {/* Header / Collapsed State */}
+          <div 
+            className="flex items-center justify-between px-6 h-12 w-full cursor-pointer"
+            onClick={() => setIsExpanded(!isExpanded)}
           >
-            <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-white/10">
-              <Image
-                src="/branding/nacho.jpeg"
-                alt="Nacho"
-                width={28}
-                height={28}
-                className="w-full h-full object-cover"
-                priority
-              />
+            <span className="font-pixel text-xs text-[#E2E8F0] tracking-widest whitespace-nowrap">
+              challenger deep.
+            </span>
+            <div className="flex space-x-1">
+              <div className={cn("w-1 h-1 bg-[#374151] animate-pulse", isExpanded && "bg-[#64748B]")} />
+              <div className={cn("w-1 h-1 bg-[#374151] animate-pulse delay-75", isExpanded && "bg-[#64748B]")} />
+              <div className={cn("w-1 h-1 bg-[#374151] animate-pulse delay-150", isExpanded && "bg-[#64748B]")} />
             </div>
-              <div className="flex flex-col items-start gap-1">
-              <span className="text-sm font-semibold text-white/95 tracking-wide">Nacho</span>
-                <span className="text-xs text-white/60">{activeLabel}</span>
-                <span className="text-[10px] text-white/60 font-mono uppercase tracking-[0.35em]">
-                  {versionLabel}
-                </span>
-            </div>
-          </motion.div>
-        )}
+          </div>
 
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="p-5 w-full h-full flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/10">
-                    <Image
-                      src="/branding/nacho.jpeg"
-                      alt="Nacho"
-                      width={32}
-                      height={32}
-                      className="w-full h-full object-cover"
-                      priority
-                    />
-                  </div>
-                  <div className="flex flex-col leading-tight">
-                    <div className="font-bold text-base">Nacho</div>
-                    <div className="text-[11px] text-white/45">{activeLabel}</div>
-                    <div className="text-[10px] text-white/50 font-mono uppercase tracking-[0.35em]">
-                      {versionLabel}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenAchievements?.();
-                      setIsExpanded(false);
-                    }}
-                    className="p-2 rounded-full border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95"
-                    title="Achievements"
-                  >
-                    <Trophy size={16} className="text-amber-200" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onTabChange('account');
-                      setIsExpanded(false);
-                    }}
-                    className="p-2 rounded-full border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95"
-                    title="Account"
-                  >
-                    <User size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onTabChange('settings');
-                      setIsExpanded(false);
-                    }}
-                    className="p-2 rounded-full border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95"
-                    title="Settings"
-                  >
-                    <Settings size={16} />
-                  </button>
-                  <button
-                    type="button"
+          {/* Expanded Content */}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="grid grid-cols-3 gap-2 p-4 pt-0"
+              >
+                {NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center justify-center p-2 text-sm font-retro text-[#64748B] hover:text-[#94A3B8] hover:bg-[#111827] transition-colors border border-transparent hover:border-[#374151]/30",
+                      pathname === item.href && "text-[#E2E8F0] bg-[#111827] border-[#374151]/50"
+                    )}
                     onClick={() => setIsExpanded(false)}
-                    className="p-2 rounded-full border-2 border-white/15 hover:border-white/35 bg-white/5 hover:bg-white/10 transition-all active:scale-95"
-                    title="Close"
                   >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {primaryNav.map((item) => (
-                  <motion.button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      if (item.id === 'runner') onOpenRunner?.();
-                      onTabChange(item.id);
-                      setIsExpanded(false);
-                    }}
-                    whileHover={{ y: -1 }}
-                    whileTap={{ scale: 0.99 }}
-                    className={`flex flex-col items-center gap-2 p-2 rounded-2xl border-2 transition-all active:scale-[0.98] ${
-                      activeTab === item.id
-                        ? 'bg-white text-black border-white'
-                        : 'text-white/70 border-white/10 hover:border-white/35 hover:bg-white/5'
-                    }`}
-                  >
-                    <item.icon size={18} />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider">{item.label}</span>
-                  </motion.button>
+                    {item.name}
+                  </Link>
                 ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </motion.div>
     </div>
   );
-};
+}

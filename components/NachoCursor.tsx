@@ -2,72 +2,102 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { SPRITES, PALETTES, createSprite } from '@/lib/ui/sprites';
 
 export function NachoCursor() {
-  const [isPointer, setIsPointer] = useState(false);
-  const cursorX = useMotionValue(-100);
-  const cursorY = useMotionValue(-100);
-  
-  const springConfig = { damping: 25, stiffness: 700 };
-  const cursorXSpring = useSpring(cursorX, springConfig);
-  const cursorYSpring = useSpring(cursorY, springConfig);
+  const [cursorUrl, setCursorUrl] = useState('');
+  const [isHovering, setIsHovering] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Mouse position
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  // Smooth spring animation for cursor movement
+  const springConfig = { damping: 25, stiffness: 400, mass: 0.5 };
+  const x = useSpring(mouseX, springConfig);
+  const y = useSpring(mouseY, springConfig);
 
   useEffect(() => {
-    const moveCursor = (e: MouseEvent) => {
-      cursorX.set(e.clientX - 16);
-      cursorY.set(e.clientY - 16);
-    };
+    // Generate cursor sprite - using darker glow palette
+    const url = createSprite(SPRITES.cursor, 2, { ...PALETTES.glow, '#': '#94A3B8' });
+    setCursorUrl(url);
 
-    const handleMouseOver = (e: MouseEvent) => {
+    const updateMouse = (e: MouseEvent) => {
+      mouseX.set(e.clientX);
+      mouseY.set(e.clientY);
+      setIsVisible(true);
+      
+      // Check if hovering over clickable elements
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'A' ||
+      const isClickable = 
         target.tagName === 'BUTTON' ||
-        target.closest('a') ||
+        target.tagName === 'A' ||
         target.closest('button') ||
-        target.classList.contains('clickable') ||
-        getComputedStyle(target).cursor === 'pointer'
-      ) {
-        setIsPointer(true);
-      } else {
-        setIsPointer(false);
-      }
+        target.closest('a') ||
+        target.classList.contains('cursor-pointer');
+      
+      setIsHovering(!!isClickable);
     };
 
-    window.addEventListener('mousemove', moveCursor);
-    window.addEventListener('mouseover', handleMouseOver);
+    const handleMouseLeave = () => setIsVisible(false);
+    const handleMouseEnter = () => setIsVisible(true);
+
+    window.addEventListener('mousemove', updateMouse);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
 
     return () => {
-      window.removeEventListener('mousemove', moveCursor);
-      window.removeEventListener('mouseover', handleMouseOver);
+      window.removeEventListener('mousemove', updateMouse);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
     };
-  }, [cursorX, cursorY]);
+  }, [mouseX, mouseY]);
+
+  if (!cursorUrl) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+    <>
+      <style jsx global>{`
+        body, a, button, input, select, textarea {
+          cursor: none !important;
+        }
+      `}</style>
+      
       <motion.div
+        className="pointer-events-none fixed left-0 top-0 z-[10000] mix-blend-difference"
         style={{
-          translateX: cursorXSpring,
-          translateY: cursorYSpring,
+          x,
+          y,
+          opacity: isVisible ? 1 : 0,
         }}
-        className="absolute top-0 left-0"
       >
-        {/* Main Cursor: Pixel Square */}
+        {/* Glow Effect */}
         <div 
-          className={`
-            w-8 h-8 border-2 border-nacho-primary bg-transparent
-            transition-transform duration-100 ease-out
-            ${isPointer ? 'scale-150 rotate-45 bg-nacho-primary/20' : 'scale-100'}
-          `}
+          className="absolute -left-12 -top-12 h-24 w-24 rounded-full opacity-20 blur-xl transition-all duration-300"
           style={{
-            boxShadow: '0 0 15px 2px rgba(168, 180, 208, 0.4)',
-            imageRendering: 'pixelated'
+            background: isHovering 
+              ? 'radial-gradient(circle, #475569 0%, transparent 70%)' 
+              : 'radial-gradient(circle, #334155 0%, transparent 70%)',
+            transform: isHovering ? 'scale(1.5)' : 'scale(1)',
+          }}
+        />
+
+        {/* Cursor Sprite */}
+        <div 
+          className="relative h-6 w-6 transition-transform duration-200"
+          style={{
+            transform: isHovering ? 'scale(0.8) rotate(-10deg)' : 'scale(1) rotate(0deg)',
           }}
         >
-            {/* Center Dot */}
-            <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-white -translate-x-1/2 -translate-y-1/2" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src={cursorUrl} 
+            alt="Cursor" 
+            className="h-full w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+          />
         </div>
       </motion.div>
-    </div>
+    </>
   );
 }

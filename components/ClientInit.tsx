@@ -1,96 +1,16 @@
 'use client';
 
-import { useEffect } from 'react';
-import { authService } from '@/lib/firebase/auth-service';
-import { ensureKursor } from '@/lib/ui/kursor';
-import { hyperRuntime } from '@/lib/performance/hyper-runtime';
-import { unlockAchievement } from '@/lib/gamification/achievements';
-import { getNachoIdentity } from '@/lib/auth/nacho-identity';
-import { AetherLanRoom } from '@/lib/lan/aetherlan';
+import { useEffect, useState } from 'react';
 
-/**
- * Client-side initialization
- * Runs keepalive cluster frame and other client-only setup
- */
 export function ClientInit() {
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    // IMPORTANT: /keepalive runs inside a hidden iframe. Do not spawn nested iframes or warm heavy subsystems there.
-    if (typeof window !== 'undefined') {
-      const path = window.location?.pathname || '';
-      if (path.startsWith('/keepalive')) return;
-    }
-
-    // Custom cursor (Kursor)
-    ensureKursor().catch(() => { });
-
-    // Ensure a local identity exists (username + device fingerprint). No user action required.
-    void getNachoIdentity()
-      .then(() => unlockAchievement('booted'))
-      .catch(() => { });
-
-    const ensureKeepaliveFrame = () => {
-      try {
-        // User-controlled opt-out (Network page toggle).
-        if (window.localStorage.getItem('nacho.keepalive') === 'off') return;
-      } catch {
-        // ignore
-      }
-      const id = 'nacho-cluster-keepalive';
-      const existing = document.getElementById(id) as HTMLIFrameElement | null;
-      if (existing) return;
-
-      const iframe = document.createElement('iframe');
-      iframe.id = id;
-      iframe.src = '/keepalive';
-      iframe.tabIndex = -1;
-      iframe.setAttribute('aria-hidden', 'true');
-      iframe.style.position = 'fixed';
-      iframe.style.left = '-9999px';
-      iframe.style.top = '-9999px';
-      iframe.style.width = '1px';
-      iframe.style.height = '1px';
-      iframe.style.opacity = '0';
-      iframe.style.pointerEvents = 'none';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-    };
-
-    ensureKeepaliveFrame();
-
-    // Preload critical assets
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(async () => {
-        // Warm runtime helpers early (GPU/audio/worker/idle queue).
-        hyperRuntime.ensureInitialized().catch(() => { });
-
-        // Bootstrap Global P2P Networking (Fabrik)
-        try {
-          // Use a fixed roomId for the global mesh
-          const globalRoom = new AetherLanRoom('global');
-          await globalRoom.start();
-          console.log('[Fabric] Global P2P Mesh connected.');
-
-          // Warm Fabric (semantic memo index + CAS path) early for better perceived speed.
-          const { fabricRuntime } = await import('@/lib/fabric/runtime');
-          await fabricRuntime.initialize();
-          console.log('[Fabric] Runtime initialized.');
-        } catch (err) {
-          console.warn('[Fabric] P2P auto-start failed', err);
-        }
-
-        // Preload ISO files logic removed for Local-First policy
-        // Users will provide their own files or manually download.
-      });
-    }
-
-    return () => {
-      // Keepalive should persist for the lifetime of the app shell;
-      // on unmount, remove it.
-      const existing = document.getElementById('nacho-cluster-keepalive');
-      existing?.remove();
-    };
+    setMounted(true);
+    // Any other client-side initialization can go here
   }, []);
+
+  if (!mounted) return null;
 
   return null;
 }
-

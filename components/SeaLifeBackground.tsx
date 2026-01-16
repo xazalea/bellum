@@ -1,247 +1,220 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { motion, Variants } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { SPRITES, PALETTES, createSprite, PixelMap } from '@/lib/ui/sprites';
 
-// Pixel Art SVGs - Brighter Colors
-const Fish1 = () => (
-  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixelated">
-    <path d="M4 4H8V6H4V4Z" fill="#F9A8D4"/> {/* Lighter Pink */}
-    <path d="M8 2H12V4H8V2Z" fill="#F9A8D4"/>
-    <path d="M12 4H16V6H12V4Z" fill="#F9A8D4"/>
-    <path d="M16 6H20V10H16V6Z" fill="#F9A8D4"/>
-    <path d="M12 10H16V12H12V10Z" fill="#F9A8D4"/>
-    <path d="M8 12H12V14H8V12Z" fill="#F9A8D4"/>
-    <path d="M4 10H8V12H4V10Z" fill="#F9A8D4"/>
-    <rect x="14" y="5" width="2" height="2" fill="white"/>
-  </svg>
-);
+interface Animal {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  type: keyof typeof SPRITES;
+  image: HTMLImageElement;
+  width: number;
+  height: number;
+  frame: number;
+  speed: number;
+  scale: number;
+  reaction: 'flee' | 'attract' | 'ignore';
+}
 
-const Fish2 = () => (
-  <svg width="32" height="20" viewBox="0 0 32 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixelated">
-     <path d="M4 6H12V8H4V6Z" fill="#86EFAC"/> {/* Lighter Green */}
-     <path d="M12 4H20V6H12V4Z" fill="#86EFAC"/>
-     <path d="M20 6H24V8H20V6Z" fill="#86EFAC"/>
-     <path d="M24 8H28V12H24V8Z" fill="#86EFAC"/>
-     <path d="M20 12H24V14H20V12Z" fill="#86EFAC"/>
-     <path d="M12 14H20V16H12V14Z" fill="#86EFAC"/>
-     <path d="M4 12H12V14H4V12Z" fill="#86EFAC"/>
-     <rect x="18" y="6" width="2" height="2" fill="white"/>
-  </svg>
-);
-
-const Jellyfish = () => (
-  <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixelated">
-    <path d="M4 8H20V16H4V8Z" fill="#C7D2FE" fillOpacity="0.9"/> {/* Lighter Blue */}
-    <path d="M6 4H18V8H6V4Z" fill="#C7D2FE" fillOpacity="0.9"/>
-    <path d="M6 16H8V28H6V16Z" fill="#C7D2FE" fillOpacity="0.7"/>
-    <path d="M10 16H12V24H10V16Z" fill="#C7D2FE" fillOpacity="0.7"/>
-    <path d="M14 16H16V26H14V16Z" fill="#C7D2FE" fillOpacity="0.7"/>
-    <path d="M18 16H20V30H18V16Z" fill="#C7D2FE" fillOpacity="0.7"/>
-  </svg>
-);
-
-const Turtle = () => (
-    <svg width="40" height="24" viewBox="0 0 40 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixelated">
-        <path d="M10 8H30V18H10V8Z" fill="#6EE7B7"/> {/* Lighter Teal */}
-        <path d="M6 10H10V16H6V10Z" fill="#6EE7B7"/>
-        <path d="M30 10H34V14H30V10Z" fill="#6EE7B7"/>
-        <path d="M8 16H14V20H8V16Z" fill="#6EE7B7"/>
-        <path d="M26 16H32V20H26V16Z" fill="#6EE7B7"/>
-        <path d="M34 11H38V13H34V11Z" fill="#6EE7B7"/>
-        <rect x="35" y="11" width="1" height="1" fill="black"/>
-    </svg>
-)
+interface Particle {
+  x: number;
+  y: number;
+  vy: number;
+  life: number;
+  image: HTMLImageElement;
+}
 
 export function SeaLifeBackground() {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mouseRef = useRef({ x: -1000, y: -1000 });
+  const animalsRef = useRef<Animal[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('mousemove', handleMouseMove);
+    // Pre-generate sprites
+    const loadedSprites: Record<string, HTMLImageElement> = {};
+    const spriteKeys = Object.keys(SPRITES) as Array<keyof typeof SPRITES>;
     
-    // Initial size
-    handleResize();
+    // Create ocean palette variations
+    const palettes = {
+      fish: { ...PALETTES.ocean, '#': '#334155', 'x': '#1E293B' },
+      octopus: { ...PALETTES.ocean, '#': '#475569', 'x': '#334155' },
+      jellyfish: { ...PALETTES.ocean, '#': '#64748B', 'x': '#475569', 'o': '#334155' },
+      bubble: { '#': '#475569', '.': 'transparent' }
+    };
+
+    spriteKeys.forEach(key => {
+      const img = new Image();
+      // Use specific palette or default ocean
+      const palette = palettes[key as keyof typeof palettes] || PALETTES.ocean;
+      img.src = createSprite(SPRITES[key], 4, palette);
+      loadedSprites[key] = img;
+    });
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Track mouse
+    const handleMouseMove = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+
+    // Spawn animals
+    const spawnAnimals = () => {
+      const count = Math.min(20, Math.floor(window.innerWidth / 100));
+      animalsRef.current = [];
+      
+      for (let i = 0; i < count; i++) {
+        const type = spriteKeys[Math.floor(Math.random() * (spriteKeys.length - 2)) + 1]; // Skip cursor
+        const img = loadedSprites[type];
+        if (!img) continue;
+
+        animalsRef.current.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 0.5,
+          type,
+          image: img,
+          width: img.width,
+          height: img.height,
+          frame: 0,
+          speed: 1 + Math.random(),
+          scale: 0.5 + Math.random() * 0.5,
+          reaction: type === 'fish' ? 'flee' : type === 'octopus' ? 'attract' : 'ignore'
+        });
+      }
+    };
+
+    // Wait for images to load somewhat
+    setTimeout(spawnAnimals, 500);
+
+    // Animation Loop
+    let animationFrameId: number;
+    
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Update & Draw Animals
+      animalsRef.current.forEach(animal => {
+        // Base movement
+        animal.x += animal.vx * animal.speed;
+        animal.y += animal.vy * animal.speed;
+
+        // Wall wrapping
+        if (animal.x < -100) animal.x = canvas.width + 100;
+        if (animal.x > canvas.width + 100) animal.x = -100;
+        if (animal.y < -100) animal.y = canvas.height + 100;
+        if (animal.y > canvas.height + 100) animal.y = -100;
+
+        // Interaction
+        const dx = mouseRef.current.x - animal.x;
+        const dy = mouseRef.current.y - animal.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 200) {
+          if (animal.reaction === 'flee') {
+            animal.vx -= (dx / dist) * 0.2;
+            animal.vy -= (dy / dist) * 0.2;
+          } else if (animal.reaction === 'attract') {
+            animal.vx += (dx / dist) * 0.1;
+            animal.vy += (dy / dist) * 0.1;
+          }
+        }
+
+        // Speed limit
+        const maxSpeed = 3;
+        const speed = Math.sqrt(animal.vx * animal.vx + animal.vy * animal.vy);
+        if (speed > maxSpeed) {
+          animal.vx = (animal.vx / speed) * maxSpeed;
+          animal.vy = (animal.vy / speed) * maxSpeed;
+        }
+
+        // Draw
+        ctx.save();
+        ctx.translate(animal.x, animal.y);
+        if (animal.vx > 0) ctx.scale(-1, 1); // Flip if moving right
+        ctx.scale(animal.scale, animal.scale);
+        
+        // Bobbing effect
+        const bob = Math.sin(Date.now() / 500 + animal.x) * 5;
+        ctx.drawImage(animal.image, -animal.width / 2, -animal.height / 2 + bob);
+        
+        ctx.restore();
+        
+        // Randomly spawn bubbles
+        if (Math.random() < 0.005) {
+          particlesRef.current.push({
+            x: animal.x + (Math.random() - 0.5) * 20,
+            y: animal.y,
+            vy: -1 - Math.random(),
+            life: 100,
+            image: loadedSprites['bubble']
+          });
+        }
+      });
+
+      // Update & Draw Particles (Bubbles)
+      for (let i = particlesRef.current.length - 1; i >= 0; i--) {
+        const p = particlesRef.current[i];
+        p.y += p.vy;
+        p.life--;
+        
+        ctx.globalAlpha = p.life / 100;
+        ctx.drawImage(p.image, p.x, p.y, 8, 8);
+        ctx.globalAlpha = 1;
+
+        if (p.life <= 0) particlesRef.current.splice(i, 1);
+      }
+
+      // Draw Cursor Light (Illumination)
+      ctx.save();
+      ctx.globalCompositeOperation = 'overlay'; 
+      const gradient = ctx.createRadialGradient(
+        mouseRef.current.x, 
+        mouseRef.current.y, 
+        0, 
+        mouseRef.current.x, 
+        mouseRef.current.y, 
+        200
+      );
+      gradient.addColorStop(0, 'rgba(51, 65, 85, 0.2)');
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animate();
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  const fishVariants: Variants = {
-    swimRight: {
-      x: [ -100, typeof window !== 'undefined' ? window.innerWidth + 100 : 2000 ],
-      transition: {
-        duration: 20,
-        repeat: Infinity,
-        ease: "linear" as const,
-        delay: 0,
-      }
-    },
-    swimLeft: {
-        x: [ typeof window !== 'undefined' ? window.innerWidth + 100 : 2000, -100 ],
-        transition: {
-          duration: 25,
-          repeat: Infinity,
-          ease: "linear" as const,
-          delay: 0,
-        }
-    },
-    bob: {
-        y: [0, -20, 0],
-        transition: {
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut" as const
-        }
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-[-1] overflow-hidden bg-[#02040a]">
-      {/* Layer 0: Deep Background (Bubbles/Particles) - Increased opacity */}
-      <div className="absolute inset-0 opacity-40">
-         {[...Array(30)].map((_, i) => (
-             <motion.div
-                key={`bubble-${i}`}
-                className="absolute bg-white/20 rounded-none" // Square bubbles for pixel look
-                style={{
-                    width: Math.random() * 4 + 2,
-                    height: Math.random() * 4 + 2,
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                }}
-                animate={{
-                    y: [0, -1000],
-                    opacity: [0, 1, 0]
-                }}
-                transition={{
-                    duration: Math.random() * 20 + 10,
-                    repeat: Infinity,
-                    ease: "linear",
-                    delay: Math.random() * 10
-                }}
-             />
-         ))}
-      </div>
-
-      {/* Layer 1: Active Sea Life */}
-      <div className="absolute inset-0">
-        {/* School of Fish 1 */}
-        {[...Array(8)].map((_, i) => (
-             <motion.div
-                key={`fish1-${i}`}
-                className="absolute"
-                style={{
-                    top: `${10 + i * 12}%`,
-                    left: -100,
-                }}
-                animate="swimRight"
-                variants={fishVariants}
-                custom={i}
-             >
-                 <motion.div animate="bob" variants={fishVariants}>
-                    <Fish1 />
-                 </motion.div>
-             </motion.div>
-        ))}
-
-        {/* School of Fish 2 (Swimming Left) */}
-        {[...Array(5)].map((_, i) => (
-            <motion.div
-                key={`fish2-${i}`}
-                className="absolute"
-                style={{
-                    top: `${30 + i * 15}%`,
-                    left: '100%'
-                }}
-                animate="swimLeft"
-                variants={fishVariants}
-            >
-                <motion.div animate="bob" variants={fishVariants}>
-                    <div style={{ transform: 'scaleX(-1)' }}>
-                        <Fish2 />
-                    </div>
-                </motion.div>
-            </motion.div>
-        ))}
-
-        {/* Jellyfish */}
-        {[...Array(5)].map((_, i) => (
-            <motion.div
-                key={`jelly-${i}`}
-                className="absolute"
-                style={{
-                    left: `${10 + i * 20}%`,
-                    top: -50
-                }}
-                animate={{
-                    y: [-50, typeof window !== 'undefined' ? window.innerHeight + 50 : 1000],
-                    scale: [1, 1.1, 1]
-                }}
-                transition={{
-                    y: {
-                        duration: 30 + i * 5,
-                        repeat: Infinity,
-                        ease: "linear" as const,
-                        delay: i * 5,
-                        repeatType: "loop" as const
-                    },
-                    scale: {
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: "easeInOut" as const,
-                        delay: i,
-                        repeatType: "loop" as const
-                    }
-                }}
-            >
-                <Jellyfish />
-            </motion.div>
-        ))}
-        
-        {/* Turtle */}
-         <motion.div
-            className="absolute"
-            style={{
-                top: '40%',
-                left: -200,
-            }}
-            animate={{
-                x: [ -200, typeof window !== 'undefined' ? window.innerWidth + 200 : 2000 ],
-                y: [0, 50, 0, -50, 0]
-            }}
-            transition={{
-                x: { duration: 60, repeat: Infinity, ease: "linear" },
-                y: { duration: 10, repeat: Infinity, ease: "easeInOut" }
-            }}
-        >
-            <Turtle />
-        </motion.div>
-
-      </div>
-
-      {/* Layer 2: Dark Overlay with Flashlight Mask */}
-      <div 
-        className="absolute inset-0 bg-[#0B0F1A] transition-colors duration-300"
-        style={{
-            maskImage: `radial-gradient(circle 300px at ${mousePos.x}px ${mousePos.y}px, transparent 0%, rgba(0,0,0,0.8) 20%, black 100%)`,
-            WebkitMaskImage: `radial-gradient(circle 300px at ${mousePos.x}px ${mousePos.y}px, transparent 0%, rgba(0,0,0,0.8) 20%, black 100%)`,
-        }}
-      />
+    <div ref={containerRef} className="fixed inset-0 z-0 bg-[#030508]">
+      <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full" />
     </div>
   );
 }

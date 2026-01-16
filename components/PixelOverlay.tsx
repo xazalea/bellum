@@ -4,22 +4,12 @@ import React from 'react';
 
 export function PixelOverlay() {
   return (
-    <div className="fixed inset-0 z-[9999] pointer-events-none overflow-hidden">
-      {/* Scanlines */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          background: 'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2))',
-          backgroundSize: '100% 4px'
-        }}
-      />
-      {/* Vignette */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%)'
-        }}
-      />
-    </div>
+    <div className="pointer-events-none fixed inset-0 z-[9999] h-full w-full opacity-[0.03]"
+      style={{
+        backgroundImage: `linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))`,
+        backgroundSize: '100% 2px, 3px 100%',
+        backgroundRepeat: 'repeat, repeat',
+      }}
+    />
   );
 }
