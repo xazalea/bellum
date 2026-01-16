@@ -3,6 +3,7 @@ import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 import { NachoCursor } from '@/components/NachoCursor';
 import { SeaLifeBackground } from '@/components/SeaLifeBackground';
+import { PixelOverlay } from '@/components/PixelOverlay';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({
       <body className="min-h-screen w-full flex flex-col font-retro antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
         <SeaLifeBackground />
         <NachoCursor />
+        <PixelOverlay />
         {children}
         <ClientInit />
       </body>

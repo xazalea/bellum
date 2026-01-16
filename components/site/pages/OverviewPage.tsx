@@ -1,15 +1,9 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { GlobalSearch } from '@/components/nacho-ui/GlobalSearch';
-import { Button } from '@/components/nacho-ui/Button';
-import { Card } from '@/components/nacho-ui/Card';
-import { ProgressBar } from '@/components/nacho-ui/ProgressBar';
-import { StatusIndicator } from '@/components/nacho-ui/StatusIndicator';
 import { PageTransition } from '@/components/nacho-ui/PageTransition';
-import { Settings, ArrowRight, Play, HardDrive, Cpu, MoreVertical } from 'lucide-react';
 import { useInstalledApps } from '../hooks/useInstalledApps';
 import { useClusterPeers } from '../hooks/useClusterPeers';
 
@@ -25,227 +19,118 @@ export function OverviewPage() {
   const router = useRouter();
   const { apps } = useInstalledApps();
   const { peers } = useClusterPeers();
-  const [search, setSearch] = useState('');
+  const [currentTime, setCurrentTime] = useState('');
 
-  const featured = useMemo(() => {
-    return [...apps].sort((a, b) => b.installedAt - a.installedAt)[0] ?? null;
-  }, [apps]);
+  useEffect(() => {
+    const tick = () => setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
+    const timer = setInterval(tick, 1000);
+    tick();
+    return () => clearInterval(timer);
+  }, []);
 
   const storageUsed = useMemo(() => apps.reduce((acc, app) => acc + (app.storedBytes || 0), 0), [apps]);
-  const storagePercent = Math.min(100, (storageUsed / (5 * 1024 * 1024 * 1024)) * 100); // Assume 5GB quota for demo
 
   return (
     <PageTransition>
-      <div className="flex flex-col gap-10 pb-20 relative z-10">
-        {/* Hero Section */}
-        <section className="text-center space-y-8 pt-20 pb-8">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-            className="text-4xl md:text-6xl tracking-tight text-white font-pixel uppercase"
-          >
-            challenger deep.
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="max-w-2xl mx-auto text-xl md:text-2xl text-nacho-primary font-retro leading-relaxed"
-          >
-            explore the depths.
-          </motion.p>
-        </section>
-
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] relative z-10 text-center">
         
-        {/* Left Column Group */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          
-          {/* Search Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <Card className="flex flex-col gap-4 !bg-nacho-card/80 backdrop-blur-sm">
-            <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1 font-pixel">Library Search</div>
-            <GlobalSearch 
-              placeholder="Find apps, settings, or files..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  router.push(`/library?q=${encodeURIComponent(search)}`);
-                }
-              }}
+        {/* Top HUD */}
+        <div className="absolute top-0 w-full flex justify-between items-center text-xs text-nacho-primary border-b border-nacho-primary/30 pb-2 mb-10 font-pixel">
+            <span>SYS.ONLINE</span>
+            <span>{currentTime}</span>
+            <span>DEPTH: 10,924M</span>
+        </div>
+
+        {/* Central Sonar / Logo */}
+        <div className="relative w-64 h-64 mb-12 flex items-center justify-center">
+            {/* Rotating Radar Line */}
+            <motion.div 
+                className="absolute inset-0 rounded-full border-2 border-nacho-primary/30"
+                style={{
+                    background: 'radial-gradient(circle, rgba(168, 180, 208, 0.1) 0%, transparent 70%)'
+                }}
             />
-          </Card>
-          </motion.div>
-
-          {/* Split Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Quick Actions */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 }}
-            >
-              <Card className="flex flex-col gap-8 h-full justify-between !bg-nacho-card/80 backdrop-blur-sm">
-              <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1 font-pixel">Quick Actions</div>
-              
-              <div className="flex flex-col gap-4">
-                <Button 
-                  className="w-full justify-between group font-retro text-lg"
-                  onClick={() => router.push('/library')}
-                >
-                  Install New App
-                  <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-                </Button>
-                
-                <div className="flex gap-3">
-                  <Button variant="secondary" className="flex-1 font-retro text-lg" onClick={() => router.push('/network')}>
-                    View Network
-                  </Button>
-                  <Button variant="secondary" className="px-3 aspect-square">
-                    <Settings size={20} />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-            </motion.div>
-
-            {/* System Status */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.5 }}
-            >
-              <Card className="flex flex-col gap-8 h-full !bg-nacho-card/80 backdrop-blur-sm">
-              <div className="text-xs font-bold tracking-widest uppercase text-nacho-subtext/60 pl-1 font-pixel">System Status</div>
-              
-              <div className="space-y-6">
-                <ProgressBar value={storagePercent} label="Storage Quota" showValue />
-                
-                <div className="flex flex-wrap gap-2">
-                  <StatusIndicator status={peers.length > 0 ? 'active' : 'pending'} label="Cluster" />
-                  <StatusIndicator status="active" label="Runtime" />
-                  <StatusIndicator status="info" label={`${apps.length} Apps`} />
-                </div>
-                
-                <div className="flex items-center justify-between pt-2 border-t border-nacho-border">
-                  <span className="text-sm font-medium text-nacho-subtext font-retro">Version</span>
-                  <span className="text-sm font-mono text-white font-retro">v2.0.0-deep</span>
-                </div>
-              </div>
-            </Card>
-            </motion.div>
-
-          </div>
+                className="absolute w-full h-1/2 top-0 left-0 origin-bottom border-r border-nacho-primary/50"
+                style={{
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(168, 180, 208, 0.2) 100%)'
+                }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            />
+            {/* Center Text */}
+            <div className="relative z-10 flex flex-col items-center">
+                <h1 className="text-4xl md:text-5xl font-pixel text-white mb-2 tracking-widest leading-normal">
+                    CHALLENGER
+                    <br />
+                    <span className="text-nacho-primary">DEEP</span>
+                </h1>
+            </div>
         </div>
 
-        {/* Right Column Group */}
-        <div className="flex flex-col gap-6">
-          
-          {/* Featured App (Standard Card) */}
-          {featured ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.6 }}
-            >
-              <Card className="flex flex-col gap-4 relative overflow-hidden group !bg-nacho-card/80 backdrop-blur-sm">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Cpu size={100} />
-              </div>
-              <div className="h-12 w-12 bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-nacho-primary mb-2 shadow-glow">
-                {featured.type === 'android' ? <span className="material-symbols-outlined">smartphone</span> : <span className="material-symbols-outlined">desktop_windows</span>}
-              </div>
-              
-              <div>
-                <div className="text-xs font-bold tracking-widest uppercase text-nacho-primary mb-1 font-pixel">Jump Back In</div>
-                <h3 className="text-xl font-bold text-white truncate font-pixel">{featured.name}</h3>
-              </div>
-              
-              <p className="text-sm text-nacho-subtext leading-relaxed line-clamp-2 font-retro text-lg">
-                {featured.originalName}
-              </p>
-              
-              <Button 
-                onClick={() => router.push(`/play?appId=${encodeURIComponent(featured.id)}`)}
-                className="mt-2 w-full gap-2 font-retro text-lg"
-              >
-                <Play size={18} fill="currentColor" /> Resume
-              </Button>
-            </Card>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.6 }}
-            >
-              <Card className="flex flex-col gap-4 !bg-nacho-card/80 backdrop-blur-sm">
-              <div className="h-12 w-12 bg-nacho-card-hover border border-nacho-border flex items-center justify-center text-nacho-subtext mb-2">
-                <HardDrive size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-white font-pixel">No Apps Installed</h3>
-              <p className="text-sm text-nacho-subtext leading-relaxed font-retro text-lg">
-                Your library is empty. Install your first app to get started.
-              </p>
-              <Button onClick={() => router.push('/library')} className="mt-2 font-retro text-lg">Go to Library</Button>
-            </Card>
-            </motion.div>
-          )}
-
-          {/* App Card (Static or Contextual) */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.7 }}
-          >
-            <Card className="relative overflow-hidden group !bg-nacho-card/80 backdrop-blur-sm">
-            <div className="flex justify-between items-start mb-4">
-              <div className="h-12 w-12 bg-gradient-to-br from-nacho-subtext/20 to-nacho-subtext/5 backdrop-blur-sm border border-white/5" />
-              <button className="text-nacho-subtext hover:text-white transition-colors">
-                <MoreVertical size={20} />
-              </button>
-            </div>
-            
-            <h3 className="text-lg font-bold text-white mb-2 font-pixel">Workspace</h3>
-            <p className="text-sm text-nacho-subtext leading-relaxed mb-6 font-retro text-lg">
-              Manage your distributed compute nodes and storage buckets.
-            </p>
-            
-            <Button variant="secondary" className="w-full uppercase text-xs tracking-wider font-bold py-3 hover:bg-nacho-card-hover hover:border-nacho-border-strong font-pixel">
-              Open Workspace
-            </Button>
-          </Card>
-          </motion.div>
-
-          {/* Icon Card (Stats) */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.8 }}
-            className="relative overflow-hidden bg-nacho-primary/90 p-6 md:p-8 text-nacho-bg transition-transform hover:-translate-y-1 duration-300 cursor-pointer border-2 border-white shadow-nacho"
-          >
-            <div className="flex justify-between items-end">
-              <div>
-                <div className="text-xs font-bold tracking-widest uppercase opacity-70 mb-1 font-pixel">Total Storage</div>
-                <div className="text-4xl font-black font-pixel tracking-tight">{formatBytes(storageUsed)}</div>
-              </div>
-              <div className="h-12 w-12 bg-black/10 flex items-center justify-center backdrop-blur-sm">
-                <HardDrive className="h-6 w-6 opacity-80" />
-              </div>
-            </div>
-          </motion.div>
-
+        {/* Main Actions Menu */}
+        <div className="flex flex-col md:flex-row gap-6 w-full max-w-2xl">
+            <MenuOption 
+                label="INITIATE DIVE" 
+                sub="Launch Applications" 
+                onClick={() => router.push('/library')} 
+                active
+            />
+            <MenuOption 
+                label="SONAR SCAN" 
+                sub="Network Status" 
+                onClick={() => router.push('/network')} 
+            />
+            <MenuOption 
+                label="CARGO HOLD" 
+                sub={`${formatBytes(storageUsed)} Used`} 
+                onClick={() => {}} 
+            />
         </div>
+
+        {/* System Stats Footer */}
+        <div className="mt-16 w-full max-w-4xl grid grid-cols-3 gap-4 text-xs font-retro text-nacho-subtext border-t border-nacho-primary/30 pt-4">
+            <Stat label="CLUSTER NODES" value={peers.length.toString()} />
+            <Stat label="PRESSURE" value="1086 BAR" />
+            <Stat label="TEMP" value="1.4°C" />
+        </div>
+
       </div>
-    </div>
     </PageTransition>
   );
+}
+
+function MenuOption({ label, sub, onClick, active }: { label: string, sub: string, onClick: () => void, active?: boolean }) {
+    return (
+        <button 
+            onClick={onClick}
+            className={`flex-1 group relative p-6 border-2 transition-all duration-200
+                ${active 
+                    ? 'border-nacho-primary bg-nacho-primary/10' 
+                    : 'border-nacho-border hover:border-nacho-primary hover:bg-nacho-primary/5'
+                }`}
+        >
+            {/* Corner Markers */}
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-nacho-primary" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-nacho-primary" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-nacho-primary" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-nacho-primary" />
+
+            <div className="text-xl font-pixel text-white mb-2 group-hover:text-nacho-primary transition-colors">
+                {label}
+            </div>
+            <div className="text-sm font-retro text-nacho-subtext uppercase tracking-widest">
+                {sub}
+            </div>
+        </button>
+    );
+}
+
+function Stat({ label, value }: { label: string, value: string }) {
+    return (
+        <div className="flex flex-col items-center">
+            <span className="opacity-50 mb-1">{label}</span>
+            <span className="text-nacho-primary text-lg">{value}</span>
+        </div>
+    );
 }
