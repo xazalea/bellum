@@ -116,7 +116,8 @@ export function SeaLifeBackground() {
         transition: {
             duration: 40,
             repeat: Infinity,
-            ease: "linear" as const
+            ease: "linear" as const,
+            repeatType: "loop" as const
         }
     },
     pulse: {
@@ -124,7 +125,8 @@ export function SeaLifeBackground() {
         transition: {
             duration: 3,
             repeat: Infinity,
-            ease: "easeInOut" as const
+            ease: "easeInOut" as const,
+            repeatType: "loop" as const
         }
     }
   };
@@ -204,11 +206,25 @@ export function SeaLifeBackground() {
                     left: `${15 + i * 30}%`,
                     top: -50
                 }}
-                animate={["float", "pulse"]}
-                variants={jellyfishVariants}
+                animate={{
+                    y: [-50, typeof window !== 'undefined' ? window.innerHeight + 50 : 1000],
+                    scale: [1, 1.1, 1]
+                }}
                 transition={{
-                    float: { duration: 30 + i * 5, repeat: Infinity, ease: "linear", delay: i * 5 },
-                    pulse: { duration: 3, repeat: Infinity, ease: "easeInOut", delay: i }
+                    y: {
+                        duration: 30 + i * 5,
+                        repeat: Infinity,
+                        ease: "linear" as const,
+                        delay: i * 5,
+                        repeatType: "loop" as const
+                    },
+                    scale: {
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut" as const,
+                        delay: i,
+                        repeatType: "loop" as const
+                    }
                 }}
             >
                 <Jellyfish />
