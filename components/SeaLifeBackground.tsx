@@ -50,39 +50,48 @@ export function SeaLifeBackground() {
     
     // Function to generate random ocean colors
     const randomColor = () => {
-      const hues = [200, 220, 240, 260, 280, 180]; // Blues, Cyans, Purples
+      // Use specific palette colors from the new high-quality sprites if possible, 
+      // OR map the string characters dynamically.
+      // But our createSprite function handles the palette mapping.
+      // We need to pass a palette to createSprite.
+      
+      const hues = [200, 210, 220, 230, 190]; // More strict deep ocean hues
       const hue = hues[Math.floor(Math.random() * hues.length)];
-      const sat = 40 + Math.random() * 40;
-      const light = 30 + Math.random() * 40;
+      const sat = 20 + Math.random() * 30; // Desaturated
+      const light = 20 + Math.random() * 30; // Darker
       return `hsl(${hue}, ${sat}%, ${light}%)`;
     };
 
     const secondaryColor = (base: string) => {
-      // Just dim it a bit for secondary
-      return base.replace('%)', '%, 0.7)'); 
+      return base.replace('%)', '%, 0.5)'); 
+    };
+    
+    const highlightColor = (base: string) => {
+       // Make it slightly lighter for details
+       return '#64748B';
     };
 
     // Pre-generate multiple color variants for each sprite type
     spriteKeys.forEach(key => {
       loadedSprites[key] = [];
-      // Generate 3 variants per species
-      for (let i = 0; i < 3; i++) {
+      // Generate 2 variants per species (Standard + Variant)
+      for (let i = 0; i < 2; i++) {
         const base = randomColor();
         const palette = {
-          '#': base,
-          'x': secondaryColor(base),
-          'o': '#ffffff', // bright eyes/accents
+          '#': base, // Body
+          'o': secondaryColor(base), // Detail/Shadow
+          'x': i === 0 ? '#0F172A' : '#1E293B', // Outline (Dark)
           '.': 'transparent'
         };
         const img = new Image();
-        img.src = createSprite(SPRITES[key], 6, palette); // Scale 6 for larger pixels
+        img.src = createSprite(SPRITES[key], 4, palette); // Scale 4 is good for 16-32px sprites
         loadedSprites[key].push(img);
       }
     });
     
     // Bubble sprite
     const bubbleImg = new Image();
-    bubbleImg.src = createSprite(SPRITES['bubble'], 4, { '#': '#475569', '.': 'transparent' });
+    bubbleImg.src = createSprite(SPRITES['bubble'], 2, { 'x': '#334155', '.': 'transparent' });
 
     const resize = () => {
       canvas.width = window.innerWidth;

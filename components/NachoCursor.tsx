@@ -13,14 +13,19 @@ export function NachoCursor() {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  // Smooth spring animation for cursor movement - Responsive Tuning
-  const springConfig = { damping: 20, stiffness: 800, mass: 0.5 };
+  // Snappier spring animation
+  const springConfig = { damping: 25, stiffness: 700, mass: 0.5 };
   const x = useSpring(mouseX, springConfig);
   const y = useSpring(mouseY, springConfig);
 
   useEffect(() => {
-    // Generate cursor sprite - using darker glow palette
-    const url = createSprite(SPRITES.cursor, 2, { ...PALETTES.glow, '#': '#94A3B8' });
+    // Generate cursor sprite - crisp white/grey
+    const url = createSprite(SPRITES.cursor, 2, { 
+      'x': '#E2E8F0', 
+      '#': '#94A3B8',
+      'o': '#64748B',
+      '.': 'transparent' 
+    });
     setCursorUrl(url);
 
     const updateMouse = (e: MouseEvent) => {
@@ -28,7 +33,6 @@ export function NachoCursor() {
       mouseY.set(e.clientY);
       setIsVisible(true);
       
-      // Check if hovering over clickable elements
       const target = e.target as HTMLElement;
       const isClickable = 
         target.tagName === 'BUTTON' ||
@@ -65,21 +69,22 @@ export function NachoCursor() {
       `}</style>
       
       <motion.div
-        className="pointer-events-none fixed left-0 top-0 z-[10000] mix-blend-difference"
+        className="pointer-events-none fixed left-0 top-0 z-[10000]"
         style={{
           x,
           y,
           opacity: isVisible ? 1 : 0,
         }}
       >
-        {/* Glow Effect */}
+        {/* Simple Glow - Radial Gradient Div */}
         <div 
-          className="absolute -left-12 -top-12 h-24 w-24 rounded-full opacity-20 blur-xl transition-all duration-300"
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200"
           style={{
+            width: isHovering ? '120px' : '80px',
+            height: isHovering ? '120px' : '80px',
             background: isHovering 
-              ? 'radial-gradient(circle, #475569 0%, transparent 70%)' 
-              : 'radial-gradient(circle, #334155 0%, transparent 70%)',
-            transform: isHovering ? 'scale(1.5)' : 'scale(1)',
+              ? 'radial-gradient(circle, rgba(148, 163, 184, 0.4) 0%, transparent 70%)' 
+              : 'radial-gradient(circle, rgba(100, 116, 139, 0.3) 0%, transparent 70%)',
           }}
         />
 
@@ -94,7 +99,7 @@ export function NachoCursor() {
           <img 
             src={cursorUrl} 
             alt="Cursor" 
-            className="h-full w-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+            className="h-full w-full object-contain drop-shadow-md"
           />
         </div>
       </motion.div>
