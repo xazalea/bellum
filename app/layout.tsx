@@ -1,22 +1,9 @@
 import type { Metadata } from 'next';
-import { Press_Start_2P, VT323 } from 'next/font/google';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 import { NachoCursor } from '@/components/NachoCursor';
 import { SeaLifeBackground } from '@/components/SeaLifeBackground';
 import { cn } from '@/lib/utils';
-
-const fontPixel = Press_Start_2P({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-pixel',
-});
-
-const fontRetro = VT323({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-retro',
-});
 
 export const metadata: Metadata = {
   title: 'challenger deep. - explore the depths.',
@@ -41,12 +28,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn(fontPixel.variable, fontRetro.variable, "dark")}>
+    <html lang="en" className="dark">
       <head>
         {/* Material Symbols */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        />
+        {/* Pixel Fonts */}
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" 
+          rel="stylesheet" 
         />
       </head>
       <body className="min-h-screen w-full flex flex-col font-retro antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">

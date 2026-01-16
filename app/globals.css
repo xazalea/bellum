@@ -33,6 +33,9 @@
   --nacho-border: rgba(255, 255, 255, 0.2);
   --nacho-border-strong: rgba(255, 255, 255, 0.4);
   --nacho-outline: 2px;
+  
+  --font-pixel: 'Press Start 2P', cursive;
+  --font-retro: 'VT323', monospace;
 }
 
 html {
@@ -44,10 +47,15 @@ body {
   color: var(--nacho-text);
   background: transparent; /* Allow SeaLifeBackground to show */
   min-height: 100vh;
-  /* Fonts are set in layout.tsx via next/font variables */
   font-family: var(--font-retro), monospace; 
   overflow-x: hidden;
   -webkit-font-smoothing: none; /* Crisp pixels */
+  image-rendering: pixelated;
+}
+
+/* Force sharp corners everywhere */
+* {
+  border-radius: 0 !important;
 }
 
 /* Custom Scrollbar */
