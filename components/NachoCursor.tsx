@@ -13,8 +13,8 @@ export function NachoCursor() {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  // Smooth spring animation for cursor movement
-  const springConfig = { damping: 25, stiffness: 400, mass: 0.5 };
+  // Smooth spring animation for cursor movement - Responsive Tuning
+  const springConfig = { damping: 20, stiffness: 800, mass: 0.5 };
   const x = useSpring(mouseX, springConfig);
   const y = useSpring(mouseY, springConfig);
 

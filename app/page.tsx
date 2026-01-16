@@ -6,13 +6,11 @@ import { SPRITES, PALETTES, createSprite } from '@/lib/ui/sprites';
 export default function Home() {
   const features = [
     { title: 'Android', href: '/android', desc: 'Run Android apps in the cloud.', icon: 'phone_iphone' },
-    { title: 'Cluster', href: '/cluster', desc: 'Distributed computing power.', icon: 'hub' },
-    { title: 'Compiler', href: '/compiler', desc: 'Compile code instantly.', icon: 'code' },
-    { title: 'Emulator', href: '/emulator', desc: 'Retro gaming & systems.', icon: 'games' },
-    { title: 'Linux', href: '/linux', desc: 'Full Linux environment.', icon: 'terminal' },
     { title: 'Windows', href: '/windows', desc: 'Windows on the web.', icon: 'desktop_windows' },
-    { title: 'VPS', href: '/vps', desc: 'Virtual Private Servers.', icon: 'dns' },
-    { title: 'Unblocker', href: '/unblocker', desc: 'Access the open web.', icon: 'vpn_lock' },
+    { title: 'Cluster', href: '/cluster', desc: 'Distributed computing power.', icon: 'hub' },
+    { title: 'Library', href: '/library', desc: 'App repository.', icon: 'local_library' },
+    { title: 'Storage', href: '/storage', desc: 'Deep storage archives.', icon: 'folder' },
+    { title: 'Games', href: '/games', desc: 'Retro arcade.', icon: 'sports_esports' },
   ];
 
   return (
@@ -29,7 +27,7 @@ export default function Home() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl px-4">
         {features.map((feature, i) => (
           <Link key={feature.title} href={feature.href} className="group">
-            <Card variant="hover" className="h-full flex flex-col items-center text-center space-y-4 border-[#1F2937]/30 hover:border-[#374151] bg-opacity-80">
+            <Card variant="hover" className="h-full flex flex-col items-center text-center space-y-4 border-[#1F2937]/30 hover:border-[#374151] bg-opacity-80 rounded-xl">
               <div className="w-16 h-16 rounded-full bg-[#030508] flex items-center justify-center border-2 border-[#1F2937] group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-3xl text-[#475569]">{feature.icon}</span>
               </div>

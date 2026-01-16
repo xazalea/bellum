@@ -9,13 +9,11 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { name: 'Home', href: '/' },
   { name: 'Android', href: '/android' },
-  { name: 'Cluster', href: '/cluster' },
-  { name: 'Compiler', href: '/compiler' },
-  { name: 'Emulator', href: '/emulator' },
-  { name: 'Linux', href: '/linux' },
   { name: 'Windows', href: '/windows' },
-  { name: 'VPS', href: '/vps' },
-  { name: 'Unblocker', href: '/unblocker' },
+  { name: 'Cluster', href: '/cluster' },
+  { name: 'Library', href: '/library' },
+  { name: 'Storage', href: '/storage' },
+  { name: 'Games', href: '/games' },
 ];
 
 export function DynamicIsland() {

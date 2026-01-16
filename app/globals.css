@@ -53,10 +53,10 @@ body {
   image-rendering: pixelated;
 }
 
-/* Force sharp corners everywhere */
-* {
+/* Force sharp corners everywhere - REMOVED for rounded update */
+/* * {
   border-radius: 0 !important;
-}
+} */
 
 /* Exempt Dynamic Island from forced square corners if desired, 
    but user asked for pixelated look, so maybe square is better? 
@@ -86,6 +86,7 @@ body {
 .nacho-card {
   background: var(--nacho-card);
   border: 2px solid var(--nacho-border);
+  border-radius: 1rem; /* Rounded */
   box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.8);
   transition: transform 0.1s ease;
   backdrop-filter: blur(4px);
@@ -105,6 +106,7 @@ body {
   font-size: 0.8rem;
   padding: 0.75rem 1.5rem;
   border: 2px solid #374151;
+  border-radius: 0.75rem; /* Rounded */
   box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.8);
   transition: all 0.1s ease;
   text-transform: uppercase;

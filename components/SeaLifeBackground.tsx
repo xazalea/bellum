@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { SPRITES, PALETTES, createSprite, PixelMap } from '@/lib/ui/sprites';
+import { SPRITES, PALETTES, createSprite } from '@/lib/ui/sprites';
 
 interface Animal {
   x: number;
@@ -14,8 +14,11 @@ interface Animal {
   height: number;
   frame: number;
   speed: number;
+  baseSpeed: number;
   scale: number;
-  reaction: 'flee' | 'attract' | 'ignore';
+  angle: number; // For rotation
+  color: string; // Debug/Fallback
+  fleeing: boolean;
 }
 
 interface Particle {
@@ -41,25 +44,45 @@ export function SeaLifeBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Pre-generate sprites
-    const loadedSprites: Record<string, HTMLImageElement> = {};
-    const spriteKeys = Object.keys(SPRITES) as Array<keyof typeof SPRITES>;
+    // Generate Sprites with Diverse Colors
+    const loadedSprites: Record<string, HTMLImageElement[]> = {};
+    const spriteKeys = Object.keys(SPRITES).filter(k => k !== 'cursor' && k !== 'bubble') as Array<keyof typeof SPRITES>;
     
-    // Create ocean palette variations
-    const palettes = {
-      fish: { ...PALETTES.ocean, '#': '#334155', 'x': '#1E293B' },
-      octopus: { ...PALETTES.ocean, '#': '#475569', 'x': '#334155' },
-      jellyfish: { ...PALETTES.ocean, '#': '#64748B', 'x': '#475569', 'o': '#334155' },
-      bubble: { '#': '#475569', '.': 'transparent' }
+    // Function to generate random ocean colors
+    const randomColor = () => {
+      const hues = [200, 220, 240, 260, 280, 180]; // Blues, Cyans, Purples
+      const hue = hues[Math.floor(Math.random() * hues.length)];
+      const sat = 40 + Math.random() * 40;
+      const light = 30 + Math.random() * 40;
+      return `hsl(${hue}, ${sat}%, ${light}%)`;
     };
 
+    const secondaryColor = (base: string) => {
+      // Just dim it a bit for secondary
+      return base.replace('%)', '%, 0.7)'); 
+    };
+
+    // Pre-generate multiple color variants for each sprite type
     spriteKeys.forEach(key => {
-      const img = new Image();
-      // Use specific palette or default ocean
-      const palette = palettes[key as keyof typeof palettes] || PALETTES.ocean;
-      img.src = createSprite(SPRITES[key], 4, palette);
-      loadedSprites[key] = img;
+      loadedSprites[key] = [];
+      // Generate 3 variants per species
+      for (let i = 0; i < 3; i++) {
+        const base = randomColor();
+        const palette = {
+          '#': base,
+          'x': secondaryColor(base),
+          'o': '#ffffff', // bright eyes/accents
+          '.': 'transparent'
+        };
+        const img = new Image();
+        img.src = createSprite(SPRITES[key], 6, palette); // Scale 6 for larger pixels
+        loadedSprites[key].push(img);
+      }
     });
+    
+    // Bubble sprite
+    const bubbleImg = new Image();
+    bubbleImg.src = createSprite(SPRITES['bubble'], 4, { '#': '#475569', '.': 'transparent' });
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -69,7 +92,6 @@ export function SeaLifeBackground() {
     window.addEventListener('resize', resize);
     resize();
 
-    // Track mouse
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
     };
@@ -77,13 +99,15 @@ export function SeaLifeBackground() {
 
     // Spawn animals
     const spawnAnimals = () => {
-      const count = Math.min(20, Math.floor(window.innerWidth / 100));
+      const count = Math.min(40, Math.floor(window.innerWidth / 50)); // More animals
       animalsRef.current = [];
       
       for (let i = 0; i < count; i++) {
-        const type = spriteKeys[Math.floor(Math.random() * (spriteKeys.length - 2)) + 1]; // Skip cursor
-        const img = loadedSprites[type];
-        if (!img) continue;
+        const type = spriteKeys[Math.floor(Math.random() * spriteKeys.length)];
+        const variants = loadedSprites[type];
+        if (!variants || variants.length === 0) continue;
+        
+        const img = variants[Math.floor(Math.random() * variants.length)];
 
         animalsRef.current.push({
           x: Math.random() * canvas.width,
@@ -95,27 +119,71 @@ export function SeaLifeBackground() {
           width: img.width,
           height: img.height,
           frame: 0,
-          speed: 1 + Math.random(),
-          scale: 0.5 + Math.random() * 0.5,
-          reaction: type === 'fish' ? 'flee' : type === 'octopus' ? 'attract' : 'ignore'
+          baseSpeed: 0.5 + Math.random() * 1.5,
+          speed: 0, // Init
+          scale: 0.8 + Math.random() * 0.6,
+          angle: 0,
+          color: '',
+          fleeing: false
         });
       }
     };
 
-    // Wait for images to load somewhat
     setTimeout(spawnAnimals, 500);
 
-    // Animation Loop
     let animationFrameId: number;
     
     const animate = () => {
+      // Clear with transparency to allow trails? No, strict clear for performance
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Update & Draw Animals
+      // 1. Draw Darkness Layer (Base) - Everything is dark by default
+      // We rely on 'destination-in' or masking to reveal.
+      // Strategy: Draw animals to an offscreen canvas or just draw them normally
+      // but put a heavy dark overlay on top, then punch a hole with the cursor light.
+      // BUT user wants them "hidden until the glow illuminates them".
+      // Easiest way: Global composite operation.
+      
+      // Step A: Draw all animals (they will be the content)
+      ctx.save();
+      
       animalsRef.current.forEach(animal => {
-        // Base movement
-        animal.x += animal.vx * animal.speed;
-        animal.y += animal.vy * animal.speed;
+        // Logic
+        const dx = mouseRef.current.x - animal.x;
+        const dy = mouseRef.current.y - animal.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Flee Logic - ALL animals flee
+        if (dist < 300) {
+          animal.fleeing = true;
+          // Vector away from cursor
+          const angle = Math.atan2(dy, dx);
+          const force = (300 - dist) / 300; // Stronger closer
+          
+          animal.vx -= Math.cos(angle) * force * 0.5;
+          animal.vy -= Math.sin(angle) * force * 0.5;
+          
+          // Boost speed
+          animal.speed = animal.baseSpeed * 3;
+        } else {
+          animal.fleeing = false;
+          // Return to base speed gradually
+          animal.speed = animal.speed * 0.95 + animal.baseSpeed * 0.05;
+        }
+
+        // Apply Velocity
+        animal.x += animal.vx;
+        animal.y += animal.vy;
+
+        // Friction/Cruising
+        animal.vx *= 0.99;
+        animal.vy *= 0.99;
+        
+        // Minimal movement if idle
+        if (!animal.fleeing) {
+            if (Math.abs(animal.vx) < 0.5) animal.vx += (Math.random() - 0.5) * 0.1;
+            if (Math.abs(animal.vy) < 0.5) animal.vy += (Math.random() - 0.5) * 0.1;
+        }
 
         // Wall wrapping
         if (animal.x < -100) animal.x = canvas.width + 100;
@@ -123,79 +191,83 @@ export function SeaLifeBackground() {
         if (animal.y < -100) animal.y = canvas.height + 100;
         if (animal.y > canvas.height + 100) animal.y = -100;
 
-        // Interaction
-        const dx = mouseRef.current.x - animal.x;
-        const dy = mouseRef.current.y - animal.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        if (dist < 200) {
-          if (animal.reaction === 'flee') {
-            animal.vx -= (dx / dist) * 0.2;
-            animal.vy -= (dy / dist) * 0.2;
-          } else if (animal.reaction === 'attract') {
-            animal.vx += (dx / dist) * 0.1;
-            animal.vy += (dy / dist) * 0.1;
-          }
-        }
-
-        // Speed limit
-        const maxSpeed = 3;
-        const speed = Math.sqrt(animal.vx * animal.vx + animal.vy * animal.vy);
-        if (speed > maxSpeed) {
-          animal.vx = (animal.vx / speed) * maxSpeed;
-          animal.vy = (animal.vy / speed) * maxSpeed;
-        }
+        // Rotation based on velocity
+        const targetAngle = Math.atan2(animal.vy, animal.vx);
+        // Smooth rotation
+        let diff = targetAngle - animal.angle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        animal.angle += diff * 0.1;
 
         // Draw
         ctx.save();
         ctx.translate(animal.x, animal.y);
-        if (animal.vx > 0) ctx.scale(-1, 1); // Flip if moving right
+        
+        // Flip if heading left (simplified sprite facing)
+        // Actually, let's rotate properly
+        // If sprite faces right by default:
+        if (Math.abs(animal.vx) > 0.1) {
+            ctx.scale(animal.vx > 0 ? 1 : -1, 1);
+        }
+        
         ctx.scale(animal.scale, animal.scale);
         
-        // Bobbing effect
-        const bob = Math.sin(Date.now() / 500 + animal.x) * 5;
+        // Bobbing animation
+        const bob = Math.sin(Date.now() / 200 + animal.x) * 3;
         ctx.drawImage(animal.image, -animal.width / 2, -animal.height / 2 + bob);
         
         ctx.restore();
-        
-        // Randomly spawn bubbles
-        if (Math.random() < 0.005) {
-          particlesRef.current.push({
-            x: animal.x + (Math.random() - 0.5) * 20,
-            y: animal.y,
-            vy: -1 - Math.random(),
-            life: 100,
-            image: loadedSprites['bubble']
-          });
+
+        // Particles
+        if (Math.random() < 0.002) {
+           particlesRef.current.push({
+             x: animal.x,
+             y: animal.y,
+             vy: -0.5 - Math.random(),
+             life: 150,
+             image: bubbleImg
+           });
         }
       });
 
-      // Update & Draw Particles (Bubbles)
+      // Particles
       for (let i = particlesRef.current.length - 1; i >= 0; i--) {
         const p = particlesRef.current[i];
         p.y += p.vy;
         p.life--;
-        
-        ctx.globalAlpha = p.life / 100;
-        ctx.drawImage(p.image, p.x, p.y, 8, 8);
+        ctx.globalAlpha = p.life / 150 * 0.5;
+        ctx.drawImage(p.image, p.x, p.y);
         ctx.globalAlpha = 1;
-
         if (p.life <= 0) particlesRef.current.splice(i, 1);
       }
+      
+      ctx.restore(); // End drawing content
 
-      // Draw Cursor Light (Illumination)
+      // 2. Darkness & Illumination Mask
+      // We want the screen black EXCEPT where the light is.
+      // Destination-in keeps existing content where new shape is drawn.
+      // But we also want the background color to remain. 
+      // Actually, better approach: Draw a black rectangle over everything,
+      // then use 'destination-out' to punch a hole with a gradient.
+      
       ctx.save();
-      ctx.globalCompositeOperation = 'overlay'; 
+      // Draw full darkness
+      ctx.fillStyle = 'rgba(3, 5, 8, 0.95)'; // Very dark water
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Punch hole
+      ctx.globalCompositeOperation = 'destination-out';
       const gradient = ctx.createRadialGradient(
         mouseRef.current.x, 
         mouseRef.current.y, 
-        0, 
+        50, // Inner radius (fully clear)
         mouseRef.current.x, 
         mouseRef.current.y, 
-        200
+        400 // Outer radius (fade to black)
       );
-      gradient.addColorStop(0, 'rgba(51, 65, 85, 0.2)');
+      gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
       gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
@@ -213,7 +285,7 @@ export function SeaLifeBackground() {
   }, []);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-0 bg-[#030508]">
+    <div ref={containerRef} className="fixed inset-0 z-0 bg-[#020406]">
       <canvas ref={canvasRef} className="absolute inset-0 block h-full w-full" />
     </div>
   );
