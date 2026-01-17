@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { SPRITES, PALETTES, createSprite } from '@/lib/ui/sprites';
+import { ANIMATED_FISH_SPRITES } from '@/lib/ui/animated-fish-sprites';
 import { ParticleSystem, AmbientLayer, BioluminescentLayer } from '@/lib/ui/animated-sprites';
 import type { Particle, AmbientElement, GlowEffect } from '@/lib/ui/animated-sprites';
 
@@ -10,8 +11,11 @@ interface Animal {
   y: number;
   vx: number;
   vy: number;
-  type: keyof typeof SPRITES;
-  image: HTMLImageElement;
+  type: string;
+  images: HTMLImageElement[]; // Multiple frames for animation
+  currentFrame: number;
+  frameTime: number; // Time accumulated for frame switching
+  frameRate: number; // Milliseconds per frame
   width: number;
   height: number;
   frame: number;
@@ -49,12 +53,7 @@ export function SeaLifeBackground() {
     biolumLayerRef.current = new BioluminescentLayer();
 
     // Enhanced sprite generation with realistic ocean colors
-    const loadedSprites: Record<string, HTMLImageElement[]> = {};
-    const spriteKeys = Object.keys(SPRITES).filter(
-      k => !['cursor', 'bubble', 'bubble_small', 'bubble_medium', 'bubble_large', 
-             'kelp', 'coral_1', 'coral_2', 'plankton_1', 'plankton_2',
-             'glow_orb', 'light_ray', 'ripple'].includes(k)
-    ) as Array<keyof typeof SPRITES>;
+    const loadedAnimatedSprites: Record<string, Array<{frames: HTMLImageElement[], frameRate: number}>> = {};
     
     const speciesColors: Record<string, Array<{body: string, detail: string, shadow: string, highlight: string}>> = {
       shark: [
@@ -97,9 +96,10 @@ export function SeaLifeBackground() {
       ]
     };
 
-    // Generate creature sprites
-    spriteKeys.forEach(key => {
-      loadedSprites[key] = [];
+    // Generate animated creature sprites (multi-frame)
+    Object.keys(ANIMATED_FISH_SPRITES).forEach(key => {
+      loadedAnimatedSprites[key] = [];
+      const animSprite = ANIMATED_FISH_SPRITES[key];
       const colors = speciesColors[key] || [
         { body: '#475569', detail: '#334155', shadow: '#1E293B', highlight: '#64748B' }
       ];
@@ -113,9 +113,19 @@ export function SeaLifeBackground() {
           'x': '#0F172A',
           '.': 'transparent'
         };
+        
+        // Generate an image for each frame
+        const frameImages: HTMLImageElement[] = [];
+        animSprite.frames.forEach(frameMap => {
         const img = new Image();
-        img.src = createSprite(SPRITES[key], 3, palette);
-        loadedSprites[key].push(img);
+          img.src = createSprite(frameMap, 3, palette);
+          frameImages.push(img);
+        });
+        
+        loadedAnimatedSprites[key].push({
+          frames: frameImages,
+          frameRate: animSprite.frameRate
+        });
       });
     });
     
@@ -149,7 +159,7 @@ export function SeaLifeBackground() {
       '@': '#4F3A25',
       '.': 'transparent'
     });
-
+    
     // Bubble sprites with shine
     const bubbleSmall = new Image();
     bubbleSmall.src = createSprite(SPRITES.bubble_small, 2, {
@@ -266,8 +276,9 @@ export function SeaLifeBackground() {
         starfish: 1.4
       };
       
+      const animatedKeys = Object.keys(loadedAnimatedSprites);
       const weightedKeys: string[] = [];
-      spriteKeys.forEach(key => {
+      animatedKeys.forEach(key => {
         const weight = weights[key] || 1;
         for (let i = 0; i < weight * 10; i++) {
           weightedKeys.push(key);
@@ -275,11 +286,12 @@ export function SeaLifeBackground() {
       });
       
       for (let i = 0; i < density; i++) {
-        const type = weightedKeys[Math.floor(Math.random() * weightedKeys.length)] as keyof typeof SPRITES;
-        const variants = loadedSprites[type];
+        const type = weightedKeys[Math.floor(Math.random() * weightedKeys.length)];
+        const variants = loadedAnimatedSprites[type];
         if (!variants || variants.length === 0) continue;
         
-        const img = variants[Math.floor(Math.random() * variants.length)];
+        const variant = variants[Math.floor(Math.random() * variants.length)];
+        const firstFrame = variant.frames[0];
         
         let baseSpeed = 0.5 + Math.random() * 1.0;
         let scale = 0.7 + Math.random() * 0.5;
@@ -312,9 +324,12 @@ export function SeaLifeBackground() {
           vx: (Math.random() - 0.5) * baseSpeed * 1.5,
           vy: (Math.random() - 0.5) * baseSpeed * 0.4,
           type,
-          image: img,
-          width: img.width,
-          height: img.height,
+          images: variant.frames,
+          currentFrame: Math.floor(Math.random() * variant.frames.length),
+          frameTime: 0,
+          frameRate: variant.frameRate,
+          width: firstFrame.width,
+          height: firstFrame.height,
           frame: 0,
           baseSpeed,
           speed: baseSpeed,
@@ -470,6 +485,16 @@ export function SeaLifeBackground() {
                              animal.type === 'shark' ? 0.08 : 0.1;
         animal.angle += diff * rotationSpeed;
 
+        // Update frame animation
+        animal.frameTime += deltaTime;
+        if (animal.frameTime >= animal.frameRate) {
+          animal.frameTime = 0;
+          animal.currentFrame = (animal.currentFrame + 1) % animal.images.length;
+        }
+
+        // Get current frame image
+        const currentImage = animal.images[animal.currentFrame];
+
         // Draw with depth-based effects and cursor illumination
         ctx.save();
         ctx.translate(animal.x, animal.y);
@@ -487,12 +512,12 @@ export function SeaLifeBackground() {
         ctx.globalAlpha = depthAlpha;
         
         if (Math.abs(animal.vx) > 0.05) {
-          ctx.scale(animal.vx > 0 ? 1 : -1, 1);
+            ctx.scale(animal.vx > 0 ? 1 : -1, 1);
         }
         
         ctx.scale(animal.scale, animal.scale);
         
-        // Species-specific animation
+        // Species-specific subtle bobbing animation (in addition to frame animation)
         let offset = 0;
         
         if (animal.type === 'jellyfish') {
@@ -503,7 +528,8 @@ export function SeaLifeBackground() {
           offset = Math.sin(time / 400 + animal.animationOffset) * 3;
         }
         
-        ctx.drawImage(animal.image, -animal.width / 2, -animal.height / 2 + offset);
+        // Draw the current animation frame
+        ctx.drawImage(currentImage, -animal.width / 2, -animal.height / 2 + offset);
         
         ctx.restore();
 
@@ -515,7 +541,7 @@ export function SeaLifeBackground() {
           
           particleSystem.emit({
             x: animal.x + (Math.random() - 0.5) * 20,
-            y: animal.y,
+             y: animal.y,
             vx: (Math.random() - 0.5) * 0.3,
             vy: -0.4 - Math.random() * 0.6,
             life: 2000 + Math.random() * 2000,
@@ -526,7 +552,7 @@ export function SeaLifeBackground() {
             opacity: 1,
             rotation: Math.random() * Math.PI * 2,
             rotationSpeed: (Math.random() - 0.5) * 0.03
-          });
+           });
         }
       });
 

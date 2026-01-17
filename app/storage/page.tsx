@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/lib/auth/auth-context';
-import { adminDb } from '@/lib/firebase';
 
 interface StoredFile {
   id: string;
@@ -37,28 +36,28 @@ export default function StoragePage() {
       setLoading(true);
       setError(null);
 
-      // Fetch from both Discord and Telegram stores
-      const [discordSnap, telegramSnap] = await Promise.all([
-        adminDb().collection('discord_files').where('ownerUid', '==', auth.user.uid).limit(50).get(),
-        adminDb().collection('telegram_files').where('ownerUid', '==', auth.user.uid).limit(50).get()
+      // Fetch files from API endpoints
+      const [discordRes, telegramRes] = await Promise.all([
+        fetch('/api/discord/manifest').then(r => r.ok ? r.json() : { files: [] }).catch(() => ({ files: [] })),
+        fetch('/api/telegram/manifest').then(r => r.ok ? r.json() : { files: [] }).catch(() => ({ files: [] }))
       ]);
 
-      const discordFiles: StoredFile[] = discordSnap.docs.map(doc => ({
-        id: doc.id,
-        fileName: doc.data().fileName || 'unknown',
-        size: doc.data().size || 0,
-        type: 'discord',
-        createdAt: doc.data().createdAt || Date.now(),
-        ownerUid: doc.data().ownerUid
+      const discordFiles: StoredFile[] = (discordRes.files || []).map((file: any) => ({
+        id: file.id || file.messageId,
+        fileName: file.fileName || file.filename || 'unknown',
+        size: file.size || 0,
+        type: 'discord' as const,
+        createdAt: file.createdAt || file.timestamp || Date.now(),
+        ownerUid: auth.user!.uid
       }));
 
-      const telegramFiles: StoredFile[] = telegramSnap.docs.map(doc => ({
-        id: doc.id,
-        fileName: doc.data().fileName || 'unknown',
-        size: doc.data().sizeBytes || 0,
-        type: 'telegram',
-        createdAt: doc.data().createdAt || Date.now(),
-        ownerUid: doc.data().ownerUid
+      const telegramFiles: StoredFile[] = (telegramRes.files || []).map((file: any) => ({
+        id: file.id || file.fileId,
+        fileName: file.fileName || file.filename || 'unknown',
+        size: file.size || file.sizeBytes || 0,
+        type: 'telegram' as const,
+        createdAt: file.createdAt || file.timestamp || Date.now(),
+        ownerUid: auth.user!.uid
       }));
 
       const allFiles = [...discordFiles, ...telegramFiles].sort((a, b) => b.createdAt - a.createdAt);

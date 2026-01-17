@@ -115,7 +115,7 @@ export default function ClusterPage() {
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6 flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-pixel text-[#8B9DB8]">Cluster Management</h1>
-            <p className="font-retro text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
+          <p className="font-retro text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
           </div>
           <Button onClick={loadPeers} disabled={loading} className="flex items-center gap-2">
             <span className="material-symbols-outlined text-base">refresh</span>
@@ -150,10 +150,10 @@ export default function ClusterPage() {
             </Button>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {peers.map((peer, idx) => (
               <Card key={`${peer.userId}:${peer.deviceId}`} className="space-y-5 p-6 group hover:border-[#64748B]/50">
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                   <span className="font-pixel text-[10px] text-[#64748B] uppercase tracking-wider">
                     {peer.label || `NODE-${String(idx + 1).padStart(2, '0')}`}
                   </span>
@@ -220,7 +220,7 @@ export default function ClusterPage() {
                 <div className="font-retro text-sm text-[#64748B]">Total Mbps</div>
               </div>
             </div>
-          </Card>
+            </Card>
         )}
       </div>
     </main>

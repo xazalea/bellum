@@ -32,7 +32,7 @@ export default function LibraryPage() {
     
     // Placeholder: Show empty state for now
     setApps([]);
-    setLoading(false);
+        setLoading(false);
   }, []);
 
   return (
