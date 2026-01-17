@@ -470,11 +470,20 @@ export function SeaLifeBackground() {
                              animal.type === 'shark' ? 0.08 : 0.1;
         animal.angle += diff * rotationSpeed;
 
-        // Draw with depth-based effects
+        // Draw with depth-based effects and cursor illumination
         ctx.save();
         ctx.translate(animal.x, animal.y);
         
-        const depthAlpha = 0.4 + (animal.depth) * 0.6;
+        // Calculate illumination from cursor
+        const lightDist = Math.sqrt(dx * dx + dy * dy);
+        const maxLightDistance = 450;
+        const lightIntensity = Math.max(0, 1 - (lightDist / maxLightDistance));
+        
+        // Base visibility (very dark) + light reveal
+        const baseAlpha = 0.05 + (animal.depth * 0.05); // Very dark by default
+        const illuminatedAlpha = 0.6 + (animal.depth * 0.4); // Full visibility in light
+        const depthAlpha = baseAlpha + (lightIntensity * (illuminatedAlpha - baseAlpha));
+        
         ctx.globalAlpha = depthAlpha;
         
         if (Math.abs(animal.vx) > 0.05) {
@@ -528,12 +537,14 @@ export function SeaLifeBackground() {
         particleSystem.render(ctx);
       }
 
-      // Atmospheric lighting effect
+      // Deep darkness with cursor light reveal
       ctx.save();
-      ctx.fillStyle = 'rgba(3, 5, 8, 0.80)';
+      
+      // Very dark overlay - creatures hidden in darkness
+      ctx.fillStyle = 'rgba(2, 4, 6, 0.92)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Cursor light with improved falloff
+      // Cursor light - punch hole to reveal creatures
       ctx.globalCompositeOperation = 'destination-out';
       const lightGradient = ctx.createRadialGradient(
         mouseRef.current.x, 
@@ -541,17 +552,18 @@ export function SeaLifeBackground() {
         0,
         mouseRef.current.x, 
         mouseRef.current.y, 
-        400
+        450
       );
-      lightGradient.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
-      lightGradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.6)');
-      lightGradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.2)');
+      lightGradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+      lightGradient.addColorStop(0.25, 'rgba(0, 0, 0, 0.8)');
+      lightGradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.5)');
+      lightGradient.addColorStop(0.75, 'rgba(0, 0, 0, 0.2)');
       lightGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       
       ctx.fillStyle = lightGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Bioluminescent glow
+      // Bioluminescent glow around cursor
       ctx.globalCompositeOperation = 'screen';
       const biolumGradient = ctx.createRadialGradient(
         mouseRef.current.x, 
@@ -559,10 +571,11 @@ export function SeaLifeBackground() {
         0,
         mouseRef.current.x, 
         mouseRef.current.y, 
-        250
+        300
       );
-      biolumGradient.addColorStop(0, 'rgba(100, 116, 139, 0.18)');
-      biolumGradient.addColorStop(0.5, 'rgba(71, 85, 105, 0.08)');
+      biolumGradient.addColorStop(0, 'rgba(139, 157, 184, 0.25)');
+      biolumGradient.addColorStop(0.4, 'rgba(100, 116, 139, 0.15)');
+      biolumGradient.addColorStop(0.7, 'rgba(71, 85, 105, 0.08)');
       biolumGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
       
       ctx.fillStyle = biolumGradient;

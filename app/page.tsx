@@ -5,12 +5,12 @@ import { SPRITES, PALETTES, createSprite } from '@/lib/ui/sprites';
 
 export default function Home() {
   const features = [
-    { title: 'Android', href: '/android', desc: 'Run Android apps in the cloud.', icon: 'phone_iphone' },
-    { title: 'Windows', href: '/windows', desc: 'Windows on the web.', icon: 'desktop_windows' },
+    { title: 'Virtual Machines', href: '/virtual-machines', desc: 'Android, Windows & Linux.', icon: 'dns' },
     { title: 'Cluster', href: '/cluster', desc: 'Distributed computing power.', icon: 'hub' },
     { title: 'Library', href: '/library', desc: 'App repository.', icon: 'local_library' },
     { title: 'Storage', href: '/storage', desc: 'Deep storage archives.', icon: 'folder' },
     { title: 'Games', href: '/games', desc: 'Retro arcade.', icon: 'sports_esports' },
+    { title: 'Emulators', href: '/emulator', desc: 'Classic gaming systems.', icon: 'videogame_asset' },
   ];
 
   return (
@@ -24,7 +24,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl px-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl px-4">
         {features.map((feature, i) => (
           <Link key={feature.title} href={feature.href} className="group">
             <Card variant="hover" className="h-full flex flex-col items-center text-center space-y-5 p-8">

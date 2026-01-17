@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { name: 'Home', href: '/' },
-  { name: 'Android', href: '/android' },
-  { name: 'Windows', href: '/windows' },
+  { name: 'Virtual Machines', href: '/virtual-machines' },
   { name: 'Cluster', href: '/cluster' },
   { name: 'Library', href: '/library' },
   { name: 'Storage', href: '/storage' },
   { name: 'Games', href: '/games' },
+  { name: 'Emulators', href: '/emulator' },
 ];
 
 export function DynamicIsland() {

@@ -64,12 +64,6 @@ export function NachoCursor() {
 
   return (
     <>
-      <style jsx global>{`
-        body, a, button, input, select, textarea {
-          cursor: none !important;
-        }
-      `}</style>
-      
       <motion.div
         className="pointer-events-none fixed left-0 top-0 z-[10000]"
         style={{

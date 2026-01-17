@@ -49,7 +49,15 @@
 
 html {
   scroll-behavior: smooth;
-  cursor: none; /* We use custom cursor */
+}
+
+/* Allow native cursor for interactive elements */
+button, a, input, select, textarea, [role="button"] {
+  cursor: pointer !important;
+}
+
+input, select, textarea {
+  cursor: text !important;
 }
 
 body {

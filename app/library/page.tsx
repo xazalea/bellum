@@ -22,19 +22,17 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching installed apps
-    // In reality: await appManager.listInstalled()
-    // For now we simulate to match the "connect with existing code" requirement visually
-    // but without breaking build if backend isn't ready.
+    // TODO: Connect to real app manager backend
+    // const loadApps = async () => {
+    //   const installedApps = await fetch('/api/apps/list').then(r => r.json());
+    //   setApps(installedApps);
+    //   setLoading(false);
+    // };
+    // loadApps();
     
-    setTimeout(() => {
-        setApps([
-            { id: '1', name: 'File Explorer', description: 'Manage system files', type: 'system', version: '1.0' },
-            { id: '2', name: 'Terminal', description: 'Command line interface', type: 'utility', version: '2.4' },
-            { id: '3', name: 'Code Editor', description: 'Develop applications', type: 'dev', version: '0.9' },
-        ]);
-        setLoading(false);
-    }, 500);
+    // Placeholder: Show empty state for now
+    setApps([]);
+    setLoading(false);
   }, []);
 
   return (
@@ -56,6 +54,18 @@ export default function LibraryPage() {
               <span className="w-5 h-5 border-2 border-[#64748B] border-t-transparent rounded-full animate-spin"></span>
               Loading library...
             </div>
+        ) : apps.length === 0 ? (
+            <Card className="p-12 text-center">
+              <span className="material-symbols-outlined text-6xl text-[#4A5A6F] mb-4 inline-block">apps</span>
+              <h2 className="text-xl font-pixel text-[#8B9DB8] mb-2">No Apps Installed</h2>
+              <p className="font-retro text-lg text-[#64748B] mb-6">
+                Your library is empty. Install applications to get started.
+              </p>
+              <Button className="flex items-center gap-2 mx-auto">
+                <span className="material-symbols-outlined text-lg">add</span>
+                Install App
+              </Button>
+            </Card>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {apps.map((app) => (
