@@ -8,8 +8,10 @@ RetroUI (pixel-retroui) has been integrated into Bellum to provide pixel-perfect
 
 The package is already added to `package.json`:
 ```json
-"pixel-retroui": "^0.1.1"
+"pixel-retroui": "github:Dksie09/RetroUI"
 ```
+
+**Note**: RetroUI is installed directly from GitHub since it's not published to npm.
 
 ### Local Development Setup
 
