@@ -24,18 +24,27 @@
 }
 
 :root {
-  /* Challenger Deep Palette - Darker Abyss */
-  --nacho-bg: #030508;
-  --nacho-card: rgba(10, 14, 20, 0.9);
-  --nacho-card-hover: rgba(15, 20, 28, 0.95);
-  --nacho-primary: #1F2937;
-  --nacho-text: #94A3B8;
-  --nacho-subtext: #475569;
-  --nacho-border: rgba(31, 41, 55, 0.4);
-  --nacho-border-strong: rgba(51, 65, 85, 0.6);
+  /* Challenger Deep Palette - Refined Minimalist Abyss */
+  --nacho-bg: #020406;
+  --nacho-card: rgba(8, 12, 18, 0.85);
+  --nacho-card-hover: rgba(12, 16, 24, 0.92);
+  --nacho-primary: #1E2A3A;
+  --nacho-primary-hover: #2A3648;
+  --nacho-text: #8B9DB8;
+  --nacho-text-bright: #A0B3CC;
+  --nacho-subtext: #4A5A6F;
+  --nacho-border: rgba(26, 36, 50, 0.5);
+  --nacho-border-hover: rgba(42, 54, 72, 0.7);
+  --nacho-accent: #64748B;
+  --nacho-accent-bright: #94A3B8;
   
   --font-pixel: 'Press Start 2P', cursive;
   --font-retro: 'VT323', monospace;
+  
+  /* Shadows for depth */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-hard: 0 8px 16px rgba(0, 0, 0, 0.6);
 }
 
 html {
@@ -63,83 +72,121 @@ body {
    I'll keep island slightly rounded via its inline styles to simulate 'island' 
    but cards should be square. */
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Minimalist */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #030508;
+  background: var(--nacho-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1F2937;
-  border: 2px solid #030508; /* Pixel look */
+  background: var(--nacho-primary);
+  border-radius: 5px;
+  border: 2px solid var(--nacho-bg);
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: var(--nacho-primary-hover);
 }
 
-/* Challenger Deep Components - Base Styles */
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--nacho-primary) var(--nacho-bg);
+}
+
+/* Challenger Deep Components - Minimalist Refined Styles */
 .nacho-card {
   background: var(--nacho-card);
-  border: 2px solid var(--nacho-border);
-  border-radius: 1rem; /* Rounded */
-  box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.8);
-  transition: transform 0.1s ease;
-  backdrop-filter: blur(4px);
+  border: 1.5px solid var(--nacho-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .nacho-card:hover {
   background: var(--nacho-card-hover);
-  border-color: var(--nacho-border-strong);
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px 0px rgba(0,0,0,0.9);
+  border-color: var(--nacho-border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
 }
 
 .nacho-btn {
   background: var(--nacho-primary);
-  color: #94A3B8;
+  color: var(--nacho-text-bright);
   font-family: var(--font-pixel), cursive;
-  font-size: 0.8rem;
-  padding: 0.75rem 1.5rem;
-  border: 2px solid #374151;
-  border-radius: 0.75rem; /* Rounded */
-  box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.8);
-  transition: all 0.1s ease;
+  font-size: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  border: 1.5px solid var(--nacho-border-hover);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.nacho-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.nacho-btn:hover::before {
+  transform: translateX(100%);
 }
 
 .nacho-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 6px 6px 0px 0px rgba(0,0,0,0.8);
-  background: #374151;
-  color: #E2E8F0;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
+  background: var(--nacho-primary-hover);
+  border-color: var(--nacho-accent);
+  color: var(--nacho-accent-bright);
 }
 
 .nacho-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px 0px rgba(0,0,0,0.8);
+  transform: translateY(1px);
+  box-shadow: var(--shadow-soft);
 }
 
 .bellum-input {
   background: var(--nacho-card);
-  border: 2px solid var(--nacho-border);
-  color: var(--nacho-text);
+  border: 1.5px solid var(--nacho-border);
+  border-radius: 0.5rem;
+  color: var(--nacho-text-bright);
   padding: 0.75rem 1rem;
   font-family: var(--font-retro);
   font-size: 1.1rem;
   width: 100%;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-soft);
 }
 
 .bellum-input:focus {
   outline: none;
-  border-color: var(--nacho-border-strong);
+  border-color: var(--nacho-accent);
   background: var(--nacho-card-hover);
-  box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 0.4);
+  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1), var(--shadow-medium);
+  color: var(--nacho-accent-bright);
+}
+
+.bellum-input::placeholder {
+  color: var(--nacho-subtext);
+  opacity: 0.7;
 }
 
 /* Material Symbols override */

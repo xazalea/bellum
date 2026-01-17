@@ -19,11 +19,13 @@ export function NachoCursor() {
   const y = useSpring(mouseY, springConfig);
 
   useEffect(() => {
-    // Generate cursor sprite - crisp white/grey
+    // Generate cursor sprite - refined minimalist colors
     const url = createSprite(SPRITES.cursor, 2, { 
-      'x': '#E2E8F0', 
-      '#': '#94A3B8',
+      'x': '#A0B3CC', 
+      '#': '#8B9DB8',
       'o': '#64748B',
+      '+': '#CBD5E1',
+      '@': '#4A5A6F',
       '.': 'transparent' 
     });
     setCursorUrl(url);
@@ -76,30 +78,31 @@ export function NachoCursor() {
           opacity: isVisible ? 1 : 0,
         }}
       >
-        {/* Simple Glow - Radial Gradient Div */}
+        {/* Subtle Glow - Minimalist */}
         <div 
-          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-200"
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300 ease-out"
           style={{
-            width: isHovering ? '120px' : '80px',
-            height: isHovering ? '120px' : '80px',
+            width: isHovering ? '100px' : '60px',
+            height: isHovering ? '100px' : '60px',
             background: isHovering 
-              ? 'radial-gradient(circle, rgba(148, 163, 184, 0.4) 0%, transparent 70%)' 
-              : 'radial-gradient(circle, rgba(100, 116, 139, 0.3) 0%, transparent 70%)',
+              ? 'radial-gradient(circle, rgba(139, 157, 184, 0.25) 0%, rgba(100, 116, 139, 0.08) 40%, transparent 70%)' 
+              : 'radial-gradient(circle, rgba(100, 116, 139, 0.18) 0%, rgba(74, 90, 111, 0.05) 40%, transparent 70%)',
+            filter: 'blur(8px)',
           }}
         />
 
         {/* Cursor Sprite */}
         <div 
-          className="relative h-6 w-6 transition-transform duration-200"
+          className="relative h-6 w-6 transition-all duration-200 ease-out"
           style={{
-            transform: isHovering ? 'scale(0.8) rotate(-10deg)' : 'scale(1) rotate(0deg)',
+            transform: isHovering ? 'scale(0.85) rotate(-8deg)' : 'scale(1) rotate(0deg)',
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src={cursorUrl} 
             alt="Cursor" 
-            className="h-full w-full object-contain drop-shadow-md"
+            className="h-full w-full object-contain drop-shadow-[0_2px_8px_rgba(139,157,184,0.3)]"
           />
         </div>
       </motion.div>

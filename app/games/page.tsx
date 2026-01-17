@@ -47,17 +47,20 @@ export default function GamesPage() {
   return (
     <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
       <div className="w-full max-w-7xl space-y-8">
-        <header className="space-y-2 border-b-2 border-[#1F2937]/30 pb-6 flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-pixel text-[#94A3B8]">Games Arcade</h1>
+        <header className="space-y-3 border-b border-[#2A3648]/50 pb-6 flex justify-between items-end">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-pixel text-[#8B9DB8]">Games Arcade</h1>
             <p className="font-retro text-xl text-[#64748B]">Retro gaming library.</p>
           </div>
         </header>
 
         {selectedGame ? (
             <div className="w-full h-[80vh] flex flex-col space-y-4">
-                <Button onClick={() => setSelectedGame(null)} className="w-fit">Back to Library</Button>
-                <div className="flex-grow bg-black rounded-xl overflow-hidden border border-[#374151] relative">
+                <Button onClick={() => setSelectedGame(null)} className="w-fit flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">arrow_back</span>
+                  Back to Library
+                </Button>
+                <div className="flex-grow bg-black rounded-lg overflow-hidden border border-[#2A3648] relative shadow-2xl">
                     <iframe 
                         src={getProxiedGameUrl(selectedGame.file)} 
                         className="w-full h-full border-0"
@@ -65,7 +68,10 @@ export default function GamesPage() {
                         sandbox="allow-scripts allow-same-origin allow-pointer-lock"
                     />
                 </div>
-                <h2 className="text-xl font-pixel text-[#E2E8F0]">{selectedGame.title}</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-pixel text-[#A0B3CC]">{selectedGame.title}</h2>
+                  <span className="text-sm font-retro text-[#64748B] px-3 py-1 bg-[#1E2A3A] rounded-lg border border-[#2A3648]">HTML5</span>
+                </div>
             </div>
         ) : (
             <>
@@ -73,28 +79,31 @@ export default function GamesPage() {
                   {games.map((game) => (
                     <Card 
                         key={game.id} 
-                        className="aspect-[3/4] p-2 flex flex-col space-y-2 hover:scale-105 transition-transform cursor-pointer border-[#1F2937] hover:border-[#475569] group"
+                        className="aspect-[3/4] p-3 flex flex-col space-y-2 cursor-pointer group"
                         onClick={() => setSelectedGame(game)}
                     >
-                      <div className="flex-grow bg-[#030508] rounded flex items-center justify-center overflow-hidden relative">
+                      <div className="flex-grow bg-gradient-to-br from-[#0C1016] to-[#1E2A3A] rounded-lg flex items-center justify-center overflow-hidden relative border border-[#2A3648] group-hover:border-[#64748B] transition-all">
                          {game.thumb ? (
                              // eslint-disable-next-line @next/next/no-img-element
-                             <img src={game.thumb} alt={game.title} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
+                             <img src={game.thumb} alt={game.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300" />
                          ) : (
-                             <span className="material-symbols-outlined text-4xl text-[#1F2937]">sports_esports</span>
+                             <span className="material-symbols-outlined text-4xl text-[#2A3648] group-hover:text-[#4A5A6F] transition-colors">sports_esports</span>
                          )}
                       </div>
-                      <div className="px-1">
-                        <h4 className="font-pixel text-[10px] text-[#94A3B8] truncate">{game.title}</h4>
-                        <span className="text-[10px] font-retro text-[#475569]">HTML5</span>
+                      <div className="px-1 space-y-1">
+                        <h4 className="font-pixel text-[9px] text-[#8B9DB8] truncate group-hover:text-[#A0B3CC] transition-colors">{game.title}</h4>
+                        <span className="text-[9px] font-retro text-[#4A5A6F]">HTML5</span>
                       </div>
                     </Card>
                   ))}
                 </div>
                 
                 <div className="flex justify-center pt-8">
-                    <Button onClick={() => setPage(p => p + 1)} disabled={loading}>
-                        {loading ? 'Loading...' : 'Load More'}
+                    <Button onClick={() => setPage(p => p + 1)} disabled={loading} className="min-w-[200px] flex items-center gap-3">
+                        {loading && (
+                          <span className="w-5 h-5 border-2 border-[#64748B] border-t-transparent rounded-full animate-spin"></span>
+                        )}
+                        <span>{loading ? 'Loading...' : 'Load More'}</span>
                     </Button>
                 </div>
             </>
