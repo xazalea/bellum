@@ -408,39 +408,9 @@ export function SeaLifeBackground() {
       
       // Draw animals
       animalsRef.current.forEach(animal => {
-        const dx = mouseRef.current.x - animal.x;
-        const dy = mouseRef.current.y - animal.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Species-specific flee distance
-        let fleeDistance = 250;
-        let fleeForce = 0.5;
-        
-        if (animal.type === 'shark') {
-          fleeDistance = 150;
-          fleeForce = 0.3;
-        } else if (animal.type === 'starfish' || animal.type === 'seahorse') {
-          fleeDistance = 100;
-          fleeForce = 0.2;
-        } else if (animal.type === 'jellyfish') {
-          fleeDistance = 300;
-          fleeForce = 0.6;
-        }
-        
-        // Flee behavior
-        if (dist < fleeDistance) {
-          animal.fleeing = true;
-          const angle = Math.atan2(dy, dx);
-          const force = (fleeDistance - dist) / fleeDistance;
-          
-          animal.vx -= Math.cos(angle) * force * fleeForce;
-          animal.vy -= Math.sin(angle) * force * fleeForce;
-          
-          animal.speed = animal.baseSpeed * 2.5;
-        } else {
-          animal.fleeing = false;
-          animal.speed = animal.speed * 0.95 + animal.baseSpeed * 0.05;
-        }
+        // Fish swim peacefully - no fleeing behavior
+        animal.fleeing = false;
+        animal.speed = animal.speed * 0.95 + animal.baseSpeed * 0.05;
 
         // Apply velocity
         animal.x += animal.vx;
@@ -563,11 +533,11 @@ export function SeaLifeBackground() {
         particleSystem.render(ctx);
       }
 
-      // Deep darkness with cursor light reveal
+      // Gentle darkness with cursor light reveal
       ctx.save();
       
-      // Very dark overlay - creatures hidden in darkness
-      ctx.fillStyle = 'rgba(2, 4, 6, 0.92)';
+      // Softer overlay - creatures more visible
+      ctx.fillStyle = 'rgba(2, 4, 6, 0.50)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Cursor light - punch hole to reveal creatures
