@@ -50,9 +50,12 @@ git push
 
 ### 1. CSS Imports (`app/globals.css`)
 ```css
-@import 'pixel-retroui/dist/index.css';
-@import 'pixel-retroui/dist/fonts.css';
+/* Note: Currently commented out - RetroUI v2.1.0 doesn't have pre-built CSS */
+/* @import 'pixel-retroui/dist/index.css'; */
+/* @import 'pixel-retroui/dist/fonts.css'; */
 ```
+
+**Important**: The GitHub version of RetroUI (v2.1.0) doesn't include pre-built CSS files in a `dist/` folder. The CSS imports are currently commented out to prevent build errors.
 
 ### 2. Wrapper Components
 

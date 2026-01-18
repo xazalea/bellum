@@ -4,8 +4,9 @@
 @import '../components/sea-creatures/creatures.css';
 
 /* RetroUI Pixel-Perfect Styling */
-@import 'pixel-retroui/dist/index.css';
-@import 'pixel-retroui/dist/fonts.css';
+/* Note: RetroUI v2.1.0 from GitHub doesn't have dist/ folder */
+/* @import 'pixel-retroui/dist/index.css'; */
+/* @import 'pixel-retroui/dist/fonts.css'; */
 
 @layer utilities {
   .text-stroke {
