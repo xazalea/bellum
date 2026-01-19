@@ -6,16 +6,18 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleProxy(request, params);
+  const resolvedParams = await params;
+  return handleProxy(request, resolvedParams);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return handleProxy(request, params);
+  const resolvedParams = await params;
+  return handleProxy(request, resolvedParams);
 }
 
 export async function OPTIONS(request: NextRequest) {

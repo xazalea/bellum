@@ -9,6 +9,16 @@ export default function CommunityPage() {
   const widgetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Create widgetbot element after script loads
+    if (isLoaded && widgetRef.current && !widgetRef.current.querySelector('widgetbot')) {
+      const widgetElement = document.createElement('widgetbot');
+      widgetElement.setAttribute('server', '1462853786790793298');
+      widgetElement.setAttribute('channel', '1462853786790793301');
+      widgetElement.setAttribute('width', '100%');
+      widgetElement.setAttribute('height', '600');
+      widgetRef.current.appendChild(widgetElement);
+    }
+
     // Check if the widget loaded successfully
     const timer = setTimeout(() => {
       if (widgetRef.current && !widgetRef.current.querySelector('iframe')) {
@@ -92,14 +102,7 @@ export default function CommunityPage() {
               ref={widgetRef}
               className={`${isLoaded ? 'block' : 'hidden'} rounded-lg overflow-hidden border border-[#2A3648]`}
               style={{ minHeight: '600px' }}
-            >
-              <widgetbot
-                server="1462853786790793298"
-                channel="1462853786790793301"
-                width="100%"
-                height="600"
-              />
-            </div>
+            />
           </div>
         </div>
 
@@ -164,7 +167,7 @@ export default function CommunityPage() {
                 <span className="material-symbols-outlined text-2xl text-[#EF4444]">cancel</span>
                 <div>
                   <h4 className="font-retro text-[#8B9DB8] font-bold">No Spam</h4>
-                  <p className="font-retro text-sm text-[#64748B]">Don't spam channels or DM users</p>
+                  <p className="font-retro text-sm text-[#64748B]">Don&apos;t spam channels or DM users</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
