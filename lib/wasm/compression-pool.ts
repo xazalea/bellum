@@ -137,7 +137,7 @@ export class CompressionPool {
     }
     
     return {
-      blob: new Blob([result.data]),
+      blob: new Blob([result.data.buffer]),
       originalSize: result.originalSize,
       compressedSize: result.compressedSize,
       ratio: result.compressedSize / result.originalSize,
