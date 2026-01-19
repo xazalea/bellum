@@ -41,38 +41,15 @@ export class CASManager {
     }
 
     async storeFile(path: string, data: Uint8Array): Promise<void> {
-        // Initialize WASM storage for faster hashing
-        await initStorage();
-        
         const chunks: string[] = [];
         let totalSize = 0;
 
-        // 1. Chunking (WASM-accelerated)
-        const chunker = new Chunker(this.CHUNK_SIZE);
-        const chunkCount = chunker.chunkCount(data.length);
-        
-        // Batch process chunks for better performance
-        const chunkBatch: Uint8Array[] = [];
-        const chunkHashes: string[] = [];
-        
-        for (let i = 0; i < chunkCount; i++) {
-            const [start, end] = chunker.chunkBoundaries(i, data.length);
-            const chunk = data.slice(start, end);
-            chunkBatch.push(chunk);
+        // 1. Chunking
+        for (let i = 0; i < data.length; i += this.CHUNK_SIZE) {
+            const chunk = data.slice(i, Math.min(i + this.CHUNK_SIZE, data.length));
             
-            // Process in batches of 10 for parallel hashing
-            if (chunkBatch.length >= 10 || i === chunkCount - 1) {
-                const hashes = await hashChunksBatch(chunkBatch);
-                chunkHashes.push(...hashes);
-                chunkBatch.length = 0;
-            }
-        }
-        
-        // 2. Store chunks with deduplication
-        for (let i = 0; i < chunkCount; i++) {
-            const [start, end] = chunker.chunkBoundaries(i, data.length);
-            const chunk = data.slice(start, end);
-            const hash = chunkHashes[i];
+            // 2. Hashing (Deduplication)
+            const hash = await this.computeHash(chunk);
             
             // 3. Store Chunk if new
             if (!this.chunkIndex.has(hash)) {
