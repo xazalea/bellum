@@ -1,0 +1,22 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "../../public/wasm/animation.wasm",
+      "textFile": "../../public/wasm/animation.wat",
+      "sourceMap": true,
+      "optimizeLevel": 3,
+      "shrinkLevel": 2,
+      "converge": true,
+      "noAssert": true
+    },
+    "debug": {
+      "outFile": "../../public/wasm/animation.debug.wasm",
+      "textFile": "../../public/wasm/animation.debug.wat",
+      "sourceMap": true,
+      "debug": true
+    }
+  },
+  "options": {
+    "bindings": "esm"
+  }
+}

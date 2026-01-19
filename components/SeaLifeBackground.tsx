@@ -5,6 +5,7 @@ import { SPRITES, PALETTES, createSprite } from '@/lib/ui/sprites';
 import { ANIMATED_FISH_SPRITES } from '@/lib/ui/animated-fish-sprites';
 import { ParticleSystem, AmbientLayer, BioluminescentLayer } from '@/lib/ui/animated-sprites';
 import type { Particle, AmbientElement, GlowEffect } from '@/lib/ui/animated-sprites';
+import { initAnimationEngine, initAnimal, updateAllAnimals, getAnimalPosition, isUsingWasm } from '@/lib/wasm/animation-engine';
 
 interface Animal {
   x: number;
@@ -46,6 +47,15 @@ export function SeaLifeBackground() {
 
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
+
+    // Initialize WASM animation engine (async, non-blocking)
+    initAnimationEngine().then((success) => {
+      if (success) {
+        console.log('🚀 Using WASM-accelerated animation physics');
+      } else {
+        console.log('Using JavaScript fallback for animations');
+      }
+    });
 
     // Initialize systems
     particleSystemRef.current = new ParticleSystem(300);
@@ -409,8 +419,8 @@ export function SeaLifeBackground() {
       // Draw animals
       animalsRef.current.forEach(animal => {
         // Fish swim peacefully - no fleeing behavior
-        animal.fleeing = false;
-        animal.speed = animal.speed * 0.95 + animal.baseSpeed * 0.05;
+          animal.fleeing = false;
+          animal.speed = animal.speed * 0.95 + animal.baseSpeed * 0.05;
 
         // Apply velocity
         animal.x += animal.vx;

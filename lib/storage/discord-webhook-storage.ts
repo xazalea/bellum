@@ -6,6 +6,7 @@
 
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 import { compressFileGzip } from './compression';
+import { getCompressionPool, CompressionAlgorithm } from '@/lib/wasm/compression-pool';
 
 export interface WebhookConfig {
   webhookUrl: string;
@@ -177,10 +178,35 @@ export async function uploadFile(
     throw new Error(`Quota exceeded. You have ${(await getQuotaInfo()).availableBytes} bytes available, but need ${file.size} bytes.`);
   }
 
-  // Compress file using existing compression pipeline
+  // Compress file using WASM-accelerated compression (with fallback)
   console.log(`[Challenger Storage] Compressing ${file.name}...`);
-  const compressed = await compressFileGzip(file);
-  console.log(`[Challenger Storage] Compressed ${compressed.originalBytes} → ${compressed.compressedBytes} bytes (${((1 - compressed.compressedBytes / compressed.originalBytes) * 100).toFixed(1)}% reduction)`);
+  let compressed;
+  
+  try {
+    // Try WASM compression first (much faster)
+    const pool = getCompressionPool();
+    const result = await pool.compressFile(file, CompressionAlgorithm.Zstd, 9, (progress) => {
+      onProgress?.({
+        chunkIndex: 0,
+        totalChunks: 1,
+        uploadedBytes: Math.floor(file.size * progress),
+        totalBytes: file.size,
+        compressedBytes: 0,
+      });
+    });
+    compressed = {
+      blob: result.blob,
+      originalBytes: result.originalSize,
+      compressedBytes: result.compressedSize,
+      algorithm: 'zstd' as const,
+    };
+    console.log(`[Challenger Storage] WASM Zstd compressed ${compressed.originalBytes} → ${compressed.compressedBytes} bytes (${((1 - compressed.compressedBytes / compressed.originalBytes) * 100).toFixed(1)}% reduction)`);
+  } catch (error) {
+    console.warn('[Challenger Storage] WASM compression failed, using fallback:', error);
+    // Fallback to browser gzip
+    compressed = await compressFileGzip(file);
+    console.log(`[Challenger Storage] Gzip compressed ${compressed.originalBytes} → ${compressed.compressedBytes} bytes (${((1 - compressed.compressedBytes / compressed.originalBytes) * 100).toFixed(1)}% reduction)`);
+  }
 
   // Calculate chunks
   const totalChunks = Math.ceil(compressed.compressedBytes / MAX_CHUNK_SIZE);

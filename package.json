@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:wasm": "npm run build:wasm:rust && npm run build:wasm:as",
+    "build:wasm:rust": "node scripts/build-rust-wasm.js",
+    "build:wasm:as": "npm run asbuild",
+    "asbuild": "asc wasm/animation/assembly/index.ts --target release --outFile public/wasm/animation.wasm --optimize --sourceMap",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "node scripts/copy-optimizers.js --if-missing"
@@ -17,6 +21,7 @@
     "adm-zip": "^0.5.16",
     "clsx": "^2.1.1",
     "fengari": "^0.1.4",
+    "fflate": "^0.8.2",
     "firebase": "^10.7.1",
     "firebase-admin": "^12.6.0",
     "framer-motion": "^12.23.24",
@@ -34,6 +39,7 @@
     "@types/node": "^20.11.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "assemblyscript": "^0.27.29",
     "autoprefixer": "^10.4.17",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",

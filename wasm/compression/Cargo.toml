@@ -1,0 +1,21 @@
+[package]
+name = "bellum-compression"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
+zstd = "0.13"
+lz4 = "1.24"
+js-sys = "0.3"
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Better optimization
+panic = "abort"     # Smaller binary
+strip = true        # Strip symbols
