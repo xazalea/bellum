@@ -136,8 +136,13 @@ export class CompressionPool {
       throw new Error(result.error || 'Compression failed');
     }
     
+    // Convert ArrayBufferLike to ArrayBuffer for Blob constructor
+    const buffer = result.data.buffer instanceof ArrayBuffer
+      ? result.data.buffer
+      : new Uint8Array(result.data).buffer;
+    
     return {
-      blob: new Blob([result.data.buffer]),
+      blob: new Blob([buffer]),
       originalSize: result.originalSize,
       compressedSize: result.compressedSize,
       ratio: result.compressedSize / result.originalSize,
