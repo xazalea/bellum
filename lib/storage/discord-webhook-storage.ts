@@ -6,7 +6,8 @@
 
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 import { compressFileGzip } from './compression';
-import { getCompressionPool, CompressionAlgorithm } from '@/lib/wasm/compression-pool';
+import { getCompressionPool } from '@/lib/wasm/compression-pool';
+import { CompressionAlgorithm } from '@/lib/wasm/compression';
 
 export interface WebhookConfig {
   webhookUrl: string;

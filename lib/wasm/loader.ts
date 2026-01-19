@@ -59,17 +59,17 @@ export async function loadWasmModule(options: WasmLoaderOptions): Promise<WasmMo
       const wasmBytes = await response.arrayBuffer();
       
       // Instantiate WASM module
-      const module = await WebAssembly.compile(wasmBytes);
+      const wasmModule = await WebAssembly.compile(wasmBytes);
       
       // Cache the module
       if (cache) {
         moduleCache.set(wasmPath, {
-          module,
+          module: wasmModule,
           timestamp: Date.now(),
         });
       }
 
-      return module;
+      return wasmModule;
     } catch (error) {
       console.warn(`WASM load failed (${wasmPath}):`, error);
       
@@ -93,10 +93,10 @@ export async function loadWasmModule(options: WasmLoaderOptions): Promise<WasmMo
  * Instantiate a compiled WASM module with imports
  */
 export async function instantiateWasm(
-  module: WasmModule,
+  wasmModule: WasmModule,
   imports: WebAssembly.Imports = {}
 ): Promise<WebAssembly.Instance> {
-  return await WebAssembly.instantiate(module, imports);
+  return await WebAssembly.instantiate(wasmModule, imports);
 }
 
 /**
@@ -107,13 +107,13 @@ export async function loadAndInstantiate(
   imports: WebAssembly.Imports = {},
   fallback?: () => any
 ): Promise<any> {
-  const module = await loadWasmModule({ wasmPath, fallback });
+  const wasmModule = await loadWasmModule({ wasmPath, fallback });
   
-  if (!module) {
+  if (!wasmModule) {
     return fallback ? fallback() : null;
   }
 
-  const instance = await instantiateWasm(module, imports);
+  const instance = await instantiateWasm(wasmModule, imports);
   return instance.exports;
 }
 
@@ -139,10 +139,10 @@ export function isWasmSupported(): boolean {
         && typeof WebAssembly.instantiate === 'function'
         && typeof WebAssembly.compile === 'function') {
       // Test with a minimal WASM module
-      const module = new WebAssembly.Module(
+      const testModule = new WebAssembly.Module(
         new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])
       );
-      return module instanceof WebAssembly.Module;
+      return testModule instanceof WebAssembly.Module;
     }
   } catch (e) {
     // WASM not supported

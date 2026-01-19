@@ -4,7 +4,7 @@
  */
 
 import { loadAndInstantiate } from './loader';
-import { gzip, ungzip, strToU8, strFromU8 } from 'fflate';
+import { gzip, gunzip, strToU8, strFromU8 } from 'fflate';
 
 export enum CompressionAlgorithm {
   Gzip = 0,
@@ -102,7 +102,7 @@ export async function decompress(
 
   // JavaScript fallback
   return new Promise((resolve, reject) => {
-    ungzip(data, (err, result) => {
+    gunzip(data, (err, result) => {
       if (err) reject(err);
       else resolve(result);
     });
