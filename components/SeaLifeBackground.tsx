@@ -479,7 +479,9 @@ export function SeaLifeBackground() {
         ctx.save();
         ctx.translate(animal.x, animal.y);
         
-        // Calculate illumination from cursor
+        // Calculate distance to cursor for illumination
+        const dx = mouseRef.current.x - animal.x;
+        const dy = mouseRef.current.y - animal.y;
         const lightDist = Math.sqrt(dx * dx + dy * dy);
         const maxLightDistance = 450;
         const lightIntensity = Math.max(0, 1 - (lightDist / maxLightDistance));
