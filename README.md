@@ -1,5 +1,9 @@
 # Nacho - Maximum Performance Computing Runtime
 
+[![Discord](https://img.shields.io/discord/YOUR_SERVER_ID?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/ADauzE32J7)
+
+> 💬 Join our [Discord community](https://discord.gg/ADauzE32J7) for bugs, suggestions, or just chatting!
+
 Production-grade high-performance computing runtime for the web.
 
 ## Overview

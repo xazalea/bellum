@@ -5,6 +5,7 @@ import { NachoCursor } from '@/components/NachoCursor';
 import { SeaLifeBackground } from '@/components/SeaLifeBackground';
 import { PixelOverlay } from '@/components/PixelOverlay';
 import { DynamicIsland } from '@/components/DynamicIsland';
+import { DiscordButton } from '@/components/DiscordButton';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -48,6 +49,7 @@ export default function RootLayout({
         <NachoCursor />
         <DynamicIsland />
         <PixelOverlay />
+        <DiscordButton />
         {children}
         <ClientInit />
       </body>
