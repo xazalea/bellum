@@ -1,17 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useAuth } from '@/lib/auth/auth-context';
-import { authService } from '@/lib/firebase/auth-service';
+import { authService, type User } from '@/lib/firebase/auth-service';
 
 export default function AccountPage() {
-  const auth = useAuth?.() || { user: null, isAuthenticated: false };
+  const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get current user
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+
+    // Listen for auth changes
+    const unsubscribe = authService.onAuthStateChange((newUser) => {
+      setUser(newUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleClaimUsername = async () => {
     if (!username.trim()) {
@@ -62,7 +74,7 @@ export default function AccountPage() {
           </Card>
         )}
 
-        {auth.isAuthenticated && auth.user ? (
+        {user ? (
           <Card className="p-8 bg-gradient-to-br from-[#0F172A] to-[#1E2A3A]">
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
@@ -71,9 +83,9 @@ export default function AccountPage() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-pixel text-[#8B9DB8] mb-1">
-                    {auth.user.username || 'Explorer'}
+                    {user.username || 'Explorer'}
                   </h2>
-                  <p className="font-retro text-base text-[#64748B]">UID: {auth.user.uid.substring(0, 16)}...</p>
+                  <p className="font-retro text-base text-[#64748B]">UID: {user.uid.substring(0, 16)}...</p>
                 </div>
               </div>
             </div>
