@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { name: 'Storage', href: '/storage' },
   { name: 'Games', href: '/games' },
   { name: 'Emulators', href: '/emulator' },
+  { name: 'Community', href: '/community' },
   { name: 'Account', href: '/account' },
 ];
 
