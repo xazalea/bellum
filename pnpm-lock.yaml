@@ -29,6 +29,9 @@ importers:
       fengari:
         specifier: ^0.1.4
         version: 0.1.5
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.2
       firebase:
         specifier: ^10.7.1
         version: 10.14.1
@@ -75,6 +78,9 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.0
         version: 18.3.7(@types/react@18.3.26)
+      assemblyscript:
+        specifier: ^0.27.29
+        version: 0.27.37
       autoprefixer:
         specifier: ^10.4.17
         version: 10.4.21(postcss@8.5.6)
@@ -883,6 +889,11 @@ packages:
     resolution: {integrity: sha512-3duEwti880xqi4eAMN8AyR4a0ByT90zoYdLlevfrvU43vb0YZwZVfxOgxWrLXXXpyugL0hNZc9G6BiB5B3nUug==}
     engines: {node: '>=8'}
 
+  assemblyscript@0.27.37:
+    resolution: {integrity: sha512-YtY5k3PiV3SyUQ6gRlR2OCn8dcVRwkpiG/k2T5buoL2ymH/Z/YbaYWbk/f9mO2HTgEtGWjPiAQrIuvA7G/63Gg==}
+    engines: {node: '>=18', npm: '>=10'}
+    hasBin: true
+
   ast-types-flow@0.0.8:
     resolution: {integrity: sha512-OH/2E5Fg20h2aPrbe+QL8JZQFko0YZaF+j4mnQ7BGhfavO7OpSLa8a0y9sBwomHdSbkhTS8TQNayBfnW5DwbvQ==}
 
@@ -931,6 +942,10 @@ packages:
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
+
+  binaryen@116.0.0-nightly.20240114:
+    resolution: {integrity: sha512-0GZrojJnuhoe+hiwji7QFaL3tBlJoA+KFUN7ouYSDGZLSo9CKM8swQX8n/UcbR0d1VuZKU+nhogNzv423JEu5A==}
+    hasBin: true
 
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
@@ -1345,6 +1360,9 @@ packages:
 
   fengari@0.1.5:
     resolution: {integrity: sha512-0DS4Nn4rV8qyFlQCpKK8brT61EUtswynrpfFTcgLErcilBIBskSMQ86fO2WVuybr14ywyKdRjv91FiRZwnEuvQ==}
+
+  fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
   figures@3.2.0:
     resolution: {integrity: sha512-yaduQFRKLXYOGgEn6AZau90j3ggSOyiqXU0F9JZfeXYhNa+Jk4X+s45A2zg5jns87GAFa34BBm2kXw4XpNcbdg==}
@@ -3661,6 +3679,11 @@ snapshots:
   arrify@2.0.1:
     optional: true
 
+  assemblyscript@0.27.37:
+    dependencies:
+      binaryen: 116.0.0-nightly.20240114
+      long: 5.3.2
+
   ast-types-flow@0.0.8: {}
 
   async-function@1.0.0: {}
@@ -3701,6 +3724,8 @@ snapshots:
     optional: true
 
   binary-extensions@2.3.0: {}
+
+  binaryen@116.0.0-nightly.20240114: {}
 
   bl@4.1.0:
     dependencies:
@@ -4270,6 +4295,8 @@ snapshots:
       readline-sync: 1.4.10
       sprintf-js: 1.1.3
       tmp: 0.2.5
+
+  fflate@0.8.2: {}
 
   figures@3.2.0:
     dependencies:
