@@ -13,7 +13,7 @@ export default function AccountPage() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSignIn = async () => {
+  const handleClaimUsername = async () => {
     if (!username.trim()) {
       setError('Please enter a username');
       return;
@@ -22,11 +22,11 @@ export default function AccountPage() {
     try {
       setIsSigningIn(true);
       setError(null);
-      await authService.signInWithUsername(username);
+      await authService.claimUsername(username);
       // Auth context will update automatically
     } catch (err: any) {
-      console.error('Sign in error:', err);
-      setError(err?.message || 'Failed to sign in');
+      console.error('Claim username error:', err);
+      setError(err?.message || 'Failed to claim username');
     } finally {
       setIsSigningIn(false);
     }
@@ -70,8 +70,10 @@ export default function AccountPage() {
                   <span className="material-symbols-outlined text-4xl text-white">person</span>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-pixel text-[#8B9DB8] mb-1">Signed In</h2>
-                  <p className="font-retro text-base text-[#64748B]">UID: {auth.user.uid}</p>
+                  <h2 className="text-2xl font-pixel text-[#8B9DB8] mb-1">
+                    {auth.user.username || 'Explorer'}
+                  </h2>
+                  <p className="font-retro text-base text-[#64748B]">UID: {auth.user.uid.substring(0, 16)}...</p>
                 </div>
               </div>
             </div>
@@ -145,7 +147,7 @@ export default function AccountPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleClaimUsername()}
                   disabled={isSigningIn}
                   className="w-full"
                 />
@@ -153,26 +155,26 @@ export default function AccountPage() {
 
               <div className="p-4 bg-[#1E2A3A]/30 rounded-lg border border-[#2A3648]/50">
                 <p className="font-retro text-xs text-[#64748B]">
-                  🔐 <strong>Privacy First:</strong> Your username is combined with your device fingerprint 
-                  for secure, password-free authentication. No personal data required.
+                  🔐 <strong>Privacy First:</strong> You already have a device identity. Claim a username 
+                  to personalize your account. No email or password required!
                 </p>
               </div>
             </div>
 
             <Button
-              onClick={handleSignIn}
+              onClick={handleClaimUsername}
               disabled={isSigningIn || !username.trim()}
               className="w-full flex items-center justify-center gap-2"
             >
               {isSigningIn ? (
                 <>
                   <span className="w-4 h-4 border-2 border-[#64748B] border-t-transparent rounded-full animate-spin"></span>
-                  <span>Signing In...</span>
+                  <span>Claiming Username...</span>
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-base">login</span>
-                  <span>Sign In</span>
+                  <span className="material-symbols-outlined text-base">badge</span>
+                  <span>Claim Username</span>
                 </>
               )}
             </Button>
