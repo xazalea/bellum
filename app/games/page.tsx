@@ -49,8 +49,8 @@ export default function GamesPage() {
       <div className="w-full max-w-7xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6 flex justify-between items-end">
           <div className="space-y-2">
-            <h1 className="text-3xl font-pixel text-[#8B9DB8]">Games Arcade</h1>
-            <p className="font-retro text-xl text-[#64748B]">Retro gaming library.</p>
+            <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Games Arcade</h1>
+            <p className="font-sans text-xl text-[#64748B]">Retro gaming library.</p>
           </div>
         </header>
 
@@ -69,8 +69,8 @@ export default function GamesPage() {
                     />
                 </div>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-pixel text-[#A0B3CC]">{selectedGame.title}</h2>
-                  <span className="text-sm font-retro text-[#64748B] px-3 py-1 bg-[#1E2A3A] rounded-lg border border-[#2A3648]">HTML5</span>
+                  <h2 className="text-xl font-sans font-semibold text-[#A0B3CC]">{selectedGame.title}</h2>
+                  <span className="text-sm font-sans text-[#64748B] px-3 py-1 bg-[#1E2A3A] rounded-lg border border-[#2A3648]">HTML5</span>
                 </div>
             </div>
         ) : (
@@ -91,8 +91,8 @@ export default function GamesPage() {
                          )}
                       </div>
                       <div className="px-1 space-y-1">
-                        <h4 className="font-pixel text-[9px] text-[#8B9DB8] truncate group-hover:text-[#A0B3CC] transition-colors">{game.title}</h4>
-                        <span className="text-[9px] font-retro text-[#4A5A6F]">HTML5</span>
+                        <h4 className="font-sans font-medium text-[10px] text-[#8B9DB8] truncate group-hover:text-[#A0B3CC] transition-colors">{game.title}</h4>
+                        <span className="text-[9px] font-sans text-[#4A5A6F]">HTML5</span>
                       </div>
                     </Card>
                   ))}

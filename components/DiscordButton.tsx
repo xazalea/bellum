@@ -8,13 +8,13 @@ export function DiscordButton() {
       href="https://discord.gg/ADauzE32J7"
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-50 group"
+      className="fixed bottom-6 right-6 z-50 group opacity-50 hover:opacity-100 transition-opacity"
       aria-label="Join Discord"
     >
-      <div className="relative w-12 h-12 bg-[#5865F2] hover:bg-[#4752C4] rounded-full flex items-center justify-center transition-all duration-200 group-hover:scale-105 shadow-lg">
+      <div className="relative w-8 h-8 bg-[#5865F2] hover:bg-[#4752C4] rounded-full flex items-center justify-center transition-all duration-200 shadow-sm">
         <svg 
-          width="20" 
-          height="20" 
+          width="14" 
+          height="14" 
           viewBox="0 0 24 24" 
           fill="white"
         >

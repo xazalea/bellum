@@ -6,8 +6,8 @@ export default function WindowsPage() {
     <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
       <div className="w-full max-w-4xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-pixel text-[#8B9DB8]">Windows Environment</h1>
-          <p className="font-retro text-xl text-[#64748B]">Streamed desktop experience.</p>
+          <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Windows Environment</h1>
+          <p className="font-sans text-xl text-[#64748B]">Streamed desktop experience.</p>
         </header>
 
         <Card className="aspect-video flex items-center justify-center bg-gradient-to-br from-[#000000] to-[#0A0E14] border-[#2A3648]">

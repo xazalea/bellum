@@ -40,8 +40,8 @@ export default function LibraryPage() {
       <div className="w-full max-w-6xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6 flex justify-between items-end">
           <div className="space-y-2">
-            <h1 className="text-3xl font-pixel text-[#8B9DB8]">App Library</h1>
-            <p className="font-retro text-xl text-[#64748B]">Installed applications and tools.</p>
+            <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">App Library</h1>
+            <p className="font-sans text-xl text-[#64748B]">Installed applications and tools.</p>
           </div>
           <Button className="flex items-center gap-2">
              <span className="material-symbols-outlined text-lg">add</span> 
@@ -50,15 +50,15 @@ export default function LibraryPage() {
         </header>
 
         {loading ? (
-            <div className="text-[#64748B] font-retro text-center py-20 flex items-center justify-center gap-3">
+            <div className="text-[#64748B] font-sans text-center py-20 flex items-center justify-center gap-3">
               <span className="w-5 h-5 border-2 border-[#64748B] border-t-transparent rounded-full animate-spin"></span>
               Loading library...
             </div>
         ) : apps.length === 0 ? (
             <Card className="p-12 text-center">
               <span className="material-symbols-outlined text-6xl text-[#4A5A6F] mb-4 inline-block">apps</span>
-              <h2 className="text-xl font-pixel text-[#8B9DB8] mb-2">No Apps Installed</h2>
-              <p className="font-retro text-lg text-[#64748B] mb-6">
+              <h2 className="text-xl font-sans font-semibold text-[#8B9DB8] mb-2">No Apps Installed</h2>
+              <p className="font-sans text-lg text-[#64748B] mb-6">
                 Your library is empty. Install applications to get started.
               </p>
               <Button className="flex items-center gap-2 mx-auto">
@@ -78,10 +78,10 @@ export default function LibraryPage() {
                   </div>
                   <div className="flex-grow space-y-2">
                     <div className="flex justify-between items-start gap-2">
-                        <h3 className="font-pixel text-sm text-[#8B9DB8] group-hover:text-[#A0B3CC] transition-colors">{app.name}</h3>
+                        <h3 className="font-sans font-medium text-sm text-[#8B9DB8] group-hover:text-[#A0B3CC] transition-colors">{app.name}</h3>
                         <span className="text-[9px] bg-[#1E2A3A] text-[#64748B] px-2 py-1 rounded border border-[#2A3648]">{app.version}</span>
                     </div>
-                    <p className="font-retro text-base text-[#64748B]">{app.description}</p>
+                    <p className="font-sans text-base text-[#64748B]">{app.description}</p>
                   </div>
                   <div className="flex space-x-2 pt-2">
                       <Button className="flex-1 text-xs flex items-center justify-center gap-2">

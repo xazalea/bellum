@@ -28,6 +28,41 @@ export class NachoLoader {
 
   // Hook for UI updates
   public onStatusUpdate: ((status: string, detail?: string) => void) | null = null;
+  public onStatsUpdate: ((stats: { cpu: number; ram: number; ping: number }) => void) | null = null;
+  private statsInterval: NodeJS.Timeout | null = null;
+
+  async initialize(systemType: 'android' | 'windows' | 'linux') {
+    this.updateStatus('System Boot', `Initializing ${systemType} Hypervisor...`);
+    
+    try {
+        await hypervisor.boot();
+        this.updateStatus('Hypervisor Ready', 'Kernel loaded successfully');
+        
+        // Start emitting stats
+        this.startStatsEmission();
+        
+        return true;
+    } catch (e) {
+        console.warn('Hypervisor failed to boot:', e);
+        this.updateStatus('Boot Error', 'Hypervisor initialization failed');
+        throw e;
+    }
+  }
+
+  private startStatsEmission() {
+    if (this.statsInterval) clearInterval(this.statsInterval);
+    
+    this.statsInterval = setInterval(() => {
+        if (this.onStatsUpdate) {
+            // In a real implementation, we would query the hypervisor/VM for these metrics
+            this.onStatsUpdate({
+                cpu: Math.floor(Math.random() * 30) + 10, // Simulated for now
+                ram: Math.floor(Math.random() * 2048) + 1024,
+                ping: Math.floor(Math.random() * 50) + 20
+            });
+        }
+    }, 1000);
+  }
 
   async load(container: HTMLElement, filePath: string, type: FileType) {
     this.updateStatus('Initializing', `Loading ${filePath}...`);
@@ -211,6 +246,10 @@ export class NachoLoader {
   }
 
   stop() {
+    if (this.statsInterval) {
+        clearInterval(this.statsInterval);
+        this.statsInterval = null;
+    }
     this.instance = null;
     this.memory = null;
     this.syscallBridge = null;

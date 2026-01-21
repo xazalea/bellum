@@ -281,8 +281,8 @@ export default function StoragePage() {
     <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
       <div className="w-full max-w-6xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-pixel text-[#8B9DB8]">App Storage</h1>
-          <p className="font-retro text-xl text-[#64748B]">Import and store your games & applications. 4GB free.</p>
+          <h1 className="text-3xl font-sans text-[#8B9DB8]">App Storage</h1>
+          <p className="font-sans text-xl text-[#64748B]">Import and store your games & applications.</p>
         </header>
 
         {error && (
@@ -302,16 +302,16 @@ export default function StoragePage() {
           <Card className="p-6 bg-gradient-to-br from-[#0F172A] to-[#1E2A3A]">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-pixel text-sm text-[#8B9DB8]">Storage Quota</h3>
-                <p className="font-retro text-xs text-[#64748B]">
+                <h3 className="font-sans font-medium text-sm text-[#8B9DB8]">Storage Quota</h3>
+                <p className="font-sans text-xs text-[#64748B]">
                   Fingerprint: {quotaInfo.fingerprint.substring(0, 12)}...
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-pixel text-lg text-[#8B9DB8]">
+                <p className="font-sans font-bold text-lg text-[#8B9DB8]">
                   {formatBytes(quotaInfo.usedBytes)} / {formatBytes(quotaInfo.limitBytes)}
                 </p>
-                <p className="font-retro text-xs text-[#64748B]">
+                <p className="font-sans text-xs text-[#64748B]">
                   {formatPercentage(quotaInfo.usedBytes, quotaInfo.limitBytes)} used
                 </p>
               </div>
@@ -331,56 +331,56 @@ export default function StoragePage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <Card className="col-span-1 h-fit space-y-6 p-6">
-            <h3 className="font-pixel text-[10px] text-[#64748B] uppercase tracking-wider">Import App/Game</h3>
+            <h3 className="font-sans text-[10px] text-[#64748B] uppercase tracking-wider font-semibold">Import App/Game</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block font-retro text-sm text-[#8B9DB8] mb-2">Storage Mode</label>
+                <label className="block font-sans text-sm text-[#8B9DB8] mb-2">Storage Mode</label>
                 <select
                   value={storageMode}
                   onChange={(e) => setStorageMode(e.target.value as 'challenger' | 'api')}
-                  className="w-full bg-[#1E2A3A] border border-[#2A3648] text-[#8B9DB8] rounded-lg p-2 font-retro"
+                  className="w-full bg-[#1E2A3A] border border-[#2A3648] text-[#8B9DB8] rounded-lg p-2 font-sans"
                 >
-                  <option value="challenger">Challenger Storage (4GB Free)</option>
+                  <option value="challenger">Challenger Storage</option>
                   <option value="api">API Storage (Auth Required)</option>
                 </select>
-                <p className="mt-2 font-retro text-xs text-[#64748B]">
+                <p className="mt-2 font-sans text-xs text-[#64748B]">
                   {storageMode === 'challenger' 
-                    ? 'Deep sea storage with automatic compression'
+                    ? 'Secure storage for your imported apps'
                     : 'Requires authentication, stores via API'}
                 </p>
               </div>
 
               <div>
-                <label className="block font-retro text-sm text-[#8B9DB8] mb-2">Select File</label>
+                <label className="block font-sans text-sm text-[#8B9DB8] mb-2">Select File</label>
                 <Input
                   type="file"
                   accept=".apk,.exe,.iso,.zip,.html,.jar"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   className="text-sm"
                 />
-                <p className="mt-2 font-retro text-xs text-[#64748B]">
+                <p className="mt-2 font-sans text-xs text-[#64748B]">
                   Supported: APK, EXE, ISO, ZIP, HTML5
                 </p>
               </div>
 
               {selectedFile && (
                 <div className="p-3 bg-[#1E2A3A]/50 rounded-lg border border-[#2A3648]">
-                  <p className="font-retro text-sm text-[#8B9DB8] truncate">{selectedFile.name}</p>
-                  <p className="font-retro text-xs text-[#64748B]">{formatBytes(selectedFile.size)}</p>
+                  <p className="font-sans text-sm text-[#8B9DB8] truncate">{selectedFile.name}</p>
+                  <p className="font-sans text-xs text-[#64748B]">{formatBytes(selectedFile.size)}</p>
                 </div>
               )}
 
               {uploadProgress && (
                 <div className="p-3 bg-[#3B82F6]/10 rounded-lg border border-[#3B82F6]/30">
-                  <p className="font-retro text-xs text-[#8B9DB8] mb-2">{uploadProgress.status}</p>
+                  <p className="font-sans text-xs text-[#8B9DB8] mb-2">{uploadProgress.status}</p>
                   <div className="w-full h-2 bg-[#1E2A3A] rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-[#3B82F6] transition-all duration-300"
                       style={{ width: `${uploadProgress.percent}%` }}
                     />
                   </div>
-                  <p className="font-retro text-xs text-[#64748B] mt-1">{uploadProgress.percent}%</p>
+                  <p className="font-sans text-xs text-[#64748B] mt-1">{uploadProgress.percent}%</p>
                 </div>
               )}
 
@@ -404,15 +404,15 @@ export default function StoragePage() {
             </div>
             
             <div className="pt-4 border-t border-[#2A3648]">
-              <div className="flex justify-between text-xs text-[#64748B] mb-2 font-retro">
+              <div className="flex justify-between text-xs text-[#64748B] mb-2 font-sans">
                 <span>Total Files</span>
                 <span>{files.length}</span>
               </div>
-              <div className="flex justify-between text-xs text-[#64748B] mb-2 font-retro">
+              <div className="flex justify-between text-xs text-[#64748B] mb-2 font-sans">
                 <span>Challenger Storage</span>
                 <span>{challengerFilesCount} files</span>
               </div>
-              <div className="flex justify-between text-xs text-[#64748B] font-retro">
+              <div className="flex justify-between text-xs text-[#64748B] font-sans">
                 <span>Total Size</span>
                 <span>{formatBytes(totalSize)}</span>
               </div>
@@ -425,16 +425,16 @@ export default function StoragePage() {
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="w-12 h-12 border-4 border-[#64748B] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="font-retro text-lg text-[#64748B]">Loading files...</p>
+                  <p className="font-sans text-lg text-[#64748B]">Loading files...</p>
                 </div>
               </div>
             ) : files.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-3">
                   <span className="material-symbols-outlined text-6xl text-[#4A5A6F]">apps</span>
-                  <h3 className="font-pixel text-lg text-[#8B9DB8]">No Apps Imported</h3>
-                  <p className="font-retro text-base text-[#64748B]">Import games and applications to get started</p>
-                  <p className="font-retro text-sm text-[#64748B]">{formatBytes(CHALLENGER_STORAGE_LIMIT_BYTES)} free storage available</p>
+                  <h3 className="font-sans font-medium text-lg text-[#8B9DB8]">No Apps Imported</h3>
+                  <p className="font-sans text-base text-[#64748B]">Import games and applications to get started</p>
+                  <p className="font-sans text-sm text-[#64748B]">{formatBytes(CHALLENGER_STORAGE_LIMIT_BYTES)} free storage available</p>
                 </div>
               </div>
             ) : (
@@ -449,8 +449,8 @@ export default function StoragePage() {
                         {file.type === 'challenger' ? 'scuba_diving' : file.type === 'discord' ? 'forum' : 'send'}
                       </span>
                       <div className="flex-grow min-w-0">
-                        <h4 className="font-retro text-base text-[#8B9DB8] truncate">{file.fileName}</h4>
-                        <p className="font-retro text-sm text-[#64748B]">
+                        <h4 className="font-sans font-medium text-base text-[#8B9DB8] truncate">{file.fileName}</h4>
+                        <p className="font-sans text-sm text-[#64748B]">
                           {formatBytes(file.size)}
                           {file.compressedSize && ` (${formatBytes(file.compressedSize)} compressed)`}
                           {' • '}

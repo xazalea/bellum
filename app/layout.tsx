@@ -3,7 +3,6 @@ import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 import { NachoCursor } from '@/components/NachoCursor';
 import { SeaLifeBackground } from '@/components/SeaLifeBackground';
-import { PixelOverlay } from '@/components/PixelOverlay';
 import { DynamicIsland } from '@/components/DynamicIsland';
 import { DiscordButton } from '@/components/DiscordButton';
 import { cn } from '@/lib/utils';
@@ -38,17 +37,16 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
-        {/* Pixel Fonts */}
+        {/* Inter Font */}
         <link 
-          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" 
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
           rel="stylesheet" 
         />
       </head>
-      <body className="min-h-screen w-full flex flex-col font-retro antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
+      <body className="min-h-screen w-full flex flex-col font-sans antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
         <SeaLifeBackground />
         <NachoCursor />
         <DynamicIsland />
-        <PixelOverlay />
         <DiscordButton />
         {children}
         <ClientInit />

@@ -13,8 +13,6 @@ const NAV_ITEMS = [
   { name: 'Library', href: '/library' },
   { name: 'Storage', href: '/storage' },
   { name: 'Games', href: '/games' },
-  { name: 'Emulators', href: '/emulator' },
-  { name: 'Community', href: '/community' },
   { name: 'Account', href: '/account' },
 ];
 
@@ -70,7 +68,7 @@ export function DynamicIsland() {
             className="flex items-center justify-between px-5 h-11 w-full cursor-pointer group"
             onClick={() => setIsExpanded(!isExpanded)}
           >
-            <span className="font-pixel text-[10px] text-[#A0B3CC] tracking-wider whitespace-nowrap transition-colors group-hover:text-[#94A3B8]">
+            <span className="font-sans font-bold text-xs text-[#A0B3CC] tracking-wider whitespace-nowrap transition-colors group-hover:text-[#94A3B8]">
               challenger deep.
             </span>
             <div className="flex space-x-1.5">
@@ -104,7 +102,7 @@ export function DynamicIsland() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center justify-center p-2.5 text-sm font-retro rounded-lg transition-all duration-200",
+                      "flex items-center justify-center p-2.5 text-sm font-sans rounded-lg transition-all duration-200",
                       "border border-transparent",
                       pathname === item.href 
                         ? "text-[#A0B3CC] bg-[#1E2A3A] border-[#2A3648] shadow-inner" 

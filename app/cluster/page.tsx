@@ -93,14 +93,14 @@ export default function ClusterPage() {
       <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
         <div className="w-full max-w-6xl space-y-8">
           <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-            <h1 className="text-3xl font-pixel text-[#8B9DB8]">Cluster Management</h1>
-            <p className="font-retro text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
+            <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Cluster Management</h1>
+            <p className="font-sans text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
           </header>
 
           <Card className="p-12 text-center">
             <span className="material-symbols-outlined text-6xl text-[#4A5A6F] mb-4 inline-block">lock</span>
-            <h2 className="text-xl font-pixel text-[#8B9DB8] mb-2">Authentication Required</h2>
-            <p className="font-retro text-lg text-[#64748B]">
+            <h2 className="text-xl font-sans font-semibold text-[#8B9DB8] mb-2">Authentication Required</h2>
+            <p className="font-sans text-lg text-[#64748B]">
               Please sign in to view and manage your cluster nodes.
             </p>
           </Card>
@@ -114,8 +114,8 @@ export default function ClusterPage() {
       <div className="w-full max-w-6xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6 flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-pixel text-[#8B9DB8]">Cluster Management</h1>
-          <p className="font-retro text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
+            <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Cluster Management</h1>
+          <p className="font-sans text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
           </div>
           <Button onClick={loadPeers} disabled={loading} className="flex items-center gap-2">
             <span className="material-symbols-outlined text-base">refresh</span>
@@ -127,7 +127,7 @@ export default function ClusterPage() {
           <Card className="p-6 border-[#EF4444]/30 bg-[#EF4444]/5">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-2xl text-[#EF4444]">error</span>
-              <p className="font-retro text-lg text-[#EF4444]">{error}</p>
+              <p className="font-sans text-lg text-[#EF4444]">{error}</p>
             </div>
           </Card>
         )}
@@ -135,13 +135,13 @@ export default function ClusterPage() {
         {loading ? (
           <div className="text-center py-20">
             <div className="w-12 h-12 border-4 border-[#64748B] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="font-retro text-lg text-[#64748B]">Loading cluster nodes...</p>
+            <p className="font-sans text-lg text-[#64748B]">Loading cluster nodes...</p>
           </div>
         ) : peers.length === 0 ? (
           <Card className="p-12 text-center">
             <span className="material-symbols-outlined text-6xl text-[#4A5A6F] mb-4 inline-block">devices</span>
-            <h2 className="text-xl font-pixel text-[#8B9DB8] mb-2">No Active Nodes</h2>
-            <p className="font-retro text-lg text-[#64748B] mb-6">
+            <h2 className="text-xl font-sans font-semibold text-[#8B9DB8] mb-2">No Active Nodes</h2>
+            <p className="font-sans text-lg text-[#64748B] mb-6">
               No cluster nodes are currently active. Connect devices to build your distributed network.
             </p>
             <Button className="flex items-center gap-2 mx-auto">
@@ -154,7 +154,7 @@ export default function ClusterPage() {
             {peers.map((peer, idx) => (
               <Card key={`${peer.userId}:${peer.deviceId}`} className="space-y-5 p-6 group hover:border-[#64748B]/50">
               <div className="flex items-center justify-between">
-                  <span className="font-pixel text-[10px] text-[#64748B] uppercase tracking-wider">
+                  <span className="font-sans font-medium text-[10px] text-[#64748B] uppercase tracking-wider">
                     {peer.label || `NODE-${String(idx + 1).padStart(2, '0')}`}
                   </span>
                   <div className="relative">
@@ -163,7 +163,7 @@ export default function ClusterPage() {
                   </div>
                 </div>
 
-                <div className="h-32 bg-gradient-to-br from-[#0C1016] to-[#1E2A3A] border border-[#2A3648] rounded-lg p-3 font-retro text-sm space-y-2 group-hover:border-[#4A5A6F] transition-colors">
+                <div className="h-32 bg-gradient-to-br from-[#0C1016] to-[#1E2A3A] border border-[#2A3648] rounded-lg p-3 font-sans text-sm space-y-2 group-hover:border-[#4A5A6F] transition-colors">
                   <div className="text-[#8B9DB8]">
                     &gt; last seen: <span className="text-[#64748B]">{formatUptime(peer.lastSeenUnixMs)}</span>
                   </div>
@@ -195,29 +195,29 @@ export default function ClusterPage() {
 
         {peers.length > 0 && (
           <Card className="p-6">
-            <h3 className="font-pixel text-sm text-[#8B9DB8] mb-4">Cluster Statistics</h3>
+            <h3 className="font-sans font-medium text-sm text-[#8B9DB8] mb-4">Cluster Statistics</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
-                <div className="text-3xl font-pixel text-[#8B9DB8] mb-2">{peers.length}</div>
-                <div className="font-retro text-sm text-[#64748B]">Active Nodes</div>
+                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">{peers.length}</div>
+                <div className="font-sans text-sm text-[#64748B]">Active Nodes</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-pixel text-[#8B9DB8] mb-2">
+                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">
                   {peers.reduce((sum, p) => sum + (p.load || 0), 0).toFixed(1)}
                 </div>
-                <div className="font-retro text-sm text-[#64748B]">Total Load</div>
+                <div className="font-sans text-sm text-[#64748B]">Total Load</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-pixel text-[#8B9DB8] mb-2">
+                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">
                   {new Set(peers.flatMap(p => p.caps || [])).size}
                 </div>
-                <div className="font-retro text-sm text-[#64748B]">Capabilities</div>
+                <div className="font-sans text-sm text-[#64748B]">Capabilities</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-pixel text-[#8B9DB8] mb-2">
+                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">
                   {Math.round(peers.reduce((sum, p) => sum + (p.uplinkKbps || 0), 0) / 1000)}
                 </div>
-                <div className="font-retro text-sm text-[#64748B]">Total Mbps</div>
+                <div className="font-sans text-sm text-[#64748B]">Total Mbps</div>
               </div>
             </div>
             </Card>

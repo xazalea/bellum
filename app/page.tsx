@@ -51,12 +51,12 @@ export default function Home() {
       {/* Hero Section */}
       <div className="text-center mb-20 space-y-8 max-w-4xl">
         <div className="space-y-4">
-          <h1 className="text-5xl md:text-7xl font-pixel text-[#8B9DB8] tracking-tight animate-fade-in">
+          <h1 className="text-5xl md:text-7xl font-sans font-bold text-[#8B9DB8] tracking-tight animate-fade-in">
             challenger deep<span className="text-[#4A5A6F]">.</span>
           </h1>
           <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#64748B] to-transparent rounded-full"></div>
         </div>
-        <p className="text-xl md:text-2xl font-retro text-[#64748B] max-w-2xl mx-auto leading-relaxed">
+        <p className="text-xl md:text-2xl font-sans text-[#64748B] max-w-2xl mx-auto leading-relaxed">
           Run operating systems, games, and applications directly in your browser.
           <br />
           <span className="text-[#8B9DB8]">Powered by WebAssembly & WebGPU.</span>
@@ -67,7 +67,7 @@ export default function Home() {
           {['WASM', 'WebGPU', 'P2P', 'JIT'].map((tech) => (
             <span 
               key={tech}
-              className="px-4 py-2 bg-[#1E2A3A]/50 border border-[#2A3648] rounded-full font-pixel text-xs text-[#64748B] hover:text-[#8B9DB8] hover:border-[#4A5A6F] transition-all cursor-default"
+              className="px-4 py-2 bg-[#1E2A3A]/50 border border-[#2A3648] rounded-full font-sans text-xs text-[#64748B] hover:text-[#8B9DB8] hover:border-[#4A5A6F] transition-all cursor-default"
             >
               {tech}
             </span>
@@ -95,16 +95,16 @@ export default function Home() {
               </div>
               
               <div className="space-y-3 flex-grow">
-                <h2 className="text-xl font-pixel text-[#8B9DB8] group-hover:text-[#A0B3CC] transition-colors">
+                <h2 className="text-xl font-sans font-semibold text-[#8B9DB8] group-hover:text-[#A0B3CC] transition-colors">
                   {feature.title}
                 </h2>
-                <p className="text-[#64748B] font-retro text-base leading-relaxed">
+                <p className="text-[#64748B] font-sans text-base leading-relaxed">
                   {feature.desc}
                 </p>
               </div>
               
               <div className="pt-4 border-t border-[#2A3648] group-hover:border-[#4A5A6F] transition-colors">
-                <span className="font-pixel text-xs text-[#4A5A6F] group-hover:text-[#64748B] transition-colors">
+                <span className="font-sans text-xs font-medium text-[#4A5A6F] group-hover:text-[#64748B] transition-colors">
                   EXPLORE →
                 </span>
               </div>
@@ -116,10 +116,10 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-24 text-center space-y-4">
         <div className="h-px w-64 mx-auto bg-gradient-to-r from-transparent via-[#2A3648] to-transparent"></div>
-        <p className="text-[#4A5A6F] font-retro text-sm opacity-70 hover:opacity-100 transition-opacity">
+        <p className="text-[#4A5A6F] font-sans text-sm opacity-70 hover:opacity-100 transition-opacity">
           DEEP OCEAN COMPUTING // {new Date().getFullYear()}
         </p>
-        <p className="text-[#4A5A6F] font-pixel text-xs">
+        <p className="text-[#4A5A6F] font-sans text-xs">
           Built with WebAssembly, WebGPU & Next.js
         </p>
       </footer>

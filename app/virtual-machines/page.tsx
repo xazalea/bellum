@@ -29,18 +29,13 @@ export default function VirtualMachinesPage() {
 
   // Simulated stats update (replace with real backend polling)
   useEffect(() => {
-    if (!activeInstance) return;
-    
-    const interval = setInterval(() => {
-      setStats({
-        cpu: Math.floor(Math.random() * 30) + 10,
-        ram: Math.floor(Math.random() * 2048) + 1024,
-        ping: Math.floor(Math.random() * 50) + 20
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [activeInstance]);
+    // Stats are now handled by NachoLoader
+    return () => {
+        if (nachoLoaderRef.current) {
+            nachoLoaderRef.current.stop();
+        }
+    };
+  }, []);
 
   const launchInstance = async (type: 'android' | 'windows' | 'linux') => {
     setLoading(true);
@@ -61,21 +56,33 @@ export default function VirtualMachinesPage() {
       
       // Initialize Nacho VM
       if (canvasRef.current) {
-        nachoLoaderRef.current = new NachoLoader();
-        nachoLoaderRef.current.onStatusUpdate = (status, detail) => {
+        if (!nachoLoaderRef.current) {
+            nachoLoaderRef.current = new NachoLoader();
+        }
+        
+        const loader = nachoLoaderRef.current;
+        
+        loader.onStatusUpdate = (status, detail) => {
           setVmStatus(`${status}${detail ? ': ' + detail : ''}`);
         };
         
-        // Boot the VM based on type
-        setVmStatus('Booting Nacho VM...');
+        loader.onStatsUpdate = (newStats) => {
+            setStats(newStats);
+        };
         
-        // For now, just show the canvas ready state
-        // In production, you would load an actual ISO/APK file
-        setTimeout(() => {
-          newInstance.status = 'running';
-          setInstances([...instances.filter(i => i.id !== newInstance.id), newInstance]);
-          setVmStatus('VM Running - WASM/WebGPU Accelerated');
-        }, 2000);
+        // Boot the VM based on type
+        try {
+            await loader.initialize(type);
+            
+            newInstance.status = 'running';
+            setInstances(prev => [...prev.filter(i => i.id !== newInstance.id), newInstance]);
+            setVmStatus('VM Running - WASM/WebGPU Accelerated');
+        } catch (err) {
+            console.error(err);
+            setVmStatus('Boot Failed');
+            setLoading(false);
+            return;
+        }
       }
       
       setLoading(false);
@@ -121,8 +128,8 @@ export default function VirtualMachinesPage() {
     <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
       <div className="w-full max-w-7xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-pixel text-[#8B9DB8]">Virtual Machines</h1>
-          <p className="font-retro text-xl text-[#64748B]">
+          <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Virtual Machines</h1>
+          <p className="font-sans text-xl text-[#64748B]">
             Run Android, Windows, and Linux environments in your browser.
           </p>
         </header>
@@ -138,8 +145,8 @@ export default function VirtualMachinesPage() {
                      activeInstance.type === 'windows' ? 'desktop_windows' : 'terminal'}
                   </span>
                   <div>
-                    <h3 className="font-pixel text-sm text-[#8B9DB8]">{activeInstance.name}</h3>
-                    <p className="font-retro text-sm text-[#64748B]">
+                    <h3 className="font-sans font-medium text-sm text-[#8B9DB8]">{activeInstance.name}</h3>
+                    <p className="font-sans text-sm text-[#64748B]">
                       {activeInstance.status === 'booting' ? 'Booting...' : 
                        activeInstance.status === 'running' ? 'Running' : 'Stopped'}
                     </p>
@@ -160,7 +167,7 @@ export default function VirtualMachinesPage() {
                       <span className="material-symbols-outlined text-6xl text-[#4A5A6F] animate-spin">hourglass_empty</span>
                       <div className="absolute inset-0 blur-xl bg-[#64748B]/20 animate-pulse"></div>
                     </div>
-                    <p className="font-pixel text-xs text-[#64748B] tracking-wider">
+                    <p className="font-sans text-xs text-[#64748B] tracking-wider">
                       {vmStatus.toUpperCase()}
                     </p>
                   </div>
@@ -172,8 +179,8 @@ export default function VirtualMachinesPage() {
                       style={{ imageRendering: 'pixelated' }}
                     />
                     <div className="absolute top-4 left-4 bg-black/80 px-4 py-2 rounded-lg border border-[#2A3648]">
-                      <p className="font-pixel text-xs text-[#10B981]">{vmStatus}</p>
-                      <p className="font-retro text-xs text-[#64748B] mt-1">
+                      <p className="font-sans font-medium text-xs text-[#10B981]">{vmStatus}</p>
+                      <p className="font-sans text-xs text-[#64748B] mt-1">
                         {activeInstance.type === 'android' && 'Nacho Android Runtime (WASM)'}
                         {activeInstance.type === 'windows' && 'Nacho Windows Runtime (x86→WASM JIT)'}
                         {activeInstance.type === 'linux' && 'Nacho Linux Runtime (V86)'}
@@ -188,8 +195,8 @@ export default function VirtualMachinesPage() {
             <div className="space-y-6">
               {/* System Stats */}
               <Card className="p-6">
-                <h3 className="font-pixel text-xs mb-5 text-[#64748B] uppercase tracking-wider">System Stats</h3>
-                <div className="space-y-4 font-retro text-lg">
+                <h3 className="font-sans text-xs mb-5 text-[#64748B] uppercase tracking-wider font-semibold">System Stats</h3>
+                <div className="space-y-4 font-sans text-lg">
                   <div className="flex justify-between items-center">
                     <span className="text-[#8B9DB8]">CPU</span>
                     <span className="text-[#64748B] text-base">{stats.cpu}%</span>
@@ -221,7 +228,7 @@ export default function VirtualMachinesPage() {
 
               {/* Quick Actions */}
               <Card className="p-6">
-                <h3 className="font-pixel text-xs mb-4 text-[#64748B] uppercase tracking-wider">Quick Actions</h3>
+                <h3 className="font-sans text-xs mb-4 text-[#64748B] uppercase tracking-wider font-semibold">Quick Actions</h3>
                 <div className="space-y-2">
                   {activeInstance.type === 'android' && (
                     <>
@@ -269,7 +276,7 @@ export default function VirtualMachinesPage() {
               {/* Active Instances */}
               {instances.length > 1 && (
                 <Card className="p-6">
-                  <h3 className="font-pixel text-xs mb-4 text-[#64748B] uppercase tracking-wider">
+                  <h3 className="font-sans text-xs mb-4 text-[#64748B] uppercase tracking-wider font-semibold">
                     Other Instances
                   </h3>
                   <div className="space-y-2">
@@ -284,7 +291,7 @@ export default function VirtualMachinesPage() {
                             {instance.type === 'android' ? 'phone_android' : 
                              instance.type === 'windows' ? 'desktop_windows' : 'terminal'}
                           </span>
-                          <span className="font-retro text-sm text-[#8B9DB8]">{instance.name}</span>
+                          <span className="font-sans text-sm text-[#8B9DB8]">{instance.name}</span>
                         </div>
                         <div className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></div>
                       </div>
@@ -298,8 +305,8 @@ export default function VirtualMachinesPage() {
           // System Selection
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-pixel text-[#8B9DB8]">Choose Your System</h2>
-              <p className="font-retro text-lg text-[#64748B]">
+              <h2 className="text-2xl font-sans font-bold text-[#8B9DB8]">Choose Your System</h2>
+              <p className="font-sans text-lg text-[#64748B]">
                 Select an operating system to launch
               </p>
             </div>
@@ -319,21 +326,21 @@ export default function VirtualMachinesPage() {
                       </span>
                     </div>
                     <div className="text-center space-y-2">
-                      <h3 className="text-xl font-pixel text-[#8B9DB8] group-hover:text-[#A0B3CC] transition-colors">
+                      <h3 className="text-xl font-sans font-semibold text-[#8B9DB8] group-hover:text-[#A0B3CC] transition-colors">
                         {system.name}
                       </h3>
-                      <p className="font-retro text-base text-[#64748B]">
+                      <p className="font-sans text-base text-[#64748B]">
                         {system.description}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex-grow space-y-2">
-                    <h4 className="font-pixel text-[10px] text-[#64748B] uppercase tracking-wider">Features</h4>
+                    <h4 className="font-sans text-[10px] text-[#64748B] uppercase tracking-wider font-semibold">Features</h4>
                     {system.features.map((feature, idx) => (
                       <div key={idx} className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#64748B]"></span>
-                        <span className="font-retro text-sm text-[#64748B]">{feature}</span>
+                        <span className="font-sans text-sm text-[#64748B]">{feature}</span>
                       </div>
                     ))}
                   </div>

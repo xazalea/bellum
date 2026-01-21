@@ -58,15 +58,15 @@ export default function AccountPage() {
     <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
       <div className="w-full max-w-2xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-pixel text-[#8B9DB8]">Account</h1>
-          <p className="font-retro text-xl text-[#64748B]">Manage your deep sea identity</p>
+          <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Account</h1>
+          <p className="font-sans text-xl text-[#64748B]">Manage your deep sea identity</p>
         </header>
 
         {error && (
           <Card className="p-6 border-[#EF4444]/30 bg-[#EF4444]/5">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-2xl text-[#EF4444]">error</span>
-              <p className="font-retro text-lg text-[#EF4444]">{error}</p>
+              <p className="font-sans text-lg text-[#EF4444]">{error}</p>
               <button onClick={() => setError(null)} className="ml-auto text-[#EF4444] hover:text-[#DC2626]">
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -82,10 +82,10 @@ export default function AccountPage() {
                   <span className="material-symbols-outlined text-4xl text-white">person</span>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-pixel text-[#8B9DB8] mb-1">
+                  <h2 className="text-2xl font-sans font-semibold text-[#8B9DB8] mb-1">
                     {user.username || 'Explorer'}
                   </h2>
-                  <p className="font-retro text-base text-[#64748B]">UID: {user.uid.substring(0, 16)}...</p>
+                  <p className="font-sans text-base text-[#64748B]">UID: {user.uid.substring(0, 16)}...</p>
                 </div>
               </div>
             </div>
@@ -96,11 +96,11 @@ export default function AccountPage() {
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-2xl text-[#3B82F6]">cloud</span>
                     <div>
-                      <p className="font-retro text-sm text-[#8B9DB8]">Challenger Storage</p>
-                      <p className="font-retro text-xs text-[#64748B]">4GB free per device</p>
+                      <p className="font-sans text-sm text-[#8B9DB8]">Challenger Storage</p>
+                      <p className="font-sans text-xs text-[#64748B]">4GB free per device</p>
                     </div>
                   </div>
-                  <span className="font-retro text-sm text-[#10B981]">Active</span>
+                  <span className="font-sans text-sm text-[#10B981]">Active</span>
                 </div>
               </div>
 
@@ -109,11 +109,11 @@ export default function AccountPage() {
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-2xl text-[#8B5CF6]">hub</span>
                     <div>
-                      <p className="font-retro text-sm text-[#8B9DB8]">Cluster Network</p>
-                      <p className="font-retro text-xs text-[#64748B]">P2P file sharing</p>
+                      <p className="font-sans text-sm text-[#8B9DB8]">Cluster Network</p>
+                      <p className="font-sans text-xs text-[#64748B]">P2P file sharing</p>
                     </div>
                   </div>
-                  <span className="font-retro text-sm text-[#10B981]">Active</span>
+                  <span className="font-sans text-sm text-[#10B981]">Active</span>
                 </div>
               </div>
 
@@ -122,11 +122,11 @@ export default function AccountPage() {
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-2xl text-[#F59E0B]">fingerprint</span>
                     <div>
-                      <p className="font-retro text-sm text-[#8B9DB8]">Device Fingerprint</p>
-                      <p className="font-retro text-xs text-[#64748B]">Secure identification</p>
+                      <p className="font-sans text-sm text-[#8B9DB8]">Device Fingerprint</p>
+                      <p className="font-sans text-xs text-[#64748B]">Secure identification</p>
                     </div>
                   </div>
-                  <span className="font-retro text-sm text-[#10B981]">Active</span>
+                  <span className="font-sans text-sm text-[#10B981]">Active</span>
                 </div>
               </div>
             </div>
@@ -145,15 +145,15 @@ export default function AccountPage() {
               <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#1E40AF] flex items-center justify-center mx-auto mb-4">
                 <span className="material-symbols-outlined text-5xl text-white">scuba_diving</span>
               </div>
-              <h2 className="text-2xl font-pixel text-[#8B9DB8] mb-2">Welcome, Explorer</h2>
-              <p className="font-retro text-base text-[#64748B]">
+              <h2 className="text-2xl font-sans font-semibold text-[#8B9DB8] mb-2">Welcome, Explorer</h2>
+              <p className="font-sans text-base text-[#64748B]">
                 Dive into the deep sea with your identity
               </p>
             </div>
 
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block font-retro text-sm text-[#8B9DB8] mb-2">Username</label>
+                <label className="block font-sans text-sm text-[#8B9DB8] mb-2">Username</label>
                 <Input
                   type="text"
                   value={username}
@@ -166,7 +166,7 @@ export default function AccountPage() {
               </div>
 
               <div className="p-4 bg-[#1E2A3A]/30 rounded-lg border border-[#2A3648]/50">
-                <p className="font-retro text-xs text-[#64748B]">
+                <p className="font-sans text-xs text-[#64748B]">
                   🔐 <strong>Privacy First:</strong> You already have a device identity. Claim a username 
                   to personalize your account. No email or password required!
                 </p>
@@ -192,20 +192,20 @@ export default function AccountPage() {
             </Button>
 
             <div className="mt-6 p-4 bg-[#3B82F6]/10 rounded-lg border border-[#3B82F6]/30">
-              <h3 className="font-pixel text-xs text-[#3B82F6] mb-2">Features Unlocked:</h3>
+              <h3 className="font-sans font-medium text-xs text-[#3B82F6] mb-2">Features Unlocked:</h3>
               <ul className="space-y-1">
-                <li className="font-retro text-xs text-[#8B9DB8]">• 4GB Challenger Storage</li>
-                <li className="font-retro text-xs text-[#8B9DB8]">• P2P Cluster Network</li>
-                <li className="font-retro text-xs text-[#8B9DB8]">• Game Save Sync</li>
-                <li className="font-retro text-xs text-[#8B9DB8]">• Virtual Machines</li>
+                <li className="font-sans text-xs text-[#8B9DB8]">• 4GB Challenger Storage</li>
+                <li className="font-sans text-xs text-[#8B9DB8]">• P2P Cluster Network</li>
+                <li className="font-sans text-xs text-[#8B9DB8]">• Game Save Sync</li>
+                <li className="font-sans text-xs text-[#8B9DB8]">• Virtual Machines</li>
               </ul>
             </div>
           </Card>
         )}
 
         <Card className="p-6 bg-[#0F172A]/50">
-          <h3 className="font-pixel text-sm text-[#8B9DB8] mb-4">About Nacho Auth</h3>
-          <div className="space-y-3 font-retro text-sm text-[#64748B]">
+          <h3 className="font-sans font-medium text-sm text-[#8B9DB8] mb-4">About Nacho Auth</h3>
+          <div className="space-y-3 font-sans text-sm text-[#64748B]">
             <p>
               <strong className="text-[#8B9DB8]">No Passwords:</strong> Uses device fingerprinting + username for secure authentication.
             </p>
