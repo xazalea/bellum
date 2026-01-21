@@ -96,7 +96,8 @@ export async function instantiateWasm(
   wasmModule: WasmModule,
   imports: WebAssembly.Imports = {}
 ): Promise<WebAssembly.Instance> {
-  return await WebAssembly.instantiate(wasmModule, imports);
+  const result = await WebAssembly.instantiate(wasmModule, imports);
+  return result.instance;
 }
 
 /**

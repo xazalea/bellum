@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Sea Life Animation Physics Engine in AssemblyScript
 // Uses SIMD for parallel processing when available
 

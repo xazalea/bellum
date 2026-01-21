@@ -54,7 +54,12 @@ export async function hashSHA256(data: Uint8Array): Promise<Uint8Array> {
   }
 
   // JavaScript fallback (SubtleCrypto)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  // Convert ArrayBufferLike to ArrayBuffer for crypto.subtle.digest
+  const buffer = data.buffer instanceof ArrayBuffer
+    ? data.buffer
+    : new Uint8Array(data).buffer;
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   return new Uint8Array(hashBuffer);
 }
 

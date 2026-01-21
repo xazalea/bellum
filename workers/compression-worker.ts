@@ -74,7 +74,12 @@ self.onmessage = async (event: MessageEvent<CompressionTask>) => {
     };
     
     // Transfer the array buffer to avoid copying
-    self.postMessage(response, [result.buffer]);
+    // Convert ArrayBufferLike to ArrayBuffer for postMessage
+    const buffer = result.buffer instanceof ArrayBuffer
+      ? result.buffer
+      : new Uint8Array(result).buffer;
+    // Use type assertion for Worker postMessage (takes Transferable[] as second arg)
+    (self.postMessage as (message: any, transfer?: Transferable[]) => void)(response, [buffer]);
   } catch (error: any) {
     const timeMs = performance.now() - startTime;
     

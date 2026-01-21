@@ -64,15 +64,18 @@ export async function compress(
   }
 
   // JavaScript fallback (fflate)
+  // Constrain level to valid range (0-9) for fflate
+  const validLevel = Math.max(0, Math.min(9, Math.round(level))) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  
   return new Promise((resolve, reject) => {
     if (algorithm === CompressionAlgorithm.Gzip) {
-      gzip(data, { level }, (err, result) => {
+      gzip(data, { level: validLevel }, (err, result) => {
         if (err) reject(err);
         else resolve(result);
       });
     } else {
       // For other algorithms, use gzip as fallback
-      gzip(data, { level }, (err, result) => {
+      gzip(data, { level: validLevel }, (err, result) => {
         if (err) reject(err);
         else resolve(result);
       });
@@ -132,13 +135,30 @@ export async function compressFile(
   const compressedSize = compressed.byteLength;
   const ratio = compressedSize / originalSize;
   
+  // Convert ArrayBufferLike to ArrayBuffer for Blob constructor
+  const buffer = compressed.buffer instanceof ArrayBuffer
+    ? compressed.buffer
+    : new Uint8Array(compressed).buffer;
+  
   return {
-    blob: new Blob([compressed]),
+    blob: new Blob([buffer]),
     originalSize,
     compressedSize,
     ratio,
     algorithm: CompressionAlgorithm[algorithm],
   };
+}
+
+/**
+ * Compress a Blob (alias for compressFile for API consistency)
+ */
+export async function compressBlob(
+  blob: Blob,
+  algorithm: CompressionAlgorithm = CompressionAlgorithm.Zstd,
+  level: number = 9
+): Promise<Blob> {
+  const result = await compressFile(blob, algorithm, level);
+  return result.blob;
 }
 
 /**
@@ -151,7 +171,13 @@ export async function decompressBlob(
   const arrayBuffer = await blob.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
   const decompressed = await decompress(data, algorithm);
-  return new Blob([decompressed]);
+  
+  // Convert ArrayBufferLike to ArrayBuffer for Blob constructor
+  const buffer = decompressed.buffer instanceof ArrayBuffer
+    ? decompressed.buffer
+    : new Uint8Array(decompressed).buffer;
+  
+  return new Blob([buffer]);
 }
 
 /**

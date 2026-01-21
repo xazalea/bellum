@@ -36,7 +36,8 @@
     "public/unblocker",
     "public/optimizers",
     "tests",
-    "**/*.bench.ts"
+    "**/*.bench.ts",
+    "wasm/**/*"
   ]
 }
 

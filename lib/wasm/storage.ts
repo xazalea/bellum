@@ -112,7 +112,12 @@ export async function hashChunk(data: Uint8Array): Promise<string> {
   }
 
   // JavaScript fallback (SubtleCrypto)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  // Convert ArrayBufferLike to ArrayBuffer for crypto.subtle.digest
+  const buffer = data.buffer instanceof ArrayBuffer
+    ? data.buffer
+    : new Uint8Array(data).buffer;
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
