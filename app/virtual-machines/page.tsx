@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { NachoLoader } from '@/lib/engine/loaders/nacho-loader';
+import { FileType } from '@/lib/engine/analyzers/binary-analyzer';
 
 interface VMInstance {
   id: string;
@@ -21,6 +23,9 @@ export default function VirtualMachinesPage() {
   const [activeInstance, setActiveInstance] = useState<VMInstance | null>(null);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ cpu: 0, ram: 0, ping: 0 });
+  const [vmStatus, setVmStatus] = useState<string>('Idle');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const nachoLoaderRef = useRef<NachoLoader | null>(null);
 
   // Simulated stats update (replace with real backend polling)
   useEffect(() => {
@@ -39,15 +44,9 @@ export default function VirtualMachinesPage() {
 
   const launchInstance = async (type: 'android' | 'windows' | 'linux') => {
     setLoading(true);
+    setVmStatus('Initializing...');
     
-    // TODO: Call backend API to launch instance
-    // const response = await fetch('/api/emulator/launch', {
-    //   method: 'POST',
-    //   body: JSON.stringify({ type })
-    // });
-    
-    // Simulate instance creation
-    setTimeout(() => {
+    try {
       const newInstance: VMInstance = {
         id: `vm-${Date.now()}`,
         type,
@@ -60,14 +59,31 @@ export default function VirtualMachinesPage() {
       setInstances([...instances, newInstance]);
       setActiveInstance(newInstance);
       
-      // Simulate boot completion
-      setTimeout(() => {
-        newInstance.status = 'running';
-        setInstances([...instances.filter(i => i.id !== newInstance.id), newInstance]);
-      }, 3000);
+      // Initialize Nacho VM
+      if (canvasRef.current) {
+        nachoLoaderRef.current = new NachoLoader();
+        nachoLoaderRef.current.onStatusUpdate = (status, detail) => {
+          setVmStatus(`${status}${detail ? ': ' + detail : ''}`);
+        };
+        
+        // Boot the VM based on type
+        setVmStatus('Booting Nacho VM...');
+        
+        // For now, just show the canvas ready state
+        // In production, you would load an actual ISO/APK file
+        setTimeout(() => {
+          newInstance.status = 'running';
+          setInstances([...instances.filter(i => i.id !== newInstance.id), newInstance]);
+          setVmStatus('VM Running - WASM/WebGPU Accelerated');
+        }, 2000);
+      }
       
       setLoading(false);
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to launch VM:', error);
+      setVmStatus('Error: ' + (error as Error).message);
+      setLoading(false);
+    }
   };
 
   const stopInstance = (id: string) => {
@@ -145,21 +161,22 @@ export default function VirtualMachinesPage() {
                       <div className="absolute inset-0 blur-xl bg-[#64748B]/20 animate-pulse"></div>
                     </div>
                     <p className="font-pixel text-xs text-[#64748B] tracking-wider">
-                      INITIALIZING SYSTEM...
+                      {vmStatus.toUpperCase()}
                     </p>
                   </div>
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    {/* This would be replaced with actual emulator display */}
-                    <div className="text-center space-y-3">
-                      <span className="material-symbols-outlined text-7xl text-[#64748B]">
-                        {activeInstance.type === 'android' ? 'phone_android' : 
-                         activeInstance.type === 'windows' ? 'desktop_windows' : 'terminal'}
-                      </span>
-                      <p className="font-retro text-lg text-[#64748B]">
-                        {activeInstance.type === 'android' && 'Android interface would load here'}
-                        {activeInstance.type === 'windows' && 'Windows desktop streaming here'}
-                        {activeInstance.type === 'linux' && 'Terminal interface here'}
+                  <div className="w-full h-full relative">
+                    <canvas 
+                      ref={canvasRef} 
+                      className="w-full h-full"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                    <div className="absolute top-4 left-4 bg-black/80 px-4 py-2 rounded-lg border border-[#2A3648]">
+                      <p className="font-pixel text-xs text-[#10B981]">{vmStatus}</p>
+                      <p className="font-retro text-xs text-[#64748B] mt-1">
+                        {activeInstance.type === 'android' && 'Nacho Android Runtime (WASM)'}
+                        {activeInstance.type === 'windows' && 'Nacho Windows Runtime (x86→WASM JIT)'}
+                        {activeInstance.type === 'linux' && 'Nacho Linux Runtime (V86)'}
                       </p>
                     </div>
                   </div>

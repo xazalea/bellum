@@ -281,8 +281,8 @@ export default function StoragePage() {
     <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
       <div className="w-full max-w-6xl space-y-8">
         <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-pixel text-[#8B9DB8]">Deep Sea Storage</h1>
-          <p className="font-retro text-xl text-[#64748B]">Challenger Storage - 4GB free per device</p>
+          <h1 className="text-3xl font-pixel text-[#8B9DB8]">App Storage</h1>
+          <p className="font-retro text-xl text-[#64748B]">Import and store your games & applications. 4GB free.</p>
         </header>
 
         {error && (
@@ -331,7 +331,7 @@ export default function StoragePage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <Card className="col-span-1 h-fit space-y-6 p-6">
-            <h3 className="font-pixel text-[10px] text-[#64748B] uppercase tracking-wider">Upload File</h3>
+            <h3 className="font-pixel text-[10px] text-[#64748B] uppercase tracking-wider">Import App/Game</h3>
             
             <div className="space-y-4">
               <div>
@@ -355,9 +355,13 @@ export default function StoragePage() {
                 <label className="block font-retro text-sm text-[#8B9DB8] mb-2">Select File</label>
                 <Input
                   type="file"
+                  accept=".apk,.exe,.iso,.zip,.html,.jar"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   className="text-sm"
                 />
+                <p className="mt-2 font-retro text-xs text-[#64748B]">
+                  Supported: APK, EXE, ISO, ZIP, HTML5
+                </p>
               </div>
 
               {selectedFile && (
@@ -427,10 +431,10 @@ export default function StoragePage() {
             ) : files.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-3">
-                  <span className="material-symbols-outlined text-6xl text-[#4A5A6F]">cloud_off</span>
-                  <h3 className="font-pixel text-lg text-[#8B9DB8]">No Files Yet</h3>
-                  <p className="font-retro text-base text-[#64748B]">Upload files to get started</p>
-                  <p className="font-retro text-sm text-[#64748B]">You have {formatBytes(CHALLENGER_STORAGE_LIMIT_BYTES)} of free storage</p>
+                  <span className="material-symbols-outlined text-6xl text-[#4A5A6F]">apps</span>
+                  <h3 className="font-pixel text-lg text-[#8B9DB8]">No Apps Imported</h3>
+                  <p className="font-retro text-base text-[#64748B]">Import games and applications to get started</p>
+                  <p className="font-retro text-sm text-[#64748B]">{formatBytes(CHALLENGER_STORAGE_LIMIT_BYTES)} free storage available</p>
                 </div>
               </div>
             ) : (
