@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
-import { cn } from '@/lib/utils';
+import { OceanCreatures3D } from '@/components/OceanCreatures3D';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#F8FAFC',
+  themeColor: '#0B1120',
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="light">
+    <html lang="en" className="dark">
       <head>
         {/* Material Symbols */}
         <link
@@ -47,7 +47,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen w-full flex flex-col font-sans antialiased overflow-x-hidden bg-nacho-bg text-nacho-primary selection:bg-nacho-accent selection:text-white">
-        {children}
+        <OceanCreatures3D />
+        <div className="relative z-10 w-full">
+          {children}
+        </div>
         <ClientInit />
       </body>
     </html>

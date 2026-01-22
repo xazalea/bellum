@@ -145,19 +145,19 @@
 }
 
 :root {
-  /* Challenger Deep Palette - Refined Minimalist Abyss */
-  --nacho-bg: #020406;
-  --nacho-card: rgba(8, 12, 18, 0.85);
-  --nacho-card-hover: rgba(12, 16, 24, 0.92);
-  --nacho-primary: #1E2A3A;
-  --nacho-primary-hover: #2A3648;
-  --nacho-text: #8B9DB8;
-  --nacho-text-bright: #A0B3CC;
-  --nacho-subtext: #4A5A6F;
-  --nacho-border: rgba(26, 36, 50, 0.5);
-  --nacho-border-hover: rgba(42, 54, 72, 0.7);
-  --nacho-accent: #64748B;
-  --nacho-accent-bright: #94A3B8;
+  /* Dark Deep Ocean Palette */
+  --nacho-bg: #0B1120;
+  --nacho-card: rgba(15, 23, 42, 0.85);
+  --nacho-card-hover: rgba(30, 41, 59, 0.92);
+  --nacho-primary: #F8FAFC;
+  --nacho-primary-hover: #E2E8F0;
+  --nacho-text: #E2E8F0;
+  --nacho-text-bright: #F8FAFC;
+  --nacho-subtext: #94A3B8;
+  --nacho-border: rgba(51, 65, 85, 0.6);
+  --nacho-border-hover: rgba(71, 85, 105, 0.8);
+  --nacho-accent: #3B82F6;
+  --nacho-accent-bright: #60A5FA;
   
   --font-pixel: 'Press Start 2P', cursive;
   --font-retro: 'VT323', monospace;
@@ -183,12 +183,36 @@ input, select, textarea {
 
 body {
   color: var(--nacho-text);
-  background: var(--nacho-bg);
+  background: radial-gradient(1200px 800px at 20% 10%, rgba(30, 58, 95, 0.25), transparent 60%),
+              radial-gradient(900px 600px at 80% 30%, rgba(59, 130, 246, 0.15), transparent 55%),
+              var(--nacho-bg);
   min-height: 100vh;
-  font-family: var(--font-retro), monospace; 
+  font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
-  -webkit-font-smoothing: none; /* Crisp pixels */
-  image-rendering: pixelated;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ocean-creature {
+  position: absolute;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.45));
+  mix-blend-mode: screen;
+}
+
+@keyframes swim-right {
+  0% { transform: translate3d(-30vw, 0, 0) scale(1) rotateZ(-2deg); }
+  50% { transform: translate3d(10vw, -20px, 0) scale(1.05) rotateZ(2deg); }
+  100% { transform: translate3d(130vw, 0, 0) scale(1) rotateZ(-1deg); }
+}
+
+@keyframes drift-left {
+  0% { transform: translate3d(30vw, 0, 0) scale(1) rotateZ(1deg); }
+  50% { transform: translate3d(-10vw, -25px, 0) scale(1.03) rotateZ(-2deg); }
+  100% { transform: translate3d(-130vw, 0, 0) scale(1) rotateZ(1deg); }
+}
+
+@keyframes crawl-right {
+  0% { transform: translate3d(-10vw, 0, 0) scale(1); }
+  100% { transform: translate3d(110vw, 0, 0) scale(1); }
 }
 
 /* Force sharp corners everywhere - REMOVED for rounded update */

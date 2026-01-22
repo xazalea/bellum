@@ -25,9 +25,9 @@ export default function VirtualMachinesPage() {
 
   useEffect(() => {
     return () => {
-      if (nachoLoaderRef.current) {
-        nachoLoaderRef.current.stop();
-      }
+        if (nachoLoaderRef.current) {
+            nachoLoaderRef.current.stop();
+        }
     };
   }, []);
 
@@ -50,7 +50,7 @@ export default function VirtualMachinesPage() {
       
       if (canvasRef.current) {
         if (!nachoLoaderRef.current) {
-          nachoLoaderRef.current = new NachoLoader();
+        nachoLoaderRef.current = new NachoLoader();
         }
         
         const loader = nachoLoaderRef.current;
@@ -60,19 +60,19 @@ export default function VirtualMachinesPage() {
         };
         
         loader.onStatsUpdate = (newStats) => {
-          setStats(newStats);
+            setStats(newStats);
         };
         
         try {
-          await loader.initialize(type);
+            await loader.initialize(type);
           newInstance.status = 'running';
-          setInstances(prev => [...prev.filter(i => i.id !== newInstance.id), newInstance]);
+            setInstances(prev => [...prev.filter(i => i.id !== newInstance.id), newInstance]);
           setVmStatus('VM Running - WASM/WebGPU Accelerated');
         } catch (err) {
-          console.error(err);
-          setVmStatus('Boot Failed');
-          setLoading(false);
-          return;
+            console.error(err);
+            setVmStatus('Boot Failed');
+            setLoading(false);
+            return;
         }
       }
       
@@ -181,13 +181,13 @@ export default function VirtualMachinesPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-nacho-secondary">CPU Usage</span>
                       <span className="font-mono text-nacho-primary">{stats.cpu}%</span>
-                    </div>
+                  </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div 
+                    <div 
                         className="h-full bg-nacho-accent transition-all duration-500"
-                        style={{ width: `${stats.cpu}%` }}
-                      />
-                    </div>
+                      style={{ width: `${stats.cpu}%` }}
+                    />
+                  </div>
                   </div>
 
                   <div className="space-y-2">
@@ -196,10 +196,10 @@ export default function VirtualMachinesPage() {
                       <span className="font-mono text-nacho-primary">{stats.ram} MB</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div 
+                    <div 
                         className="h-full bg-nacho-accent transition-all duration-500"
-                        style={{ width: `${(stats.ram / 4096) * 100}%` }}
-                      />
+                      style={{ width: `${(stats.ram / 4096) * 100}%` }}
+                    />
                     </div>
                   </div>
 
@@ -227,43 +227,43 @@ export default function VirtualMachinesPage() {
                     Open Console
                   </button>
                 </div>
-              </div>
+                  </div>
             </div>
           </div>
         ) : (
           /* Selection Grid */
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {systems.map((system) => (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {systems.map((system) => (
               <button
-                key={system.type}
-                onClick={() => launchInstance(system.type)}
+                  key={system.type}
+                  onClick={() => launchInstance(system.type)}
                 disabled={loading}
                 className="group bg-white p-8 rounded-nacho shadow-nacho hover:shadow-nacho-hover border border-nacho-border text-left transition-all duration-300 hover:-translate-y-1"
-              >
+                >
                 <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-4xl text-nacho-accent">
-                    {system.icon}
-                  </span>
-                </div>
+                        {system.icon}
+                      </span>
+                    </div>
                 
                 <h3 className="text-xl font-bold text-nacho-primary mb-2">{system.name}</h3>
                 <p className="text-nacho-muted mb-6 h-12">{system.description}</p>
-                
+
                 <div className="space-y-2 mb-8">
                   {system.features.map((feature) => (
                     <div key={feature} className="flex items-center gap-2 text-sm text-nacho-secondary">
                       <span className="w-1.5 h-1.5 rounded-full bg-nacho-accent"></span>
                       {feature}
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
 
                 <div className="flex items-center text-nacho-accent font-medium group-hover:gap-2 transition-all">
                   Launch {system.name}
                   <span className="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
                 </div>
               </button>
-            ))}
+              ))}
           </div>
         )}
       </div>

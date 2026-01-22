@@ -13,37 +13,53 @@ const MODELS = [
 export function Hero3D() {
   const modelViewerRef = useRef<HTMLElement>(null);
   const [currentModelIndex, setCurrentModelIndex] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const scrollProgressRef = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
       const windowHeight = window.innerHeight;
       const documentHeight = document.body.scrollHeight;
-      const progress = scrollY / (documentHeight - windowHeight);
-      setScrollProgress(progress);
-
-      if (modelViewerRef.current) {
-        // Smooth scroll-based rotation
-        // We add to the base orbit to create a "spinning" effect as you scroll down
-        const theta = scrollY * 0.1; // Rotation speed
-        const phi = 75 - (scrollY * 0.02); // Slight tilt up/down
-        const radius = 105 + (scrollY * 0.05); // Slight zoom out
-        
-        // We use the model's base orbit as a starting point if needed, 
-        // but overriding it with dynamic values often feels more responsive.
-        // Let's mix auto-rotate with scroll.
-        
-        // Actually, model-viewer's camera-orbit takes "theta phi radius".
-        // We can just update theta to rotate around.
-        const orbit = `${theta}deg ${Math.max(20, Math.min(90, phi))}deg ${radius}%`;
-        modelViewerRef.current.setAttribute('camera-orbit', orbit);
-      }
+      const progress = scrollY / Math.max(1, documentHeight - windowHeight);
+      scrollProgressRef.current = progress;
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    let raf = 0;
+    const animate = (t: number) => {
+      const model = modelViewerRef.current as any;
+      if (model) {
+        const base = scrollProgressRef.current;
+        const wave = Math.sin(t * 0.0006) * 10;
+        const theta = t * 0.005 + base * 360;
+        const phi = Math.max(25, Math.min(85, 60 + wave));
+        const radius = 105 + Math.sin(t * 0.0004) * 6 + base * 12;
+        model.cameraOrbit = `${theta.toFixed(2)}deg ${phi.toFixed(2)}deg ${radius.toFixed(2)}%`;
+      }
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const model = modelViewerRef.current as any;
+    if (!model) return;
+    const onLoad = () => {
+      const animations = model.availableAnimations || [];
+      if (animations.length > 0) {
+        model.animationName = animations[0];
+        model.play?.();
+        model.playbackRate = 1.0;
+      }
+    };
+    model.addEventListener('load', onLoad);
+    return () => model.removeEventListener('load', onLoad);
+  }, [currentModelIndex]);
 
   const nextModel = () => {
     setCurrentModelIndex((prev) => (prev + 1) % MODELS.length);
@@ -63,8 +79,9 @@ export function Hero3D() {
         alt={`3D Model of ${currentModel.name}`}
         camera-controls
         disable-zoom
+        autoplay
         auto-rotate
-        rotation-per-second="30deg" // Slow idle rotation
+        rotation-per-second="12deg"
         interaction-prompt="none"
         shadow-intensity="2"
         shadow-softness="1"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { fetchGames, Game, getProxiedGameUrl } from '@/lib/games-parser';
@@ -13,33 +13,42 @@ export default function GamesPage() {
   const [page, setPage] = useState(1);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [installing, setInstalling] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadGames = useCallback(async (pageToLoad = 1, append = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchGames(pageToLoad, 24);
+      if (append) {
+        setGames(prev => [...prev, ...data.games]);
+      } else {
+        setGames(data.games);
+      }
+    } catch (err) {
+      console.error('Failed to load games', err);
+      setError('Failed to load games. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    loadGames();
-    
-    // Initialize DB
+    loadGames(1, false);
+
     getDeviceFingerprintId().then(fp => discordDB.init(fp));
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/nacho-proxy-sw.js')
         .catch(err => console.error('Proxy SW failed', err));
     }
-  }, []);
+  }, [loadGames]);
 
   useEffect(() => {
     if (page > 1) {
-      fetchGames(page, 24).then(data => {
-        setGames(prev => [...prev, ...data.games]);
-      });
+      loadGames(page, true);
     }
-  }, [page]);
-
-  const loadGames = async () => {
-    setLoading(true);
-    const data = await fetchGames(page, 24);
-    setGames(data.games);
-    setLoading(false);
-  };
+  }, [page, loadGames]);
 
   const handleInstall = async (e: React.MouseEvent, game: Game) => {
     e.stopPropagation();
@@ -80,6 +89,19 @@ export default function GamesPage() {
           </div>
         </header>
 
+        {error && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-nacho flex items-center gap-3 text-red-400">
+            <span className="material-symbols-outlined">error</span>
+            <p className="flex-1">{error}</p>
+            <Button
+              onClick={() => loadGames(1, false)}
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
         {selectedGame ? (
           <div className="w-full h-[85vh] flex flex-col space-y-4 animate-fade-in">
             <div className="flex justify-between items-center">
@@ -102,14 +124,14 @@ export default function GamesPage() {
             </div>
             
             <div className="flex-grow bg-black rounded-nacho overflow-hidden border border-nacho-border shadow-2xl relative">
-              <iframe 
-                src={getProxiedGameUrl(selectedGame.file)} 
-                className="w-full h-full border-0"
-                title={selectedGame.title}
+                    <iframe 
+                        src={getProxiedGameUrl(selectedGame.file)} 
+                        className="w-full h-full border-0"
+                        title={selectedGame.title}
                 sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
                 allowFullScreen
-              />
-            </div>
+                    />
+                </div>
             
             <div className="flex items-center justify-between bg-nacho-surface p-4 rounded-nacho border border-nacho-border">
               <div>
@@ -117,10 +139,10 @@ export default function GamesPage() {
                   <p className="text-sm text-nacho-muted mt-1">{selectedGame.description || 'No description available.'}</p>
               </div>
               <span className="text-xs font-mono text-nacho-accent px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">HTML5</span>
+                </div>
             </div>
-          </div>
         ) : (
-          <>
+            <>
             {/* Featured Hero (Placeholder for first game) */}
             {games.length > 0 && (
                 <div className="relative h-64 rounded-nacho overflow-hidden group cursor-pointer border border-nacho-border shadow-nacho" onClick={() => setSelectedGame(games[0])}>
@@ -135,18 +157,32 @@ export default function GamesPage() {
                 </div>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-              {games.map((game) => (
-                <Card 
-                  key={game.id} 
-                  className="group aspect-[3/4] p-0 overflow-hidden bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all duration-300 hover:-translate-y-1 cursor-pointer relative"
-                  onClick={() => setSelectedGame(game)}
+            {!loading && games.length === 0 && !error && (
+              <div className="text-center py-20 bg-nacho-surface rounded-nacho border border-nacho-border">
+                <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4">sports_esports</span>
+                <h3 className="text-xl font-bold text-nacho-primary">No Games Loaded</h3>
+                <p className="text-nacho-secondary">Try reloading the catalog.</p>
+                <Button
+                  onClick={() => loadGames(1, false)}
+                  className="mt-6 bg-nacho-accent text-white border-none"
                 >
+                  Reload Games
+                </Button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                  {games.map((game) => (
+                    <Card 
+                        key={game.id} 
+                  className="group aspect-[3/4] p-0 overflow-hidden bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all duration-300 hover:-translate-y-1 cursor-pointer relative"
+                        onClick={() => setSelectedGame(game)}
+                    >
                   <div className="w-full h-full relative">
-                    {game.thumb ? (
-                         // eslint-disable-next-line @next/next/no-img-element
+                         {game.thumb ? (
+                             // eslint-disable-next-line @next/next/no-img-element
                         <img src={game.thumb} alt={game.title} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-300" />
-                    ) : (
+                         ) : (
                         <div className="w-full h-full flex items-center justify-center bg-nacho-surface">
                             <span className="material-symbols-outlined text-4xl text-nacho-muted">sports_esports</span>
                         </div>
@@ -165,12 +201,12 @@ export default function GamesPage() {
                                 <span className="material-symbols-outlined text-[14px]">download</span>
                             </button>
                         </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-            
+                      </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+                
             <div className="flex justify-center pt-12 pb-20">
               <Button 
                 onClick={() => setPage(p => p + 1)} 
@@ -185,9 +221,9 @@ export default function GamesPage() {
                     <span className="material-symbols-outlined ml-2">expand_more</span>
                   </>
                 )}
-              </Button>
-            </div>
-          </>
+                    </Button>
+                </div>
+            </>
         )}
       </div>
     </main>

@@ -143,8 +143,8 @@ export default function StoragePage() {
             <p>{error}</p>
             <button onClick={() => setError(null)} className="ml-auto hover:text-red-300">
                 <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
+              </button>
+            </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -183,7 +183,7 @@ export default function StoragePage() {
                     </div>
                     <div className="h-1.5 bg-nacho-bg rounded-full overflow-hidden">
                         <div className="h-full bg-nacho-accent transition-all duration-300" style={{ width: `${uploadProgress.percent}%` }}></div>
-                    </div>
+                  </div>
                 </div>
               )}
 
@@ -195,7 +195,7 @@ export default function StoragePage() {
                 {uploading ? 'Uploading...' : 'Upload to Cloud'}
               </Button>
             </div>
-
+            
             {quotaInfo && (
                 <div className="pt-6 border-t border-nacho-border space-y-3">
                     <h3 className="text-xs font-bold text-nacho-muted uppercase tracking-wider">Storage Quota</h3>
@@ -204,12 +204,12 @@ export default function StoragePage() {
                             className="h-full bg-gradient-to-r from-blue-500 to-cyan-400" 
                             style={{ width: `${(quotaInfo.usedBytes / quotaInfo.limitBytes) * 100}%` }}
                         ></div>
-                    </div>
+              </div>
                     <div className="flex justify-between text-xs text-nacho-secondary">
                         <span>{formatBytes(quotaInfo.usedBytes)} used</span>
                         <span>{formatBytes(quotaInfo.limitBytes)} total</span>
-                    </div>
-                </div>
+              </div>
+            </div>
             )}
           </Card>
 
@@ -218,13 +218,13 @@ export default function StoragePage() {
             {loading ? (
                  <div className="flex justify-center py-20">
                     <span className="w-8 h-8 border-2 border-nacho-accent border-t-transparent rounded-full animate-spin"></span>
-                </div>
+              </div>
             ) : files.length === 0 ? (
                 <div className="text-center py-20 bg-nacho-surface rounded-nacho border border-nacho-border">
                     <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4">folder_open</span>
                     <h3 className="text-xl font-bold text-nacho-primary">No Files Stored</h3>
                     <p className="text-nacho-secondary">Upload files to secure them in the distributed cloud.</p>
-                </div>
+              </div>
             ) : (
                 <div className="bg-nacho-surface rounded-nacho border border-nacho-border overflow-hidden">
                     <table className="w-full text-left">
@@ -237,7 +237,7 @@ export default function StoragePage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-nacho-border">
-                            {files.map((file) => (
+                {files.map((file) => (
                                 <tr key={file.id} className="hover:bg-nacho-card-hover transition-colors group">
                                     <td className="p-4">
                                         <div className="flex items-center gap-3">
@@ -246,7 +246,7 @@ export default function StoragePage() {
                                         </div>
                                     </td>
                                     <td className="p-4 text-sm text-nacho-secondary">
-                                        {formatBytes(file.size)}
+                          {formatBytes(file.size)}
                                         {file.compressedSize && <span className="text-xs text-nacho-muted ml-1">({formatBytes(file.compressedSize)})</span>}
                                     </td>
                                     <td className="p-4 text-sm text-nacho-secondary">
@@ -258,23 +258,23 @@ export default function StoragePage() {
                                                 onClick={() => handleDownload(file.id, file.fileName)}
                                                 className="p-2 hover:bg-nacho-bg rounded-full text-nacho-secondary hover:text-nacho-accent"
                                                 title="Download"
-                                            >
+                      >
                                                 <span className="material-symbols-outlined text-[18px]">download</span>
                                             </button>
                                             <button 
-                                                onClick={() => handleDelete(file)}
+                          onClick={() => handleDelete(file)}
                                                 className="p-2 hover:bg-nacho-bg rounded-full text-nacho-secondary hover:text-red-500"
                                                 title="Delete"
-                                            >
+                        >
                                                 <span className="material-symbols-outlined text-[18px]">delete</span>
                                             </button>
-                                        </div>
+                    </div>
                                     </td>
                                 </tr>
-                            ))}
+               ))}
                         </tbody>
                     </table>
-                </div>
+            </div>
             )}
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { listActivePeersForUser, type ClusterPeer } from '@/lib/cluster/presence-store';
@@ -13,7 +13,7 @@ export default function ClusterPage() {
   const [loading, setLoading] = useState(true);
   const auth = useAuth?.() || { user: null };
 
-  const loadPeers = async () => {
+  const loadPeers = useCallback(async () => {
     try {
       setLoading(true);
       if (!auth.user) {
@@ -27,13 +27,13 @@ export default function ClusterPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [auth.user]);
 
   useEffect(() => {
     loadPeers();
     const interval = setInterval(loadPeers, 10_000);
     return () => clearInterval(interval);
-  }, [auth.user]);
+  }, [loadPeers]);
 
   return (
     <main className="min-h-screen bg-nacho-bg p-6 pt-24">
@@ -55,18 +55,18 @@ export default function ClusterPage() {
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                         <span className="material-symbols-outlined text-2xl">hub</span>
-                    </div>
+            </div>
                     <div>
                         <p className="text-2xl font-bold text-nacho-primary">{peers.length}</p>
                         <p className="text-xs text-nacho-muted uppercase tracking-wider">Active Nodes</p>
-                    </div>
+                  </div>
                 </div>
             </Card>
             <Card className="bg-nacho-surface border-nacho-border p-6">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
                         <span className="material-symbols-outlined text-2xl">speed</span>
-                    </div>
+                  </div>
                     <div>
                         <p className="text-2xl font-bold text-nacho-primary">
                              {Math.round(peers.reduce((sum, p) => sum + (p.uplinkKbps || 0), 0) / 1000)} Mbps
@@ -87,19 +87,19 @@ export default function ClusterPage() {
                         <p className="text-xs text-nacho-muted uppercase tracking-wider">Total Load</p>
                     </div>
                 </div>
-            </Card>
+              </Card>
             <Card className="bg-nacho-surface border-nacho-border p-6">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
                         <span className="material-symbols-outlined text-2xl">bolt</span>
-                    </div>
+          </div>
                     <div>
                         <p className="text-2xl font-bold text-nacho-primary">99.9%</p>
                         <p className="text-xs text-nacho-muted uppercase tracking-wider">Uptime</p>
-                    </div>
+              </div>
                 </div>
             </Card>
-        </div>
+              </div>
 
         {/* Node Grid */}
         <div>
@@ -152,12 +152,12 @@ export default function ClusterPage() {
                                             {cap}
                                         </span>
                                     ))}
-                                </div>
-                            </div>
-                        </Card>
+              </div>
+            </div>
+            </Card>
                     ))}
                 </div>
-            )}
+        )}
         </div>
       </div>
     </main>

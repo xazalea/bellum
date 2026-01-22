@@ -97,12 +97,12 @@ export default function LibraryPage() {
                         <h2 className="text-xl font-bold text-nacho-primary mb-2">Library Empty</h2>
                         <p className="text-nacho-secondary mb-6">
                             You haven&apos;t installed any apps yet. Visit the Arcade to find games.
-                        </p>
+              </p>
                         <Button onClick={() => window.location.href = '/games'} className="bg-nacho-accent text-white border-none">
                             Browse Games
-                        </Button>
-                    </Card>
-                ) : (
+              </Button>
+            </Card>
+        ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {profile.installedApps.map((app) => (
                             <Card key={app.id} className="group bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all duration-300 p-0 overflow-hidden flex flex-col">
@@ -123,26 +123,26 @@ export default function LibraryPage() {
                                         >
                                             <span className="material-symbols-outlined text-[14px]">delete</span>
                                         </button>
-                                    </div>
-                                </div>
+                  </div>
+                    </div>
                                 <div className="p-4 flex-grow flex flex-col justify-between">
                                     <div>
                                         <h3 className="font-bold text-nacho-primary truncate mb-1">{app.title}</h3>
                                         <p className="text-xs text-nacho-muted">
                                             Installed {new Date(app.installedAt).toLocaleDateString()}
                                         </p>
-                                    </div>
+                  </div>
                                     <Button 
                                         onClick={() => handleLaunch(app)}
                                         className="w-full mt-4 bg-nacho-bg hover:bg-nacho-accent text-nacho-primary hover:text-white border-nacho-border hover:border-transparent transition-all"
                                     >
                                         <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
-                                        Launch
-                                    </Button>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
+                        Launch
+                      </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
                 )}
             </>
         )}

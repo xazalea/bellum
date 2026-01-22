@@ -18,10 +18,10 @@ export default function Home() {
           
           <p className="text-xl md:text-3xl text-nacho-secondary max-w-3xl mx-auto font-light animate-fade-in delay-100 leading-relaxed">
             Run APKs and EXEs at impossible speeds.
-            <br />
+          <br />
             <span className="text-nacho-accent font-medium">20,000+ Games. 4GB Free Storage.</span>
-          </p>
-
+        </p>
+        
           <div className="flex flex-wrap items-center justify-center gap-6 pt-12 animate-fade-in delay-200">
             <Link 
               href="/virtual-machines"
@@ -45,13 +45,13 @@ export default function Home() {
           <div className="space-y-6 p-6 rounded-2xl hover:bg-nacho-bg/50 transition-colors duration-300">
             <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-nacho-accent shadow-[0_0_20px_rgba(59,130,246,0.2)]">
               <span className="material-symbols-outlined text-3xl">rocket_launch</span>
-            </div>
+                </div>
             <h3 className="text-3xl font-bold text-nacho-primary">Impossible Speeds</h3>
             <p className="text-nacho-secondary leading-relaxed text-lg">
               Powered by WebAssembly and WebGPU, our runtime delivers near-native performance for Android and Windows applications directly in your browser.
             </p>
-          </div>
-          
+              </div>
+              
           <div className="space-y-6 p-6 rounded-2xl hover:bg-nacho-bg/50 transition-colors duration-300">
             <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
               <span className="material-symbols-outlined text-3xl">sports_esports</span>
@@ -59,9 +59,9 @@ export default function Home() {
             <h3 className="text-3xl font-bold text-nacho-primary">Massive Library</h3>
             <p className="text-nacho-secondary leading-relaxed text-lg">
               Access over 20,000 games and applications instantly. No downloads, no installation, just click and play.
-            </p>
-          </div>
-          
+                </p>
+              </div>
+              
           <div className="space-y-6 p-6 rounded-2xl hover:bg-nacho-bg/50 transition-colors duration-300">
             <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
               <span className="material-symbols-outlined text-3xl">cloud_upload</span>
@@ -71,7 +71,7 @@ export default function Home() {
               Your personal cloud container persists your data, saves, and installed apps securely. Import your own APKs and EXEs.
             </p>
           </div>
-        </div>
+              </div>
       </div>
     </main>
   );
