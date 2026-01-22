@@ -1,96 +1,97 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { RuntimeManager } from '@/lib/engine/runtime-manager';
-import { puterClient } from '@/lib/storage/hiberfile';
+import { OptimizedV86 } from '@/lib/emulators/optimized-v86';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-type RunState = 'idle' | 'loading' | 'running' | 'error';
+type BootState = 'idle' | 'booting' | 'running' | 'error';
 
 export default function AndroidPage() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const runtimeRef = useRef<RuntimeManager | null>(null);
-  const [state, setState] = useState<RunState>('idle');
+  const screenRef = useRef<HTMLDivElement | null>(null);
+  const emulatorRef = useRef<OptimizedV86 | null>(null);
+  const [state, setState] = useState<BootState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [activePath, setActivePath] = useState<string | null>(null);
+  
+  const canStart = state === 'idle' || state === 'error';
 
-  useEffect(() => {
-    runtimeRef.current = RuntimeManager.getInstance();
-    return () => {
-      try {
-        runtimeRef.current?.stop();
-      } catch {
-        // ignore
-      }
-    };
-  }, []);
+  const statusText = useMemo(() => {
+    if (state === 'idle') return 'Ready';
+    if (state === 'booting') return 'Booting Android…';
+    if (state === 'running') return 'Running';
+    return 'Error';
+  }, [state]);
 
-  const runFile = async (file: File) => {
+  const stop = () => {
+    try {
+      const emu = emulatorRef.current?.getEmulator?.();
+      emu?.stop?.();
+    } catch {
+      // ignore
+    } finally {
+      emulatorRef.current = null;
+      setState('idle');
+    }
+  };
+
+  const start = async () => {
     try {
       setError(null);
-      setState('loading');
-      if (!containerRef.current) throw new Error('missing_container');
-      if (!runtimeRef.current) throw new Error('runtime_unavailable');
+      setState('booting');
+      if (!screenRef.current) throw new Error('missing_screen_container');
 
-      const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-      const path = `uploads/${Date.now()}/${safeName}`;
-      await puterClient.writeFile(path, file, { compress: false });
+      screenRef.current.innerHTML = '';
 
-      const { type, config } = await runtimeRef.current.prepareRuntime(path);
-      containerRef.current.innerHTML = '';
-      await runtimeRef.current.launch(containerRef.current, type, path, config);
+      // Boot Android-x86 ISO via same-origin proxy (faster + works with COEP/COOP).
+      const isoUrl = '/api/isos/android-x86-9.0-r2';
 
-      setActivePath(path);
+      const optimized = await OptimizedV86.create({
+        wasm_path: '/v86/v86.wasm',
+        screen_container: screenRef.current,
+        memory_size: 1024 * 1024 * 1024,
+        vga_memory_size: 16 * 1024 * 1024,
+        bios: { url: '/v86/bios/seabios.bin' },
+        vga_bios: { url: '/v86/bios/vgabios.bin' },
+        cdrom: { url: isoUrl },
+        autostart: true,
+      });
+      emulatorRef.current = optimized;
       setState('running');
     } catch (e: any) {
-      setError(e?.message || 'run_failed');
+      setError(e?.message || 'boot_failed');
       setState('error');
     }
   };
 
-  const stop = () => {
-    try {
-      runtimeRef.current?.stop();
-    } catch {
-      // ignore
-    } finally {
-      setActivePath(null);
-      setState('idle');
-    }
-  };
+  useEffect(() => {
+    return () => stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-10">
       <div className="flex items-end justify-between gap-6 border-b border-nacho-border pb-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Android</h1>
-          <p className="text-sm text-nacho-secondary">Android OS in the browser (APK runtime).</p>
+          <p className="text-sm text-nacho-secondary">Android OS in the browser.</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="inline-flex">
-            <input
-              type="file"
-              accept=".apk"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void runFile(f);
-                e.currentTarget.value = '';
-              }}
-            />
-            <span className="nacho-btn inline-flex items-center justify-center">
-              <span className="material-symbols-outlined mr-2 text-[16px]">upload_file</span>
-              Upload APK
-            </span>
-          </label>
-
-          {state === 'running' && (
+          {canStart ? (
+            <Button onClick={start}>
+              <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
+              Start
+            </Button>
+          ) : (
             <Button onClick={stop} className="border-rose-500/30 bg-rose-500/10 text-rose-200">
               <span className="material-symbols-outlined mr-2 text-[16px]">stop</span>
               Stop
             </Button>
           )}
+
+          <Button onClick={() => (window.location.href = '/library')}>
+            <span className="material-symbols-outlined mr-2 text-[16px]">bolt</span>
+            Run APK (fast)
+          </Button>
         </div>
       </div>
 
@@ -105,15 +106,15 @@ export default function AndroidPage() {
           <div className="flex items-center gap-2 text-xs text-nacho-secondary">
             <span
               className={`h-2 w-2 rounded-full ${
-                state === 'running' ? 'bg-emerald-400' : state === 'loading' ? 'bg-amber-400' : 'bg-slate-500'
+                state === 'running' ? 'bg-emerald-400' : state === 'booting' ? 'bg-amber-400' : 'bg-slate-500'
               }`}
             />
-            <span>{state === 'idle' ? 'Ready' : state === 'loading' ? 'Loading…' : state === 'running' ? 'Running' : 'Error'}</span>
+            <span>{statusText}</span>
           </div>
-          <div className="text-[11px] text-nacho-muted">{activePath ? activePath.split('/').slice(-1)[0] : 'no app'}</div>
+          <div className="text-[11px] text-nacho-muted">v86</div>
         </div>
 
-        <div ref={containerRef} className="min-h-[70vh] w-full" />
+        <div ref={screenRef} className="h-[70vh] w-full" />
       </div>
     </main>
   );

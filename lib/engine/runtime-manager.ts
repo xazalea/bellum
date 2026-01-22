@@ -24,6 +24,10 @@ export class RuntimeManager {
         return RuntimeManager.instance;
     }
 
+    getActiveLoader(): any {
+        return this.activeLoader;
+    }
+
     /**
      * "Converts" the file by analyzing it and preparing the runtime configuration.
      * Returns a playable "Runtime Packet".

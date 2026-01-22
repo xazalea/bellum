@@ -16,6 +16,7 @@ export default function LibraryPage() {
   const [launchingGame, setLaunchingGame] = useState<InstalledApp | null>(null);
   const [launchingLocal, setLaunchingLocal] = useState<StoredApp | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [runnerStatus, setRunnerStatus] = useState<string>('Idle');
   const libraryRef = useRef<AppLibraryManager | null>(null);
   const runtimeRef = useRef<RuntimeManager | null>(null);
   const runContainerRef = useRef<HTMLDivElement | null>(null);
@@ -100,6 +101,7 @@ export default function LibraryPage() {
     try {
       setBusy('run');
       setLaunchingLocal(app);
+      setRunnerStatus('Initializing…');
       await new Promise((r) => setTimeout(r, 0));
 
       if (!runContainerRef.current) throw new Error('missing_container');
@@ -115,11 +117,29 @@ export default function LibraryPage() {
 
       runContainerRef.current.innerHTML = '';
       const { type, config } = await runtime.prepareRuntime(latest.storagePath);
+      setRunnerStatus(`Launching (${type})…`);
       await runtime.launch(runContainerRef.current, type, latest.storagePath, config);
+
+      // Attach best-effort status hooks for loaders that expose them (e.g. NachoLoader).
+      try {
+        const loader = runtime.getActiveLoader?.();
+        if (loader && typeof loader === 'object') {
+          if ('onStatusUpdate' in loader) {
+            (loader as any).onStatusUpdate = (status: string, detail?: string) => {
+              setRunnerStatus(`${status}${detail ? `: ${detail}` : ''}`);
+            };
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      setRunnerStatus('Running');
     } catch (e) {
       console.error('Failed to launch local app', e);
       alert('Failed to launch file.');
       setLaunchingLocal(null);
+      setRunnerStatus('Error');
     } finally {
       setBusy(null);
     }
@@ -146,9 +166,7 @@ export default function LibraryPage() {
               <div className="text-sm font-semibold text-nacho-primary">
                 {launchingGame?.title || launchingLocal?.name}
               </div>
-              <div className="text-[11px] text-nacho-muted">
-                {launchingGame ? 'Game' : 'App'}
-              </div>
+              <div className="text-[11px] text-nacho-muted">{launchingGame ? 'Game' : runnerStatus}</div>
             </div>
             <Button
               onClick={() => {
@@ -159,6 +177,7 @@ export default function LibraryPage() {
                 }
                 setLaunchingGame(null);
                 setLaunchingLocal(null);
+                setRunnerStatus('Idle');
               }}
               className="border-rose-500/30 bg-rose-500/10 text-rose-200"
             >
@@ -191,7 +210,7 @@ export default function LibraryPage() {
             <label className="inline-flex">
               <input
                 type="file"
-                accept=".apk,.exe,.iso"
+                accept=".apk,.exe"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
