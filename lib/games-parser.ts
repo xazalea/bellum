@@ -48,13 +48,25 @@ export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[],
         console.warn('WASM game parser failed, using DOMParser fallback:', wasmError);
       }
       
-      // Fallback to DOMParser
+      // Fallback to DOMParser (namespace-safe)
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(text, "text/xml");
       
       // Check if it's a Sitemap (urlset/url) or Game List (games/game)
-      const urlNodes = xmlDoc.getElementsByTagName("url");
-      const gameNodes = xmlDoc.getElementsByTagName("game");
+      // NOTE: `games.xml` uses a default XML namespace (sitemap). `getElementsByTagName('url')`
+      // can return 0 in some browsers when namespaces are present. Use NS-aware lookup.
+      const urlNodes =
+        // @ts-ignore - TS DOM lib doesn't always model overloads perfectly across targets
+        typeof xmlDoc.getElementsByTagNameNS === 'function'
+          ? // @ts-ignore
+            xmlDoc.getElementsByTagNameNS('*', 'url')
+          : xmlDoc.getElementsByTagName("url");
+      const gameNodes =
+        // @ts-ignore
+        typeof xmlDoc.getElementsByTagNameNS === 'function'
+          ? // @ts-ignore
+            xmlDoc.getElementsByTagNameNS('*', 'game')
+          : xmlDoc.getElementsByTagName("game");
       
       const games: Game[] = [];
       
@@ -89,8 +101,16 @@ export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[],
             const node = urlNodes[i];
             if (!node) continue;
             
-            const loc = getTagValue(node, 'loc');
-            const imageLoc = getTagValue(node, 'image:loc') || getTagValue(node, 'image');
+            const locEls =
+              // @ts-ignore
+              typeof (node as any).getElementsByTagNameNS === 'function'
+                ? // @ts-ignore
+                  (node as any).getElementsByTagNameNS('*', 'loc')
+                : (node as any).getElementsByTagName?.('loc') || [];
+
+            const loc = (locEls?.[0]?.textContent || '').trim();
+            // In sitemap format, both <loc> and <image:loc> share localName "loc".
+            const imageLoc = (locEls?.[1]?.textContent || '').trim();
             
             // Extract ID from URL (last segment)
             // https://html5.gamedistribution.com/218ac3fe3df6ff2c8fe8f9353f1084f6/ -> 218ac3fe3df6ff2c8fe8f9353f1084f6
