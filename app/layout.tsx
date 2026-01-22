@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
 import { OceanCreatures3D } from '@/components/OceanCreatures3D';
+import { SiteFooter } from '@/components/SiteFooter';
+import { SiteNav } from '@/components/SiteNav';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
@@ -47,9 +49,16 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen w-full flex flex-col font-sans antialiased overflow-x-hidden bg-nacho-bg text-nacho-primary selection:bg-nacho-accent selection:text-white">
+        <div className="ocean-atmosphere" />
+        <div className="ocean-vignette" />
+        <div className="ocean-grid" />
         <OceanCreatures3D />
-        <div className="relative z-10 w-full">
-          {children}
+        <div className="relative z-10 w-full flex-1 flex flex-col">
+          <SiteNav />
+          <div className="flex-1">
+            {children}
+          </div>
+          <SiteFooter />
         </div>
         <ClientInit />
       </body>

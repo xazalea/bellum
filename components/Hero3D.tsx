@@ -69,9 +69,8 @@ export function Hero3D() {
 
   return (
     <div className="fixed inset-0 z-0 w-full h-screen pointer-events-none bg-nacho-bg">
-      {/* Cinematic Lighting Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-nacho-bg/80 via-transparent to-nacho-bg z-10 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-nacho-bg/50 via-transparent to-nacho-bg/50 z-10 pointer-events-none" />
+      {/* Subtle Lighting Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-nacho-bg/70 via-transparent to-nacho-bg/80 z-10 pointer-events-none" />
       
       <model-viewer
         ref={modelViewerRef}

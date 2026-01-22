@@ -183,13 +183,40 @@ input, select, textarea {
 
 body {
   color: var(--nacho-text);
-  background: radial-gradient(1200px 800px at 20% 10%, rgba(30, 58, 95, 0.25), transparent 60%),
-              radial-gradient(900px 600px at 80% 30%, rgba(59, 130, 246, 0.15), transparent 55%),
-              var(--nacho-bg);
+  background: var(--nacho-bg);
   min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+.ocean-atmosphere {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(800px 500px at 20% 15%, rgba(59, 130, 246, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 80% 20%, rgba(14, 165, 233, 0.08), transparent 60%);
+}
+
+.ocean-vignette {
+  position: fixed;
+  inset: -10%;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(circle at center, transparent 60%, rgba(2, 6, 23, 0.75) 100%);
+}
+
+.ocean-grid {
+  display: none;
+}
+
+.ocean-nav {
+  background: rgba(11, 17, 32, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--nacho-border);
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.4);
 }
 
 .ocean-creature {
