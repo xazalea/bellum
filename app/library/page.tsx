@@ -96,7 +96,7 @@ export default function LibraryPage() {
                         <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4 inline-block">apps</span>
                         <h2 className="text-xl font-bold text-nacho-primary mb-2">Library Empty</h2>
                         <p className="text-nacho-secondary mb-6">
-                            You haven't installed any apps yet. Visit the Arcade to find games.
+                            You haven&apos;t installed any apps yet. Visit the Arcade to find games.
                         </p>
                         <Button onClick={() => window.location.href = '/games'} className="bg-nacho-accent text-white border-none">
                             Browse Games
