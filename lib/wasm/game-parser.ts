@@ -30,18 +30,7 @@ let useWasm = false;
  * Initialize game parser
  */
 export async function initGameParser(): Promise<boolean> {
-  try {
-    wasmModule = await loadAndInstantiate('/wasm/game-parser.wasm');
-    if (wasmModule && wasmModule.GameParser) {
-      parser = new wasmModule.GameParser();
-      useWasm = true;
-      console.log('✅ Game Parser WASM loaded');
-      return true;
-    }
-  } catch (error) {
-    console.warn('Game Parser WASM failed, using JS fallback:', error);
-  }
-  
+  // WASM disabled due to missing binary
   useWasm = false;
   return false;
 }

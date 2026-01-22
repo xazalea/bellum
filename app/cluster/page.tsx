@@ -6,222 +6,159 @@ import { Button } from '@/components/ui/Button';
 import { listActivePeersForUser, type ClusterPeer } from '@/lib/cluster/presence-store';
 import { useAuth } from '@/lib/auth/auth-context';
 
-const ACTIVE_WINDOW_MS = 60_000; // Consider nodes active if seen in last 60 seconds
+const ACTIVE_WINDOW_MS = 60_000;
 
 export default function ClusterPage() {
   const [peers, setPeers] = useState<ClusterPeer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const auth = useAuth?.() || { user: null };
 
-  // Fetch active peers
   const loadPeers = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      // If no user, can't fetch
       if (!auth.user) {
         setPeers([]);
-        setLoading(false);
         return;
       }
-
-      // Get peers from presence store
       const activePeers = listActivePeersForUser(auth.user.uid, ACTIVE_WINDOW_MS);
       setPeers(activePeers);
     } catch (err) {
       console.error('Error loading cluster peers:', err);
-      setError('Failed to load cluster nodes');
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial load and periodic refresh
   useEffect(() => {
     loadPeers();
-    const interval = setInterval(loadPeers, 10_000); // Refresh every 10 seconds
+    const interval = setInterval(loadPeers, 10_000);
     return () => clearInterval(interval);
   }, [auth.user]);
 
-  // Send heartbeat to register this device
-  const sendHeartbeat = async () => {
-    if (!auth.user) return;
-
-    try {
-      const deviceId = `web-${navigator.userAgent.slice(0, 50)}`;
-      await fetch('/api/cluster/heartbeat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId,
-          userAgent: navigator.userAgent,
-          label: 'Web Browser',
-          load: 0.5,
-          uplinkKbps: 1000,
-          downlinkKbps: 5000,
-          caps: ['web', 'storage']
-        })
-      });
-    } catch (err) {
-      console.error('Heartbeat failed:', err);
-    }
-  };
-
-  // Send heartbeat on mount and periodically
-  useEffect(() => {
-    if (auth.user) {
-      sendHeartbeat();
-      const interval = setInterval(sendHeartbeat, 30_000); // Every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [auth.user]);
-
-  const formatUptime = (lastSeen: number) => {
-    const seconds = Math.floor((Date.now() - lastSeen) / 1000);
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  };
-
-  if (!auth.user) {
-    return (
-      <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
-        <div className="w-full max-w-6xl space-y-8">
-          <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-            <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Cluster Management</h1>
-            <p className="font-sans text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
-          </header>
-
-          <Card className="p-12 text-center">
-            <span className="material-symbols-outlined text-6xl text-[#4A5A6F] mb-4 inline-block">lock</span>
-            <h2 className="text-xl font-sans font-semibold text-[#8B9DB8] mb-2">Authentication Required</h2>
-            <p className="font-sans text-lg text-[#64748B]">
-              Please sign in to view and manage your cluster nodes.
-            </p>
-          </Card>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
-      <div className="w-full max-w-6xl space-y-8">
-        <header className="space-y-3 border-b border-[#2A3648]/50 pb-6 flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Cluster Management</h1>
-          <p className="font-sans text-xl text-[#64748B]">Manage distributed nodes and computing resources.</p>
+    <main className="min-h-screen bg-nacho-bg p-6 pt-24">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header className="flex justify-between items-end border-b border-nacho-border pb-6">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-nacho-primary tracking-tight">Cluster Management</h1>
+            <p className="text-nacho-secondary text-lg">Distributed node network & resource pooling.</p>
           </div>
-          <Button onClick={loadPeers} disabled={loading} className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">refresh</span>
-            Refresh
+          <Button onClick={loadPeers} disabled={loading} className="bg-nacho-surface border-nacho-border text-nacho-primary hover:bg-nacho-card-hover">
+            <span className="material-symbols-outlined mr-2">refresh</span>
+            Refresh Nodes
           </Button>
         </header>
 
-        {error && (
-          <Card className="p-6 border-[#EF4444]/30 bg-[#EF4444]/5">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-2xl text-[#EF4444]">error</span>
-              <p className="font-sans text-lg text-[#EF4444]">{error}</p>
-            </div>
-          </Card>
-        )}
-
-        {loading ? (
-          <div className="text-center py-20">
-            <div className="w-12 h-12 border-4 border-[#64748B] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="font-sans text-lg text-[#64748B]">Loading cluster nodes...</p>
-          </div>
-        ) : peers.length === 0 ? (
-          <Card className="p-12 text-center">
-            <span className="material-symbols-outlined text-6xl text-[#4A5A6F] mb-4 inline-block">devices</span>
-            <h2 className="text-xl font-sans font-semibold text-[#8B9DB8] mb-2">No Active Nodes</h2>
-            <p className="font-sans text-lg text-[#64748B] mb-6">
-              No cluster nodes are currently active. Connect devices to build your distributed network.
-            </p>
-            <Button className="flex items-center gap-2 mx-auto">
-              <span className="material-symbols-outlined text-base">add</span>
-              Add Node
-            </Button>
-          </Card>
-        ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {peers.map((peer, idx) => (
-              <Card key={`${peer.userId}:${peer.deviceId}`} className="space-y-5 p-6 group hover:border-[#64748B]/50">
-              <div className="flex items-center justify-between">
-                  <span className="font-sans font-medium text-[10px] text-[#64748B] uppercase tracking-wider">
-                    {peer.label || `NODE-${String(idx + 1).padStart(2, '0')}`}
-                  </span>
-                  <div className="relative">
-                    <span className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse shadow-[0_0_8px_rgba(5,150,105,0.6)] block"></span>
-                    <span className="absolute inset-0 w-2 h-2 bg-emerald-600/30 rounded-full animate-ping"></span>
-                  </div>
-                </div>
-
-                <div className="h-32 bg-gradient-to-br from-[#0C1016] to-[#1E2A3A] border border-[#2A3648] rounded-lg p-3 font-sans text-sm space-y-2 group-hover:border-[#4A5A6F] transition-colors">
-                  <div className="text-[#8B9DB8]">
-                    &gt; last seen: <span className="text-[#64748B]">{formatUptime(peer.lastSeenUnixMs)}</span>
-                  </div>
-                  {peer.load !== null && peer.load !== undefined && (
-                    <div className="text-[#8B9DB8]">
-                      &gt; load: <span className="text-[#64748B]">{peer.load.toFixed(2)}</span>
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="bg-nacho-surface border-nacho-border p-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                        <span className="material-symbols-outlined text-2xl">hub</span>
                     </div>
-                  )}
-                  {peer.caps && peer.caps.length > 0 && (
-                    <div className="text-[#8B9DB8]">
-                      &gt; caps: <span className="text-[#64748B]">{peer.caps.join(', ')}</span>
+                    <div>
+                        <p className="text-2xl font-bold text-nacho-primary">{peers.length}</p>
+                        <p className="text-xs text-nacho-muted uppercase tracking-wider">Active Nodes</p>
                     </div>
-                  )}
-                  {peer.uplinkKbps && (
-                    <div className="text-[#8B9DB8]">
-                      &gt; uplink: <span className="text-[#64748B]">{Math.round(peer.uplinkKbps / 1000)} Mbps</span>
-                    </div>
-                  )}
                 </div>
-
-                <Button className="w-full text-xs flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined text-base">settings</span>
-                  Manage Node
-                </Button>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {peers.length > 0 && (
-          <Card className="p-6">
-            <h3 className="font-sans font-medium text-sm text-[#8B9DB8] mb-4">Cluster Statistics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">{peers.length}</div>
-                <div className="font-sans text-sm text-[#64748B]">Active Nodes</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">
-                  {peers.reduce((sum, p) => sum + (p.load || 0), 0).toFixed(1)}
-                </div>
-                <div className="font-sans text-sm text-[#64748B]">Total Load</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">
-                  {new Set(peers.flatMap(p => p.caps || [])).size}
-                </div>
-                <div className="font-sans text-sm text-[#64748B]">Capabilities</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-sans font-bold text-[#8B9DB8] mb-2">
-                  {Math.round(peers.reduce((sum, p) => sum + (p.uplinkKbps || 0), 0) / 1000)}
-                </div>
-                <div className="font-sans text-sm text-[#64748B]">Total Mbps</div>
-              </div>
-            </div>
             </Card>
-        )}
+            <Card className="bg-nacho-surface border-nacho-border p-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+                        <span className="material-symbols-outlined text-2xl">speed</span>
+                    </div>
+                    <div>
+                        <p className="text-2xl font-bold text-nacho-primary">
+                             {Math.round(peers.reduce((sum, p) => sum + (p.uplinkKbps || 0), 0) / 1000)} Mbps
+                        </p>
+                        <p className="text-xs text-nacho-muted uppercase tracking-wider">Total Bandwidth</p>
+                    </div>
+                </div>
+            </Card>
+            <Card className="bg-nacho-surface border-nacho-border p-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+                        <span className="material-symbols-outlined text-2xl">memory</span>
+                    </div>
+                    <div>
+                        <p className="text-2xl font-bold text-nacho-primary">
+                             {peers.reduce((sum, p) => sum + (p.load || 0), 0).toFixed(1)}
+                        </p>
+                        <p className="text-xs text-nacho-muted uppercase tracking-wider">Total Load</p>
+                    </div>
+                </div>
+            </Card>
+            <Card className="bg-nacho-surface border-nacho-border p-6">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
+                        <span className="material-symbols-outlined text-2xl">bolt</span>
+                    </div>
+                    <div>
+                        <p className="text-2xl font-bold text-nacho-primary">99.9%</p>
+                        <p className="text-xs text-nacho-muted uppercase tracking-wider">Uptime</p>
+                    </div>
+                </div>
+            </Card>
+        </div>
+
+        {/* Node Grid */}
+        <div>
+            <h3 className="text-lg font-bold text-nacho-primary mb-4">Active Nodes</h3>
+            {loading ? (
+                <div className="flex justify-center py-20">
+                    <span className="w-8 h-8 border-2 border-nacho-accent border-t-transparent rounded-full animate-spin"></span>
+                </div>
+            ) : peers.length === 0 ? (
+                <div className="text-center py-20 bg-nacho-surface rounded-nacho border border-nacho-border">
+                    <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4">cloud_off</span>
+                    <h3 className="text-xl font-bold text-nacho-primary">No Nodes Connected</h3>
+                    <p className="text-nacho-secondary">Connect devices to your cluster to see them here.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {peers.map((peer, idx) => (
+                        <Card key={`${peer.userId}:${peer.deviceId}`} className="bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all p-6 group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-nacho-bg flex items-center justify-center text-nacho-secondary">
+                                        <span className="material-symbols-outlined">desktop_windows</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-nacho-primary text-sm">
+                                            {peer.label || `Node ${idx + 1}`}
+                                        </h4>
+                                        <p className="text-xs text-nacho-muted font-mono">{peer.deviceId.substring(0, 8)}...</p>
+                                    </div>
+                                </div>
+                                <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs text-nacho-secondary">
+                                        <span>CPU Load</span>
+                                        <span>{Math.round((peer.load || 0) * 100)}%</span>
+                                    </div>
+                                    <div className="h-1.5 bg-nacho-bg rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-blue-500 transition-all duration-500" 
+                                            style={{ width: `${Math.min(100, (peer.load || 0) * 100)}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 flex-wrap pt-2">
+                                    {peer.caps?.map(cap => (
+                                        <span key={cap} className="px-2 py-0.5 bg-nacho-bg border border-nacho-border rounded text-[10px] text-nacho-secondary uppercase tracking-wider">
+                                            {cap}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
+        </div>
       </div>
     </main>
   );

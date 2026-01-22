@@ -1,16 +1,13 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
-import { NachoCursor } from '@/components/NachoCursor';
-import { SeaLifeBackground } from '@/components/SeaLifeBackground';
-import { DynamicIsland } from '@/components/DynamicIsland';
-import { DiscordButton } from '@/components/DiscordButton';
 import { cn } from '@/lib/utils';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'challenger deep. - explore the depths.',
-  description: 'A pixelated journey into distributed computing. Secure. Private. Deep.',
-  keywords: ['challenger deep', 'pixel art', 'distributed computing', 'privacy'],
+  description: 'High-performance distributed computing. Secure. Private. Deep.',
+  keywords: ['challenger deep', 'distributed computing', 'privacy', 'wasm', 'webgpu'],
   icons: {
     icon: [{ url: '/icon' }],
     apple: [{ url: '/apple-icon' }],
@@ -21,7 +18,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0B0F1A',
+  themeColor: '#F8FAFC',
 };
 
 export default function RootLayout({
@@ -30,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="light">
       <head>
         {/* Material Symbols */}
         <link
@@ -39,15 +36,17 @@ export default function RootLayout({
         />
         {/* Inter Font */}
         <link 
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" 
           rel="stylesheet" 
         />
+        {/* Model Viewer Script */}
+        <Script 
+          type="module" 
+          src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js" 
+          strategy="afterInteractive"
+        />
       </head>
-      <body className="min-h-screen w-full flex flex-col font-sans antialiased overflow-x-hidden selection:bg-nacho-primary selection:text-nacho-bg">
-        <SeaLifeBackground />
-        <NachoCursor />
-        <DynamicIsland />
-        <DiscordButton />
+      <body className="min-h-screen w-full flex flex-col font-sans antialiased overflow-x-hidden bg-nacho-bg text-nacho-primary selection:bg-nacho-accent selection:text-white">
         {children}
         <ClientInit />
       </body>

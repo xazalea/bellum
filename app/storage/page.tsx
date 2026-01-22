@@ -8,9 +8,6 @@ import { useAuth } from '@/lib/auth/auth-context';
 import * as discordWebhookStorage from '@/lib/storage/discord-webhook-storage';
 import { formatBytes, formatPercentage, DISCORD_WEBHOOK_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
 
-// Alias for branding
-const CHALLENGER_STORAGE_LIMIT_BYTES = DISCORD_WEBHOOK_STORAGE_LIMIT_BYTES;
-
 interface StoredFile {
   id: string;
   fileName: string;
@@ -25,17 +22,12 @@ export default function StoragePage() {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{
-    percent: number;
-    status: string;
-  } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ percent: number; status: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [storageMode, setStorageMode] = useState<'challenger' | 'api'>('challenger');
   const [quotaInfo, setQuotaInfo] = useState<discordWebhookStorage.QuotaInfo | null>(null);
   const auth = useAuth?.() || { user: null };
 
-  // Load quota info
   const loadQuota = async () => {
     try {
       const quota = await discordWebhookStorage.getQuotaInfo();
@@ -45,13 +37,10 @@ export default function StoragePage() {
     }
   };
 
-  // Load user's files
   const loadFiles = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Load Challenger storage files
       const challengerFiles = await discordWebhookStorage.listFiles();
       const challengerStoredFiles: StoredFile[] = challengerFiles.map(file => ({
         id: file.fileId,
@@ -61,38 +50,7 @@ export default function StoragePage() {
         createdAt: file.createdAt,
         compressedSize: file.compressedSize,
       }));
-
-      // Load API-based storage files (if authenticated)
-      let apiFiles: StoredFile[] = [];
-      if (auth.user) {
-        const [discordRes, telegramRes] = await Promise.all([
-          fetch('/api/discord/manifest').then(r => r.ok ? r.json() : { files: [] }).catch(() => ({ files: [] })),
-          fetch('/api/telegram/manifest').then(r => r.ok ? r.json() : { files: [] }).catch(() => ({ files: [] }))
-        ]);
-
-        const discordFiles: StoredFile[] = (discordRes.files || []).map((file: any) => ({
-          id: file.id || file.messageId,
-          fileName: file.fileName || file.filename || 'unknown',
-          size: file.size || 0,
-          type: 'discord' as const,
-          createdAt: file.createdAt || file.timestamp || Date.now(),
-          ownerUid: auth.user!.uid
-        }));
-
-        const telegramFiles: StoredFile[] = (telegramRes.files || []).map((file: any) => ({
-          id: file.id || file.fileId,
-          fileName: file.fileName || file.filename || 'unknown',
-          size: file.size || file.sizeBytes || 0,
-          type: 'telegram' as const,
-          createdAt: file.createdAt || file.timestamp || Date.now(),
-          ownerUid: auth.user!.uid
-        }));
-
-        apiFiles = [...discordFiles, ...telegramFiles];
-      }
-
-      const allFiles = [...challengerStoredFiles, ...apiFiles].sort((a, b) => b.createdAt - a.createdAt);
-      setFiles(allFiles);
+      setFiles(challengerStoredFiles.sort((a, b) => b.createdAt - a.createdAt));
     } catch (err) {
       console.error('Error loading files:', err);
       setError('Failed to load storage files');
@@ -104,18 +62,15 @@ export default function StoragePage() {
   useEffect(() => {
     loadQuota();
     loadFiles();
-  }, [auth.user]);
+  }, []);
 
-  // Handle Challenger storage upload
-  const handleChallengerUpload = async () => {
+  const handleUpload = async () => {
     if (!selectedFile) return;
-
     try {
       setUploading(true);
       setError(null);
       setUploadProgress({ percent: 0, status: 'Starting upload...' });
 
-      // Check quota first
       const hasQuota = await discordWebhookStorage.hasQuota(selectedFile.size);
       if (!hasQuota) {
         const quota = await discordWebhookStorage.getQuotaInfo();
@@ -131,11 +86,8 @@ export default function StoragePage() {
       });
 
       setUploadProgress({ percent: 100, status: 'Upload complete!' });
-      
-      // Reload files and quota
       await Promise.all([loadFiles(), loadQuota()]);
       setSelectedFile(null);
-      
       setTimeout(() => setUploadProgress(null), 2000);
     } catch (err: any) {
       console.error('Upload error:', err);
@@ -146,56 +98,12 @@ export default function StoragePage() {
     }
   };
 
-  // Handle API-based upload
-  const handleApiUpload = async () => {
-    if (!selectedFile || !auth.user) return;
-
-    try {
-      setUploading(true);
-      setError(null);
-
-      const arrayBuffer = await selectedFile.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-
-      const response = await fetch('/api/discord/upload', {
-        method: 'POST',
-        headers: {
-          'X-File-Name': selectedFile.name,
-          'X-Upload-Id': crypto.randomUUID(),
-        },
-        body: bytes
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      await loadFiles();
-      setSelectedFile(null);
-    } catch (err: any) {
-      console.error('Upload error:', err);
-      setError(err?.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (storageMode === 'challenger') {
-      await handleChallengerUpload();
-    } else {
-      await handleApiUpload();
-    }
-  };
-
-  // Download Challenger storage file
-  const handleChallengerDownload = async (fileId: string, fileName: string) => {
+  const handleDownload = async (fileId: string, fileName: string) => {
     try {
       setError(null);
       const blob = await discordWebhookStorage.downloadFile(fileId, (progress) => {
         console.log(`Downloading: ${progress.downloadedBytes}/${progress.totalBytes} bytes`);
       });
-
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -210,51 +118,8 @@ export default function StoragePage() {
     }
   };
 
-  // Download API file
-  const handleApiDownload = async (file: StoredFile) => {
-    try {
-      const endpoint = file.type === 'discord' 
-        ? `/api/discord/file?messageId=${file.id}`
-        : `/api/telegram/file?file_id=${file.id}`;
-      
-      const response = await fetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error('Download failed');
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Download error:', err);
-      setError('Failed to download file');
-    }
-  };
-
-  const handleDownload = async (file: StoredFile) => {
-    if (file.type === 'challenger') {
-      await handleChallengerDownload(file.id, file.fileName);
-    } else {
-      await handleApiDownload(file);
-    }
-  };
-
-  // Delete Challenger storage file
   const handleDelete = async (file: StoredFile) => {
-    if (file.type !== 'challenger') {
-      setError('Only Challenger storage files can be deleted from the UI');
-      return;
-    }
-
     if (!confirm(`Delete ${file.fileName}?`)) return;
-
     try {
       await discordWebhookStorage.deleteFile(file.id);
       await Promise.all([loadFiles(), loadQuota()]);
@@ -264,229 +129,154 @@ export default function StoragePage() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-  const challengerFilesCount = files.filter(f => f.type === 'challenger').length;
-
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
-      <div className="w-full max-w-6xl space-y-8">
-        <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-sans text-[#8B9DB8]">App Storage</h1>
-          <p className="font-sans text-xl text-[#64748B]">Import and store your games & applications.</p>
+    <main className="min-h-screen bg-nacho-bg p-6 pt-24">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header className="space-y-2 border-b border-nacho-border pb-6">
+          <h1 className="text-3xl font-bold text-nacho-primary tracking-tight">Cloud Storage</h1>
+          <p className="text-nacho-secondary text-lg">Secure, distributed file storage on Discord.</p>
         </header>
 
         {error && (
-          <Card className="p-6 border-[#EF4444]/30 bg-[#EF4444]/5">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-2xl text-[#EF4444]">error</span>
-              <p className="font-retro text-lg text-[#EF4444]">{error}</p>
-              <button onClick={() => setError(null)} className="ml-auto text-[#EF4444] hover:text-[#DC2626]">
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-nacho flex items-center gap-3 text-red-400">
+            <span className="material-symbols-outlined">error</span>
+            <p>{error}</p>
+            <button onClick={() => setError(null)} className="ml-auto hover:text-red-300">
                 <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-          </Card>
-        )}
-
-        {/* Quota Display */}
-        {quotaInfo && (
-          <Card className="p-6 bg-gradient-to-br from-[#0F172A] to-[#1E2A3A]">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-sans font-medium text-sm text-[#8B9DB8]">Storage Quota</h3>
-                <p className="font-sans text-xs text-[#64748B]">
-                  Fingerprint: {quotaInfo.fingerprint.substring(0, 12)}...
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-sans font-bold text-lg text-[#8B9DB8]">
-                  {formatBytes(quotaInfo.usedBytes)} / {formatBytes(quotaInfo.limitBytes)}
-                </p>
-                <p className="font-sans text-xs text-[#64748B]">
-                  {formatPercentage(quotaInfo.usedBytes, quotaInfo.limitBytes)} used
-                </p>
-              </div>
-            </div>
-            <div className="w-full h-3 bg-[#1E2A3A] rounded-full overflow-hidden border border-[#2A3648]">
-              <div 
-                className="h-full bg-gradient-to-r from-[#3B82F6] to-[#60A5FA] transition-all duration-500"
-                style={{ width: `${Math.min(100, (quotaInfo.usedBytes / quotaInfo.limitBytes) * 100)}%` }}
-              />
-            </div>
-            <p className="font-retro text-xs text-[#64748B] mt-2">
-              {formatBytes(quotaInfo.availableBytes)} available
-            </p>
-          </Card>
+            </button>
+          </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <Card className="col-span-1 h-fit space-y-6 p-6">
-            <h3 className="font-sans text-[10px] text-[#64748B] uppercase tracking-wider font-semibold">Import App/Game</h3>
+          {/* Uploader Sidebar */}
+          <Card className="col-span-1 h-fit bg-nacho-surface border-nacho-border p-6 space-y-6">
+            <h3 className="text-xs font-bold text-nacho-muted uppercase tracking-wider">Upload File</h3>
             
             <div className="space-y-4">
-              <div>
-                <label className="block font-sans text-sm text-[#8B9DB8] mb-2">Storage Mode</label>
-                <select
-                  value={storageMode}
-                  onChange={(e) => setStorageMode(e.target.value as 'challenger' | 'api')}
-                  className="w-full bg-[#1E2A3A] border border-[#2A3648] text-[#8B9DB8] rounded-lg p-2 font-sans"
-                >
-                  <option value="challenger">Challenger Storage</option>
-                  <option value="api">API Storage (Auth Required)</option>
-                </select>
-                <p className="mt-2 font-sans text-xs text-[#64748B]">
-                  {storageMode === 'challenger' 
-                    ? 'Secure storage for your imported apps'
-                    : 'Requires authentication, stores via API'}
-                </p>
-              </div>
-
-              <div>
-                <label className="block font-sans text-sm text-[#8B9DB8] mb-2">Select File</label>
+              <div className="relative group">
                 <Input
                   type="file"
-                  accept=".apk,.exe,.iso,.zip,.html,.jar"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="text-sm"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
-                <p className="mt-2 font-sans text-xs text-[#64748B]">
-                  Supported: APK, EXE, ISO, ZIP, HTML5
-                </p>
+                <div className="border-2 border-dashed border-nacho-border rounded-nacho p-6 text-center group-hover:border-nacho-accent transition-colors">
+                    <span className="material-symbols-outlined text-3xl text-nacho-muted mb-2">cloud_upload</span>
+                    <p className="text-sm text-nacho-secondary truncate">
+                        {selectedFile ? selectedFile.name : 'Click or Drag File'}
+                    </p>
+                    <p className="text-xs text-nacho-muted mt-1">Max 25MB per chunk</p>
+                </div>
               </div>
 
               {selectedFile && (
-                <div className="p-3 bg-[#1E2A3A]/50 rounded-lg border border-[#2A3648]">
-                  <p className="font-sans text-sm text-[#8B9DB8] truncate">{selectedFile.name}</p>
-                  <p className="font-sans text-xs text-[#64748B]">{formatBytes(selectedFile.size)}</p>
+                <div className="text-xs text-nacho-secondary flex justify-between">
+                    <span>Size:</span>
+                    <span>{formatBytes(selectedFile.size)}</span>
                 </div>
               )}
 
               {uploadProgress && (
-                <div className="p-3 bg-[#3B82F6]/10 rounded-lg border border-[#3B82F6]/30">
-                  <p className="font-sans text-xs text-[#8B9DB8] mb-2">{uploadProgress.status}</p>
-                  <div className="w-full h-2 bg-[#1E2A3A] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#3B82F6] transition-all duration-300"
-                      style={{ width: `${uploadProgress.percent}%` }}
-                    />
-                  </div>
-                  <p className="font-sans text-xs text-[#64748B] mt-1">{uploadProgress.percent}%</p>
+                <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-nacho-accent">
+                        <span>{uploadProgress.status}</span>
+                        <span>{uploadProgress.percent}%</span>
+                    </div>
+                    <div className="h-1.5 bg-nacho-bg rounded-full overflow-hidden">
+                        <div className="h-full bg-nacho-accent transition-all duration-300" style={{ width: `${uploadProgress.percent}%` }}></div>
+                    </div>
                 </div>
               )}
 
               <Button
                 onClick={handleUpload}
-                disabled={!selectedFile || uploading || (storageMode === 'api' && !auth.user)}
-                className="w-full flex items-center justify-center gap-2"
+                disabled={!selectedFile || uploading}
+                className="w-full bg-nacho-accent hover:bg-blue-600 text-white border-none"
               >
-                {uploading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-[#64748B] border-t-transparent rounded-full animate-spin"></span>
-                    <span>Uploading...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-base">upload</span>
-                    <span>Upload File</span>
-                  </>
-                )}
+                {uploading ? 'Uploading...' : 'Upload to Cloud'}
               </Button>
             </div>
-            
-            <div className="pt-4 border-t border-[#2A3648]">
-              <div className="flex justify-between text-xs text-[#64748B] mb-2 font-sans">
-                <span>Total Files</span>
-                <span>{files.length}</span>
-              </div>
-              <div className="flex justify-between text-xs text-[#64748B] mb-2 font-sans">
-                <span>Challenger Storage</span>
-                <span>{challengerFilesCount} files</span>
-              </div>
-              <div className="flex justify-between text-xs text-[#64748B] font-sans">
-                <span>Total Size</span>
-                <span>{formatBytes(totalSize)}</span>
-              </div>
-            </div>
+
+            {quotaInfo && (
+                <div className="pt-6 border-t border-nacho-border space-y-3">
+                    <h3 className="text-xs font-bold text-nacho-muted uppercase tracking-wider">Storage Quota</h3>
+                    <div className="h-2 bg-nacho-bg rounded-full overflow-hidden">
+                        <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400" 
+                            style={{ width: `${(quotaInfo.usedBytes / quotaInfo.limitBytes) * 100}%` }}
+                        ></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-nacho-secondary">
+                        <span>{formatBytes(quotaInfo.usedBytes)} used</span>
+                        <span>{formatBytes(quotaInfo.limitBytes)} total</span>
+                    </div>
+                </div>
+            )}
           </Card>
 
           {/* File List */}
-          <Card className="col-span-1 lg:col-span-3 min-h-[500px] bg-gradient-to-br from-[#0C1016] to-[#1E2A3A] p-6">
+          <div className="col-span-1 lg:col-span-3 space-y-4">
             {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-[#64748B] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="font-sans text-lg text-[#64748B]">Loading files...</p>
+                 <div className="flex justify-center py-20">
+                    <span className="w-8 h-8 border-2 border-nacho-accent border-t-transparent rounded-full animate-spin"></span>
                 </div>
-              </div>
             ) : files.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center space-y-3">
-                  <span className="material-symbols-outlined text-6xl text-[#4A5A6F]">apps</span>
-                  <h3 className="font-sans font-medium text-lg text-[#8B9DB8]">No Apps Imported</h3>
-                  <p className="font-sans text-base text-[#64748B]">Import games and applications to get started</p>
-                  <p className="font-sans text-sm text-[#64748B]">{formatBytes(CHALLENGER_STORAGE_LIMIT_BYTES)} free storage available</p>
+                <div className="text-center py-20 bg-nacho-surface rounded-nacho border border-nacho-border">
+                    <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4">folder_open</span>
+                    <h3 className="text-xl font-bold text-nacho-primary">No Files Stored</h3>
+                    <p className="text-nacho-secondary">Upload files to secure them in the distributed cloud.</p>
                 </div>
-              </div>
             ) : (
-              <div className="space-y-2">
-                {files.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between p-4 bg-[#1E2A3A]/50 rounded-lg border border-[#2A3648] hover:border-[#4A5A6F] transition-all group"
-                  >
-                    <div className="flex items-center gap-4 flex-grow min-w-0">
-                      <span className="material-symbols-outlined text-2xl text-[#64748B] group-hover:text-[#8B9DB8] transition-colors">
-                        {file.type === 'challenger' ? 'scuba_diving' : file.type === 'discord' ? 'forum' : 'send'}
-                      </span>
-                      <div className="flex-grow min-w-0">
-                        <h4 className="font-sans font-medium text-base text-[#8B9DB8] truncate">{file.fileName}</h4>
-                        <p className="font-sans text-sm text-[#64748B]">
-                          {formatBytes(file.size)}
-                          {file.compressedSize && ` (${formatBytes(file.compressedSize)} compressed)`}
-                          {' • '}
-                          {formatDate(file.createdAt)}
-                          {' • '}
-                          <span className={
-                            file.type === 'challenger' ? 'text-[#3B82F6]' :
-                            file.type === 'discord' ? 'text-[#8B5CF6]' :
-                            'text-[#10B981]'
-                          }>
-                            {file.type === 'challenger' ? 'challenger' : file.type}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleDownload(file)}
-                        className="bg-transparent border-[#2A3648] hover:border-[#64748B] px-3"
-                      >
-                        <span className="material-symbols-outlined text-base">download</span>
-                      </Button>
-                      {file.type === 'challenger' && (
-                        <Button
-                          onClick={() => handleDelete(file)}
-                          className="bg-transparent border-[#2A3648] hover:border-[#EF4444] px-3"
-                        >
-                          <span className="material-symbols-outlined text-base">delete</span>
-                        </Button>
-                      )}
-                    </div>
-                 </div>
-               ))}
-            </div>
+                <div className="bg-nacho-surface rounded-nacho border border-nacho-border overflow-hidden">
+                    <table className="w-full text-left">
+                        <thead className="bg-nacho-bg border-b border-nacho-border">
+                            <tr>
+                                <th className="p-4 text-xs font-bold text-nacho-muted uppercase tracking-wider">Name</th>
+                                <th className="p-4 text-xs font-bold text-nacho-muted uppercase tracking-wider">Size</th>
+                                <th className="p-4 text-xs font-bold text-nacho-muted uppercase tracking-wider">Date</th>
+                                <th className="p-4 text-xs font-bold text-nacho-muted uppercase tracking-wider text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-nacho-border">
+                            {files.map((file) => (
+                                <tr key={file.id} className="hover:bg-nacho-card-hover transition-colors group">
+                                    <td className="p-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="material-symbols-outlined text-nacho-accent">description</span>
+                                            <span className="font-medium text-nacho-primary">{file.fileName}</span>
+                                        </div>
+                                    </td>
+                                    <td className="p-4 text-sm text-nacho-secondary">
+                                        {formatBytes(file.size)}
+                                        {file.compressedSize && <span className="text-xs text-nacho-muted ml-1">({formatBytes(file.compressedSize)})</span>}
+                                    </td>
+                                    <td className="p-4 text-sm text-nacho-secondary">
+                                        {new Date(file.createdAt).toLocaleDateString()}
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                                onClick={() => handleDownload(file.id, file.fileName)}
+                                                className="p-2 hover:bg-nacho-bg rounded-full text-nacho-secondary hover:text-nacho-accent"
+                                                title="Download"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">download</span>
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDelete(file)}
+                                                className="p-2 hover:bg-nacho-bg rounded-full text-nacho-secondary hover:text-red-500"
+                                                title="Delete"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             )}
-          </Card>
+          </div>
         </div>
       </div>
     </main>

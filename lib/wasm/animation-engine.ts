@@ -48,24 +48,7 @@ let jsParticles: ParticleState[] = [];
  * Initialize animation engine
  */
 export async function initAnimationEngine(): Promise<boolean> {
-  try {
-    const imports = {
-      env: {
-        'Math.random': Math.random,
-        abort: () => console.error('WASM abort called'),
-      },
-    };
-    
-    wasmModule = await loadAndInstantiate('/wasm/animation.wasm', imports);
-    if (wasmModule) {
-      useWasm = true;
-      console.log('✅ Animation WASM loaded');
-      return true;
-    }
-  } catch (error) {
-    console.warn('Animation WASM failed, using JS fallback:', error);
-  }
-  
+  // WASM disabled due to missing binary
   useWasm = false;
   return false;
 }

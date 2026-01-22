@@ -51,30 +51,71 @@ export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[],
       // Fallback to DOMParser
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(text, "text/xml");
-      const gameNodes = xmlDoc.getElementsByTagName("game");
       
-      const total = gameNodes.length;
-      const start = (page - 1) * limit;
-      const end = start + limit;
+      // Check if it's a Sitemap (urlset/url) or Game List (games/game)
+      const urlNodes = xmlDoc.getElementsByTagName("url");
+      const gameNodes = xmlDoc.getElementsByTagName("game");
       
       const games: Game[] = [];
       
-      for (let i = start; i < Math.min(end, total); i++) {
-        const node = gameNodes[i];
-        if (!node) continue;
-        
-        games.push({
-          id: i.toString(),
-          title: getTagValue(node, 'title'),
-          description: getTagValue(node, 'description'),
-          thumb: getTagValue(node, 'thumb'),
-          file: getTagValue(node, 'file'),
-          width: getTagValue(node, 'width'),
-          height: getTagValue(node, 'height')
-        });
+      if (gameNodes.length > 0) {
+          // Standard Game XML format
+          const total = gameNodes.length;
+          const start = (page - 1) * limit;
+          const end = start + limit;
+          
+          for (let i = start; i < Math.min(end, total); i++) {
+            const node = gameNodes[i];
+            if (!node) continue;
+            
+            games.push({
+              id: i.toString(),
+              title: getTagValue(node, 'title'),
+              description: getTagValue(node, 'description'),
+              thumb: getTagValue(node, 'thumb'),
+              file: getTagValue(node, 'file'),
+              width: getTagValue(node, 'width'),
+              height: getTagValue(node, 'height')
+            });
+          }
+          return { games, total };
+      } else if (urlNodes.length > 0) {
+          // Sitemap format
+          const total = urlNodes.length;
+          const start = (page - 1) * limit;
+          const end = start + limit;
+          
+          for (let i = start; i < Math.min(end, total); i++) {
+            const node = urlNodes[i];
+            if (!node) continue;
+            
+            const loc = getTagValue(node, 'loc');
+            const imageLoc = getTagValue(node, 'image:loc') || getTagValue(node, 'image');
+            
+            // Extract ID from URL (last segment)
+            // https://html5.gamedistribution.com/218ac3fe3df6ff2c8fe8f9353f1084f6/ -> 218ac3fe3df6ff2c8fe8f9353f1084f6
+            const idMatch = loc.match(/\/([a-f0-9]{32})\/?$/);
+            const id = idMatch ? idMatch[1] : `game-${i}`;
+            
+            // Title is not in sitemap, use ID or generic name for now
+            // We could try to fetch metadata but that would be slow for a list
+            const title = `Game ${id.substring(0, 6)}...`;
+            
+            games.push({
+              id: id,
+              title: title,
+              description: 'Play this game instantly in your browser.',
+              thumb: imageLoc,
+              file: loc,
+              width: '800',
+              height: '600',
+              platform: 'html5'
+            });
+          }
+          return { games, total };
       }
       
-      return { games, total };
+      return { games: [], total: 0 };
     }
     
     return { games: [], total: 0 };

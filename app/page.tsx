@@ -1,128 +1,76 @@
 import React from 'react';
-import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
+import { Hero3D } from '@/components/Hero3D';
 
 export default function Home() {
-  const features = [
-    { 
-      title: 'Virtual Machines', 
-      href: '/virtual-machines', 
-      desc: 'Run Android, Windows & Linux in your browser with WASM acceleration.', 
-      icon: 'memory',
-      gradient: 'from-blue-500/10 to-cyan-500/10',
-      iconColor: 'text-blue-400'
-    },
-    { 
-      title: 'Games', 
-      href: '/games', 
-      desc: 'Browse and play thousands of HTML5 games instantly.', 
-      icon: 'sports_esports',
-      gradient: 'from-purple-500/10 to-pink-500/10',
-      iconColor: 'text-purple-400'
-    },
-    { 
-      title: 'Library', 
-      href: '/library', 
-      desc: 'Manage your installed applications and tools.', 
-      icon: 'apps',
-      gradient: 'from-green-500/10 to-emerald-500/10',
-      iconColor: 'text-green-400'
-    },
-    { 
-      title: 'Storage', 
-      href: '/storage', 
-      desc: 'Import and store your apps with 4GB free storage.', 
-      icon: 'folder',
-      gradient: 'from-orange-500/10 to-amber-500/10',
-      iconColor: 'text-orange-400'
-    },
-    { 
-      title: 'Cluster', 
-      href: '/cluster', 
-      desc: 'Join the distributed computing network.', 
-      icon: 'hub',
-      gradient: 'from-indigo-500/10 to-violet-500/10',
-      iconColor: 'text-indigo-400'
-    },
-  ];
-
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 pt-24 pb-20 z-10 relative">
-      {/* Hero Section */}
-      <div className="text-center mb-20 space-y-8 max-w-4xl">
-        <div className="space-y-4">
-          <h1 className="text-5xl md:text-7xl font-sans font-bold text-[#8B9DB8] tracking-tight animate-fade-in">
-            challenger deep<span className="text-[#4A5A6F]">.</span>
+    <main className="relative min-h-screen flex flex-col">
+      <Hero3D />
+      
+      {/* Content Overlay */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-6 pointer-events-none">
+        <div className="text-center space-y-8 max-w-4xl pointer-events-auto">
+          <h1 className="text-6xl md:text-8xl font-bold text-nacho-primary tracking-tighter leading-none animate-slide-up">
+            challenger deep.
           </h1>
-          <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-[#64748B] to-transparent rounded-full"></div>
-        </div>
-        <p className="text-xl md:text-2xl font-sans text-[#64748B] max-w-2xl mx-auto leading-relaxed">
-          Run operating systems, games, and applications directly in your browser.
-          <br />
-          <span className="text-[#8B9DB8]">Powered by WebAssembly & WebGPU.</span>
-        </p>
-        
-        {/* Tech Stack Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-          {['WASM', 'WebGPU', 'P2P', 'JIT'].map((tech) => (
-            <span 
-              key={tech}
-              className="px-4 py-2 bg-[#1E2A3A]/50 border border-[#2A3648] rounded-full font-sans text-xs text-[#64748B] hover:text-[#8B9DB8] hover:border-[#4A5A6F] transition-all cursor-default"
+          
+          <p className="text-xl md:text-2xl text-nacho-secondary max-w-2xl mx-auto font-light animate-fade-in delay-100">
+            Run APKs and EXEs at impossible speeds.
+            <br />
+            <span className="text-nacho-accent font-medium">20,000+ Games. 4GB Free Storage.</span>
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-8 animate-fade-in delay-200">
+            <Link 
+              href="/virtual-machines"
+              className="px-8 py-4 bg-nacho-primary text-white rounded-full font-medium hover:bg-nacho-secondary transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
             >
-              {tech}
-            </span>
-          ))}
+              Launch Virtual Machine
+            </Link>
+            <Link 
+              href="/games"
+              className="px-8 py-4 bg-white text-nacho-primary border border-nacho-border rounded-full font-medium hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
+            >
+              Browse Library
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl px-4">
-        {features.map((feature, i) => (
-          <Link key={feature.title} href={feature.href} className="group">
-            <Card 
-              variant="hover" 
-              className={`h-full flex flex-col space-y-6 p-8 bg-gradient-to-br ${feature.gradient} backdrop-blur-sm`}
-            >
-              <div className="flex items-start justify-between">
-                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br from-[#1E2A3A] to-[#0C1016] flex items-center justify-center border border-[#2A3648] group-hover:border-[#64748B] group-hover:scale-110 transition-all duration-300 shadow-lg`}>
-                  <span className={`material-symbols-outlined text-3xl ${feature.iconColor} transition-all`}>
-                    {feature.icon}
-                  </span>
-                </div>
-                <span className="material-symbols-outlined text-[#4A5A6F] group-hover:text-[#64748B] transition-colors">
-                  arrow_forward
-                </span>
-              </div>
-              
-              <div className="space-y-3 flex-grow">
-                <h2 className="text-xl font-sans font-semibold text-[#8B9DB8] group-hover:text-[#A0B3CC] transition-colors">
-                  {feature.title}
-                </h2>
-                <p className="text-[#64748B] font-sans text-base leading-relaxed">
-                  {feature.desc}
-                </p>
-              </div>
-              
-              <div className="pt-4 border-t border-[#2A3648] group-hover:border-[#4A5A6F] transition-colors">
-                <span className="font-sans text-xs font-medium text-[#4A5A6F] group-hover:text-[#64748B] transition-colors">
-                  EXPLORE →
-                </span>
-              </div>
-            </Card>
-          </Link>
-        ))}
+      {/* Feature Section (Scroll Target) */}
+      <div className="relative z-10 bg-white/90 backdrop-blur-xl border-t border-nacho-border py-32 px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="space-y-4">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-nacho-accent">
+              <span className="material-symbols-outlined">rocket_launch</span>
+            </div>
+            <h3 className="text-2xl font-bold text-nacho-primary">Impossible Speeds</h3>
+            <p className="text-nacho-muted leading-relaxed">
+              Powered by WebAssembly and WebGPU, our runtime delivers near-native performance for Android and Windows applications directly in your browser.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-nacho-accent">
+              <span className="material-symbols-outlined">sports_esports</span>
+            </div>
+            <h3 className="text-2xl font-bold text-nacho-primary">Massive Library</h3>
+            <p className="text-nacho-muted leading-relaxed">
+              Access over 20,000 games and applications instantly. No downloads, no installation, just click and play.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-nacho-accent">
+              <span className="material-symbols-outlined">cloud_upload</span>
+            </div>
+            <h3 className="text-2xl font-bold text-nacho-primary">4GB Free Storage</h3>
+            <p className="text-nacho-muted leading-relaxed">
+              Your personal cloud container persists your data, saves, and installed apps securely. Import your own APKs and EXEs.
+            </p>
+          </div>
+        </div>
       </div>
-
-      {/* Footer */}
-      <footer className="mt-24 text-center space-y-4">
-        <div className="h-px w-64 mx-auto bg-gradient-to-r from-transparent via-[#2A3648] to-transparent"></div>
-        <p className="text-[#4A5A6F] font-sans text-sm opacity-70 hover:opacity-100 transition-opacity">
-          DEEP OCEAN COMPUTING // {new Date().getFullYear()}
-        </p>
-        <p className="text-[#4A5A6F] font-sans text-xs">
-          Built with WebAssembly, WebGPU & Next.js
-        </p>
-      </footer>
     </main>
   );
 }
