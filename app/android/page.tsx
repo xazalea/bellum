@@ -1,62 +1,119 @@
-import React from 'react';
-import { Card } from '@/components/ui/Card';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { RuntimeManager } from '@/lib/engine/runtime-manager';
+import { puterClient } from '@/lib/storage/hiberfile';
+
+type RunState = 'idle' | 'loading' | 'running' | 'error';
 
 export default function AndroidPage() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const runtimeRef = useRef<RuntimeManager | null>(null);
+  const [state, setState] = useState<RunState>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [activePath, setActivePath] = useState<string | null>(null);
+
+  useEffect(() => {
+    runtimeRef.current = RuntimeManager.getInstance();
+    return () => {
+      try {
+        runtimeRef.current?.stop();
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
+
+  const runFile = async (file: File) => {
+    try {
+      setError(null);
+      setState('loading');
+      if (!containerRef.current) throw new Error('missing_container');
+      if (!runtimeRef.current) throw new Error('runtime_unavailable');
+
+      const safeName = file.name.replace(/[^\w.\-]+/g, '_');
+      const path = `uploads/${Date.now()}/${safeName}`;
+      await puterClient.writeFile(path, file, { compress: false });
+
+      const { type, config } = await runtimeRef.current.prepareRuntime(path);
+      containerRef.current.innerHTML = '';
+      await runtimeRef.current.launch(containerRef.current, type, path, config);
+
+      setActivePath(path);
+      setState('running');
+    } catch (e: any) {
+      setError(e?.message || 'run_failed');
+      setState('error');
+    }
+  };
+
+  const stop = () => {
+    try {
+      runtimeRef.current?.stop();
+    } catch {
+      // ignore
+    } finally {
+      setActivePath(null);
+      setState('idle');
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
-      <div className="w-full max-w-4xl space-y-8">
-        <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Android Emulator</h1>
-          <p className="font-sans text-xl text-[#64748B]">Run native Android applications in your browser.</p>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-2 h-96 flex items-center justify-center bg-gradient-to-br from-[#0C1016] to-[#1E2A3A] border-dashed border-[#2A3648]">
-            <div className="text-center space-y-5">
-              <div className="w-24 h-24 mx-auto rounded-2xl bg-[#1E2A3A] border border-[#2A3648] flex items-center justify-center">
-                <span className="material-symbols-outlined text-6xl text-[#4A5A6F]">android</span>
-              </div>
-              <p className="font-retro text-lg text-[#64748B]">No instance running</p>
-              <Button className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-base">play_arrow</span>
-                Launch New Instance
-              </Button>
-            </div>
-          </Card>
-
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h3 className="font-pixel text-xs mb-5 text-[#64748B] uppercase tracking-wider">System Stats</h3>
-              <div className="space-y-3 font-retro text-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#8B9DB8]">CPU</span>
-                  <span className="text-[#64748B] text-base">0%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#8B9DB8]">RAM</span>
-                  <span className="text-[#64748B] text-base">0 / 4GB</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[#8B9DB8]">Ping</span>
-                  <span className="text-[#64748B] text-base">- ms</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="font-pixel text-xs mb-4 text-[#64748B] uppercase tracking-wider">Quick Actions</h3>
-              <div className="space-y-2">
-                <Button className="w-full justify-start text-xs flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base">upload</span> Upload APK
-                </Button>
-                <Button className="w-full justify-start text-xs flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base">settings</span> Settings
-                </Button>
-              </div>
-            </Card>
-          </div>
+    <main className="mx-auto w-full max-w-7xl px-5 py-10">
+      <div className="flex items-end justify-between gap-6 border-b border-nacho-border pb-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Android</h1>
+          <p className="text-sm text-nacho-secondary">Android OS in the browser (APK runtime).</p>
         </div>
+
+        <div className="flex items-center gap-2">
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept=".apk"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void runFile(f);
+                e.currentTarget.value = '';
+              }}
+            />
+            <span className="nacho-btn inline-flex items-center justify-center">
+              <span className="material-symbols-outlined mr-2 text-[16px]">upload_file</span>
+              Upload APK
+            </span>
+          </label>
+
+          {state === 'running' && (
+            <Button onClick={stop} className="border-rose-500/30 bg-rose-500/10 text-rose-200">
+              <span className="material-symbols-outlined mr-2 text-[16px]">stop</span>
+              Stop
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div className="mt-6 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-6 overflow-hidden rounded-2xl border border-nacho-border bg-black">
+        <div className="flex items-center justify-between border-b border-nacho-border bg-nacho-surface px-4 py-2">
+          <div className="flex items-center gap-2 text-xs text-nacho-secondary">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                state === 'running' ? 'bg-emerald-400' : state === 'loading' ? 'bg-amber-400' : 'bg-slate-500'
+              }`}
+            />
+            <span>{state === 'idle' ? 'Ready' : state === 'loading' ? 'Loading…' : state === 'running' ? 'Running' : 'Error'}</span>
+          </div>
+          <div className="text-[11px] text-nacho-muted">{activePath ? activePath.split('/').slice(-1)[0] : 'no app'}</div>
+        </div>
+
+        <div ref={containerRef} className="min-h-[70vh] w-full" />
       </div>
     </main>
   );

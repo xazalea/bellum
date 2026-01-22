@@ -1,24 +1,109 @@
-import React from 'react';
-import { Card } from '@/components/ui/Card';
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { OptimizedV86 } from '@/lib/emulators/optimized-v86';
+
+type BootState = 'idle' | 'booting' | 'running' | 'error';
 
 export default function WindowsPage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
-      <div className="w-full max-w-4xl space-y-8">
-        <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Windows Environment</h1>
-          <p className="font-sans text-xl text-[#64748B]">Streamed desktop experience.</p>
-        </header>
+  const screenRef = useRef<HTMLDivElement | null>(null);
+  const emulatorRef = useRef<OptimizedV86 | null>(null);
+  const [state, setState] = useState<BootState>('idle');
+  const [error, setError] = useState<string | null>(null);
 
-        <Card className="aspect-video flex items-center justify-center bg-gradient-to-br from-[#000000] to-[#0A0E14] border-[#2A3648]">
-          <div className="text-center space-y-4">
-            <div className="relative">
-              <span className="material-symbols-outlined text-6xl text-[#4A5A6F] animate-spin">hourglass_empty</span>
-              <div className="absolute inset-0 blur-xl bg-[#64748B]/20 animate-pulse"></div>
-            </div>
-            <p className="font-pixel text-xs text-[#64748B] tracking-wider">BOOTING SYSTEM...</p>
+  const canStart = state === 'idle' || state === 'error';
+
+  const statusText = useMemo(() => {
+    if (state === 'idle') return 'Ready';
+    if (state === 'booting') return 'Booting Windows…';
+    if (state === 'running') return 'Running';
+    return 'Error';
+  }, [state]);
+
+  const stop = () => {
+    try {
+      const emu = emulatorRef.current?.getEmulator?.();
+      emu?.stop?.();
+    } catch {
+      // ignore
+    } finally {
+      emulatorRef.current = null;
+      setState('idle');
+    }
+  };
+
+  const start = async () => {
+    try {
+      setError(null);
+      setState('booting');
+      if (!screenRef.current) throw new Error('missing_screen_container');
+
+      // Reset container
+      screenRef.current.innerHTML = '';
+
+      const optimized = await OptimizedV86.create({
+        wasm_path: '/v86/v86.wasm',
+        screen_container: screenRef.current,
+        memory_size: 512 * 1024 * 1024,
+        vga_memory_size: 8 * 1024 * 1024,
+        bios: { url: '/v86/bios/seabios.bin' },
+        vga_bios: { url: '/v86/bios/vgabios.bin' },
+        hda: { url: '/v86/Windows98.img', async: true },
+        autostart: true,
+      });
+      emulatorRef.current = optimized;
+
+      setState('running');
+    } catch (e: any) {
+      setError(e?.message || 'boot_failed');
+      setState('error');
+    }
+  };
+
+  useEffect(() => {
+    return () => stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <main className="mx-auto w-full max-w-7xl px-5 py-10">
+      <div className="flex items-end justify-between gap-6 border-b border-nacho-border pb-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Windows</h1>
+          <p className="text-sm text-nacho-secondary">Windows OS in the browser.</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {canStart ? (
+            <Button onClick={start}>
+              <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
+              Start
+            </Button>
+          ) : (
+            <Button onClick={stop} className="border-rose-500/30 bg-rose-500/10 text-rose-200">
+              <span className="material-symbols-outlined mr-2 text-[16px]">stop</span>
+              Stop
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div className="mt-6 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-6 overflow-hidden rounded-2xl border border-nacho-border bg-black">
+        <div className="flex items-center justify-between border-b border-nacho-border bg-nacho-surface px-4 py-2">
+          <div className="flex items-center gap-2 text-xs text-nacho-secondary">
+            <span className={`h-2 w-2 rounded-full ${state === 'running' ? 'bg-emerald-400' : state === 'booting' ? 'bg-amber-400' : 'bg-slate-500'}`} />
+            <span>{statusText}</span>
           </div>
-        </Card>
+          <div className="text-[11px] text-nacho-muted">v86</div>
+        </div>
+        <div ref={screenRef} className="h-[70vh] w-full" />
       </div>
     </main>
   );

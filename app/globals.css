@@ -1,184 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import '../components/sea-creatures/creatures.css';
-
-/* RetroUI Pixel-Perfect Styling */
-/* Note: RetroUI v2.1.0 from GitHub doesn't have dist/ folder */
-/* @import 'pixel-retroui/dist/index.css'; */
-/* @import 'pixel-retroui/dist/fonts.css'; */
 
 @layer utilities {
-  .text-stroke {
-    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.8);
-    color: transparent;
-  }
-  .text-stroke-sm {
-    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
-    color: transparent;
-  }
-  
-  /* Pixel-Perfect Rendering (RetroUI + Pixel-Perfect Tailwind) */
-  .pixelated {
-    image-rendering: pixelated;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: crisp-edges;
-  }
-  
-  /* Retro Fonts */
-  .font-pixel {
-    font-family: 'Press Start 2P', cursive;
-  }
-  .font-retro {
-    font-family: 'VT323', monospace;
-  }
-  .font-minecraft {
-    font-family: 'Minecraft', monospace;
-  }
-  
-  /* Pixel-Perfect Borders (Hard edges, no anti-aliasing) */
-  .pixel-border {
-    border-width: 2px;
-    border-style: solid;
-    border-image-outset: 0;
-    image-rendering: pixelated;
-  }
-  
-  .pixel-border-thick {
-    border-width: 4px;
-    border-style: solid;
-  }
-  
-  /* Hard Shadows (8-bit style) */
-  .pixel-shadow {
-    box-shadow: 4px 4px 0px 0px rgba(10, 31, 61, 1);
-  }
-  
-  .pixel-shadow-sm {
-    box-shadow: 2px 2px 0px 0px rgba(10, 31, 61, 1);
-  }
-  
-  .pixel-shadow-lg {
-    box-shadow: 6px 6px 0px 0px rgba(10, 31, 61, 1);
-  }
-  
-  .pixel-shadow-ocean {
-    box-shadow: 3px 3px 0px 0px rgba(74, 99, 128, 0.8);
-  }
-  
-  /* Scanline Effect (CRT Monitor) */
-  .scanlines {
-    position: relative;
-  }
-  
-  .scanlines::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.15),
-      rgba(0, 0, 0, 0.15) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-    pointer-events: none;
-    z-index: 9999;
-  }
-  
-  /* Pixel Grid (helps with alignment) */
-  .pixel-grid {
-    background-image: 
-      linear-gradient(rgba(139, 157, 184, 0.1) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(139, 157, 184, 0.1) 1px, transparent 1px);
-    background-size: 4px 4px;
-  }
-  
-  /* Instant Transitions (No Smooth Animations) */
-  .transition-none {
-    transition: none !important;
-  }
-  
-  .transition-instant {
-    transition-duration: 0ms !important;
-  }
-  
-  /* Stepped Animations (Pixel-Perfect Movement) */
-  .animate-step {
-    animation-timing-function: steps(4);
-  }
-  
-  /* Pixel-Perfect Button (RetroUI Style) */
-  .btn-pixel {
-    @apply pixel-border pixel-shadow-sm font-minecraft;
-    @apply px-6 py-3 bg-[#1E3A5F] text-[#E2E8F0];
-    @apply hover:translate-x-[1px] hover:translate-y-[1px];
-    @apply hover:shadow-[1px_1px_0px_0px_rgba(10,31,61,1)];
-    @apply active:translate-x-[2px] active:translate-y-[2px];
-    @apply active:shadow-none;
-    @apply transition-none;
-  }
-  
-  /* Pixel Card (RetroUI Style) */
-  .card-pixel {
-    @apply pixel-border border-[#4A6380];
-    @apply bg-[rgba(30,58,95,0.85)] backdrop-blur-sm;
-    @apply p-6;
-  }
-  
-  /* Retro Text Effects */
-  .text-glow-pixel {
-    text-shadow: 
-      0 0 2px currentColor,
-      0 0 4px currentColor;
-  }
-  
-  .text-blink {
-    animation: blink 1s steps(2, start) infinite;
-  }
-  
-  @keyframes blink {
-    50% {
-      opacity: 0;
-    }
-  }
+  /* Intentionally minimal utilities for a clean, Vapor-like UI. */
 }
 
 :root {
-  /* Dark Deep Ocean Palette */
-  --nacho-bg: #0B1120;
-  --nacho-card: rgba(15, 23, 42, 0.85);
-  --nacho-card-hover: rgba(30, 41, 59, 0.92);
-  --nacho-primary: #F8FAFC;
-  --nacho-primary-hover: #E2E8F0;
-  --nacho-text: #E2E8F0;
-  --nacho-text-bright: #F8FAFC;
-  --nacho-subtext: #94A3B8;
-  --nacho-border: rgba(51, 65, 85, 0.6);
-  --nacho-border-hover: rgba(71, 85, 105, 0.8);
-  --nacho-accent: #3B82F6;
-  --nacho-accent-bright: #60A5FA;
-  
-  --font-pixel: 'Press Start 2P', cursive;
-  --font-retro: 'VT323', monospace;
-  
-  /* Shadows for depth */
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.5);
-  --shadow-hard: 0 8px 16px rgba(0, 0, 0, 0.6);
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-/* Allow native cursor for interactive elements */
-button, a, input, select, textarea, [role="button"] {
-  cursor: pointer !important;
-}
-
-input, select, textarea {
-  cursor: text !important;
+  --nacho-bg: #050b19;
+  --nacho-surface: rgba(17, 28, 52, 0.55);
+  --nacho-card: rgba(13, 20, 38, 0.72);
+  --nacho-card-hover: rgba(17, 28, 52, 0.8);
+  --nacho-primary: #e7eefc;
+  --nacho-text: #d6e1f6;
+  --nacho-secondary: #95a4c6;
+  --nacho-muted: #6f81a8;
+  --nacho-border: rgba(120, 150, 200, 0.16);
+  --nacho-border-hover: rgba(120, 150, 200, 0.28);
+  --nacho-accent: #4d7cff;
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 body {
@@ -186,187 +26,59 @@ body {
   background: var(--nacho-bg);
   min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-}
-
-.ocean-atmosphere {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(800px 500px at 20% 15%, rgba(59, 130, 246, 0.12), transparent 60%),
-    radial-gradient(900px 600px at 80% 20%, rgba(14, 165, 233, 0.08), transparent 60%);
-}
-
-.ocean-vignette {
-  position: fixed;
-  inset: -10%;
-  pointer-events: none;
-  z-index: 1;
-  background: radial-gradient(circle at center, transparent 60%, rgba(2, 6, 23, 0.75) 100%);
-}
-
-.ocean-grid {
-  display: none;
-}
-
-.ocean-nav {
-  background: rgba(11, 17, 32, 0.85);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--nacho-border);
-  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.4);
-}
-
-.ocean-creature {
-  position: absolute;
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.45));
-  mix-blend-mode: screen;
-}
-
-@keyframes swim-right {
-  0% { transform: translate3d(-30vw, 0, 0) scale(1) rotateZ(-2deg); }
-  50% { transform: translate3d(10vw, -20px, 0) scale(1.05) rotateZ(2deg); }
-  100% { transform: translate3d(130vw, 0, 0) scale(1) rotateZ(-1deg); }
-}
-
-@keyframes drift-left {
-  0% { transform: translate3d(30vw, 0, 0) scale(1) rotateZ(1deg); }
-  50% { transform: translate3d(-10vw, -25px, 0) scale(1.03) rotateZ(-2deg); }
-  100% { transform: translate3d(-130vw, 0, 0) scale(1) rotateZ(1deg); }
-}
-
-@keyframes crawl-right {
-  0% { transform: translate3d(-10vw, 0, 0) scale(1); }
-  100% { transform: translate3d(110vw, 0, 0) scale(1); }
-}
-
-/* Force sharp corners everywhere - REMOVED for rounded update */
-/* * {
-  border-radius: 0 !important;
-} */
-
-/* Exempt Dynamic Island from forced square corners if desired, 
-   but user asked for pixelated look, so maybe square is better? 
-   I'll keep island slightly rounded via its inline styles to simulate 'island' 
-   but cards should be square. */
-
-/* Custom Scrollbar - Minimalist */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--nacho-bg);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--nacho-primary);
-  border-radius: 5px;
-  border: 2px solid var(--nacho-bg);
-  transition: background 0.2s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--nacho-primary-hover);
-}
-
-/* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--nacho-primary) var(--nacho-bg);
 }
 
 /* Challenger Deep Components - Minimalist Refined Styles */
 .nacho-card {
   background: var(--nacho-card);
-  border: 1.5px solid var(--nacho-border);
-  border-radius: 0.75rem;
+  border: 1px solid var(--nacho-border);
+  border-radius: 0.85rem;
   box-shadow: var(--shadow-soft);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .nacho-card:hover {
   background: var(--nacho-card-hover);
   border-color: var(--nacho-border-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
 }
 
 .nacho-btn {
-  background: var(--nacho-primary);
-  color: var(--nacho-text-bright);
-  font-family: var(--font-pixel), cursive;
-  font-size: 0.75rem;
-  padding: 0.65rem 1.25rem;
-  border: 1.5px solid var(--nacho-border-hover);
-  border-radius: 0.5rem;
-  box-shadow: var(--shadow-soft);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.nacho-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.1), transparent);
-  transform: translateX(-100%);
-  transition: transform 0.6s ease;
-}
-
-.nacho-btn:hover::before {
-  transform: translateX(100%);
+  background: rgba(77, 124, 255, 0.12);
+  border: 1px solid rgba(77, 124, 255, 0.22);
+  color: var(--nacho-primary);
+  padding: 0.6rem 0.95rem;
+  border-radius: 0.75rem;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .nacho-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-medium);
-  background: var(--nacho-primary-hover);
-  border-color: var(--nacho-accent);
-  color: var(--nacho-accent-bright);
+  background: rgba(77, 124, 255, 0.18);
+  border-color: rgba(77, 124, 255, 0.35);
 }
 
 .nacho-btn:active {
   transform: translateY(1px);
-  box-shadow: var(--shadow-soft);
 }
 
 .bellum-input {
-  background: var(--nacho-card);
-  border: 1.5px solid var(--nacho-border);
-  border-radius: 0.5rem;
-  color: var(--nacho-text-bright);
-  padding: 0.75rem 1rem;
-  font-family: var(--font-retro);
-  font-size: 1.1rem;
+  background: rgba(17, 28, 52, 0.35);
+  border: 1px solid var(--nacho-border);
+  border-radius: 0.8rem;
+  color: var(--nacho-primary);
+  padding: 0.75rem 0.9rem;
   width: 100%;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-soft);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .bellum-input:focus {
   outline: none;
   border-color: var(--nacho-accent);
-  background: var(--nacho-card-hover);
-  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1), var(--shadow-medium);
-  color: var(--nacho-accent-bright);
+  background: rgba(17, 28, 52, 0.55);
 }
 
 .bellum-input::placeholder {
-  color: var(--nacho-subtext);
-  opacity: 0.7;
+  color: var(--nacho-muted);
 }
 
 /* Material Symbols override */

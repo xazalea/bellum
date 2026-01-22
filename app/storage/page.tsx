@@ -130,8 +130,8 @@ export default function StoragePage() {
   };
 
   return (
-    <main className="min-h-screen bg-nacho-bg p-6 pt-24">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <main className="mx-auto w-full max-w-7xl px-5 py-10">
+      <div className="space-y-8">
         <header className="space-y-2 border-b border-nacho-border pb-6">
           <h1 className="text-3xl font-bold text-nacho-primary tracking-tight">Cloud Storage</h1>
           <p className="text-nacho-secondary text-lg">Secure, distributed file storage on Discord.</p>

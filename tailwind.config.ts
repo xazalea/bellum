@@ -10,22 +10,22 @@ const config: Config = {
     extend: {
       colors: {
         nacho: {
-          // Dark Deep Ocean Palette
-          bg: '#0B1120',         // Deepest ocean blue/black
-          surface: '#1E293B',    // Dark slate surface
-          primary: '#F8FAFC',    // White/Light Grey text
-          secondary: '#94A3B8',  // Muted text
-          accent: '#3B82F6',     // Vibrant Blue
-          muted: '#64748B',      // Darker muted text
-          border: '#334155',     // Dark border
-          'card-hover': '#2D3B4F', // Slightly lighter surface for hover
+          // Vapor-like Deep Navy Palette
+          bg: '#050b19',
+          surface: 'rgba(17, 28, 52, 0.55)',
+          primary: '#e7eefc',
+          secondary: '#95a4c6',
+          accent: '#4d7cff',
+          muted: '#6f81a8',
+          border: 'rgba(120, 150, 200, 0.16)',
+          'card-hover': 'rgba(17, 28, 52, 0.8)',
         },
         // Legacy mapping
-        primary: '#F8FAFC',
-        'primary-light': '#94A3B8',
-        'background-dark': '#0B1120',
-        'background-card': '#1E293B',
-        surface: '#1E293B',
+        primary: '#e7eefc',
+        'primary-light': '#95a4c6',
+        'background-dark': '#050b19',
+        'background-card': 'rgba(17, 28, 52, 0.55)',
+        surface: 'rgba(17, 28, 52, 0.55)',
       },
       fontFamily: {
         sans: ['"Inter"', 'system-ui', 'sans-serif'],

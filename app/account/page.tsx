@@ -55,11 +55,11 @@ export default function AccountPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 pt-24 relative z-10">
-      <div className="w-full max-w-2xl space-y-8">
-        <header className="space-y-3 border-b border-[#2A3648]/50 pb-6">
-          <h1 className="text-3xl font-sans font-bold text-[#8B9DB8]">Account</h1>
-          <p className="font-sans text-xl text-[#64748B]">Manage your deep sea identity</p>
+    <main className="mx-auto w-full max-w-3xl px-5 py-10">
+      <div className="space-y-8">
+        <header className="space-y-2 border-b border-nacho-border pb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Account</h1>
+          <p className="text-sm text-nacho-secondary">View account details.</p>
         </header>
 
         {error && (

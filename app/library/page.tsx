@@ -1,16 +1,24 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { discordDB, UserProfile, InstalledApp } from '@/lib/persistence/discord-db';
+import { discordDB, type InstalledApp, type UserProfile } from '@/lib/persistence/discord-db';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 import { getProxiedGameUrl } from '@/lib/games-parser';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppLibraryManager, type StoredApp } from '@/lib/storage/app-library';
+import { puterClient } from '@/lib/storage/hiberfile';
+import { RuntimeManager } from '@/lib/engine/runtime-manager';
 
 export default function LibraryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [launchingApp, setLaunchingApp] = useState<InstalledApp | null>(null);
+  const [apps, setApps] = useState<StoredApp[]>([]);
+  const [launchingGame, setLaunchingGame] = useState<InstalledApp | null>(null);
+  const [launchingLocal, setLaunchingLocal] = useState<StoredApp | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const libraryRef = useRef<AppLibraryManager | null>(null);
+  const runtimeRef = useRef<RuntimeManager | null>(null);
+  const runContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -18,6 +26,13 @@ export default function LibraryPage() {
         const fp = await getDeviceFingerprintId();
         const p = await discordDB.init(fp);
         setProfile(p);
+
+        const lib = new AppLibraryManager(puterClient);
+        await lib.init();
+        libraryRef.current = lib;
+        setApps([...lib.getApps()]);
+
+        runtimeRef.current = RuntimeManager.getInstance();
       } catch (err) {
         console.error('Failed to load library', err);
       } finally {
@@ -27,125 +42,256 @@ export default function LibraryPage() {
     init();
   }, []);
 
-  const handleLaunch = (app: InstalledApp) => {
-    setLaunchingApp(app);
+  const installedGames = useMemo(() => {
+    return (profile?.installedApps || []).filter((a) => a.type === 'game');
+  }, [profile]);
+
+  const refreshApps = () => {
+    const lib = libraryRef.current;
+    if (!lib) return;
+    setApps([...lib.getApps()]);
   };
 
-  const handleUninstall = async (appId: string) => {
-    if (!confirm('Are you sure you want to uninstall this app?')) return;
-    
+  const installLocal = async (file: File) => {
+    const lib = libraryRef.current;
+    if (!lib) return;
     try {
+      setBusy('install');
+      await lib.installApp(file);
+      refreshApps();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeLocal = async (appId: string) => {
+    const lib = libraryRef.current;
+    if (!lib) return;
+    if (!confirm('Remove this file from Library?')) return;
+    try {
+      setBusy(appId);
+      await lib.deleteApp(appId);
+      refreshApps();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeGame = async (appId: string) => {
+    if (!confirm('Uninstall from Library?')) return;
+    try {
+      setBusy(appId);
       await discordDB.removeApp(appId);
       const updated = await discordDB.getProfile();
-      setProfile(updated ? { ...updated } : null); // Force re-render
+      setProfile(updated ? { ...updated } : null);
     } catch (err) {
       console.error('Uninstall failed', err);
       alert('Failed to update Discord account');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runLocal = async (app: StoredApp) => {
+    const lib = libraryRef.current;
+    const runtime = runtimeRef.current;
+    if (!lib || !runtime) return;
+
+    try {
+      setBusy('run');
+      setLaunchingLocal(app);
+      await new Promise((r) => setTimeout(r, 0));
+
+      if (!runContainerRef.current) throw new Error('missing_container');
+
+      // If archived to cold store, restore first.
+      if (!app.isActive) {
+        await lib.activateApp(app.id);
+        refreshApps();
+      }
+
+      // Reload latest app entry (storagePath may have changed during activation)
+      const latest = lib.getApps().find((a) => a.id === app.id) || app;
+
+      runContainerRef.current.innerHTML = '';
+      const { type, config } = await runtime.prepareRuntime(latest.storagePath);
+      await runtime.launch(runContainerRef.current, type, latest.storagePath, config);
+    } catch (e) {
+      console.error('Failed to launch local app', e);
+      alert('Failed to launch file.');
+      setLaunchingLocal(null);
+    } finally {
+      setBusy(null);
     }
   };
 
   return (
-    <main className="min-h-screen bg-nacho-bg p-6 pt-24">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <header className="flex justify-between items-end border-b border-nacho-border pb-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-nacho-primary tracking-tight">App Library</h1>
-            <p className="text-nacho-secondary text-lg">Your installed applications & games.</p>
-          </div>
-          <div className="flex gap-2 text-sm text-nacho-muted items-center">
-            <span className={`w-2 h-2 rounded-full ${profile ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            {profile ? 'Synced to Discord' : 'Offline'}
-          </div>
-        </header>
+    <main className="mx-auto w-full max-w-7xl px-5 py-10">
+      <div className="flex items-end justify-between gap-6 border-b border-nacho-border pb-6">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Library</h1>
+          <p className="text-sm text-nacho-secondary">Upload APK/EXE and run directly.</p>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-nacho-secondary">
+          <span className={`h-2 w-2 rounded-full ${profile ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+          <span>{profile ? 'Synced' : 'Offline'}</span>
+        </div>
+      </div>
 
-        {launchingApp ? (
-            <div className="fixed inset-0 z-50 bg-black flex flex-col">
-                <div className="bg-nacho-surface border-b border-nacho-border p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-white font-bold">{launchingApp.title}</h2>
-                        <span className="text-xs bg-nacho-accent/20 text-nacho-accent px-2 py-0.5 rounded">Running</span>
-                    </div>
-                    <Button onClick={() => setLaunchingApp(null)} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/30">
-                        <span className="material-symbols-outlined mr-2">close</span>
-                        Close App
-                    </Button>
-                </div>
-                <div className="flex-grow relative">
-                    {launchingApp.type === 'game' ? (
-                        <iframe 
-                            src={getProxiedGameUrl(launchingApp.id.startsWith('http') ? launchingApp.id : `https://html5.gamedistribution.com/${launchingApp.id}/`)} 
-                            className="w-full h-full border-0"
-                            title={launchingApp.title}
-                            allowFullScreen
-                        />
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-nacho-muted">
-                            <p>Launching native app container...</p>
-                        </div>
-                    )}
-                </div>
+      {/* Runner Overlay */}
+      {(launchingGame || launchingLocal) && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <div className="flex items-center justify-between border-b border-nacho-border bg-nacho-surface px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-semibold text-nacho-primary">
+                {launchingGame?.title || launchingLocal?.name}
+              </div>
+              <div className="text-[11px] text-nacho-muted">
+                {launchingGame ? 'Game' : 'App'}
+              </div>
             </div>
-        ) : (
-            <>
-                {loading ? (
-                    <div className="flex justify-center py-20">
-                        <span className="w-8 h-8 border-2 border-nacho-accent border-t-transparent rounded-full animate-spin"></span>
+            <Button
+              onClick={() => {
+                try {
+                  runtimeRef.current?.stop();
+                } catch {
+                  // ignore
+                }
+                setLaunchingGame(null);
+                setLaunchingLocal(null);
+              }}
+              className="border-rose-500/30 bg-rose-500/10 text-rose-200"
+            >
+              <span className="material-symbols-outlined mr-2">close</span>
+              Close
+            </Button>
+          </div>
+          <div className="flex-grow relative">
+            {launchingGame ? (
+              <iframe
+                src={getProxiedGameUrl(
+                  launchingGame.id.startsWith('http') ? launchingGame.id : `https://html5.gamedistribution.com/${launchingGame.id}/`
+                )}
+                className="w-full h-full border-0"
+                title={launchingGame.title}
+                allowFullScreen
+              />
+            ) : (
+              <div ref={runContainerRef} className="w-full h-full" />
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-8">
+        {/* Upload + Local Apps */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-nacho-primary">Uploads</h2>
+            <label className="inline-flex">
+              <input
+                type="file"
+                accept=".apk,.exe,.iso"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void installLocal(f);
+                  e.currentTarget.value = '';
+                }}
+              />
+              <span className="nacho-btn inline-flex items-center">
+                <span className="material-symbols-outlined mr-2 text-[16px]">upload_file</span>
+                Upload
+              </span>
+            </label>
+          </div>
+
+          {loading ? (
+            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
+              Loading…
+            </div>
+          ) : apps.length === 0 ? (
+            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
+              No uploads yet. Add an <span className="text-nacho-primary">APK</span> or <span className="text-nacho-primary">EXE</span>.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {apps.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-nacho-border bg-nacho-surface px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-nacho-primary">{a.name}</div>
+                    <div className="text-xs text-nacho-muted">
+                      {a.isActive ? 'Local' : 'Archived'} · {(a.size / (1024 * 1024)).toFixed(2)} MB
                     </div>
-                ) : !profile?.installedApps.length ? (
-                    <Card className="p-12 text-center bg-nacho-surface border-nacho-border">
-                        <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4 inline-block">apps</span>
-                        <h2 className="text-xl font-bold text-nacho-primary mb-2">Library Empty</h2>
-                        <p className="text-nacho-secondary mb-6">
-                            You haven&apos;t installed any apps yet. Visit the Arcade to find games.
-              </p>
-                        <Button onClick={() => window.location.href = '/games'} className="bg-nacho-accent text-white border-none">
-                            Browse Games
-              </Button>
-            </Card>
-        ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {profile.installedApps.map((app) => (
-                            <Card key={app.id} className="group bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all duration-300 p-0 overflow-hidden flex flex-col">
-                                <div className="aspect-video relative bg-black/50">
-                                    {app.thumb ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={app.thumb} alt={app.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-4xl text-nacho-muted">extension</span>
-                                        </div>
-                                    )}
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                            onClick={() => handleUninstall(app.id)}
-                                            className="p-1.5 bg-black/50 hover:bg-red-500 rounded-full text-white transition-colors"
-                                            title="Uninstall"
-                                        >
-                                            <span className="material-symbols-outlined text-[14px]">delete</span>
-                                        </button>
                   </div>
-                    </div>
-                                <div className="p-4 flex-grow flex flex-col justify-between">
-                                    <div>
-                                        <h3 className="font-bold text-nacho-primary truncate mb-1">{app.title}</h3>
-                                        <p className="text-xs text-nacho-muted">
-                                            Installed {new Date(app.installedAt).toLocaleDateString()}
-                                        </p>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => void runLocal(a)} disabled={busy === 'run' || busy === 'install'}>
+                      <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
+                      Run
+                    </Button>
+                    <Button
+                      onClick={() => void removeLocal(a.id)}
+                      disabled={busy === a.id}
+                      className="border-rose-500/30 bg-rose-500/10 text-rose-200"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </Button>
                   </div>
-                                    <Button 
-                                        onClick={() => handleLaunch(app)}
-                                        className="w-full mt-4 bg-nacho-bg hover:bg-nacho-accent text-nacho-primary hover:text-white border-nacho-border hover:border-transparent transition-all"
-                                    >
-                                        <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
-                        Launch
-                      </Button>
-                  </div>
-                </Card>
+                </div>
               ))}
             </div>
-                )}
-            </>
-        )}
+          )}
+        </section>
+
+        {/* Games */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-nacho-primary">Installed Games</h2>
+            <Button onClick={() => (window.location.href = '/games')} disabled={busy === 'install'}>
+              Browse
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
+              Loading…
+            </div>
+          ) : installedGames.length === 0 ? (
+            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
+              No games installed. Install from <span className="text-nacho-primary">Games</span>.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {installedGames.map((g) => (
+                <div
+                  key={g.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-nacho-border bg-nacho-surface px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-nacho-primary">{g.title}</div>
+                    <div className="text-xs text-nacho-muted">Installed {new Date(g.installedAt).toLocaleDateString()}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => setLaunchingGame(g)} disabled={busy === 'install'}>
+                      <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
+                      Play
+                    </Button>
+                    <Button
+                      onClick={() => void removeGame(g.id)}
+                      disabled={busy === g.id}
+                      className="border-rose-500/30 bg-rose-500/10 text-rose-200"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
