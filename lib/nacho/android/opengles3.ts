@@ -1,3 +1,5 @@
+import { glslToWGSLTranslator } from '../../rendering/glsl-to-wgsl';
+
 /**
  * OpenGL ES 3.0+ Emulation via WebGL2/WebGPU
  * Maps OpenGL ES API calls to WebGL2 and WebGPU
@@ -123,6 +125,7 @@ export class OpenGLES3Context {
   private buffers: Map<number, GLBuffer> = new Map();
   private textures: Map<number, GLTexture> = new Map();
   private shaders: Map<number, GLShader> = new Map();
+  private shaderTypes: Map<number, number> = new Map();
   private programs: Map<number, GLProgram> = new Map();
   private framebuffers: Map<number, GLFramebuffer> = new Map();
   private renderbuffers: Map<number, GLRenderbuffer> = new Map();
@@ -290,6 +293,7 @@ export class OpenGLES3Context {
     
     const id = this.nextId++;
     this.shaders.set(id, shader);
+    this.shaderTypes.set(id, type);
     return id;
   }
   
@@ -297,6 +301,13 @@ export class OpenGLES3Context {
     const shdr = this.shaders.get(shader);
     if (shdr) {
       this.gl!.shaderSource(shdr, source);
+    }
+
+    const type = this.shaderTypes.get(shader);
+    if (type === this.gl!.VERTEX_SHADER || type === this.gl!.FRAGMENT_SHADER) {
+      const stage = type === this.gl!.VERTEX_SHADER ? 'vertex' : 'fragment';
+      // Warm Mesa-optimized WGSL cache for potential WebGPU path
+      glslToWGSLTranslator.translate(source, stage);
     }
   }
   

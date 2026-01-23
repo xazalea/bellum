@@ -73,7 +73,7 @@ export default function AndroidPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Android</h1>
           <p className="text-sm text-nacho-secondary">Android OS in the browser.</p>
-        </div>
+              </div>
 
         <div className="flex items-center gap-2">
           {canStart ? (
@@ -91,14 +91,14 @@ export default function AndroidPage() {
           <Button onClick={() => (window.location.href = '/library')}>
             <span className="material-symbols-outlined mr-2 text-[16px]">bolt</span>
             Run APK (fast)
-          </Button>
-        </div>
-      </div>
+              </Button>
+            </div>
+                </div>
 
       {error && (
         <div className="mt-6 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           {error}
-        </div>
+                </div>
       )}
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-nacho-border bg-black">

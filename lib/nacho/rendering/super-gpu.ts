@@ -17,6 +17,9 @@
  * - Stream and compress everything
  */
 
+import { GPUComputeAccelerator } from '../../performance/gpu-compute-accel';
+import { AdaptiveQualityController } from '../../performance/adaptive-quality';
+
 export interface GPUCapabilities {
   vramSize: number;
   computeUnits: number;
@@ -394,6 +397,8 @@ export class SuperGPU {
   private textureStreaming: TextureStreaming;
   private lightProbes: LightProbeSystem;
   private mlCache: MLApproximationCache;
+  private computeAccelerator: GPUComputeAccelerator;
+  private qualityController: AdaptiveQualityController;
 
   constructor(device: GPUDevice) {
     this.device = device;
@@ -407,6 +412,9 @@ export class SuperGPU {
     this.textureStreaming = new TextureStreaming(device);
     this.lightProbes = new LightProbeSystem(device);
     this.mlCache = new MLApproximationCache();
+    this.computeAccelerator = new GPUComputeAccelerator();
+    void this.computeAccelerator.initialize(device);
+    this.qualityController = new AdaptiveQualityController(50);
 
     console.log('[SuperGPU] Initialized');
     this.logCapabilities();
@@ -489,6 +497,29 @@ export class SuperGPU {
    */
   async updateLightProbe(id: string, position: Float32Array, scene: any): Promise<void> {
     return this.lightProbes.updateProbe(id, position, scene);
+  }
+
+  recordFrameTime(frameTimeMs: number): void {
+    this.qualityController.recordFrame(frameTimeMs);
+  }
+
+  getQualityScale(): number {
+    return this.qualityController.getQualityScale();
+  }
+
+  /**
+   * GPU-accelerated helpers
+   */
+  async acceleratePhysics(positions: Float32Array, velocities: Float32Array, dt: number): Promise<Float32Array> {
+    return this.computeAccelerator.acceleratePhysics(positions, velocities, dt);
+  }
+
+  async accelerateAudioMix(bufferA: Float32Array, bufferB: Float32Array): Promise<Float32Array> {
+    return this.computeAccelerator.accelerateAudioMix(bufferA, bufferB);
+  }
+
+  async accelerateAI(inputs: Float32Array, weights: Float32Array): Promise<Float32Array> {
+    return this.computeAccelerator.accelerateAI(inputs, weights);
   }
 
   /**

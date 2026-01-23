@@ -1,3 +1,6 @@
+import { MesaStyleOptimizer } from './mesa-optimizer';
+import { shaderPrecompiler } from './shader-precompiler';
+
 /**
  * GLSL to WGSL Translator  
  * Real-time shader translation for OpenGL ES applications (Android)
@@ -41,12 +44,14 @@ export interface GLSLVariable {
 export class GLSLToWGSLTranslator {
   private cache: Map<string, string> = new Map();
   private readonly CACHE_SIZE = 1000;
+  private mesaOptimizer = new MesaStyleOptimizer();
 
   /**
    * Translate GLSL to WGSL
    */
   translate(glslCode: string, stage: GLSLStage): string {
     const hash = this.hashCode(glslCode + stage);
+    const opfsKey = shaderPrecompiler.buildKey('glsl', stage, glslCode);
     
     // Check cache
     const cached = this.cache.get(hash);
@@ -55,18 +60,29 @@ export class GLSLToWGSLTranslator {
       return cached;
     }
 
+    const opfsCached = shaderPrecompiler.getCachedWGSL(opfsKey);
+    if (opfsCached) {
+      this.cacheTranslation(hash, opfsCached);
+      return opfsCached;
+    }
+
     console.log(`[GLSL->WGSL] Translating ${stage} shader...`);
 
     // Parse GLSL
     const glslShader = this.parseGLSL(glslCode, stage);
 
     // Convert to WGSL
-    const wgsl = this.convertGLSLtoWGSL(glslShader);
+    const wgsl = this.optimizeWGSL(this.convertGLSLtoWGSL(glslShader));
 
     // Cache translation
     this.cacheTranslation(hash, wgsl);
+    shaderPrecompiler.recordWGSL(opfsKey, wgsl);
 
     return wgsl;
+  }
+
+  private optimizeWGSL(wgsl: string): string {
+    return this.mesaOptimizer.optimizeWGSL(wgsl);
   }
 
   /**

@@ -92,7 +92,7 @@ export default function WindowsPage() {
       {error && (
         <div className="mt-6 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           {error}
-        </div>
+            </div>
       )}
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-nacho-border bg-black">

@@ -12,6 +12,9 @@
  * - Translation caching
  */
 
+import { MesaStyleOptimizer } from './mesa-optimizer';
+import { shaderPrecompiler } from './shader-precompiler';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -81,18 +84,26 @@ export interface TranslationCache {
 export class HLSLToWGSLTranslator {
   private cache: Map<string, TranslationCache> = new Map();
   private readonly CACHE_SIZE = 1000;
+  private mesaOptimizer = new MesaStyleOptimizer();
 
   /**
    * Translate HLSL to WGSL
    */
   translate(hlslCode: string, profile: ShaderProfile): string {
     const hash = this.hashCode(hlslCode);
+    const opfsKey = shaderPrecompiler.buildKey('hlsl', profile, hlslCode);
     
     // Check cache
     const cached = this.cache.get(hash);
     if (cached) {
       console.log('[HLSL->WGSL] Using cached translation');
       return cached.wgsl;
+    }
+
+    const opfsCached = shaderPrecompiler.getCachedWGSL(opfsKey);
+    if (opfsCached) {
+      this.cacheTranslation(hash, opfsCached);
+      return opfsCached;
     }
 
     console.log(`[HLSL->WGSL] Translating ${profile} shader...`);
@@ -123,6 +134,7 @@ export class HLSLToWGSLTranslator {
 
     // Cache translation
     this.cacheTranslation(hash, wgsl);
+    shaderPrecompiler.recordWGSL(opfsKey, wgsl);
 
     return wgsl;
   }
@@ -471,13 +483,7 @@ export class HLSLToWGSLTranslator {
    * Optimize WGSL
    */
   optimizeWGSL(wgsl: string): string {
-    // Remove duplicate newlines
-    wgsl = wgsl.replace(/\n{3,}/g, '\n\n');
-
-    // Remove trailing whitespace
-    wgsl = wgsl.replace(/[ \t]+$/gm, '');
-
-    return wgsl;
+    return this.mesaOptimizer.optimizeWGSL(wgsl);
   }
 
   /**

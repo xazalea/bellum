@@ -14,6 +14,7 @@
  */
 
 import { androidKernelGPU } from './android-kernel-gpu';
+import { GPUScheduler } from '../../rendering/gpu-scheduler';
 
 // ============================================================================
 // Activity Manager Service
@@ -608,6 +609,7 @@ export class SurfaceFlinger {
     private nextSurfaceId: number = 1;
     private compositorCanvas: HTMLCanvasElement | null = null;
     private isCompositing: boolean = false;
+    private scheduler = new GPUScheduler();
 
     async initialize(device: GPUDevice): Promise<void> {
         console.log('[SurfaceFlinger] Initializing Surface Flinger...');
@@ -705,6 +707,12 @@ export class SurfaceFlinger {
 
         // Composite all surfaces (in Z-order)
         const sortedSurfaces = Array.from(this.surfaces.values()).sort((a, b) => a.id - b.id);
+
+        this.scheduler.enqueueWarp('surfaceFlinger', sortedSurfaces.length);
+        const { warps } = this.scheduler.flush();
+        for (const warp of warps) {
+            console.log(`[SurfaceFlinger] Scheduled warp ${warp.pipelineKey} (${warp.commandCount} surfaces)`);
+        }
 
         for (const surface of sortedSurfaces) {
             if (surface.canvas) {

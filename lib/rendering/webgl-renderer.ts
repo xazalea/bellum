@@ -3,6 +3,9 @@
  * Uses WebGL for hardware-accelerated rendering
  */
 
+import { adaptiveQualityController } from '../performance/adaptive-quality';
+import { perfValidator } from '../performance/perf-validator';
+
 export class WebGLRenderer {
   private gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
   private canvas: HTMLCanvasElement | null = null;
@@ -10,6 +13,7 @@ export class WebGLRenderer {
   private texture: WebGLTexture | null = null;
   private vertexBuffer: WebGLBuffer | null = null;
   private isInitialized = false;
+  private lastFrameTime = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -137,6 +141,25 @@ export class WebGLRenderer {
    */
   render(imageData: ImageData | HTMLImageElement | HTMLCanvasElement): void {
     if (!this.gl || !this.program || !this.texture || !this.isInitialized) return;
+
+    const now = performance.now();
+    if (this.lastFrameTime > 0) {
+      const frameTime = now - this.lastFrameTime;
+      adaptiveQualityController.recordFrame(frameTime);
+      perfValidator.recordFrame(frameTime);
+    }
+    this.lastFrameTime = now;
+
+    const qualityScale = adaptiveQualityController.getQualityScale();
+    const cssWidth = this.canvas!.clientWidth || this.canvas!.width;
+    const cssHeight = this.canvas!.clientHeight || this.canvas!.height;
+    const targetWidth = Math.max(1, Math.floor(cssWidth * qualityScale));
+    const targetHeight = Math.max(1, Math.floor(cssHeight * qualityScale));
+    if (this.canvas!.width !== targetWidth || this.canvas!.height !== targetHeight) {
+      this.canvas!.width = targetWidth;
+      this.canvas!.height = targetHeight;
+      this.gl.viewport(0, 0, targetWidth, targetHeight);
+    }
 
     this.gl.useProgram(this.program);
 

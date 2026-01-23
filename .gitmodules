@@ -19,3 +19,15 @@
 [submodule "vendor/dokploy"]
 	path = vendor/dokploy
 	url = https://github.com/Dokploy/dokploy.git
+[submodule "third_party/tiny-gpu"]
+	path = third_party/tiny-gpu
+	url = https://github.com/adam-maj/tiny-gpu
+[submodule "third_party/picorv32"]
+	path = third_party/picorv32
+	url = https://github.com/YosysHQ/picorv32
+[submodule "third_party/mesa"]
+	path = third_party/mesa
+	url = https://gitlab.freedesktop.org/mesa/mesa.git
+[submodule "third_party/gpuweb"]
+	path = third_party/gpuweb
+	url = https://github.com/gpuweb/gpuweb

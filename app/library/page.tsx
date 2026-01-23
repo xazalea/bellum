@@ -148,26 +148,26 @@ export default function LibraryPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-5 py-10">
       <div className="flex items-end justify-between gap-6 border-b border-nacho-border pb-6">
-        <div className="space-y-2">
+          <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Library</h1>
           <p className="text-sm text-nacho-secondary">Upload APK/EXE and run directly.</p>
         </div>
         <div className="flex items-center gap-3 text-xs text-nacho-secondary">
           <span className={`h-2 w-2 rounded-full ${profile ? 'bg-emerald-400' : 'bg-slate-500'}`} />
           <span>{profile ? 'Synced' : 'Offline'}</span>
-        </div>
-      </div>
+          </div>
+          </div>
 
       {/* Runner Overlay */}
       {(launchingGame || launchingLocal) && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+            <div className="fixed inset-0 z-50 bg-black flex flex-col">
           <div className="flex items-center justify-between border-b border-nacho-border bg-nacho-surface px-4 py-3">
-            <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
               <div className="text-sm font-semibold text-nacho-primary">
                 {launchingGame?.title || launchingLocal?.name}
               </div>
               <div className="text-[11px] text-nacho-muted">{launchingGame ? 'Game' : runnerStatus}</div>
-            </div>
+                    </div>
             <Button
               onClick={() => {
                 try {
@@ -181,26 +181,26 @@ export default function LibraryPage() {
               }}
               className="border-rose-500/30 bg-rose-500/10 text-rose-200"
             >
-              <span className="material-symbols-outlined mr-2">close</span>
+                        <span className="material-symbols-outlined mr-2">close</span>
               Close
-            </Button>
-          </div>
-          <div className="flex-grow relative">
+                    </Button>
+                </div>
+                <div className="flex-grow relative">
             {launchingGame ? (
-              <iframe
+                        <iframe 
                 src={getProxiedGameUrl(
                   launchingGame.id.startsWith('http') ? launchingGame.id : `https://html5.gamedistribution.com/${launchingGame.id}/`
                 )}
-                className="w-full h-full border-0"
+                            className="w-full h-full border-0"
                 title={launchingGame.title}
-                allowFullScreen
-              />
-            ) : (
+                            allowFullScreen
+                        />
+                    ) : (
               <div ref={runContainerRef} className="w-full h-full" />
             )}
           </div>
-        </div>
-      )}
+                        </div>
+                    )}
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-8">
         {/* Upload + Local Apps */}
@@ -228,12 +228,12 @@ export default function LibraryPage() {
           {loading ? (
             <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
               Loading…
-            </div>
+                </div>
           ) : apps.length === 0 ? (
             <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
               No uploads yet. Add an <span className="text-nacho-primary">APK</span> or <span className="text-nacho-primary">EXE</span>.
             </div>
-          ) : (
+        ) : (
             <div className="space-y-3">
               {apps.map((a) => (
                 <div
@@ -250,16 +250,16 @@ export default function LibraryPage() {
                     <Button onClick={() => void runLocal(a)} disabled={busy === 'run' || busy === 'install'}>
                       <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
                       Run
-                    </Button>
+              </Button>
                     <Button
                       onClick={() => void removeLocal(a.id)}
                       disabled={busy === a.id}
                       className="border-rose-500/30 bg-rose-500/10 text-rose-200"
-                    >
+                                        >
                       <span className="material-symbols-outlined text-[16px]">delete</span>
                     </Button>
                   </div>
-                </div>
+                    </div>
               ))}
             </div>
           )}
@@ -298,18 +298,18 @@ export default function LibraryPage() {
                       <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
                       Play
                     </Button>
-                    <Button
+                                    <Button 
                       onClick={() => void removeGame(g.id)}
                       disabled={busy === g.id}
                       className="border-rose-500/30 bg-rose-500/10 text-rose-200"
-                    >
+                                    >
                       <span className="material-symbols-outlined text-[16px]">delete</span>
-                    </Button>
+                      </Button>
                   </div>
                 </div>
               ))}
             </div>
-          )}
+                )}
         </section>
       </div>
     </main>

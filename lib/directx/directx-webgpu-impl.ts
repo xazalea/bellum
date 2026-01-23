@@ -3,6 +3,8 @@
  * Real command translation from D3D12 to WebGPU
  */
 
+import { HLSLToWGSLTranslator } from '../rendering/hlsl-to-wgsl';
+
 export class DirectXWebGPUImpl {
     private device: GPUDevice | null = null;
     private context: GPUCanvasContext | null = null;
@@ -13,6 +15,7 @@ export class DirectXWebGPUImpl {
     private textures: Map<number, GPUTexture> = new Map();
     private pipelines: Map<number, GPURenderPipeline | GPUComputePipeline> = new Map();
     private shaderModules: Map<string, GPUShaderModule> = new Map();
+    private hlslTranslator = new HLSLToWGSLTranslator();
     
     private nextResourceId: number = 1;
     
@@ -267,8 +270,8 @@ export class DirectXWebGPUImpl {
         // Real implementation would parse DXIL/DXBC bytecode
         
         if (bytecode.source) {
-            // If we have source HLSL, do simple translation
-            return this.simpleHLSLtoWGSL(bytecode.source, stage);
+            const profile = stage === 'vertex' ? 'vs_5_0' : stage === 'fragment' ? 'ps_5_0' : 'cs_5_0';
+            return this.hlslTranslator.translate(bytecode.source, profile);
         }
         
         // Generate basic shader
