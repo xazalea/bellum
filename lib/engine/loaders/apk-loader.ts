@@ -1,76 +1,62 @@
+/**
+ * APK Loader (Real)
+ * Boots the in-repo Android framework stack and launches the APK via ExecutionPipeline.
+ *
+ * Note: This is the "fast runner" path used by Library (not the full ISO VM).
+ */
 
-// A minimal Dalvik Bytecode Interpreter for "running" APKs in web
-// Realistically, this just parses the manifest and assets to show the app is "valid"
-// Full Android emulation in pure JS/WASM without a 500MB download is not feasible yet.
-
-import { puterClient } from '../../storage/hiberfile';
-import JSZip from 'jszip';
+import { androidBootManager } from '@/lib/nexus/os/android-boot';
+import { executionPipeline } from '@/lib/engine/execution-pipeline';
 
 export class APKLoader {
-    async load(container: HTMLElement, apkPath: string) {
-        // 1. Read APK as Zip
-        const blob = await puterClient.readFile(apkPath);
-        const zip = await JSZip.loadAsync(blob);
+    public onStatusUpdate: ((status: string, detail?: string) => void) | null = null;
+    private displayEl: HTMLElement | null = null;
+    private running = false;
 
-        // 2. Extract Icon
-        // Heuristic: Look for highest res icon in res/mipmap-*
-        let iconUrl = '';
-        const iconFiles = Object.keys(zip.files).filter(f => f.includes('ic_launcher') && f.endsWith('.png'));
-        if (iconFiles.length > 0) {
-             const bestIcon = iconFiles.sort((a,b) => b.length - a.length)[0]; // Heuristic: longer path often means deeper/higher res
-             const iconBlob = await zip.file(bestIcon)?.async('blob');
-             if (iconBlob) iconUrl = URL.createObjectURL(iconBlob);
+    private update(status: string, detail?: string) {
+        try { this.onStatusUpdate?.(status, detail); } catch {}
+    }
+
+    async load(container: HTMLElement, apkPath: string) {
+        this.running = true;
+        this.update('Booting Android', 'Initializing framework…');
+
+        // Create a display surface for AndroidBootManager to target.
+        container.innerHTML = '';
+        const display = document.createElement('div');
+        display.style.cssText = 'width: 100%; height: 100%; position: relative; overflow: hidden; background: #000;';
+        container.appendChild(display);
+        this.displayEl = display;
+
+        // Boot Android system (SystemUI + services)
+        try {
+            await androidBootManager.boot(display);
+        } catch (e: any) {
+            this.update('Boot failed', e?.message || 'android_boot_failed');
+            throw e;
         }
 
-        // 3. Extract Manifest (binary XML decoding is complex, skipping for now)
-        
-        // 4. "Run" the App (Simulated UI)
-        container.innerHTML = '';
-        
-        // Create an "Android-like" frame
-        const phoneFrame = document.createElement('div');
-        phoneFrame.className = 'relative w-[320px] h-[640px] bg-black rounded-[30px] border-8 border-gray-800 overflow-hidden mx-auto mt-10 shadow-2xl';
-        
-        // Top Bar
-        const statusBar = document.createElement('div');
-        statusBar.className = 'h-6 bg-black text-white text-[10px] flex justify-between px-4 items-center select-none';
-        statusBar.innerHTML = '<span>12:00</span><span>5G 100%</span>';
-        phoneFrame.appendChild(statusBar);
+        if (!this.running) return;
 
-        // App Content (Splash Screen)
-        const appContent = document.createElement('div');
-        appContent.className = 'flex flex-col items-center justify-center h-full bg-white text-black';
-        appContent.innerHTML = `
-            <img src="${iconUrl}" class="w-24 h-24 mb-4 rounded-xl animate-bounce" />
-            <h1 class="text-xl font-bold mb-2">Launching...</h1>
-            <p class="text-xs text-gray-500 px-8 text-center">
-                Running via Nacho Dalvik Translator<br/>
-                (Partial Implementation)
-            </p>
-        `;
-        phoneFrame.appendChild(appContent);
-        
-        container.appendChild(phoneFrame);
+        // Install + launch app
+        this.update('Launching APK', 'Installing and starting app…');
+        await executionPipeline.executeAndroid(apkPath, {
+            enableProfiling: false,
+            enableMetrics: false,
+        });
 
-        // Mock Activity Lifecycle
-        setTimeout(() => {
-            appContent.innerHTML = `
-                <div class="p-4 text-center">
-                    <h2 class="text-2xl font-bold text-blue-600 mb-4">Hello Android!</h2>
-                    <p class="mb-4">This APK was successfully parsed.</p>
-                    <div class="bg-gray-100 p-2 rounded text-left text-xs font-mono overflow-auto h-64">
-                        Files found: ${Object.keys(zip.files).length}<br/>
-                        DEX Size: ${zip.file('classes.dex') ? 'Present' : 'Missing'}<br/>
-                        <br/>
-                        *Full graphic emulation requires WebGL backend implementation.*
-                    </div>
-                </div>
-            `;
-        }, 2000);
+        this.update('Running', 'App launched');
     }
 
     stop() {
-        // cleanup
+        this.running = false;
+        this.update('Stopping', 'Shutting down Android…');
+        // Best-effort shutdown (removes SystemUI and stops services)
+        void androidBootManager.shutdown().catch(() => {});
+        try {
+            if (this.displayEl) this.displayEl.innerHTML = '';
+        } catch {}
+        this.displayEl = null;
     }
 }
 
