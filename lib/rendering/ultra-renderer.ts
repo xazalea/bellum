@@ -64,7 +64,7 @@ export class UltraRenderer {
 
     try {
       const offscreen = this.output.transferControlToOffscreen();
-      const worker = new Worker(new URL('../workers/offscreen-renderer.worker.ts', import.meta.url));
+      const worker = new Worker(new URL('../../workers/offscreen-renderer.worker.ts', import.meta.url));
       worker.postMessage({ type: 'INIT', canvas: offscreen }, [offscreen]);
       this.offscreenWorker = worker;
       this.offscreenEnabled = true;
