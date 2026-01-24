@@ -6,6 +6,7 @@ export class WebGPURenderer {
   private pipeline: GPURenderPipeline | null = null;
   private sampler: GPUSampler | null = null;
   private texture: GPUTexture | null = null;
+  private textureSize: { width: number; height: number } | null = null;
   private bindGroup: GPUBindGroup | null = null;
   private initialized = false;
   private initializing: Promise<void> | null = null;
@@ -90,13 +91,14 @@ export class WebGPURenderer {
 
   private ensureTexture(width: number, height: number): void {
     if (!this.device || !this.sampler || !this.pipeline) return;
-    if (this.texture && this.texture.width === width && this.texture.height === height) return;
+    if (this.texture && this.textureSize?.width === width && this.textureSize?.height === height) return;
     this.texture?.destroy();
     this.texture = this.device.createTexture({
       size: { width, height },
       format: 'rgba8unorm',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
+    this.textureSize = { width, height };
     this.bindGroup = this.device.createBindGroup({
       layout: this.pipeline.getBindGroupLayout(0),
       entries: [
