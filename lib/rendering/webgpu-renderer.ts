@@ -92,7 +92,7 @@ export class WebGPURenderer {
   private ensureTexture(width: number, height: number): void {
     if (!this.device || !this.sampler || !this.pipeline) return;
     if (this.texture && this.textureSize?.width === width && this.textureSize?.height === height) return;
-    this.texture?.destroy();
+    (this.texture as any)?.destroy?.();
     this.texture = this.device.createTexture({
       size: { width, height },
       format: 'rgba8unorm',
