@@ -18,13 +18,14 @@ export class WebGPURenderer {
     if (this.initialized) return;
     if (this.initializing) return this.initializing;
     this.initializing = (async () => {
-      if (!('gpu' in navigator)) return;
-      const adapter = await navigator.gpu.requestAdapter();
+      const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
+      if (!gpu) return;
+      const adapter = await gpu.requestAdapter();
       if (!adapter) return;
       const device = await adapter.requestDevice();
       const context = this.canvas.getContext('webgpu');
       if (!context) return;
-      const format = navigator.gpu.getPreferredCanvasFormat();
+      const format = gpu.getPreferredCanvasFormat();
       context.configure({ device, format, alphaMode: 'opaque' });
 
       const shaderModule = device.createShaderModule({
