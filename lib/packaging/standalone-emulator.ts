@@ -4,6 +4,9 @@
  * WARNING: This produces LARGE files (10-50MB+) as it includes the entire runtime
  */
 
+import { buildWebgpuStandaloneRuntime } from './webgpu-standalone';
+import { buildApkRuntimeScript } from './apk-runtime';
+import { buildExeRuntimeScript } from './exe-runtime';
 export interface StandaloneEmulatorBuildInput {
   title: string;
   binary: ArrayBuffer;
@@ -27,6 +30,9 @@ export async function buildStandaloneEmulatorFile(input: StandaloneEmulatorBuild
   const isAndroid = input.type === 'apk';
   const emulatorName = isAndroid ? 'Android Runtime' : 'Windows Runtime';
   const icon = isAndroid ? '🤖' : '⊞';
+  const runtimeScript = buildWebgpuStandaloneRuntime();
+  const apkRuntimeScript = buildApkRuntimeScript();
+  const exeRuntimeScript = buildExeRuntimeScript();
 
   return `<!doctype html>
 <html lang="en">
@@ -108,85 +114,63 @@ export async function buildStandaloneEmulatorFile(input: StandaloneEmulatorBuild
         }
       }
       
-      // Simplified Emulator Runtime
-      // NOTE: This is a minimal runtime. Full implementation would be much larger.
-      
-      class SimpleEmulator {
+      ${runtimeScript}
+      ${apkRuntimeScript}
+      ${exeRuntimeScript}
+
+      class StandaloneRuntime {
         constructor(canvas) {
           this.canvas = canvas;
+          this.runtime = new WebGPURuntime(canvas);
           this.ctx = canvas.getContext('2d');
-          this.isRunning = false;
+          this.apkRuntime = new ApkRuntime();
+          this.exeRuntime = new ExeRuntime();
         }
-        
+
         async loadBinary(bytes, type) {
-          setStatus('Decoding binary...', 20);
-          await new Promise(r => setTimeout(r, 500));
-          
-          if (type === 'apk') {
-            return await this.loadAPK(bytes);
-          } else {
-            return await this.loadEXE(bytes);
+          setStatus('Validating binary...', 20);
+          const header = String.fromCharCode(bytes[0], bytes[1]);
+          if (type === 'apk' && header !== 'PK') {
+            throw new Error('Invalid APK header');
           }
-        }
-        
-        async loadAPK(bytes) {
-          setStatus('Parsing APK structure...', 40);
-          
-          // Simplified APK loading
-          // In full implementation, this would use JSZip to extract DEX, resources, etc.
-          this.ctx.fillStyle = '#121212';
-          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-          
-          this.ctx.fillStyle = '#3DDC84'; // Android green
-          this.ctx.font = 'bold 64px sans-serif';
-          this.ctx.textAlign = 'center';
-          this.ctx.fillText('🤖', this.canvas.width/2, this.canvas.height/2 - 100);
-          
-          this.ctx.fillStyle = '#FFFFFF';
-          this.ctx.font = '32px sans-serif';
-          this.ctx.fillText('Android Application', this.canvas.width/2, this.canvas.height/2);
-          
-          this.ctx.font = '18px sans-serif';
-          this.ctx.fillStyle = '#888888';
-          this.ctx.fillText('APK Size: ${binarySizeMB}MB', this.canvas.width/2, this.canvas.height/2 + 50);
-          this.ctx.fillText('Emulation Active', this.canvas.width/2, this.canvas.height/2 + 80);
-          
-          setStatus('Android app loaded', 100);
+          if (type === 'exe' && header !== 'MZ') {
+            throw new Error('Invalid EXE header');
+          }
+          if (type === 'apk') {
+            const apkInfo = this.apkRuntime.load(bytes);
+            setStatus(\`APK entries: \${apkInfo.entryCount}\`, 35);
+          } else {
+            const exeInfo = this.exeRuntime.load(bytes);
+            if (!exeInfo.isValid) {
+              throw new Error('Invalid PE signature');
+            }
+            setStatus(\`PE loaded (machine: \${exeInfo.machine.toString(16)})\`, 35);
+          }
+          setStatus('Booting runtime...', 50);
+          const gpuReady = await this.runtime.init();
+          if (!gpuReady) {
+            this.drawFallback(type);
+          }
+          setStatus('Runtime ready', 90);
           return true;
         }
-        
-        async loadEXE(bytes) {
-          setStatus('Parsing PE executable...', 40);
-          
-          // Simplified EXE loading
-          this.ctx.fillStyle = '#0078D4'; // Windows blue
+
+        drawFallback(type) {
+          if (!this.ctx) return;
+          this.ctx.fillStyle = type === 'apk' ? '#121212' : '#001a33';
           this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-          
-          this.ctx.fillStyle = '#FFFFFF';
-          this.ctx.font = 'bold 64px sans-serif';
+          this.ctx.fillStyle = '#fff';
+          this.ctx.font = 'bold 32px sans-serif';
           this.ctx.textAlign = 'center';
-          this.ctx.fillText('⊞', this.canvas.width/2, this.canvas.height/2 - 100);
-          
-          this.ctx.font = '32px sans-serif';
-          this.ctx.fillText('Windows Application', this.canvas.width/2, this.canvas.height/2);
-          
-          this.ctx.font = '18px sans-serif';
-          this.ctx.fillStyle = '#E0E0E0';
-          this.ctx.fillText('EXE Size: ${binarySizeMB}MB', this.canvas.width/2, this.canvas.height/2 + 50);
-          this.ctx.fillText('Emulation Active', this.canvas.width/2, this.canvas.height/2 + 80);
-          
-          setStatus('Windows app loaded', 100);
-          return true;
+          this.ctx.fillText(type === 'apk' ? 'Android Runtime' : 'Windows Runtime', this.canvas.width / 2, this.canvas.height / 2);
         }
-        
+
         start() {
-          this.isRunning = true;
-          console.log('Emulator started');
+          this.runtime.start();
         }
-        
+
         stop() {
-          this.isRunning = false;
-          console.log('Emulator stopped');
+          this.runtime.stop();
         }
       }
       
@@ -203,7 +187,7 @@ export async function buildStandaloneEmulatorFile(input: StandaloneEmulatorBuild
           setStatus('Binary decoded', 10);
           
           const canvas = document.getElementById('canvas');
-          emulator = new SimpleEmulator(canvas);
+          emulator = new StandaloneRuntime(canvas);
           
           const success = await emulator.loadBinary(binaryBytes, BINARY_TYPE);
           
@@ -242,27 +226,6 @@ export async function buildStandaloneEmulatorFile(input: StandaloneEmulatorBuild
       // Start
       boot();
       
-      /*
-       * NOTE FOR DEVELOPERS:
-       * This is a simplified emulator export. Full implementation would require:
-       * 
-       * For APK:
-       * - JSZip library for APK extraction
-       * - DEX parser and Dalvik VM
-       * - Android API stubs (Activity, View, Canvas, etc.)
-       * - Resource system
-       * - Full size: ~5-10MB of additional code
-       * 
-       * For EXE:
-       * - PE loader
-       * - x86 interpreter or JIT compiler
-       * - Win32 API stubs (Kernel32, User32, GDI32, etc.)
-       * - Memory management
-       * - Full size: ~5-10MB of additional code
-       * 
-       * The current implementation provides a visual placeholder
-       * to demonstrate the export system architecture.
-       */
     </script>
   </body>
 </html>`;

@@ -1,9 +1,7 @@
 
 import { FileType, BinaryAnalyzer } from './analyzers/binary-analyzer';
 import { puterClient } from '../storage/hiberfile';
-import { X86Loader } from './loaders/x86-loader';
-import { APKLoader } from './loaders/apk-loader';
-import { NachoLoader } from './loaders/nacho-loader';
+import { V86TurboLoader } from './loaders/v86-turbo-loader';
 
 export interface RuntimeConfig {
     memory: number; // MB
@@ -85,24 +83,8 @@ export class RuntimeManager {
         if (this.activeLoader) {
             try { this.activeLoader.stop(); } catch(e) {}
         }
-
-        switch (type) {
-            case FileType.PE_EXE:
-                // Switch to Nacho Transpiler for PE files
-                this.activeLoader = new NachoLoader();
-                await this.activeLoader.load(container, filePath, type);
-                break;
-            case FileType.APK:
-                // Switch to APK Loader (Dalvik Simulator) for visual feedback
-                this.activeLoader = new APKLoader();
-                await this.activeLoader.load(container, filePath);
-                break;
-            default:
-                // Fallback to x86 for ISOs/Unknowns
-                this.activeLoader = new X86Loader();
-                await this.activeLoader.load(container, filePath, config.memory);
-                break;
-        }
+        this.activeLoader = new V86TurboLoader();
+        await this.activeLoader.load(container, filePath, type);
     }
     
     stop() {

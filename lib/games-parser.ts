@@ -1,4 +1,4 @@
-import { initGameParser, parseGameXML, getGames as getGamesWasm, isUsingWasm } from '@/lib/wasm/game-parser';
+import { GamesCatalog, readGamesCatalog, writeGamesCatalog, getCatalogAgeMs } from '@/lib/games/cache-manager';
 
 export interface Game {
   id: string;
@@ -11,143 +11,193 @@ export interface Game {
   platform?: string; // e.g. 'flash', 'html5'
 }
 
+// In-memory cache for parsed catalog
+let cachedCatalog: GamesCatalog | null = null;
+let isLoading = false;
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const BACKGROUND_REFRESH_MS = 60 * 60 * 1000; // 1 hour
+
+function getNodeText(parent: Element, tagName: string): string {
+  const nsGetter = (parent as any).getElementsByTagNameNS;
+  const els =
+    typeof nsGetter === 'function'
+      ? nsGetter.call(parent, '*', tagName)
+      : parent.getElementsByTagName(tagName);
+  return (els?.[0]?.textContent || '').trim();
+}
+
+function parseGamesXml(xmlText: string): { games: Game[]; total: number } {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'text/xml');
+  const urlNodes =
+    typeof doc.getElementsByTagNameNS === 'function'
+      ? doc.getElementsByTagNameNS('*', 'url')
+      : doc.getElementsByTagName('url');
+  const gameNodes =
+    typeof doc.getElementsByTagNameNS === 'function'
+      ? doc.getElementsByTagNameNS('*', 'game')
+      : doc.getElementsByTagName('game');
+
+  if (gameNodes.length > 0) {
+    const total = gameNodes.length;
+    const games: Game[] = [];
+    for (let i = 0; i < total; i++) {
+      const node = gameNodes[i];
+      if (!node) continue;
+      games.push({
+        id: i.toString(),
+        title: getNodeText(node, 'title'),
+        description: getNodeText(node, 'description'),
+        thumb: getNodeText(node, 'thumb'),
+        file: getNodeText(node, 'file'),
+        width: getNodeText(node, 'width'),
+        height: getNodeText(node, 'height'),
+      });
+    }
+    return { games, total };
+  }
+
+  if (urlNodes.length > 0) {
+    const total = urlNodes.length;
+    const games: Game[] = [];
+    for (let i = 0; i < total; i++) {
+      const node = urlNodes[i];
+      if (!node) continue;
+      const loc = getNodeText(node, 'loc');
+      const imageLoc = (() => {
+        const nsGetter = (node as any).getElementsByTagNameNS;
+        const els =
+          typeof nsGetter === 'function'
+            ? nsGetter.call(node, '*', 'loc')
+            : (node as any).getElementsByTagName?.('loc') || [];
+        return (els?.[1]?.textContent || '').trim();
+      })();
+      const idMatch = loc.match(/\/([a-f0-9]{32})\/?$/);
+      const id = idMatch ? idMatch[1] : `game-${i}`;
+      const title = `HTML5 Game ${id.substring(0, 8)}`;
+      games.push({
+        id,
+        title,
+        description: 'Play this HTML5 game instantly in your browser. No downloads required!',
+        thumb: imageLoc,
+        file: loc,
+        width: '800',
+        height: '600',
+        platform: 'html5',
+      });
+    }
+    return { games, total };
+  }
+
+  return { games: [], total: 0 };
+}
+
+async function parseGamesXmlAsync(xmlText: string): Promise<{ games: Game[]; total: number }> {
+  if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+    return parseGamesXml(xmlText);
+  }
+  return new Promise((resolve) => {
+    try {
+      const worker = new Worker(new URL('../workers/games-parser.worker.ts', import.meta.url));
+      const cleanup = () => worker.terminate();
+      worker.onmessage = (event: MessageEvent<{ games: Game[]; total: number }>) => {
+        cleanup();
+        resolve(event.data);
+      };
+      worker.onerror = () => {
+        cleanup();
+        resolve(parseGamesXml(xmlText));
+      };
+      worker.postMessage({ xmlText });
+    } catch (error) {
+      console.warn('[GamesParser] Worker unavailable, parsing on main thread', error);
+      resolve(parseGamesXml(xmlText));
+    }
+  });
+}
+
+async function refreshCatalog(force = false): Promise<GamesCatalog | null> {
+  if (isLoading) {
+    return cachedCatalog;
+  }
+  if (!force && cachedCatalog && getCatalogAgeMs(cachedCatalog) < BACKGROUND_REFRESH_MS) {
+    return cachedCatalog;
+  }
+
+  isLoading = true;
+  try {
+    const headers: Record<string, string> = {};
+    if (cachedCatalog?.etag) headers['If-None-Match'] = cachedCatalog.etag;
+    if (cachedCatalog?.lastModified) headers['If-Modified-Since'] = cachedCatalog.lastModified;
+    const response = await fetch('/games.xml', { headers });
+    if (response.status === 304 && cachedCatalog) {
+      const updated: GamesCatalog = {
+        ...cachedCatalog,
+        cachedAt: Date.now(),
+      };
+      cachedCatalog = updated;
+      await writeGamesCatalog(updated);
+      return updated;
+    }
+    const text = await response.text();
+    const { games, total } = await parseGamesXmlAsync(text);
+    const catalog: GamesCatalog = {
+      id: 'games',
+      games,
+      total,
+      cachedAt: Date.now(),
+      etag: response.headers.get('etag'),
+      lastModified: response.headers.get('last-modified'),
+    };
+    cachedCatalog = catalog;
+    await writeGamesCatalog(catalog);
+    return catalog;
+  } catch (error) {
+    console.warn('Failed to refresh games catalog', error);
+    return cachedCatalog;
+  } finally {
+    isLoading = false;
+  }
+}
+
+async function getCatalog(): Promise<GamesCatalog | null> {
+  if (cachedCatalog) {
+    if (getCatalogAgeMs(cachedCatalog) > CACHE_DURATION) {
+      void refreshCatalog(false);
+    }
+    return cachedCatalog;
+  }
+  const stored = await readGamesCatalog();
+  if (stored) {
+    cachedCatalog = stored;
+    if (getCatalogAgeMs(stored) > CACHE_DURATION) {
+      void refreshCatalog(false);
+    }
+    return stored;
+  }
+  return refreshCatalog(true);
+}
+
 /**
  * Parsed chunks of games to avoid loading massive XML at once
- * Enhanced with WASM streaming parser for 10-20x faster parsing
+ * Enhanced with caching and optimized parsing for 20,000+ games
  */
 export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[], total: number }> {
   try {
-    const response = await fetch('/games.xml');
-    const text = await response.text();
-    
-    // Try WASM parser first (10-20x faster streaming parser)
-    if (typeof window !== 'undefined') {
-      try {
-        await initGameParser();
-        await parseGameXML(text);
-        
-        const wasmGames = await getGamesWasm(page - 1, limit); // WASM uses 0-based pages
-        
-        if (isUsingWasm() && wasmGames.length > 0) {
-          console.log(`🚀 WASM parser loaded ${wasmGames.length} games (page ${page})`);
-          return {
-            games: wasmGames.map(g => ({
-              id: g.id,
-              title: g.name,
-              description: g.description,
-              thumb: g.thumbnail,
-              file: g.url,
-              width: g.width.toString(),
-              height: g.height.toString(),
-              platform: 'html5',
-            })),
-            total: wasmGames.length * page, // Estimate
-          };
-        }
-      } catch (wasmError) {
-        console.warn('WASM game parser failed, using DOMParser fallback:', wasmError);
-      }
-      
-      // Fallback to DOMParser (namespace-safe)
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(text, "text/xml");
-      
-      // Check if it's a Sitemap (urlset/url) or Game List (games/game)
-      // NOTE: `games.xml` uses a default XML namespace (sitemap). `getElementsByTagName('url')`
-      // can return 0 in some browsers when namespaces are present. Use NS-aware lookup.
-      const urlNodes =
-        // @ts-ignore - TS DOM lib doesn't always model overloads perfectly across targets
-        typeof xmlDoc.getElementsByTagNameNS === 'function'
-          ? // @ts-ignore
-            xmlDoc.getElementsByTagNameNS('*', 'url')
-          : xmlDoc.getElementsByTagName("url");
-      const gameNodes =
-        // @ts-ignore
-        typeof xmlDoc.getElementsByTagNameNS === 'function'
-          ? // @ts-ignore
-            xmlDoc.getElementsByTagNameNS('*', 'game')
-          : xmlDoc.getElementsByTagName("game");
-      
-      const games: Game[] = [];
-      
-      if (gameNodes.length > 0) {
-          // Standard Game XML format
-          const total = gameNodes.length;
-          const start = (page - 1) * limit;
-          const end = start + limit;
-          
-          for (let i = start; i < Math.min(end, total); i++) {
-            const node = gameNodes[i];
-            if (!node) continue;
-            
-            games.push({
-              id: i.toString(),
-              title: getTagValue(node, 'title'),
-              description: getTagValue(node, 'description'),
-              thumb: getTagValue(node, 'thumb'),
-              file: getTagValue(node, 'file'),
-              width: getTagValue(node, 'width'),
-              height: getTagValue(node, 'height')
-            });
-          }
-          return { games, total };
-      } else if (urlNodes.length > 0) {
-          // Sitemap format
-          const total = urlNodes.length;
-          const start = (page - 1) * limit;
-          const end = start + limit;
-          
-          for (let i = start; i < Math.min(end, total); i++) {
-            const node = urlNodes[i];
-            if (!node) continue;
-            
-            const locEls =
-              // @ts-ignore
-              typeof (node as any).getElementsByTagNameNS === 'function'
-                ? // @ts-ignore
-                  (node as any).getElementsByTagNameNS('*', 'loc')
-                : (node as any).getElementsByTagName?.('loc') || [];
-
-            const loc = (locEls?.[0]?.textContent || '').trim();
-            // In sitemap format, both <loc> and <image:loc> share localName "loc".
-            const imageLoc = (locEls?.[1]?.textContent || '').trim();
-            
-            // Extract ID from URL (last segment)
-            // https://html5.gamedistribution.com/218ac3fe3df6ff2c8fe8f9353f1084f6/ -> 218ac3fe3df6ff2c8fe8f9353f1084f6
-            const idMatch = loc.match(/\/([a-f0-9]{32})\/?$/);
-            const id = idMatch ? idMatch[1] : `game-${i}`;
-            
-            // Title is not in sitemap, use ID or generic name for now
-            // We could try to fetch metadata but that would be slow for a list
-            const title = `Game ${id.substring(0, 6)}...`;
-            
-            games.push({
-              id: id,
-              title: title,
-              description: 'Play this game instantly in your browser.',
-              thumb: imageLoc,
-              file: loc,
-              width: '800',
-              height: '600',
-              platform: 'html5'
-            });
-          }
-          return { games, total };
-      }
-      
+    const catalog = await getCatalog();
+    if (!catalog) {
       return { games: [], total: 0 };
     }
-    
-    return { games: [], total: 0 };
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    return {
+      games: catalog.games.slice(start, end),
+      total: catalog.total,
+    };
   } catch (e) {
     console.error("Failed to parse games.xml", e);
     return { games: [], total: 0 };
   }
-}
-
-function getTagValue(parent: Element, tagName: string): string {
-  const node = parent.getElementsByTagName(tagName)[0];
-  return node ? node.textContent || '' : '';
 }
 
 /**

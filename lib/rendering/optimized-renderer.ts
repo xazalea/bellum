@@ -3,13 +3,30 @@
  */
 
 import { WebGLRenderer } from './webgl-renderer';
+import { WebGPURenderer } from './webgpu-renderer';
 // stateOptimizer imported dynamically to avoid fengari SSR issues
 import { adaptivePerformance } from '../performance/adaptive';
+import { performanceMonitor } from '../performance/monitor';
 
 export class OptimizedRenderer extends WebGLRenderer {
+  private canvas: HTMLCanvasElement;
+  private webgpuRenderer: WebGPURenderer | null = null;
   private frameBuffer: ImageData | null = null;
   private lastOptimization = 0;
   private optimizationInterval = 100; // Optimize every 100ms
+  private lastFrame = 0;
+  private minFrameTime = 1000 / 120;
+
+  constructor(canvas: HTMLCanvasElement) {
+    super(canvas);
+    this.canvas = canvas;
+    this.webgpuRenderer = new WebGPURenderer(canvas);
+  }
+
+  private async renderViaWebGPU(imageData: ImageData | HTMLImageElement | HTMLCanvasElement): Promise<boolean> {
+    if (!this.webgpuRenderer) return false;
+    return this.webgpuRenderer.render(imageData);
+  }
 
   /**
    * Render with optimizations
@@ -32,7 +49,9 @@ export class OptimizedRenderer extends WebGLRenderer {
             imageData.width,
             imageData.height
           );
-          this.render(optimizedData);
+          if (!(await this.renderViaWebGPU(optimizedData))) {
+            this.render(optimizedData);
+          }
           this.lastOptimization = now;
           return;
         }
@@ -40,17 +59,28 @@ export class OptimizedRenderer extends WebGLRenderer {
     }
 
     // Fallback to standard rendering
-    this.render(imageData);
+    if (!(await this.renderViaWebGPU(imageData))) {
+      this.render(imageData);
+    }
   }
 
   /**
    * Render with adaptive quality
    */
-  renderWithAdaptiveQuality(imageData: ImageData | HTMLImageElement | HTMLCanvasElement): void {
+  async renderWithAdaptiveQuality(imageData: ImageData | HTMLImageElement | HTMLCanvasElement): Promise<void> {
     const adaptive = adaptivePerformance?.getConfig();
+
+    const now = performance.now();
+    if (now - this.lastFrame < this.minFrameTime) {
+      return;
+    }
+    this.lastFrame = now;
     
     if (!adaptive) {
-      this.render(imageData);
+      if (!(await this.renderViaWebGPU(imageData))) {
+        this.render(imageData);
+      }
+      performanceMonitor?.recordFrame(now);
       return;
     }
 
@@ -70,12 +100,18 @@ export class OptimizedRenderer extends WebGLRenderer {
           this.imageDataToCanvas(imageData),
           0, 0, scaledWidth, scaledHeight
         );
-        this.render(canvas);
+        if (!(await this.renderViaWebGPU(canvas))) {
+          this.render(canvas);
+        }
+        performanceMonitor?.recordFrame(now);
         return;
       }
     }
 
-    this.render(imageData);
+    if (!(await this.renderViaWebGPU(imageData))) {
+      this.render(imageData);
+    }
+    performanceMonitor?.recordFrame(now);
   }
 
   private imageDataToCanvas(imageData: ImageData): HTMLCanvasElement {

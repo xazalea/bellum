@@ -38,6 +38,7 @@ self.addEventListener('fetch', (event) => {
   const isNachoProxy = event.request.headers.get('X-Nacho-Proxy') === 'true';
   
   if (isNachoProxy || shouldProxy(url)) {
+    console.log('[NachoProxy] Intercepting:', url.hostname);
     event.respondWith(handleProxyRequest(event.request));
   }
 });
@@ -63,7 +64,7 @@ self.addEventListener('message', (event) => {
  * Determine if a URL should be proxied
  */
 function shouldProxy(url) {
-  // Proxy game distribution URLs
+  // Proxy game distribution URLs (main game source)
   if (url.hostname.includes('gamedistribution.com')) return true;
   if (url.hostname.includes('html5.gamedistribution.com')) return true;
   if (url.hostname.includes('img.gamedistribution.com')) return true;
@@ -71,6 +72,12 @@ function shouldProxy(url) {
   // Proxy common CDNs that might have CORS issues
   if (url.hostname.includes('cloudflare')) return true;
   if (url.hostname.includes('jsdelivr')) return true;
+  if (url.hostname.includes('cdnjs')) return true;
+  if (url.hostname.includes('unpkg')) return true;
+  
+  // Proxy game-related CDNs
+  if (url.hostname.includes('poki.com')) return true;
+  if (url.hostname.includes('crazygames.com')) return true;
   
   return false;
 }

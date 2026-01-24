@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppLibraryManager, type StoredApp } from '@/lib/storage/app-library';
 import { puterClient } from '@/lib/storage/hiberfile';
 import { RuntimeManager } from '@/lib/engine/runtime-manager';
+import { buildStandaloneEmulatorFile, downloadTextFile } from '@/lib/packaging/standalone-emulator';
 
 export default function LibraryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -88,6 +89,38 @@ export default function LibraryPage() {
     } catch (err) {
       console.error('Uninstall failed', err);
       alert('Failed to update Discord account');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const downloadStandalone = async (app: StoredApp) => {
+    const lib = libraryRef.current;
+    if (!lib) return;
+    try {
+      setBusy(`download-${app.id}`);
+      if (!app.isActive) {
+        await lib.activateApp(app.id);
+        refreshApps();
+      }
+      const freshApp = libraryRef.current?.getApps().find((a) => a.id === app.id) || app;
+      const blob = await puterClient.readFile(freshApp.storagePath);
+      const binary = await blob.arrayBuffer();
+      const lowerName = freshApp.name.toLowerCase();
+      const type = lowerName.endsWith('.apk') ? 'apk' : lowerName.endsWith('.exe') ? 'exe' : null;
+      if (!type) {
+        alert('Only APK or EXE files can be exported.');
+        return;
+      }
+      const html = await buildStandaloneEmulatorFile({
+        title: freshApp.name,
+        binary,
+        type,
+      });
+      downloadTextFile(`${freshApp.name}.html`, html);
+    } catch (error) {
+      console.error('Standalone export failed', error);
+      alert('Failed to export standalone HTML.');
     } finally {
       setBusy(null);
     }
@@ -251,6 +284,14 @@ export default function LibraryPage() {
                       <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
                       Run
               </Button>
+                    <Button
+                      onClick={() => void downloadStandalone(a)}
+                      disabled={busy === `download-${a.id}` || busy === 'install'}
+                      className="bg-nacho-surface hover:bg-nacho-card-hover text-nacho-primary border-nacho-border"
+                    >
+                      <span className="material-symbols-outlined mr-2 text-[16px]">download</span>
+                      Download HTML
+                    </Button>
                     <Button
                       onClick={() => void removeLocal(a.id)}
                       disabled={busy === a.id}

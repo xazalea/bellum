@@ -18,6 +18,8 @@ export interface V86Config {
   bios?: { url: string };
   vga_bios?: { url: string };
   cdrom?: { url: string };
+  bzimage?: { url: string };
+  initrd?: { url: string };
   hda?: { url: string; async?: boolean };
   autostart?: boolean;
   boot_order?: number;

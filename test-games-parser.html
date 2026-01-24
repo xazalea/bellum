@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games Parser Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0b0b10;
+            color: #e2e8f0;
+        }
+        h1 { color: #a8b4d0; }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 8px;
+            border: 1px solid rgba(168, 180, 208, 0.2);
+        }
+        .success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .game-card {
+            background: rgba(168, 180, 208, 0.05);
+            border: 1px solid rgba(168, 180, 208, 0.15);
+            border-radius: 12px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .game-card:hover {
+            border-color: #a8b4d0;
+            transform: translateY(-2px);
+        }
+        .game-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .game-card h3 {
+            font-size: 12px;
+            margin: 0;
+            color: #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        button {
+            background: #a8b4d0;
+            color: #0b0f1a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #b8c4e0; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(168, 180, 208, 0.3);
+            border-top-color: #a8b4d0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>🎮 Games Parser Test</h1>
+    
+    <div id="status"></div>
+    
+    <div>
+        <button onclick="testParser()">Test Parser</button>
+        <button onclick="loadPage1()">Load Page 1</button>
+        <button onclick="loadPage2()">Load Page 2</button>
+        <button onclick="loadPage100()">Load Page 100</button>
+        <button onclick="clearCache()">Clear Cache</button>
+    </div>
+    
+    <div id="results"></div>
+    <div id="games" class="game-grid"></div>
+
+    <script>
+        let cachedXmlDoc = null;
+        let cacheTimestamp = 0;
+        const CACHE_DURATION = 10 * 60 * 1000;
+
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showResults(html) {
+            document.getElementById('results').innerHTML = html;
+        }
+
+        function showGames(games) {
+            const container = document.getElementById('games');
+            container.innerHTML = games.map(game => `
+                <div class="game-card" onclick="playGame('${game.file}')">
+                    <img src="${game.thumb}" alt="${game.title}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🎮%3C/text%3E%3C/svg%3E'">
+                    <h3>${game.title}</h3>
+                </div>
+            `).join('');
+        }
+
+        async function fetchGames(page = 1, limit = 24) {
+            const now = Date.now();
+            const needsReload = !cachedXmlDoc || (now - cacheTimestamp) > CACHE_DURATION;
+            
+            if (needsReload) {
+                showStatus('<span class="spinner"></span> Loading games.xml (20,000+ games)...', 'info');
+                const startTime = performance.now();
+                
+                const response = await fetch('/games.xml');
+                const text = await response.text();
+                
+                const parser = new DOMParser();
+                cachedXmlDoc = parser.parseFromString(text, "text/xml");
+                cacheTimestamp = now;
+                
+                const loadTime = (performance.now() - startTime).toFixed(0);
+                showStatus(`✅ Games XML loaded and parsed in ${loadTime}ms`, 'success');
+            }
+            
+            const urlNodes = cachedXmlDoc.getElementsByTagNameNS('*', 'url');
+            const total = urlNodes.length;
+            const start = (page - 1) * limit;
+            const end = start + limit;
+            
+            const games = [];
+            for (let i = start; i < Math.min(end, total); i++) {
+                const node = urlNodes[i];
+                if (!node) continue;
+                
+                const locEls = node.getElementsByTagNameNS('*', 'loc');
+                const loc = (locEls?.[0]?.textContent || '').trim();
+                const imageLoc = (locEls?.[1]?.textContent || '').trim();
+                
+                const idMatch = loc.match(/\/([a-f0-9]{32})\/?$/);
+                const id = idMatch ? idMatch[1] : `game-${i}`;
+                const title = `Game ${id.substring(0, 8)}`;
+                
+                games.push({
+                    id: id,
+                    title: title,
+                    description: 'Play this HTML5 game instantly in your browser.',
+                    thumb: imageLoc,
+                    file: loc,
+                    width: '800',
+                    height: '600',
+                    platform: 'html5'
+                });
+            }
+            
+            return { games, total };
+        }
+
+        async function testParser() {
+            try {
+                showStatus('Testing parser...', 'info');
+                const startTime = performance.now();
+                
+                const result = await fetchGames(1, 24);
+                const loadTime = (performance.now() - startTime).toFixed(0);
+                
+                showStatus(`✅ Test passed! Loaded ${result.games.length} games in ${loadTime}ms`, 'success');
+                showResults(`
+                    <div class="status info">
+                        <strong>Total Games:</strong> ${result.total.toLocaleString()}<br>
+                        <strong>Games Loaded:</strong> ${result.games.length}<br>
+                        <strong>Load Time:</strong> ${loadTime}ms<br>
+                        <strong>First Game ID:</strong> ${result.games[0]?.id}<br>
+                        <strong>First Game URL:</strong> ${result.games[0]?.file}
+                    </div>
+                `);
+                showGames(result.games);
+            } catch (error) {
+                showStatus(`❌ Test failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function loadPage1() {
+            try {
+                const result = await fetchGames(1, 24);
+                showResults(`<div class="status success">Page 1: ${result.games.length} games</div>`);
+                showGames(result.games);
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadPage2() {
+            try {
+                const result = await fetchGames(2, 24);
+                showResults(`<div class="status success">Page 2: ${result.games.length} games</div>`);
+                showGames(result.games);
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadPage100() {
+            try {
+                const result = await fetchGames(100, 24);
+                showResults(`<div class="status success">Page 100: ${result.games.length} games</div>`);
+                showGames(result.games);
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearCache() {
+            cachedXmlDoc = null;
+            cacheTimestamp = 0;
+            showStatus('Cache cleared', 'info');
+        }
+
+        function playGame(url) {
+            window.open(url, '_blank');
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            setTimeout(testParser, 500);
+        });
+    </script>
+</body>
+</html>

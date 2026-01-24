@@ -1,3 +1,10 @@
+export interface PerformanceStats {
+  fps: number;
+  avgFrameTime: number;
+  p95FrameTime: number;
+  frameCount: number;
+}
+
 /**
  * Performance Monitor - Tracks FPS, WebVitals, and emulator performance
  */
@@ -34,6 +41,9 @@ export class PerformanceMonitor {
     mainThreadBlocking: 0,
   };
   private callbacks: Map<string, ((metrics: PerformanceMetrics) => void)[]> = new Map();
+  private manualFrameTimes: number[] = [];
+  private manualLastFrame = 0;
+  private manualMaxSamples = 120;
 
   constructor() {
     this.startFPSMonitoring();
@@ -205,6 +215,34 @@ export class PerformanceMonitor {
     this.metrics.emulatorCycles = cycles;
     this.metrics.renderTime = renderTime;
     this.notifyCallbacks('metrics', this.metrics);
+  }
+
+  recordFrame(now: number = performance.now()): void {
+    if (this.manualLastFrame > 0) {
+      const delta = now - this.manualLastFrame;
+      this.manualFrameTimes.push(delta);
+      if (this.manualFrameTimes.length > this.manualMaxSamples) {
+        this.manualFrameTimes.shift();
+      }
+    }
+    this.manualLastFrame = now;
+  }
+
+  getFrameStats(): PerformanceStats {
+    if (this.manualFrameTimes.length === 0) {
+      return { fps: 0, avgFrameTime: 0, p95FrameTime: 0, frameCount: 0 };
+    }
+    const sorted = [...this.manualFrameTimes].sort((a, b) => a - b);
+    const sum = this.manualFrameTimes.reduce((acc, v) => acc + v, 0);
+    const avgFrameTime = sum / this.manualFrameTimes.length;
+    const p95Index = Math.floor(sorted.length * 0.95) - 1;
+    const p95FrameTime = sorted[Math.max(0, p95Index)] ?? avgFrameTime;
+    return {
+      fps: avgFrameTime > 0 ? 1000 / avgFrameTime : 0,
+      avgFrameTime,
+      p95FrameTime,
+      frameCount: this.manualFrameTimes.length,
+    };
   }
 
   /**
