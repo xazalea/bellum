@@ -81,10 +81,6 @@ export class GLSLToWGSLTranslator {
     return wgsl;
   }
 
-  private optimizeWGSL(wgsl: string): string {
-    return this.mesaOptimizer.optimizeWGSL(wgsl);
-  }
-
   /**
    * Parse GLSL shader
    */
@@ -437,6 +433,7 @@ export class GLSLToWGSLTranslator {
    * Optimize WGSL
    */
   private optimizeWGSL(wgsl: string): string {
+    wgsl = this.mesaOptimizer.optimizeWGSL(wgsl);
     // Remove duplicate newlines
     wgsl = wgsl.replace(/\n{3,}/g, '\n\n');
 
