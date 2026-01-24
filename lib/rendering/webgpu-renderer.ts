@@ -73,7 +73,7 @@ export class WebGPURenderer {
         primitive: { topology: 'triangle-strip' },
       });
 
-      const sampler = device.createSampler({
+      const sampler = (device as any).createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
       });
