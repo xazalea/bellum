@@ -9,7 +9,7 @@ import { adaptivePerformance } from '../performance/adaptive';
 import { performanceMonitor } from '../performance/monitor';
 
 export class OptimizedRenderer extends WebGLRenderer {
-  private canvas: HTMLCanvasElement;
+  private outputCanvas: HTMLCanvasElement;
   private webgpuRenderer: WebGPURenderer | null = null;
   private frameBuffer: ImageData | null = null;
   private lastOptimization = 0;
@@ -19,8 +19,8 @@ export class OptimizedRenderer extends WebGLRenderer {
 
   constructor(canvas: HTMLCanvasElement) {
     super(canvas);
-    this.canvas = canvas;
-    this.webgpuRenderer = new WebGPURenderer(canvas);
+    this.outputCanvas = canvas;
+    this.webgpuRenderer = new WebGPURenderer(this.outputCanvas);
   }
 
   private async renderViaWebGPU(imageData: ImageData | HTMLImageElement | HTMLCanvasElement): Promise<boolean> {
