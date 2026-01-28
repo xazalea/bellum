@@ -130,12 +130,20 @@ async function refreshCatalog(force = false): Promise<GamesCatalog | null> {
     if (cachedCatalog?.etag) headers['If-None-Match'] = cachedCatalog.etag;
     if (cachedCatalog?.lastModified) headers['If-Modified-Since'] = cachedCatalog.lastModified;
     
-    console.log('[GamesParser] Fetching games.xml...');
-    const response = await fetch('/games.xml', { headers });
+    // Try JSON first (much faster to parse), fallback to XML
+    console.log('[GamesParser] Attempting to load games.json...');
+    let response = await fetch('/games.json', { headers });
+    let useJson = response.ok;
+    
+    if (!response.ok) {
+      console.log('[GamesParser] games.json not found, falling back to games.xml');
+      response = await fetch('/games.xml', { headers });
+      useJson = false;
+    }
     
     if (!response.ok && response.status !== 304) {
-      console.error('[GamesParser] Failed to fetch games.xml:', response.status, response.statusText);
-      throw new Error(`Failed to fetch games.xml: ${response.status}`);
+      console.error('[GamesParser] Failed to fetch games catalog:', response.status, response.statusText);
+      throw new Error(`Failed to fetch games catalog: ${response.status}`);
     }
     
     if (response.status === 304 && cachedCatalog) {
@@ -150,18 +158,34 @@ async function refreshCatalog(force = false): Promise<GamesCatalog | null> {
     }
     
     const text = await response.text();
-    console.log('[GamesParser] Received XML, parsing...', text.substring(0, 100));
+    console.log(`[GamesParser] Received ${useJson ? 'JSON' : 'XML'} (${(text.length / 1024).toFixed(0)}KB), parsing...`);
     
     if (!text || text.length < 100) {
-      console.error('[GamesParser] XML is too short or empty');
-      throw new Error('XML file is empty or invalid');
+      console.error('[GamesParser] File is too short or empty');
+      throw new Error('Games file is empty or invalid');
     }
     
-    const { games, total } = await parseGamesXmlAsync(text);
-    console.log(`[GamesParser] Parsed ${total} games`);
+    let games: Game[];
+    let total: number;
+    
+    if (useJson) {
+      // Parse JSON (much faster)
+      const startTime = performance.now();
+      const data = JSON.parse(text);
+      games = data.games || [];
+      total = data.total || games.length;
+      console.log(`[GamesParser] Parsed ${total} games from JSON in ${(performance.now() - startTime).toFixed(0)}ms`);
+    } else {
+      // Parse XML (slower)
+      const startTime = performance.now();
+      const parsed = await parseGamesXmlAsync(text);
+      games = parsed.games;
+      total = parsed.total;
+      console.log(`[GamesParser] Parsed ${total} games from XML in ${(performance.now() - startTime).toFixed(0)}ms`);
+    }
     
     if (total === 0) {
-      console.warn('[GamesParser] No games found in XML');
+      console.warn('[GamesParser] No games found');
     }
     
     const catalog: GamesCatalog = {

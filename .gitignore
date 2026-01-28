@@ -44,6 +44,10 @@ next-env.d.ts
 lib/arsenic/public/assets/games/
 public/unblocker/assets/games/
 
+# Generated game catalog (built from games.xml)
+public/games.json
+public/games-chunks/
+
 # Cherri full-site snapshot is generated from vendor/cherri (submodule)
 public/unblocker/
 .pnpm-store
