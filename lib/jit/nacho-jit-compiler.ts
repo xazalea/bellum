@@ -1,16 +1,17 @@
 /**
- * Nacho Advanced JIT Compiler
- * Production-grade JIT compilation system for x86/ARM to WebAssembly
+ * Nacho JIT Compiler (Stub Implementation)
  * 
- * TARGET: 50-70% of native execution speed
+ * ⚠️ WARNING: This is a non-functional stub/prototype.
+ * This code provides the architecture and API for a JIT compiler
+ * but does NOT actually compile or execute any code.
  * 
- * Architecture:
- * - Tiered compilation (Interpreter → Baseline → Optimizing)
- * - Advanced optimizations (inlining, loop unrolling, DCE, CSE)
- * - Profile-guided optimization
- * - Type speculation and deoptimization
- * - Register allocation
- * - Code caching
+ * All methods return placeholder data. For actual code execution,
+ * use WebAssembly or existing JavaScript execution environments.
+ * 
+ * This serves as:
+ * - Architecture documentation
+ * - API design reference
+ * - Future implementation template
  */
 
 export enum CompilationTier {

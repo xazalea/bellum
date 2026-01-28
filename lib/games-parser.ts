@@ -129,8 +129,17 @@ async function refreshCatalog(force = false): Promise<GamesCatalog | null> {
     const headers: Record<string, string> = {};
     if (cachedCatalog?.etag) headers['If-None-Match'] = cachedCatalog.etag;
     if (cachedCatalog?.lastModified) headers['If-Modified-Since'] = cachedCatalog.lastModified;
+    
+    console.log('[GamesParser] Fetching games.xml...');
     const response = await fetch('/games.xml', { headers });
+    
+    if (!response.ok && response.status !== 304) {
+      console.error('[GamesParser] Failed to fetch games.xml:', response.status, response.statusText);
+      throw new Error(`Failed to fetch games.xml: ${response.status}`);
+    }
+    
     if (response.status === 304 && cachedCatalog) {
+      console.log('[GamesParser] Using cached catalog (304)');
       const updated: GamesCatalog = {
         ...cachedCatalog,
         cachedAt: Date.now(),
@@ -139,8 +148,22 @@ async function refreshCatalog(force = false): Promise<GamesCatalog | null> {
       await writeGamesCatalog(updated);
       return updated;
     }
+    
     const text = await response.text();
+    console.log('[GamesParser] Received XML, parsing...', text.substring(0, 100));
+    
+    if (!text || text.length < 100) {
+      console.error('[GamesParser] XML is too short or empty');
+      throw new Error('XML file is empty or invalid');
+    }
+    
     const { games, total } = await parseGamesXmlAsync(text);
+    console.log(`[GamesParser] Parsed ${total} games`);
+    
+    if (total === 0) {
+      console.warn('[GamesParser] No games found in XML');
+    }
+    
     const catalog: GamesCatalog = {
       id: 'games',
       games,
@@ -153,7 +176,7 @@ async function refreshCatalog(force = false): Promise<GamesCatalog | null> {
     await writeGamesCatalog(catalog);
     return catalog;
   } catch (error) {
-    console.warn('Failed to refresh games catalog', error);
+    console.error('[GamesParser] Failed to refresh games catalog:', error);
     return cachedCatalog;
   } finally {
     isLoading = false;

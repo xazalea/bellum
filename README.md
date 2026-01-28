@@ -1,184 +1,152 @@
-# Nacho - Maximum Performance Computing Runtime
+# Bellum - Browser Runtime Platform
 
 [![Discord](https://img.shields.io/discord/YOUR_SERVER_ID?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/ADauzE32J7)
 
 > 💬 Join our [Discord community](https://discord.gg/ADauzE32J7) for bugs, suggestions, or just chatting!
 
-Production-grade high-performance computing runtime for the web.
+Browser-based runtime for games and applications using emulation and virtualization.
 
 ## Overview
 
-Nacho is a production system that achieves maximum performance within browser constraints:
+Bellum enables running retro games and applications directly in the browser:
 
-- **10-50 TeraFLOPS** GPU compute (hardware dependent)
-- **50-70% native speed** via advanced JIT compilation
-- **<500ms boot time** with OPFS caching
-- **60-120 FPS** rendering
-- **Binary execution** for PE (EXE) and DEX (APK) files
+- **HTML5 Games** - 20,000+ games from GameDistribution
+- **Windows Emulation** - Windows 98 via v86 emulator
+- **Android Emulation** - Experimental Android support
+- **Cloud Storage** - Distributed storage via Discord/Telegram
+- **P2P Clustering** - Distributed computing across browser instances
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
-│           Nacho Production API              │
+│            Bellum Frontend (Next.js)        │
 └─────────────────────────────────────────────┘
            │                 │                │
            ▼                 ▼                ▼
     ┌──────────┐      ┌──────────┐    ┌──────────┐
-    │   JIT    │      │   GPU    │    │  Binary  │
-    │ Compiler │      │ Runtime  │    │ Executor │
+    │  Games   │      │   v86    │    │  Cloud   │
+    │  System  │      │ Emulator │    │ Storage  │
     └──────────┘      └──────────┘    └──────────┘
            │                 │                │
            └─────────────────┴────────────────┘
                         │
                         ▼
               ┌──────────────────┐
-              │  Nacho  Runtime  │
+              │  IndexedDB/OPFS  │
               └──────────────────┘
 ```
 
 ## Quick Start
 
-```typescript
-import { startNacho } from './lib/nacho/nacho-api';
+```bash
+# Install dependencies
+npm install
 
-// Initialize and boot
-const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-const container = document.getElementById('container') as HTMLElement;
+# Run development server
+npm run dev
 
-const nacho = await startNacho(canvas, container, 'windows');
-
-// Execute binary
-const binaryData = await fetch('app.exe').then(r => r.arrayBuffer());
-const exitCode = await nacho.executeBinary(binaryData);
-
-// Get performance stats
-const gpuStats = nacho.getGPUStats();
-console.log(`GPU: ${gpuStats.teraFLOPS.toFixed(2)} TeraFLOPS`);
-
-// Shutdown
-await nacho.shutdown();
+# Open in browser
+# Navigate to http://localhost:3000
 ```
 
-## API Reference
+### Features
 
-### Core API
+- **Games Page** (`/games`) - Browse and play 20,000+ HTML5 games
+- **Windows Page** (`/windows`) - Run Windows 98 in browser via v86
+- **Android Page** (`/android`) - Experimental Android emulation
+- **Library Page** (`/library`) - Upload and run APK/EXE files
+- **Storage Page** (`/storage`) - Cloud file storage via Discord
 
-#### `startNacho(canvas, container, osType)`
-Initialize and boot Nacho runtime.
+## Technology Stack
 
-- `canvas`: HTMLCanvasElement for rendering
-- `container`: HTMLElement for UI
-- `osType`: 'windows' | 'android'
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: Tailwind CSS, Framer Motion
+- **Storage**: IndexedDB (via HiberFile), Discord/Telegram webhooks
+- **Emulation**: v86 (x86 emulator)
+- **Compression**: fflate (gzip), optional WASM
+- **Auth**: Firebase Authentication
+- **Deployment**: Vercel
 
-Returns: `Promise<Nacho>`
+## Features
 
-#### `nacho.executeBinary(binaryData)`
-Execute PE (EXE) or DEX (APK) binary.
+### Currently Working
 
-- `binaryData`: ArrayBuffer containing binary data
+- ✅ **HTML5 Games**: Browse and play 20,000+ games
+- ✅ **Windows Emulation**: Windows 98 via v86
+- ✅ **Cloud Storage**: File storage using Discord/Telegram
+- ✅ **Authentication**: Firebase auth with device fingerprinting
+- ✅ **Compression**: Automatic file compression (gzip/zstd)
 
-Returns: `Promise<number>` (exit code)
+### Experimental
 
-#### `nacho.getStatus()`
-Get current runtime status.
+- ⚠️ **Android Emulation**: Basic Android support via v86
+- ⚠️ **APK/EXE Upload**: File upload with basic execution
+- ⚠️ **P2P Clustering**: Distributed computing (in development)
 
-Returns: `NachoStatus`
+### Not Yet Implemented
 
-#### `nacho.getGPUStats()`
-Get GPU performance statistics.
+- ❌ **Native Binary Execution**: JIT/GPU runtime are stubs
+- ❌ **High Performance**: No actual GPU compute or JIT
+- ❌ **Full OS Support**: Limited to what v86 can emulate
 
-Returns: GPU stats object with teraFLOPS and utilization
+## Core Components
 
-#### `nacho.getJITStats()`
-Get JIT compiler statistics.
+### Games System
+- XML parser for 20,000+ game catalog
+- Service worker for CORS proxy
+- Virtual scrolling for performance
+- Game install/save to library
 
-Returns: JIT stats object
+### v86 Emulator Integration
+- x86 emulation for Windows/DOS
+- Disk image loading from storage
+- Screen rendering to canvas
+- Input handling (keyboard/mouse)
 
-#### `nacho.printReport()`
-Print comprehensive performance report to console.
+### Storage System (HiberFile)
+- IndexedDB for local storage
+- Chunked file storage (4MB chunks)
+- Compression support (gzip/zstd)
+- Cloud archival to Discord/Telegram
+- Hot/cold storage tiers
 
-#### `nacho.shutdown()`
-Shutdown runtime and cleanup resources.
-
-Returns: `Promise<void>`
-
-## Performance
-
-### Realistic Expectations
-
-| Component | Target | Notes |
-|-----------|--------|-------|
-| GPU Compute | 10-50 TFLOPS | Depends on user's GPU hardware |
-| JIT Speed | 50-70% native | Best achievable with advanced techniques |
-| Boot Time | <500ms | With OPFS caching |
-| Frame Rate | 60-120 FPS | Display-limited |
-
-### What IS Possible
-
-- Maximum GPU utilization via WebGPU
-- Advanced JIT compilation with optimization passes
-- Binary rewriting and execution
-- Fast boot with aggressive caching
-- Smooth 120Hz rendering
-
-### What IS NOT Possible
-
-- Actual exascale compute (requires data center hardware)
-- 100% native binary speed (browser sandbox overhead)
-- Direct hardware access (security sandboxed)
-- Bypassing browser APIs (WebGPU/WASM are the lowest level)
-
-## Components
-
-### JIT Compiler
-Advanced tiered JIT compiler:
-- Interpreter → Baseline → Optimizing tiers
-- Profile-guided optimization
-- Inlining, loop unrolling, DCE, CSE
-- Register allocation
-- Target: 50-70% native speed
-
-### GPU Runtime
-Maximum GPU utilization:
-- Persistent compute kernels
-- Zero-copy memory architecture
-- Multi-queue execution
-- Automatic workload balancing
-- Target: 10-50 TeraFLOPS
-
-### Binary Executor
-Execute real binaries:
-- PE (Windows EXE/DLL) support
-- DEX (Android APK) support
-- Binary rewriting for API interception
-- System call translation
-- Memory virtualization
-
-### Runtime
-Complete OS environment:
-- Windows 11 desktop
-- Android 14 launcher
-- Application execution
-- File system (OPFS)
-- Fast boot (<500ms)
+### Experimental Features
+- **GPU Benchmarking**: WebGPU matrix multiply benchmark
+- **JIT Stubs**: Architecture for future JIT (not functional)
+- **Binary Parser**: PE/DEX format detection (basic)
 
 ## Browser Requirements
 
-- Chrome 113+ or Edge 113+ (WebGPU support)
-- HTTPS or localhost (SharedArrayBuffer)
-- Modern GPU with compute support
+- **Minimum**: Chrome 90+, Firefox 90+, Safari 14+
+- **Recommended**: Chrome 113+ or Edge 113+ for WebGPU features
+- **Required**: IndexedDB support, JavaScript enabled
+- **Optional**: SharedArrayBuffer for better performance (requires HTTPS)
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Build WASM modules (optional)
+npm run build:wasm
+```
+
+## Known Limitations
+
+- **Emulation Speed**: v86 is significantly slower than native
+- **Binary Execution**: Limited to what v86 can emulate
+- **WebGPU**: Only available in Chrome/Edge 113+
+- **CORS**: Some games may fail to load due to CORS restrictions
+- **Storage**: Discord/Telegram have file size limits (25MB)
 
 ## License
 
-[Your License Here]
-
-## Production Use
-
-This is a production-grade system designed for:
-- High-performance computing in the browser
-- Binary execution environments
-- OS virtualization
-- GPU-accelerated applications
-
-**Note**: Performance is constrained by browser APIs. For native performance, use native applications.
+MIT License - See LICENSE file for details

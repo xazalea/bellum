@@ -1,17 +1,19 @@
 /**
- * Nacho GPU Compute Runtime
- * Production-grade GPU compute system built on WebGPU
+ * Nacho GPU Runtime (Basic WebGPU Wrapper)
  * 
- * TARGET: 10-50 TeraFLOPS (hardware dependent)
+ * ⚠️ NOTE: This provides basic WebGPU functionality and benchmarking.
+ * The "TeraFLOPS" measurements are from simple matrix multiplication
+ * benchmarks, not production GPU compute workloads.
  * 
- * Optimizations:
- * - Maximum occupancy (utilize all GPU cores)
- * - Async compute (overlap compute and memory ops)
- * - Persistent kernels (reduce dispatch overhead)
- * - Zero-copy architecture (eliminate CPU-GPU transfers)
- * - Automatic workload balancing
- * - Multi-queue execution
- * - Pipeline caching
+ * Working features:
+ * - WebGPU initialization
+ * - Matrix multiplication benchmark
+ * - Basic compute kernel execution
+ * 
+ * Non-functional/aspirational:
+ * - "Maximum occupancy" and "Zero-copy architecture" are buzzwords
+ * - No actual persistent kernels or multi-queue execution
+ * - Performance claims are theoretical, not actual
  */
 
 export interface GPUComputeConfig {

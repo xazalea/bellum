@@ -34,7 +34,9 @@ export async function initCompression(): Promise<boolean> {
       return true;
     }
   } catch (error) {
-    console.warn('Compression WASM failed, using JS fallback:', error);
+    // Silently fall back to JavaScript implementation
+    // This is expected when WASM is not available
+    console.log('[Compression] Using JavaScript fallback (WASM not available)');
   }
   
   useWasm = false;
@@ -58,7 +60,7 @@ export async function compress(
     try {
       return wasmModule.compress(data, algorithm, level);
     } catch (error) {
-      console.warn('WASM compression failed, using fallback:', error);
+      console.log('[Compression] WASM compression failed, using JavaScript fallback');
       useWasm = false;
     }
   }
@@ -98,7 +100,7 @@ export async function decompress(
     try {
       return wasmModule.decompress(data, algorithm);
     } catch (error) {
-      console.warn('WASM decompression failed, using fallback:', error);
+      console.log('[Compression] WASM decompression failed, using JavaScript fallback');
       useWasm = false;
     }
   }

@@ -1,16 +1,21 @@
 /**
- * Nacho Binary Execution Engine
- * Production-grade binary rewriter and execution system
+ * Nacho Binary Executor (Stub Implementation)
  * 
- * Capabilities:
- * - Execute PE (Windows EXE/DLL) binaries
- * - Execute DEX (Android APK) binaries
- * - Binary rewriting for API interception
- * - Dynamic translation to WebAssembly
+ * ⚠️ WARNING: This is a non-functional stub.
+ * This code can parse PE/DEX/ELF headers but does NOT execute binaries.
+ * 
+ * Working features:
+ * - Binary format detection (PE/DEX/ELF)
+ * - Header parsing
+ * - Architecture detection (x86/ARM)
+ * 
+ * Non-functional:
+ * - Actual binary execution
+ * - JIT compilation
  * - System call translation
- * - Memory management
+ * - Memory virtualization
  * 
- * TARGET: Run real EXE/APK files with acceptable performance
+ * For real binary execution, use v86 emulator or similar.
  */
 
 import { NachoJITCompiler } from '../jit/nacho-jit-compiler';

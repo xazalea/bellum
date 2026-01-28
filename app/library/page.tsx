@@ -13,6 +13,7 @@ import { buildStandaloneEmulatorFile, downloadTextFile } from '@/lib/packaging/s
 export default function LibraryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [apps, setApps] = useState<StoredApp[]>([]);
   const [launchingGame, setLaunchingGame] = useState<InstalledApp | null>(null);
   const [launchingLocal, setLaunchingLocal] = useState<StoredApp | null>(null);
@@ -24,20 +25,55 @@ export default function LibraryPage() {
 
   useEffect(() => {
     const init = async () => {
+      // Set timeout to prevent infinite loading
+      const timeout = setTimeout(() => {
+        if (loading) {
+          console.error('[Library] Initialization timed out');
+          setError('Initialization timed out. Please refresh the page.');
+          setLoading(false);
+        }
+      }, 10000); // 10 second timeout
+
       try {
+        console.log('[Library] Starting initialization...');
+        
+        // Initialize Discord profile
         const fp = await getDeviceFingerprintId();
+        console.log('[Library] Got fingerprint:', fp);
+        
         const p = await discordDB.init(fp);
+        console.log('[Library] Discord profile loaded');
         setProfile(p);
 
-        const lib = new AppLibraryManager(puterClient);
-        await lib.init();
-        libraryRef.current = lib;
-        setApps([...lib.getApps()]);
+        // Initialize app library
+        try {
+          console.log('[Library] Initializing AppLibraryManager...');
+          const lib = new AppLibraryManager(puterClient);
+          await lib.init();
+          libraryRef.current = lib;
+          setApps([...lib.getApps()]);
+          console.log('[Library] AppLibraryManager initialized with', lib.getApps().length, 'apps');
+        } catch (libErr) {
+          console.error('[Library] AppLibraryManager failed, continuing without it:', libErr);
+          // Don't fail completely, just log the error
+        }
 
-        runtimeRef.current = RuntimeManager.getInstance();
+        // Initialize runtime manager
+        try {
+          console.log('[Library] Initializing RuntimeManager...');
+          runtimeRef.current = RuntimeManager.getInstance();
+          console.log('[Library] RuntimeManager initialized');
+        } catch (runtimeErr) {
+          console.error('[Library] RuntimeManager failed, continuing without it:', runtimeErr);
+          // Don't fail completely, just log the error
+        }
+        
+        console.log('[Library] Initialization complete');
       } catch (err) {
-        console.error('Failed to load library', err);
+        console.error('[Library] Failed to load library:', err);
+        setError(err instanceof Error ? err.message : 'Failed to initialize library');
       } finally {
+        clearTimeout(timeout);
         setLoading(false);
       }
     };
@@ -190,6 +226,20 @@ export default function LibraryPage() {
           <span>{profile ? 'Synced' : 'Offline'}</span>
           </div>
           </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-nacho flex items-center gap-3 text-red-400">
+          <span className="material-symbols-outlined">error</span>
+          <p className="flex-1">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30"
+          >
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* Runner Overlay */}
       {(launchingGame || launchingLocal) && (

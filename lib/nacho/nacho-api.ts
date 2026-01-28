@@ -1,8 +1,14 @@
 /**
- * Nacho Production API
- * Clean, production-grade API for maximum performance computing
+ * Nacho Runtime API (Experimental)
  * 
- * This is the main entry point for Nacho runtime
+ * ⚠️ WARNING: This is an experimental/aspirational implementation.
+ * Most features are stubs and do not provide actual JIT compilation,
+ * GPU compute, or binary execution capabilities.
+ * 
+ * For actual functionality, use:
+ * - v86 emulator for x86/Windows emulation
+ * - WebGPU for GPU benchmarking only
+ * - Standard browser APIs for everything else
  */
 
 import { nachoRuntime, NachoRuntime, NachoConfig, NachoStatus, OSType } from '../nexus/nacho-runtime';
