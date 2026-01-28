@@ -137,7 +137,8 @@ export class WebGPURenderer {
       );
     } else {
       const bitmap = await createImageBitmap(source);
-      this.device.queue.copyExternalImageToTexture(
+      // TypeScript types may not include copyExternalImageToTexture, but it exists at runtime
+      (this.device.queue as any).copyExternalImageToTexture(
         { source: bitmap },
         { texture: this.texture },
         { width, height }

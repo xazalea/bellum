@@ -124,14 +124,17 @@ export class MeshScheduler {
       selectPeer: (job, candidates) => this.selectByScore(job, candidates),
     });
     
-    // Start batch processor
-    this.startBatchProcessor();
-    
-    // Start capability heartbeat
-    this.startCapabilityHeartbeat();
-    
-    // Listen for service advertisements
-    this.setupServiceListener();
+    // Only start browser-specific features in browser environment
+    if (typeof window !== 'undefined') {
+      // Start batch processor
+      this.startBatchProcessor();
+      
+      // Start capability heartbeat
+      this.startCapabilityHeartbeat();
+      
+      // Listen for service advertisements
+      this.setupServiceListener();
+    }
     
     console.log('[MeshScheduler] Initialized');
   }
@@ -140,6 +143,7 @@ export class MeshScheduler {
    * Start capability heartbeat
    */
   private startCapabilityHeartbeat(): void {
+    if (typeof window === 'undefined') return;
     // Advertise our capabilities every 5 seconds
     this.heartbeatInterval = window.setInterval(() => {
       this.advertiseCapabilities();
@@ -285,6 +289,7 @@ export class MeshScheduler {
    * Start batch processor
    */
   private startBatchProcessor(): void {
+    if (typeof window === 'undefined') return;
     this.batchTimer = window.setInterval(() => {
       this.processBatch();
     }, this.batchInterval);

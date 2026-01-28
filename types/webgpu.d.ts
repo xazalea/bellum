@@ -156,6 +156,7 @@ interface GPUComputePassEncoder {
 interface GPURenderPassEncoder {
   setPipeline(pipeline: GPURenderPipeline): void;
   setBindGroup(index: number, bindGroup: GPUBindGroup, dynamicOffsets?: number[]): void;
+  setVertexBuffer(slot: number, buffer: GPUBuffer | null, offset?: number, size?: number): void;
   draw(vertexCount: number, instanceCount?: number, firstVertex?: number, firstInstance?: number): void;
   drawIndexed(indexCount: number, instanceCount?: number, firstIndex?: number, baseVertex?: number, firstInstance?: number): void;
   end(): void;
