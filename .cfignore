@@ -1,0 +1,76 @@
+# Files to ignore when deploying to Cloudflare Pages
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Development files
+.env*.local
+.env
+
+# Build files (except .vercel/output/static which is our target)
+.next/
+out/
+
+# Documentation
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+*.test.*
+*.spec.*
+__tests__/
+__mocks__/
+
+# Logs
+*.log
+logs/
+
+# Source files (only built output is needed)
+app/
+lib/
+components/
+styles/
+public/
+pages/
+src/
+
+# Config files (not needed in deployment)
+next.config.js
+tsconfig.json
+tailwind.config.js
+postcss.config.js
+eslint.config.js
+.eslintrc*
+
+# Build scripts
+scripts/
+
+# Vendor code
+vendor/
+
+# Wrangler local dev
+.wrangler/
+.dev.vars
+wrangler.log
+
+# Cache
+.cache/
+.eslintcache

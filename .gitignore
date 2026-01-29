@@ -4,6 +4,8 @@
 /node_modules
 /.pnp
 .pnp.js
+.pnpm-store/
+.yarn/
 
 # testing
 /coverage
@@ -35,22 +37,112 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# npm
-.npmrc.local
-/.npm-cache/
+# wasm build artifacts
+/wasm/**/*.wasm
+!/public/wasm/*.wasm
 
-# Large Asset Directories
-**/assets/games/
-lib/arsenic/public/assets/games/
-public/unblocker/assets/games/
-
-# Generated game catalog (built from games.xml)
+# Generated files
 public/games.json
-public/games-chunks/
 
-# Cherri full-site snapshot is generated from vendor/cherri (submodule)
-public/unblocker/
-.pnpm-store
+# Cloudflare
+.wrangler/
+.dev.vars
+wrangler.log
 
-.pnpm-store/
-vendor/open-saas/template/app/.pnpm-store/
+# Build output (both platforms use this)
+.vercel/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Cache
+.cache
+.eslintcache
+.npm
+.npm-cache/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.parcel-cache
+
+# Next.js cache
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*

@@ -25,12 +25,16 @@ const resolveBuildVersion = () => {
   return 'local';
 };
 
+// Detect if building for Cloudflare
+const isCloudflare = process.env.CF_PAGES === '1' || process.env.CLOUDFLARE_ENV !== undefined;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
     NEXT_PUBLIC_BUILD_VERSION: resolveBuildVersion(),
     NEXT_PUBLIC_CLUSTER_SERVER_URL: process.env.NEXT_PUBLIC_CLUSTER_SERVER_URL ?? 'https://nachooo.vercel.app',
+    NEXT_PUBLIC_PLATFORM: isCloudflare ? 'cloudflare' : 'vercel',
   },
   reactStrictMode: true,
   

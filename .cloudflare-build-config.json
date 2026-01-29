@@ -1,0 +1,22 @@
+{
+  "$schema": "https://developers.cloudflare.com/pages/functions/bindings/#configuring-bindings-locally",
+  "build": {
+    "command": "npm run build:cloudflare",
+    "cwd": "",
+    "watch_paths": [
+      "app/**/*",
+      "lib/**/*",
+      "public/**/*",
+      "next.config.js",
+      "package.json"
+    ]
+  },
+  "production": {
+    "compatibility_date": "2026-01-29",
+    "compatibility_flags": ["nodejs_compat"]
+  },
+  "preview": {
+    "compatibility_date": "2026-01-29",
+    "compatibility_flags": ["nodejs_compat"]
+  }
+}
