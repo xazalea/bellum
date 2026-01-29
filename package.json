@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:games && next build",
-    "build:games": "node scripts/build-games-json.js",
+    "build": "next build",
     "build:wasm": "npm run build:wasm:rust && npm run build:wasm:as",
     "build:wasm:rust": "node scripts/build-rust-wasm.js",
     "build:wasm:as": "npm run asbuild",

@@ -226,11 +226,28 @@ async function getCatalog(): Promise<GamesCatalog | null> {
 }
 
 /**
- * Parsed chunks of games to avoid loading massive XML at once
- * Enhanced with caching and optimized parsing for 20,000+ games
+ * Fetch games from API (server-side parsing for better performance)
+ * Falls back to client-side parsing if API fails
  */
 export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[], total: number }> {
   try {
+    // Try API first (server-side parsing is much faster)
+    console.log(`[GamesParser] Fetching games from API (page ${page}, limit ${limit})`);
+    const apiUrl = `/api/games?page=${page}&limit=${limit}`;
+    const response = await fetch(apiUrl);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`[GamesParser] Loaded ${data.games.length} games from API`);
+      return {
+        games: data.games,
+        total: data.total
+      };
+    }
+    
+    console.warn('[GamesParser] API failed, falling back to client-side parsing');
+    
+    // Fallback to client-side catalog
     const catalog = await getCatalog();
     if (!catalog) {
       return { games: [], total: 0 };
@@ -242,7 +259,7 @@ export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[],
       total: catalog.total,
     };
   } catch (e) {
-    console.error("Failed to parse games.xml", e);
+    console.error("[GamesParser] Failed to fetch games:", e);
     return { games: [], total: 0 };
   }
 }
