@@ -1,0 +1,29 @@
+# Cloudflare Pages _headers file
+# These headers are applied to all routes
+
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Static assets - long cache
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images and fonts
+/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service workers - no cache
+/sw.js
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+  Service-Worker-Allowed: /
+
+# WASM files
+/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=31536000, immutable
+
+# Games XML
+/games.xml
+  Cache-Control: public, max-age=3600, must-revalidate

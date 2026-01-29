@@ -3,6 +3,9 @@ name = "bellum"
 compatibility_date = "2026-01-29"
 pages_build_output_dir = ".vercel/output/static"
 
+# Node.js compatibility for server functions
+compatibility_flags = ["nodejs_compat"]
+
 # Environment variables (set these in Cloudflare dashboard)
 # NEXT_PUBLIC_BUILD_COMMIT
 # NEXT_PUBLIC_BUILD_VERSION

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
 
 // Force this route to be dynamic (not pre-rendered at build time)
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+// Use edge runtime for Cloudflare compatibility (falls back to nodejs on Vercel)
+export const runtime = 'edge';
 
 // Cache the parsed games in memory
 let cachedGames: any = null;
@@ -33,8 +32,16 @@ async function parseGamesXml(): Promise<Game[]> {
   const startTime = Date.now();
   
   try {
-    const xmlPath = join(process.cwd(), 'public', 'games.xml');
-    const xmlContent = await readFile(xmlPath, 'utf-8');
+    // Fetch games.xml from the public URL (works on both Vercel and Cloudflare)
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.CF_PAGES_URL || 'http://localhost:3000';
+    
+    const response = await fetch(`${baseUrl}/games.xml`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch games.xml: ${response.status}`);
+    }
+    const xmlContent = await response.text();
     
     const games: Game[] = [];
     

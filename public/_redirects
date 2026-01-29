@@ -1,0 +1,14 @@
+# Cloudflare Pages _redirects file
+# Handle SPA routing - let Next.js handle all routes
+
+# Don't redirect static files
+/_next/* 200
+/favicon.ico 200
+/images/* 200
+/v86/* 200
+/wasm/* 200
+/games.xml 200
+/sw.js 200
+
+# All other routes handled by Next.js
+/* /index.html 200
