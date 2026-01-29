@@ -1,7 +1,4 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "pnpm install",
   "framework": "nextjs",
   "regions": ["iad1"],
   "headers": [

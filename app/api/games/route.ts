@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
+// Force this route to be dynamic (not pre-rendered at build time)
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // Cache the parsed games in memory
 let cachedGames: any = null;
 let lastParsed = 0;

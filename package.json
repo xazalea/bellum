@@ -11,7 +11,8 @@
     "asbuild": "asc wasm/animation/assembly/index.ts --target release --outFile public/wasm/animation.wasm --optimize --sourceMap",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "node scripts/copy-optimizers.js --if-missing"
+    "postinstall": "node scripts/copy-optimizers.js --if-missing",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@fingerprintjs/fingerprintjs": "^4.2.1",

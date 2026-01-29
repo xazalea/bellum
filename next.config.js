@@ -355,9 +355,6 @@ const nextConfig = {
     ];
   },
   
-  // Output configuration
-  output: 'standalone',
-  
   // Image optimization
   images: {
     formats: ['image/avif', 'image/webp'],
