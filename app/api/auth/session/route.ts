@@ -2,13 +2,9 @@ import { NextResponse } from 'next/server';
 import { createSessionCookieFromIdToken, makeSessionCookieOptions, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
-
+// 14 days
 export const runtime = 'nodejs';
 
-// 14 days
 const MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 
 export async function POST(req: Request) {

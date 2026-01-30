@@ -2,11 +2,8 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, requireTelegramStorageChatId, telegramDownloadFileBytes, telegramSendDocument } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
+export const runtime = 'nodejs';
 
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
-
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type ManifestChunk = { index: number; telegramFileId: string; sizeBytes: number };

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Force this route to be dynamic (not pre-rendered at build time)
+export const runtime = 'edge';
+
 export const dynamic = 'force-dynamic';
 // Use edge runtime for Cloudflare compatibility (falls back to nodejs on Vercel)
-export const runtime = 'edge';
 
 // Cache the parsed games in memory
 let cachedGames: any = null;

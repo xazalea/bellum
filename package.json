@@ -5,14 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "next build && npx @cloudflare/next-on-pages --skip-validation",
     "build:wasm": "npm run build:wasm:rust && npm run build:wasm:as",
     "build:wasm:rust": "node scripts/build-rust-wasm.js",
     "build:wasm:as": "npm run asbuild",
     "asbuild": "asc wasm/animation/assembly/index.ts --target release --outFile public/wasm/animation.wasm --optimize --sourceMap",
     "start": "next start",
-    "preview:cloudflare": "npm run build:cloudflare && wrangler pages dev .vercel/output/static",
-    "deploy:cloudflare": "npm run build:cloudflare && wrangler pages deploy .vercel/output/static --project-name=bellum",
     "lint": "next lint",
     "postinstall": "node scripts/copy-optimizers.js --if-missing",
     "vercel-build": "next build"
@@ -40,7 +37,6 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@cloudflare/next-on-pages": "^1.13.0",
     "@types/node": "^20.11.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
@@ -48,14 +44,9 @@
     "autoprefixer": "^10.4.17",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
-    "glob": "^10.3.0",
+    "glob": "^10.3.10",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.0",
-    "vercel": "^47.0.4",
-    "wrangler": "^3.96.0"
-  },
-  "overrides": {
-    "glob": "^10.3.10"
+    "typescript": "^5.3.0"
   }
 }

@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isCurrentDeviceTrusted, requireFingerprint } from '@/lib/server/nacho-auth';
 
-
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
-
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {

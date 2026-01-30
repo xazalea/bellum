@@ -4,10 +4,6 @@ import { rateLimit } from '@/lib/server/security';
 import { extendLease, getLease } from '@/lib/gpu-rental/store';
 import type { ExtendLeaseRequest } from '@/lib/gpu-rental/types';
 
-
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
-
 export const runtime = 'nodejs';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {

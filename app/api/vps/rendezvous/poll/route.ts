@@ -2,11 +2,8 @@ import { NextResponse } from 'next/server';
 import { pollNext } from '@/lib/server/vps-rendezvous';
 import { rateLimit } from '@/lib/server/security';
 
-
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
-
 export const runtime = 'nodejs';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {

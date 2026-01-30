@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 
-
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
-
 export const runtime = 'nodejs';
 
 function pickClientIp(req: Request): string | null {

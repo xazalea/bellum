@@ -1,8 +1,7 @@
 
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
 
-export const runtime = "nodejs";
+export const runtime = 'nodejs';
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {

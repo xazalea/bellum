@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ISO_CONFIGS } from '@/lib/assets/iso-config';
 
-
-// Edge runtime for Cloudflare compatibility
 export const runtime = 'edge';
 
 export const dynamic = 'force-dynamic';

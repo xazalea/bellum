@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit } from '@/lib/server/security';
 
-
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 type Action = 'create' | 'signin' | 'verify';
 

@@ -4,10 +4,6 @@ import { rateLimit } from '@/lib/server/security';
 import { createLease, listLeasesForUser } from '@/lib/gpu-rental/store';
 import type { CreateLeaseRequest } from '@/lib/gpu-rental/types';
 
-
-// Edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
-
 export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
