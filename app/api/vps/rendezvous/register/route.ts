@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { registerOwner } from '@/lib/server/vps-rendezvous';
 import { rateLimit } from '@/lib/server/security';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {

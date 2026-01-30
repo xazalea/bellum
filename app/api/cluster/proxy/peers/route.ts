@@ -3,6 +3,10 @@ import { getClusterBaseCandidates } from '@/lib/cluster/cluster-base';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 function corsHeaders(req: Request): Record<string, string> {

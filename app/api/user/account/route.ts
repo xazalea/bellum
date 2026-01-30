@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { adminDb, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit } from '@/lib/server/security';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 type Action = 'create' | 'signin' | 'verify';
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 export async function GET(req: Request) {

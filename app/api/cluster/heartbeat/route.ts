@@ -4,6 +4,10 @@ import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 import { adminDb } from '@/app/api/user/_util';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 type Body = {

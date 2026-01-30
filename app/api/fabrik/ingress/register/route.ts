@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { rateLimit } from '@/lib/server/security';
 import { registerIngressNode } from '@/lib/server/fabrik-ingress-rendezvous';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {

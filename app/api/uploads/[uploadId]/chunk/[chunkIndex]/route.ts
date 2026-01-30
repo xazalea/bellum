@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export async function PUT(req: Request, ctx: { params: { uploadId: string; chunkIndex: string } }) {
     try {
         // In a real implementation, this would write the chunk to S3/Disk/BlobStorage.

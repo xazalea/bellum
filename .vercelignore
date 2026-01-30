@@ -1,0 +1,32 @@
+# Vercel build ignores
+
+# Don't upload vendor code to Vercel
+vendor/
+
+# Don't upload Cloudflare config
+wrangler.toml
+.cloudflare-build-config.json
+next-on-pages.config.js
+
+# Don't upload documentation
+*.md
+!README.md
+
+# Don't upload build scripts not needed for Vercel
+scripts/convert-to-edge.js
+scripts/build-games-json.js
+
+# Don't upload git files
+.git/
+.gitignore
+.gitattributes
+
+# Don't upload IDE files
+.vscode/
+.idea/
+
+# Don't upload test files
+**/*.test.*
+**/*.spec.*
+__tests__/
+__mocks__/

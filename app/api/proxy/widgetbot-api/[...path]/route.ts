@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 /**
  * Proxy endpoint for Widgetbot API requests
  * This allows the widget to communicate with Discord even if Widgetbot API is blocked

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export async function POST(req: Request, ctx: { params: { uploadId: string } }) {
     try {
         const { uploadId } = ctx.params;

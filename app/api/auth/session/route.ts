@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { createSessionCookieFromIdToken, makeSessionCookieOptions, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 // 14 days

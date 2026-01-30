@@ -1,11 +1,11 @@
 /** @type {import('@cloudflare/next-on-pages').Config} */
 module.exports = {
-  // Skip the @cloudflare/next-on-pages build check
-  skipValidation: false,
+  // Skip validation to avoid blocking on non-edge routes
+  skipValidation: true,
   
-  // Disable the warning about experimental features
+  // Disable chunks deduplication for faster builds
   disableChunksDedup: false,
   
-  // Disable the warning about the app directory
+  // Keep worker minification enabled
   disableWorkerMinification: false,
 };

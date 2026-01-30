@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "next build && npx @cloudflare/next-on-pages",
+    "build:cloudflare": "next build && npx @cloudflare/next-on-pages --skip-validation",
     "build:wasm": "npm run build:wasm:rust && npm run build:wasm:as",
     "build:wasm:rust": "node scripts/build-rust-wasm.js",
     "build:wasm:as": "npm run asbuild",

@@ -48,10 +48,10 @@ export default function LibraryPage() {
         // Initialize app library
         try {
           console.log('[Library] Initializing AppLibraryManager...');
-          const lib = new AppLibraryManager(puterClient);
-          await lib.init();
-          libraryRef.current = lib;
-          setApps([...lib.getApps()]);
+        const lib = new AppLibraryManager(puterClient);
+        await lib.init();
+        libraryRef.current = lib;
+        setApps([...lib.getApps()]);
           console.log('[Library] AppLibraryManager initialized with', lib.getApps().length, 'apps');
         } catch (libErr) {
           console.error('[Library] AppLibraryManager failed, continuing without it:', libErr);
@@ -61,7 +61,7 @@ export default function LibraryPage() {
         // Initialize runtime manager
         try {
           console.log('[Library] Initializing RuntimeManager...');
-          runtimeRef.current = RuntimeManager.getInstance();
+        runtimeRef.current = RuntimeManager.getInstance();
           console.log('[Library] RuntimeManager initialized');
         } catch (runtimeErr) {
           console.error('[Library] RuntimeManager failed, continuing without it:', runtimeErr);

@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { rateLimit } from '@/lib/server/security';
 import { getClusterBaseCandidates } from '@/lib/cluster/cluster-base';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 type Body = {

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 /**
  * Proxy endpoint for Widgetbot script
  * This allows the Widgetbot embed to work even if the CDN is blocked

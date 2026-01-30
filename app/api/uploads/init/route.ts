@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();

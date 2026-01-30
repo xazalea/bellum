@@ -3,6 +3,10 @@ import { getAdminDb } from '@/lib/server/firebase-admin';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 

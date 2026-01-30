@@ -3,6 +3,10 @@ import { listActivePeersForUser, prunePeers } from '@/lib/cluster/presence-store
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { adminDb } from '@/app/api/user/_util';
 
+
+// Edge runtime for Cloudflare compatibility
+export const runtime = 'edge';
+
 export const runtime = 'nodejs';
 
 const ACTIVE_WINDOW_MS = 60_000;

@@ -1,0 +1,51 @@
+# Cloudflare Pages build ignores
+
+# Don't upload vendor code
+vendor/
+
+# Don't upload Vercel config
+vercel.json
+.vercelignore
+
+# Don't upload documentation
+*.md
+!README.md
+
+# Don't upload source files (only need built output)
+app/
+lib/
+components/
+styles/
+pages/
+src/
+
+# Don't upload config files not needed in deployment
+next.config.js
+tsconfig.json
+tailwind.config.js
+postcss.config.js
+eslint.config.js
+.eslintrc*
+
+# Don't upload build scripts
+scripts/
+
+# Don't upload git files
+.git/
+.gitignore
+.gitattributes
+
+# Don't upload IDE files
+.vscode/
+.idea/
+
+# Don't upload test files
+**/*.test.*
+**/*.spec.*
+__tests__/
+__mocks__/
+
+# Don't upload cache
+.next/
+.cache/
+node_modules/
