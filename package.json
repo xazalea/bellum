@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:cloudflare": "next build && npx @cloudflare/next-on-pages",
     "build:wasm": "npm run build:wasm:rust && npm run build:wasm:as",
     "build:wasm:rust": "node scripts/build-rust-wasm.js",
     "build:wasm:as": "npm run asbuild",
@@ -45,6 +46,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.16",
     "@types/cheerio": "^0.22.0",
     "@types/event-stream": "^4.0.0",
     "@types/node": "^20.11.0",
@@ -58,6 +60,7 @@
     "glob": "^10.3.10",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "wrangler": "^3.96.0"
   }
 }
