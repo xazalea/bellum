@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireFingerprint, signupUsername } from '@/lib/server/nacho-auth';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {

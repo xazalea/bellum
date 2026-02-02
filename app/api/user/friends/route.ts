@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
-import type { Firestore } from 'firebase-admin/firestore';
+import { jsonError, requireAuthedUser } from '@/app/api/user/_util';
+// Dynamic import for firebase-admin to avoid Edge Runtime issues
+// import type { Firestore } from 'firebase-admin/firestore';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
 type FriendRequest = {
@@ -39,7 +40,7 @@ function normalizeHandle(input: string): string {
   return h;
 }
 
-async function getHandleForUid(db: Firestore, uid: string): Promise<string | null> {
+async function getHandleForUid(db: any, uid: string): Promise<string | null> {
   const snap = await db.collection('users').doc(uid).get();
   if (!snap.exists) return null;
   const d = snap.data() as any;
@@ -47,7 +48,7 @@ async function getHandleForUid(db: Firestore, uid: string): Promise<string | nul
   return h ? normalizeHandle(h) : null;
 }
 
-async function resolveUidByHandle(db: Firestore, handleInput: string): Promise<string> {
+async function resolveUidByHandle(db: any, handleInput: string): Promise<string> {
   const handle = normalizeHandle(handleInput);
   const snap = await db.collection('handles').doc(handle).get();
   if (!snap.exists) throw new Error('User not found');
@@ -59,7 +60,9 @@ async function resolveUidByHandle(db: Firestore, handleInput: string): Promise<s
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
-    const db = adminDb();
+    // Dynamic import for Edge Runtime compatibility
+    const { adminDb } = await import('@/app/api/user/_util');
+    const db = await adminDb();
 
     const reqSnap = await db
       .collection('friend_requests')
@@ -92,7 +95,9 @@ export async function POST(req: Request) {
       | { action: 'accept'; requestId: string }
       | { action: 'decline'; requestId: string };
 
-    const db = adminDb();
+    // Dynamic import for Edge Runtime compatibility
+    const { adminDb } = await import('@/app/api/user/_util');
+    const db = await adminDb();
     const now = Date.now();
 
     if (body.action === 'send') {

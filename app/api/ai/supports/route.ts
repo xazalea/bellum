@@ -13,7 +13,7 @@ const isBuildTime = typeof process !== 'undefined' &&
    process.env.CF_PAGES === '1' ||
    process.env.NEXT_PHASE);
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 interface SiteSupport {

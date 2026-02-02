@@ -4,7 +4,7 @@ import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 import { adminDb } from '@/app/api/user/_util';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 type Body = {
   deviceId?: string;
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     // Resolve handle (username) if available to group devices
     let effectiveUserId = uid;
     try {
-       const userSnap = await adminDb().collection('users').doc(uid).get();
+       const userSnap = await (await adminDb()).collection('users').doc(uid).get();
        const handle = userSnap.exists ? (userSnap.data() as any)?.handle : null;
        if (handle) effectiveUserId = handle;
     } catch {

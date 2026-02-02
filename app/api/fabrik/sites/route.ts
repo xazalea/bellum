@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 function normalizeDomain(input: string): string {
   const d = input.trim().toLowerCase();
@@ -25,7 +25,7 @@ type SiteRecord = {
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
-    const db = adminDb();
+    const db = await adminDb();
     const snap = await db
       .collection('xfabric_sites')
       .where('ownerUid', '==', uid)
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const bundleFileId = String(body.bundleFileId || '');
     if (!bundleFileId) throw new Error('Missing bundleFileId');
 
-    const db = adminDb();
+    const db = await adminDb();
     const createdAt = Date.now();
     const ref = db.collection('xfabric_sites').doc();
     await ref.set(

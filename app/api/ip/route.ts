@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 function pickClientIp(req: Request): string | null {
   const h = req.headers;

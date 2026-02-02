@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function POST(req: Request, ctx: { params: { repoId: string } }) {
   try {
@@ -14,7 +14,7 @@ export async function POST(req: Request, ctx: { params: { repoId: string } }) {
     const game = body.game as any;
     if (!game?.id || !game?.name) throw new Error('Invalid game');
 
-    const db = adminDb();
+    const db = await adminDb();
     const repoRef = db.collection('game_repositories').doc(ctx.params.repoId);
     const snap = await repoRef.get();
     if (!snap.exists) throw new Error('Repository not found');

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 function normalizeDomain(input: string): string {
   const d = input.trim().toLowerCase();
@@ -16,7 +16,7 @@ function normalizeDomain(input: string): string {
 
 async function requireOwnedSite(req: Request, siteId: string) {
   const { uid } = await requireAuthedUser(req);
-  const db = adminDb();
+  const db = await adminDb();
   const ref = db.collection('xfabric_sites').doc(siteId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error('not_found');

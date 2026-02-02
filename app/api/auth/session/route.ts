@@ -3,7 +3,7 @@ import { createSessionCookieFromIdToken, makeSessionCookieOptions, SESSION_COOKI
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 // 14 days
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 const MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 

@@ -3,7 +3,7 @@ import { listActivePeersForUser, prunePeers } from '@/lib/cluster/presence-store
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { adminDb } from '@/app/api/user/_util';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 const ACTIVE_WINDOW_MS = 60_000;
 
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
   let effectiveUserId = uid;
   try {
-     const userSnap = await adminDb().collection('users').doc(uid).get();
+     const userSnap = await (await adminDb()).collection('users').doc(uid).get();
      const handle = userSnap.exists ? (userSnap.data() as any)?.handle : null;
      if (handle) effectiveUserId = handle;
   } catch {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 type NachoUserSettings = {
   clusterParticipation: boolean;
@@ -13,7 +13,7 @@ const DEFAULTS: NachoUserSettings = { clusterParticipation: true };
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
-    const db = adminDb();
+    const db = await adminDb();
     const ref = db.collection('users').doc(uid).collection('settings').doc('main');
     const snap = await ref.get();
     const data = (snap.exists ? (snap.data() as any) : {}) || {};
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as Partial<NachoUserSettings>;
     const patch: Partial<NachoUserSettings> = {};
     if (typeof body.clusterParticipation === 'boolean') patch.clusterParticipation = body.clusterParticipation;
-    const db = adminDb();
+    const db = await adminDb();
     await db.collection('users').doc(uid).collection('settings').doc('main').set(patch, { merge: true });
     return new NextResponse(null, { status: 204 });
   } catch (e: any) {

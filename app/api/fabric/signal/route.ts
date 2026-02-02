@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/server/firebase-admin';
+// Dynamic import for firebase-admin to avoid Edge Runtime issues
+// import { getAdminDb } from '@/lib/server/firebase-admin';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,8 @@ export async function POST(req: Request) {
     const signal = requireSignal(body);
 
     // Only allow signaling within the authenticated user.
+    // Dynamic import for Edge Runtime compatibility
+    const { getAdminDb } = await import('@/lib/server/firebase-admin');
     const db = getAdminDb();
     await db.collection('fabric_signals').add({
       uid,
@@ -61,6 +64,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const peerId = requirePeerId(searchParams.get('peerId'), 'peerId');
 
+    // Dynamic import for Edge Runtime compatibility
+    const { getAdminDb } = await import('@/lib/server/firebase-admin');
     const db = getAdminDb();
     const qs = await db
       .collection('fabric_signals')

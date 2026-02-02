@@ -2,7 +2,7 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, requireTelegramStorageChatId, telegramDownloadFileBytes, telegramSendDocument } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = "force-dynamic";
 
@@ -59,8 +59,7 @@ export async function POST(req: Request) {
 
     const { fileId, messageId } = await telegramSendDocument({ token, chatId, caption, filename, bytes, mimeType: "application/json" });
 
-    await adminDb()
-      .collection("telegram_files")
+const db = await adminDb();db.collection("telegram_files")
       .doc(fileId)
       .set(
         {
@@ -91,7 +90,7 @@ export async function GET(req: Request) {
 
     const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: "telegram_manifest_fetch", limit: 240, windowMs: 60_000, key: uid });
-    const snap = await adminDb().collection("telegram_files").doc(fileId).get();
+    const snap = await (await adminDb()).collection("telegram_files").doc(fileId).get();
     if (!snap.exists) return Response.json({ error: "not_found" }, { status: 404 });
     const meta = snap.data() as any;
     if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });

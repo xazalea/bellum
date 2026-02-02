@@ -2,7 +2,7 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, telegramDownloadFileBytesWithRetry, TelegramError, TelegramErrorType } from "@/lib/server/telegram";
 import { rateLimit } from "@/lib/server/security";
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     if (!fileId) return Response.json({ error: "file_id required" }, { status: 400 });
 
     // Enforce ownership.
-    const snap = await adminDb().collection("telegram_files").doc(fileId).get();
+    const snap = await (await adminDb()).collection("telegram_files").doc(fileId).get();
     if (!snap.exists) return Response.json({ error: "not_found" }, { status: 404 });
     const meta = snap.data() as any;
     if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 function normalizeHandle(input: string): string {
   const h = input.trim().toLowerCase();
@@ -13,7 +13,7 @@ function normalizeHandle(input: string): string {
 export async function GET(req: Request) {
   try {
     const { uid, email, name } = await requireAuthedUser(req);
-    const db = adminDb();
+    const db = await adminDb();
     const snap = await db.collection('users').doc(uid).get();
     const d = snap.exists ? (snap.data() as any) : {};
     const handle = typeof d?.handle === 'string' ? d.handle : null;
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as { handle?: string | null };
     const handleRaw = body.handle;
     const nextHandle = handleRaw === null ? null : normalizeHandle(String(handleRaw || ''));
-    const db = adminDb();
+    const db = await adminDb();
 
     await db.runTransaction(async (tx) => {
       const userRef = db.collection('users').doc(uid);

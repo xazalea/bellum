@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { pollNext } from '@/lib/server/vps-rendezvous';
 import { rateLimit } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = 'force-dynamic';
 

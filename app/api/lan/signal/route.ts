@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/server/firebase-admin';
+// Dynamic import for firebase-admin to avoid Edge Runtime issues
+// import { getAdminDb } from '@/lib/server/firebase-admin';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 import { requireAuthedUser } from '@/app/api/user/_util';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,8 @@ export async function POST(req: Request) {
     const roomId = requireRoom(body?.roomId);
     const signal = requireSignal(body);
 
+    // Dynamic import for Edge Runtime compatibility
+    const { getAdminDb } = await import('@/lib/server/firebase-admin');
     const db = getAdminDb();
     await db.collection('lan_signals').add({
       uid,
@@ -71,6 +74,8 @@ export async function GET(req: Request) {
     const peerId = requireId(searchParams.get('peerId'), 'peerId');
     const roomId = requireRoom(searchParams.get('roomId'));
 
+    // Dynamic import for Edge Runtime compatibility
+    const { getAdminDb } = await import('@/lib/server/firebase-admin');
     const db = getAdminDb();
     const qs = await db
       .collection('lan_signals')

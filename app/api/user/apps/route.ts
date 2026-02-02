@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 type InstalledApp = {
   name: string;
@@ -19,7 +19,7 @@ type InstalledApp = {
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
-    const db = adminDb();
+    const db = await adminDb();
 
     const snap = await db
       .collection('users')
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     if (!app) throw new Error('Missing app');
     if (!app.fileId || !app.name) throw new Error('Invalid app');
 
-    const db = adminDb();
+    const db = await adminDb();
     const ref = db.collection('users').doc(uid).collection('apps').doc();
     await ref.set(app, { merge: true });
     return NextResponse.json({ id: ref.id }, { status: 200 });

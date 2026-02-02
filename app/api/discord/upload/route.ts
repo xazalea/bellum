@@ -2,7 +2,7 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireDiscordWebhookUrl, discordSendFileWithRetry, DiscordError, DiscordErrorType } from "@/lib/server/discord";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = "force-dynamic";
 
@@ -65,8 +65,8 @@ export async function POST(req: Request) {
     // Discord CDN URLs expire after ~24 hours, so we store expiration time
     const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
     
-    await adminDb()
-      .collection("discord_files")
+    const db = await adminDb();
+    await db.collection("discord_files")
       .doc(messageId)
       .set(
         {

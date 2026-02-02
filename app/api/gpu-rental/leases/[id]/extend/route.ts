@@ -4,7 +4,7 @@ import { rateLimit } from '@/lib/server/security';
 import { extendLease, getLease } from '@/lib/gpu-rental/store';
 import type { ExtendLeaseRequest } from '@/lib/gpu-rental/types';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   let body: ExtendLeaseRequest | null = null;

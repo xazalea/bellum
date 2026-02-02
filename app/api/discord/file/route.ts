@@ -2,7 +2,7 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { discordDownloadFileWithRetry, DiscordError, DiscordErrorType } from "@/lib/server/discord";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     }
 
     // Fetch metadata from Firebase
-    const doc = await adminDb().collection("discord_files").doc(messageId).get();
+    const doc = await (await adminDb()).collection("discord_files").doc(messageId).get();
 
     if (!doc.exists) {
       return Response.json({ error: "File not found" }, { status: 404 });

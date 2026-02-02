@@ -2,7 +2,7 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, requireTelegramStorageChatId, telegramSendDocumentWithRetry, TelegramError, TelegramErrorType } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = "force-dynamic";
 
@@ -64,8 +64,7 @@ export async function POST(req: Request) {
     });
 
     // Record ownership so clients can only access their own objects.
-    await adminDb()
-      .collection("telegram_files")
+const db = await adminDb();db.collection("telegram_files")
       .doc(fileId)
       .set(
         {

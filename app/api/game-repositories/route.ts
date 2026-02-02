@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET() {
   try {
-    const db = adminDb();
+    const db = await adminDb();
     const snap = await db.collection('game_repositories').where('isPublic', '==', true).get();
     const out = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     return NextResponse.json(out, { status: 200 });
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const repo = body.repo as any;
     if (!repo?.name || !repo?.description) throw new Error('Invalid repo');
 
-    const db = adminDb();
+    const db = await adminDb();
     const ref = await db.collection('game_repositories').add({
       ...repo,
       ownerUid: uid,

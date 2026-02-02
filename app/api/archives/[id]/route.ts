@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function DELETE(req: Request, ctx: { params: { id: string } }) {
   try {
@@ -10,7 +10,7 @@ export async function DELETE(req: Request, ctx: { params: { id: string } }) {
     const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: 'archives_delete', limit: 60, windowMs: 60_000, key: uid });
 
-    const db = adminDb();
+    const db = await adminDb();
     const ref = db.collection('archives').doc(ctx.params.id);
     const snap = await ref.get();
     if (!snap.exists) return NextResponse.json({ error: 'not_found' }, { status: 404 });

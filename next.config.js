@@ -34,6 +34,10 @@ const nextConfig = {
   experimental: {
     skipTrailingSlashRedirect: true,
   },
+  // Skip static generation for storage page (client component with Node.js dependencies)
+  async rewrites() {
+    return [];
+  },
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
     NEXT_PUBLIC_BUILD_VERSION: resolveBuildVersion(),
@@ -192,6 +196,28 @@ const nextConfig = {
       })
     );
     
+    // Ignore node: prefixed modules for Edge Runtime builds
+    if (isCloudflare || isEdgeRuntime) {
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^node:/,
+        })
+      );
+    }
+    
+    // Always replace node:assert with empty module to prevent build errors
+    // This is needed for pages that get prerendered even though they're client components
+    try {
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /^node:assert$/,
+          require.resolve('./lib/webpack/empty-module.js')
+        )
+      );
+    } catch (e) {
+      // Ignore if empty-module.js doesn't exist yet
+    }
+    
     // Also ensure lodash is available in the resolve
     config.resolve = config.resolve || {};
     config.resolve.alias = config.resolve.alias || {};
@@ -208,8 +234,8 @@ const nextConfig = {
       config.resolve.alias.fengari = false;
     }
 
-    // Cloudflare edge build can't bundle Node-only automation/tooling libs
-    if (isCloudflare) {
+    // Edge Runtime builds (including Cloudflare) can't bundle Node-only modules
+    if (isCloudflare || isEdgeRuntime) {
       config.resolve.alias = {
         ...config.resolve.alias,
         '@elastic/ecs-winston-format': false,
@@ -226,6 +252,71 @@ const nextConfig = {
         'tunnel': false,
         'winston': false,
         'winston-transport': false,
+        // Node.js core modules not available in Edge Runtime
+        'fs': false,
+        'path': false,
+        'crypto': false,
+        'stream': false,
+        'util': false,
+        'events': false,
+        'buffer': false,
+        'process': false,
+        'os': false,
+        'child_process': false,
+        'net': false,
+        'tls': false,
+        'http': false,
+        'https': false,
+        'url': false,
+        'zlib': false,
+        'assert': false,
+        'querystring': false,
+        'dns': false,
+        'dgram': false,
+        'cluster': false,
+        'module': false,
+        'readline': false,
+        'repl': false,
+        'string_decoder': false,
+        'timers': false,
+        'tty': false,
+        'vm': false,
+        'worker_threads': false,
+        // Firebase Admin requires Node.js runtime
+        'firebase-admin': false,
+        '@google-cloud/firestore': false,
+        'google-auth-library': false,
+        'google-gax': false,
+        // Node.js prefixed core modules (node:net, node:fs, etc.)
+        'node:net': false,
+        'node:fs': false,
+        'node:path': false,
+        'node:crypto': false,
+        'node:stream': false,
+        'node:util': false,
+        'node:events': false,
+        'node:buffer': false,
+        'node:process': false,
+        'node:os': false,
+        'node:child_process': false,
+        'node:tls': false,
+        'node:http': false,
+        'node:https': false,
+        'node:url': false,
+        'node:zlib': false,
+        'node:assert': false,
+        'node:querystring': false,
+        'node:dns': false,
+        'node:dgram': false,
+        'node:cluster': false,
+        'node:module': false,
+        'node:readline': false,
+        'node:repl': false,
+        'node:string_decoder': false,
+        'node:timers': false,
+        'node:tty': false,
+        'node:vm': false,
+        'node:worker_threads': false,
       };
     }
     

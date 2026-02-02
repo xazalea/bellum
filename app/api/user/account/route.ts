@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 type Action = 'create' | 'signin' | 'verify';
 
@@ -33,21 +33,22 @@ export async function POST(req: Request) {
     rateLimit(req, { scope: 'account_route', limit: 60, windowMs: 60_000, key: `${action || 'unknown'}:${name}` });
 
     if (action === 'create') {
-      const doc = adminDb().collection('accounts').doc(name);
+      const doc = (await adminDb()).collection('accounts').doc(name);
       const snapshot = await doc.get();
       if (snapshot.exists) return NextResponse.json({ error: 'username_taken' }, { status: 409 });
       
       // Update account ownership and sync profile/handle
-      const batch = adminDb().batch();
+      const db = await adminDb();
+      const batch = db.batch();
       batch.set(doc, { username: name, ownerUid: uid, createdAt: Date.now() });
-      batch.set(adminDb().collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
-      batch.set(adminDb().collection('handles').doc(name), { uid, updatedAt: Date.now() });
+      batch.set((await adminDb()).collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
+      batch.set((await adminDb()).collection('handles').doc(name), { uid, updatedAt: Date.now() });
       await batch.commit();
       
       return NextResponse.json({ status: 'created' });
     }
 
-    const acctDoc = await adminDb().collection('accounts').doc(name).get();
+    const acctDoc = await (await adminDb()).collection('accounts').doc(name).get();
     if (!acctDoc.exists) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
       if (acct.ownerUid === uid) {
         return NextResponse.json({ status: 'ok' });
       }
-      const challengeDoc = adminDb().collection('account_challenges').doc(name);
+      const challengeDoc = (await adminDb()).collection('account_challenges').doc(name);
       const challengeCode = generateCode();
       await challengeDoc.set({
         username: name,
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
 
     if (action === 'verify') {
       if (!code) return NextResponse.json({ error: 'code_required' }, { status: 400 });
-      const challengeDoc = await adminDb().collection('account_challenges').doc(name).get();
+      const challengeDoc = await (await adminDb()).collection('account_challenges').doc(name).get();
       if (!challengeDoc.exists) return NextResponse.json({ error: 'challenge_missing' }, { status: 404 });
       const challenge = challengeDoc.data() as {
         code: string;
@@ -89,12 +90,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'invalid_code' }, { status: 400 });
       }
       
-      const batch = adminDb().batch();
+      const db = await adminDb();
+      const batch = db.batch();
       // Transfer account ownership
-      batch.set(adminDb().collection('accounts').doc(name), { ownerUid: uid, lastSwitchedAt: Date.now() }, { merge: true });
+      batch.set((await adminDb()).collection('accounts').doc(name), { ownerUid: uid, lastSwitchedAt: Date.now() }, { merge: true });
       // Sync profile and handle index
-      batch.set(adminDb().collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
-      batch.set(adminDb().collection('handles').doc(name), { uid, updatedAt: Date.now() });
+      batch.set((await adminDb()).collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
+      batch.set((await adminDb()).collection('handles').doc(name), { uid, updatedAt: Date.now() });
       // Delete challenge
       batch.delete(challengeDoc.ref);
       

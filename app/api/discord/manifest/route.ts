@@ -1,7 +1,7 @@
 import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,8 @@ export async function POST(req: Request) {
       ownerUid: uid,
     };
 
-    await adminDb()
+    const db = await adminDb();
+    await db
       .collection("discord_manifests")
       .doc(fileId)
       .set(manifest);
@@ -78,7 +79,7 @@ export async function GET(req: Request) {
       return Response.json({ error: "Missing fileId parameter" }, { status: 400 });
     }
 
-    const doc = await adminDb().collection("discord_manifests").doc(fileId).get();
+    const doc = await (await adminDb()).collection("discord_manifests").doc(fileId).get();
 
     if (!doc.exists) {
       return Response.json({ error: "Manifest not found" }, { status: 404 });

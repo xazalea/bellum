@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function GET() {
   try {
-    const db = adminDb();
+    const db = await adminDb();
     const snap = await db.collection('archives').orderBy('publishedAt', 'desc').get();
     const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     return NextResponse.json(items, { status: 200 });
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const entry = body.entry as any;
     if (!entry?.fileId || !entry?.name) throw new Error('Invalid entry');
 
-    const db = adminDb();
+    const db = await adminDb();
     const now = Date.now();
     const ref = await db.collection('archives').add({
       ...entry,

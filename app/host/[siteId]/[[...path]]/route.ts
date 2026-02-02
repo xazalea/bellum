@@ -142,7 +142,7 @@ export async function GET(req: Request, ctx: { params: { siteId: string; path?: 
     const siteId = String(ctx.params.siteId || '');
     if (!siteId) return NextResponse.json({ error: 'missing_siteId' }, { status: 400 });
 
-    const db = adminDb();
+    const db = await adminDb();
     const siteRef = db.collection('xfabric_sites').doc(siteId);
     const snap = await siteRef.get();
     if (!snap.exists) return NextResponse.json({ error: 'not_found' }, { status: 404 });
