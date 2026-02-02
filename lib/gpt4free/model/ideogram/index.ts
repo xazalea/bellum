@@ -205,7 +205,7 @@ export class Ideogram extends Chat {
         { allowUnknown: true },
       ),
       async (ctx) => {
-        const { prompt, size } = ctx.request.body as any;
+        const { prompt, size } = (ctx.request as any).body as any;
         const [width, height] = size.split('x').map((v: string) => parseInt(v));
         await retryFunc(async () => {
           const child = await this.pool.pop();

@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance, CreateAxiosDefaults } from 'axios';
-import HttpsProxyAgent from 'https-proxy-agent';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import puppeteer from 'puppeteer-extra';
 import {
   Browser,
@@ -7,8 +7,9 @@ import {
   Device,
   Page,
   Protocol,
-  PuppeteerLaunchOptions,
 } from 'puppeteer';
+// PuppeteerLaunchOptions is not exported from puppeteer, using Parameters<typeof puppeteer.launch>[0] instead
+type PuppeteerLaunchOptions = Parameters<typeof puppeteer.launch>[0];
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { spawn } from 'child_process';
 import WebSocket from 'ws';
@@ -38,13 +39,12 @@ import { newInjectedPage } from 'fingerprint-injector';
 import { FingerprintGenerator } from 'fingerprint-generator';
 import path from 'path';
 import fs, { createWriteStream } from 'fs';
-import fileType from 'file-type';
+import { fileTypeFromFile } from 'file-type';
 import { promisify } from 'util';
 import { io } from 'socket.io-client';
-import { ManagerOptions } from 'socket.io-client/build/esm/manager';
-import { Socket, SocketOptions } from 'socket.io-client/build/esm/socket';
+import type { ManagerOptions, Socket, SocketOptions } from 'socket.io-client';
 import { puppeteerUserDirPool } from './pool';
-import { AxiosInterceptorOptions, AxiosResponse } from 'axios/index';
+import { AxiosInterceptorOptions, AxiosResponse } from 'axios';
 const tunnel = require('tunnel');
 
 export const getProxy = () => {
@@ -124,8 +124,8 @@ export function CreateAxiosProxy(
   const useProxy = proxy ? getProxy() : '';
   createConfig.proxy = false;
   if (useProxy) {
-    createConfig.httpAgent = HttpsProxyAgent(useProxy);
-    createConfig.httpsAgent = HttpsProxyAgent(useProxy);
+    createConfig.httpAgent = new HttpsProxyAgent(useProxy);
+    createConfig.httpsAgent = new HttpsProxyAgent(useProxy);
   }
   const client = axios.create(createConfig);
   const retryClient = axios.create(createConfig);
@@ -217,7 +217,7 @@ export async function CreateNewPage<
     interception_handlers = [],
   } = options || {};
   const launchOpt: PuppeteerLaunchOptions = {
-    headless: process.env.DEBUG === '1' ? false : 'new',
+    headless: process.env.DEBUG === '1' ? false : true,
     devtools,
     args: [
       '--no-sandbox',
@@ -256,7 +256,7 @@ export async function CreateNewPage<
     if (!globalBrowser || !globalBrowser.isConnected()) {
       globalBrowser = await p.launch(launchOpt);
     }
-    browser = await globalBrowser.createIncognitoBrowserContext({
+    browser = await globalBrowser.createBrowserContext({
       proxyServer: proxy || getProxy(),
     });
   } else {
@@ -283,7 +283,7 @@ export async function CreateNewPage<
       await setPageInterception(page, interception_handlers);
     }
     if (cookies.length > 0) {
-      await page.setCookie(...cookies);
+      await page.setCookie(...(cookies as any));
     }
     await page.setViewport({
       width: 1280 + Math.floor(Math.random() * 640),
@@ -305,7 +305,7 @@ export async function CreateNewPage<
       // 先清除cookie
       await page.deleteCookie(...(await page.cookies(url)));
       if (cookies.length > 0) {
-        await page.setCookie(...cookies);
+        await page.setCookie(...(cookies as any));
       }
     }
     if (navigationTimeout) {
@@ -391,7 +391,7 @@ export async function CreateNewCachePage<
     enable_user_cache = false,
   } = options || {};
   const launchOpt: PuppeteerLaunchOptions = {
-    headless: process.env.DEBUG === '1' ? false : 'new',
+    headless: process.env.DEBUG === '1' ? false : true,
     devtools,
     args: [
       '--no-sandbox',
@@ -420,7 +420,7 @@ export async function CreateNewCachePage<
     if (!globalBrowser || !globalBrowser.isConnected()) {
       globalBrowser = await p.launch(launchOpt);
     }
-    browser = await globalBrowser.createIncognitoBrowserContext({
+    browser = await globalBrowser.createBrowserContext({
       proxyServer: proxy || getProxy(),
     });
   } else {
@@ -446,7 +446,7 @@ export async function CreateNewCachePage<
     // 先清除cookie
     await page.deleteCookie();
     if (cookies.length > 0) {
-      await page.setCookie(...cookies);
+      await page.setCookie(...(cookies as any));
     }
     await page.setViewport({
       width: 1000 + Math.floor(Math.random() * 1000),
@@ -527,7 +527,7 @@ export async function CreateNewPageWS(
       await simplifyPage(page);
     }
     if (cookies.length > 0) {
-      await page.setCookie(...cookies);
+      await page.setCookie(...(cookies as any));
     }
     await page.setViewport({ width: 1920, height: 1080 });
     await page.goto(url);
@@ -541,7 +541,7 @@ export async function CreateNewPageWS(
 
 export async function CreateNewBrowser() {
   const options: PuppeteerLaunchOptions = {
-    headless: 'new',
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -632,7 +632,7 @@ export class WSS {
       ...wssOptions,
     };
     if (proxy) {
-      wsOptions.agent = HttpsProxyAgent(proxy);
+      wsOptions.agent = new HttpsProxyAgent(proxy);
     }
 
     // 创建一个配置了代理的 WebSocket 客户端
@@ -885,7 +885,7 @@ export class WebFetchProxy {
   async init() {
     try {
       const options: PuppeteerLaunchOptions = {
-        headless: process.env.DEBUG === '1' ? false : 'new',
+        headless: process.env.DEBUG === '1' ? false : true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -899,7 +899,7 @@ export class WebFetchProxy {
       const browser = await puppeteer.launch(options);
       this.page = await browser.newPage();
       if (this.options?.cookie && this.options.cookie.length > 0) {
-        await this.page.setCookie(...this.options.cookie);
+        await this.page.setCookie(...(this.options.cookie as any));
       }
       await this.page.goto(this.homeURL);
       await closeOtherPages(browser, this.page);
@@ -1050,7 +1050,7 @@ export async function downloadImageToBase64(fileUrl: string): Promise<{
     const base64Data = fs.readFileSync(tempFilePath).toString('base64');
     return {
       base64Data,
-      mimeType: (await fileType.fromFile(tempFilePath))?.mime || 'image/jpeg',
+      mimeType: (await fileTypeFromFile(tempFilePath))?.mime || 'image/jpeg',
     };
   } catch (e: any) {
     console.error(e.message);

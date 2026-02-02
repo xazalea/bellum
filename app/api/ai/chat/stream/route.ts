@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
 
     // Start the stream in the background
     chatModel.askStream({
-      prompt: messages,
+      prompt: '',
+      messages: messages,
       model: model as ModelType,
     }, eventStream).catch((error) => {
       console.error('Stream error:', error);
@@ -165,7 +166,8 @@ export async function GET(req: NextRequest) {
 
     // Start the stream in the background
     chatModel.askStream({
-      prompt: messages,
+      prompt: '',
+      messages: messages,
       model: model as ModelType,
     }, eventStream).catch((error) => {
       console.error('Stream error:', error);

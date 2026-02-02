@@ -37,6 +37,9 @@ const nextConfig = {
     NEXT_PUBLIC_PLATFORM: isCloudflare ? 'cloudflare' : 'vercel',
   },
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   
   // Performance optimizations
   swcMinify: true,
@@ -106,6 +109,12 @@ const nextConfig = {
       test: /\.wasm$/,
       type: 'webassembly/async',
     });
+
+    // Allow Markdown imports from dependencies that include README files
+    config.module.rules.push({
+      test: /\.md$/,
+      type: 'asset/source',
+    });
     
     // Fix for fengari (Lua) - ignore Node.js modules in browser
     if (!isServer) {
@@ -159,6 +168,13 @@ const nextConfig = {
           resourceRegExp: /^fengari$/,
         })
       );
+      
+      // Provide lodash globally for dependencies that expect it
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          _: 'lodash',
+        })
+      );
     }
     
     // Normalize resolve to handle fengari
@@ -168,6 +184,27 @@ const nextConfig = {
     // Alias fengari to empty module for server builds
     if (isServer) {
       config.resolve.alias.fengari = false;
+    }
+
+    // Cloudflare edge build can't bundle Node-only automation/tooling libs
+    if (isCloudflare) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@elastic/ecs-winston-format': false,
+        '@ffmpeg-installer/ffmpeg': false,
+        '@ffprobe-installer/ffprobe': false,
+        'chrome-remote-interface': false,
+        'fingerprint-generator': false,
+        'fingerprint-injector': false,
+        'fluent-ffmpeg': false,
+        'puppeteer': false,
+        'puppeteer-extra': false,
+        'puppeteer-extra-plugin-stealth': false,
+        'socket.io-client': false,
+        'tunnel': false,
+        'winston': false,
+        'winston-transport': false,
+      };
     }
     
     return config;

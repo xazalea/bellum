@@ -22,7 +22,7 @@ import { Page, Protocol } from 'puppeteer';
 import es from 'event-stream';
 import { CreateEmail } from '../../utils/emailFactory';
 import { AxiosInstance } from 'axios';
-import { AxiosRequestConfig } from 'axios/index';
+import { AxiosRequestConfig } from 'axios';
 
 interface RealReq extends ChatRequest {
   functions?: {

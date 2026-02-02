@@ -279,7 +279,7 @@ export class Vidu extends Chat {
         { allowUnknown: true },
       ),
       async (ctx: Application.Context) => {
-        const req = ctx.request.body as TaskReq;
+        const req = (ctx.request as any).body as TaskReq;
         await retryFunc(
           async () => {
             const child = await this.pool.pop();

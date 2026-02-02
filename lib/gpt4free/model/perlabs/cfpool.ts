@@ -18,7 +18,16 @@ export class PagePool {
       }
       return child;
     }
-    const [id, page] = this.idle.entries().next().value;
+    const entry = this.idle.entries().next().value;
+    if (!entry) {
+      const child = new PageChild(v4(), 'https://labs.perplexity.ai');
+      const ok = await child.init();
+      if (!ok) {
+        throw new Error('page pool has no child and cannot init');
+      }
+      return child;
+    }
+    const [id, page] = entry;
     this.idle.delete(id);
     this.using.set(id, page);
     return page;

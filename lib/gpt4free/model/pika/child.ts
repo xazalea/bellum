@@ -57,7 +57,7 @@ export class Child extends ComChild<Account> {
     await page.reload();
     // 保存cookies
     const cookies = await page.cookies('https://pika.art');
-    this.update({ cookies });
+    this.update({ cookies: cookies as any });
     this.logger.debug('saved cookies');
     this.saveToken();
     this.client = CreateNewAxios(

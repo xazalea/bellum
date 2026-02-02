@@ -24,7 +24,7 @@ import {
   TranscriptionRequest,
 } from '../define';
 import { SongOptions } from '../suno/define';
-import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
+// import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
 
 interface RealReq extends ChatRequest {
   functions?: {

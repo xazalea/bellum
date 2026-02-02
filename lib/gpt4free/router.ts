@@ -28,14 +28,14 @@ import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 import { chatModel } from './model';
 import { SaveMessagesToLogstash, TraceLogger } from './utils/log';
-import apm from 'elastic-apm-node';
+// import apm from 'elastic-apm-node';
 import Busboy from 'busboy';
 import { PassThrough, Stream } from 'stream';
 import FormData from 'form-data';
 import fs from 'fs';
 import { v4 } from 'uuid';
 import { Config } from './utils/config';
-import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
+// import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
 import { checkBody } from './utils/middleware';
 import Joi from 'joi';
 
@@ -168,7 +168,7 @@ const AskStreamHandle: (ESType: new () => EventStream) => Middleware =
       ...(ctx.request.body as any),
       ...(ctx.params as any),
     } as AskReq;
-    apm.currentTransaction?.addLabels({ site, model }, true);
+    // apm.currentTransaction?.addLabels({ site, model }, true);
     if (model !== ModelType.GetGizmoInfo && !prompt) {
       throw new ComError(`need prompt in query`, ComError.Status.BadRequest);
     }

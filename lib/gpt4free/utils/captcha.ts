@@ -128,9 +128,9 @@ export async function handleCF(
     });
 
     // 设置页面尺寸
-    await client.Page.enable(sessionId);
-    await client.Runtime.enable(sessionId);
-    await client.DOM.enable(sessionId);
+    await client.Page.enable();
+    await client.Runtime.enable();
+    await client.DOM.enable();
     let x = 0;
     let y = 0;
     const { result } = await client.Runtime.evaluate(

@@ -5,6 +5,7 @@ import type { Message } from '@/lib/gpt4free/model/base';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 interface ChatRequest {
   prompt: string | Message[];
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
     const messages = parseMessages(prompt);
 
     const result = await chatModel.ask({
-      prompt: messages,
+      prompt: '',
+      messages: messages,
       model: model as ModelType,
     });
 
@@ -98,7 +100,8 @@ export async function GET(req: NextRequest) {
     const messages: Message[] = [{ role: 'user', content: prompt }];
 
     const result = await chatModel.ask({
-      prompt: messages,
+      prompt: '',
+      messages: messages,
       model: model as ModelType,
     });
 

@@ -15,8 +15,8 @@ import {
 import moment from 'moment';
 import { Config } from '../../utils/config';
 import fs from 'fs';
-import pdfParse from 'pdf-parse';
-import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
+const pdfParse = require('pdf-parse');
+// import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
 
 puppeteer.use(StealthPlugin());
 

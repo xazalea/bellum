@@ -2,7 +2,7 @@ import { ComInfo } from '../../utils/pool';
 import { Protocol } from 'puppeteer';
 import exp from 'constants';
 import { CommCache, DefaultRedis, StringCache } from '../../utils/cache';
-import { GizmoInfo } from '../openchat4/define';
+// import { GizmoInfo } from '../openchat4/define';
 
 export interface Account extends ComInfo {
   email: string;

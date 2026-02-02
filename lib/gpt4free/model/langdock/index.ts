@@ -68,6 +68,10 @@ class Child extends ComChild<Account> {
   async getChatID(): Promise<[string, () => Promise<void>]> {
     if (this.chatIDMap.size > 0) {
       const id = this.chatIDMap.values().next().value;
+      if (!id) {
+        await this.newChat();
+        return this.getChatID();
+      }
       this.chatIDMap.delete(id);
       return [id, () => this.newChat()];
     }

@@ -15,7 +15,7 @@ import { AxiosInstance } from 'axios';
 import { handleCF, ifCF } from '../../utils/captcha';
 import { CreateEmail } from '../../utils/emailFactory';
 import { ApiKeyBase, ApiKeysData } from './define';
-import { AxiosRequestConfig } from 'axios/index';
+import { AxiosRequestConfig } from 'axios';
 import es from 'event-stream';
 
 type Room = {

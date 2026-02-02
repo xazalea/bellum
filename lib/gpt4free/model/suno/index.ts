@@ -305,7 +305,7 @@ export class Suno extends Chat {
     router.post(
       '/goamz/generate',
       (ctx) =>
-        (ctx.request.body as GoAmzGenReq)?.custom_mode
+        ((ctx.request as any).body as GoAmzGenReq)?.custom_mode
           ? checkBody({
               custom_mode: Joi.boolean().required(),
               mv: Joi.string()
@@ -336,7 +336,7 @@ export class Suno extends Chat {
               { allowUnknown: true },
             ),
       async (ctx) => {
-        const req = ctx.request.body as GoAmzGenReq;
+        const req = (ctx.request as any).body as GoAmzGenReq;
         ctx.body = await retryFunc(
           async () => {
             const child = await this.pool.pop();
@@ -412,7 +412,7 @@ export class Suno extends Chat {
         make_instrumental: Joi.boolean().optional(),
       }),
       async (ctx) => {
-        const req = ctx.request.body as SongOptions;
+        const req = (ctx.request as any).body as SongOptions;
         let server_id: string | null = null;
         if (req.continue_clip_id) {
           server_id = await SunoServerCache.get(req.continue_clip_id);
@@ -454,7 +454,7 @@ export class Suno extends Chat {
       '/generate/lyrics',
       checkBody({ prompt: Joi.string().required() }),
       async (ctx) => {
-        const { prompt } = ctx.request.body as any;
+        const { prompt } = (ctx.request as any).body as any;
         await retryFunc(async () => {
           const child = await this.pool.pop();
           const res = await child.lyrics(prompt);
@@ -468,7 +468,7 @@ export class Suno extends Chat {
       '/generate/concat/v2',
       checkBody({ clip_id: Joi.string().required() }, { allowUnknown: true }),
       async (ctx) => {
-        const { clip_id } = ctx.request.body as any;
+        const { clip_id } = (ctx.request as any).body as any;
         const server_id = await SunoServerCache.get(clip_id);
         if (!server_id) {
           throw new Error('clip_id task not found');
@@ -502,7 +502,7 @@ export class Suno extends Chat {
         url: Joi.string().required(),
       }),
       async (ctx) => {
-        const { url } = ctx.request.body as any;
+        const { url } = (ctx.request as any).body as any;
         const child = await this.pool.pop();
         const res = await child.uploadFile(url);
         await SunoServerCache.set(res.clip_id, child.info.id);

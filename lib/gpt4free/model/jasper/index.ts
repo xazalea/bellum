@@ -291,7 +291,7 @@ export class Jasper extends Chat implements BrowserUser<Account> {
     }, 10 * 1000);
     try {
       let old = '';
-      let et: EventEmitter;
+      let et: EventEmitter<any>;
       let currMsgID = '';
       await client.send('Network.enable');
       et = client.on(

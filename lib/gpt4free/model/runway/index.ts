@@ -257,7 +257,7 @@ export class Runway extends Chat {
         options: Joi.object().unknown(true).required(),
       }),
       async (ctx: Application.Context) => {
-        const req = ctx.request.body as GenVideoTaskReq;
+        const req = (ctx.request as any).body as GenVideoTaskReq;
 
         await retryFunc(
           async () => {

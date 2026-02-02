@@ -17,7 +17,7 @@ import sizeOf from 'image-size';
 import { CreateNewAxios, getDownloadClient, getProxy } from './proxyAgent';
 import { promisify } from 'util';
 import FormData from 'form-data';
-import pdfParse from 'pdf-parse';
+const pdfParse = require('pdf-parse');
 import * as XLSX from 'xlsx';
 import path from 'path';
 import Mint from 'mint-filter';
@@ -1012,7 +1012,7 @@ export async function downloadFile(fileUrl: string): Promise<{
     };
     await fs.promises.rename(tempFilePath, outputFilePath);
     if (result.image) {
-      const dimensions = sizeOf(outputFilePath);
+      const dimensions = sizeOf(outputFilePath as any);
       result.height = dimensions.height || 720;
       result.width = dimensions.width || 1280;
     }

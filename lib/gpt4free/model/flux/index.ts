@@ -189,7 +189,7 @@ export class Flux extends Chat {
         { allowUnknown: true },
       ),
       async (ctx) => {
-        const { prompt, size } = ctx.request.body as any;
+        const { prompt, size } = (ctx.request as any).body as any;
         const [width, height] = size.split('x').map((v: string) => parseInt(v));
         await retryFunc(async () => {
           const child = await this.pool.pop();
@@ -225,7 +225,7 @@ export class Flux extends Chat {
           .optional(),
       }),
       async (ctx) => {
-        const { prompt, width, height } = ctx.request.body as any;
+        const { prompt, width, height } = (ctx.request as any).body as any;
         await retryFunc(async () => {
           const child = await this.pool.pop();
           const result = await child.predictions({
@@ -268,7 +268,7 @@ export class Flux extends Chat {
         height: Joi.number().optional(),
       }),
       async (ctx) => {
-        const { prompt, width, height } = ctx.request.body as any;
+        const { prompt, width, height } = (ctx.request as any).body as any;
         await retryFunc(async () => {
           const child = await this.pool.pop();
           const result = await child.predictions({
@@ -297,7 +297,7 @@ export class Flux extends Chat {
       '/v1/chat',
       checkBody({ messages: Joi.string().required() }),
       async (ctx) => {
-        const { messages } = ctx.request.body as any;
+        const { messages } = (ctx.request as any).body as any;
         await retryFunc(async () => {
           const child = await this.pool.pop();
           ctx.body = await child.chat(messages);

@@ -83,7 +83,7 @@ export class Child extends ComChild<Account> {
     if (!client) {
       throw new Error('not found cookies');
     }
-    this.update({ cookies });
+    this.update({ cookies: cookies as any });
     const sessionCookies = await this.page.cookies('https://flux1.ai');
     const session = sessionCookies.filter((v) =>
       v.name.startsWith('__session'),
@@ -91,7 +91,7 @@ export class Child extends ComChild<Account> {
     if (!session?.length) {
       throw new Error('not found session');
     }
-    this.update({ sessCookies: session });
+    this.update({ sessCookies: session as any });
     this.logger.info('cookies saved ok');
   }
 

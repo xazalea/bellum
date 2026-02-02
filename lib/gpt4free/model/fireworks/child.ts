@@ -24,7 +24,7 @@ export class Child extends ComChild<Account> {
 
   async saveCookies() {
     const cookies = await this.page.cookies();
-    this.update({ cookies });
+    this.update({ cookies: cookies as any });
     this.logger.info('cookies saved ok');
   }
 

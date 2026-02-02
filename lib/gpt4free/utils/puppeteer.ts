@@ -3,8 +3,9 @@ import normalPPT, {
   HTTPRequest,
   KnownDevices,
   Page,
-  PuppeteerLaunchOptions,
 } from 'puppeteer';
+// PuppeteerLaunchOptions is not exported from puppeteer, using Parameters<typeof normalPPT.launch>[0] instead
+type PuppeteerLaunchOptions = Parameters<typeof normalPPT.launch>[0];
 import * as fs from 'fs';
 import {
   ComError,
@@ -108,7 +109,7 @@ export class BrowserPool<T> {
       return;
     }
     const options: PuppeteerLaunchOptions = {
-      headless: process.env.DEBUG === '1' ? false : 'new',
+      headless: process.env.DEBUG === '1' ? false : true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

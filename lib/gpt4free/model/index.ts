@@ -1,8 +1,8 @@
 import { Chat, ChatOptions, ModelType, Site } from './base';
 
 // Re-export for external use
-export { Site, ModelType, Chat, ChatOptions } from './base';
-export type { Message, ChatResponse } from './base';
+export { Site, ModelType, Chat } from './base';
+export type { Message, ChatResponse, ChatOptions } from './base';
 import { Mcbbs } from './mcbbs';
 import { Phind } from './phind';
 import { Vita } from './vita';

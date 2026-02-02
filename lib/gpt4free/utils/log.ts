@@ -71,7 +71,7 @@ export const initLog = () => {
       winston.format.prettyPrint(), // 打印整个日志对象
       winston.format.splat(), // 支持格式化的字符串
       winston.format.printf(({ level, message, timestamp, site, sn }) => {
-        const labelStr = site ? ` [${colorLabel(site)}]` : '';
+        const labelStr = site && typeof site === 'string' ? ` [${colorLabel(site)}]` : '';
         return `${timestamp} ${level} ${
           sn ? `[${sn}]` : ''
         }:${labelStr} ${message}`; // 自定义输出格式
@@ -169,7 +169,7 @@ export class UDPTransport extends Transport {
       buffer = buffer.slice(0, MAX_UDP_SIZE);
     }
 
-    /* eslint-disable @typescript-eslint/no-empty-function */
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     this.client.send(
       buffer,
       0,

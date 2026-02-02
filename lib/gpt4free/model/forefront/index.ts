@@ -16,7 +16,7 @@ import {
   TempEmailType,
   TempMailMessage,
 } from '../../utils/emailFactory';
-import { CreateAxiosProxy, CreateTlsProxy } from '../../utils/proxyAgent';
+import { CreateAxiosProxy } from '../../utils/proxyAgent';
 import * as fs from 'fs';
 import {
   DoneData,
@@ -179,7 +179,7 @@ export class Forefrontnew extends Chat implements BrowserUser<Account> {
     }
     triedTimes += 1;
     try {
-      const tsl = await CreateTlsProxy({ clientIdentifier: 'chrome_108' }).get(
+      const tsl = await CreateAxiosProxy({}, false, false).get(
         validateURL,
       );
     } catch (e: any) {
@@ -271,7 +271,7 @@ export class Forefrontnew extends Chat implements BrowserUser<Account> {
 
       let page = await browser.newPage();
       if (account.cookies.length > 0) {
-        await page.setCookie(...account.cookies);
+        await page.setCookie(...(account.cookies as any));
         await page.setViewport({ width: 1920, height: 1080 });
         await page.goto('https://chat.forefront.ai/');
         Forefrontnew.getChatID(page).then((id) => (account.chatID = id));
@@ -331,9 +331,9 @@ export class Forefrontnew extends Chat implements BrowserUser<Account> {
         { timeout: 120000 },
       );
       account.headers = await this.getAuth(page);
-      account.cookies = (await page.cookies()).filter(
+      account.cookies = ((await page.cookies()).filter(
         (v) => v.name === '__session',
-      );
+      ) as any);
       account.login_time = moment().format(TimeFormat);
       this.accountPool.syncfile();
       console.log('register successfully');

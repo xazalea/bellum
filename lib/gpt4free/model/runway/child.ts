@@ -30,7 +30,7 @@ import {
 } from '../../utils';
 import { Config } from '../../utils/config';
 import { newLogger } from '../../utils/log';
-import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
+// import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
 import fs from 'fs';
 import { removeWatermarkFromVideo } from '../../utils/file';
 
@@ -155,7 +155,7 @@ export class Child extends ComChild<Account> {
             const newPage = await target.page();
             if (newPage) {
               console.log('新窗口/标签被创建');
-              await newPage.waitForTimeout(1000); // 等待一会让页面加载
+              await sleep(1000); // 等待一会让页面加载
               console.log(await newPage.url()); // 输出新窗口的URL
               await loginGoogleNew(newPage, this.info).catch((e) => {
                 this.logger.error(e.message);
@@ -187,7 +187,7 @@ export class Child extends ComChild<Account> {
 
   async saveCookies() {
     const cookies = await this.page.cookies('https://app.runwayml.com');
-    this.update({ cookies, proxy: this.proxy });
+    this.update({ cookies: cookies as any, proxy: this.proxy });
     this.logger.debug('saved cookies ok');
   }
 

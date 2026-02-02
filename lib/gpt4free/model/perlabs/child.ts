@@ -10,7 +10,7 @@ import { Event, EventStream, preOrderUserAssistant, sleep } from '../../utils';
 import { contentToString, Message, ModelType } from '../base';
 import { fuckCF } from '../../utils/captcha';
 import { PageChild, PagePool } from './cfpool';
-import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
+// import { AwsLambda } from 'elastic-apm-node/types/aws-lambda';
 
 const pagePool = new PagePool();
 export class Child extends ComChild<Account> {

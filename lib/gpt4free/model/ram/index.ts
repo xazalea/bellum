@@ -25,7 +25,7 @@ import moment from 'moment';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
 import es from 'event-stream';
 import { CreateAxiosProxy } from '../../utils/proxyAgent';
-import { CreateAxiosDefaults } from 'axios/index';
+import { CreateAxiosDefaults } from 'axios';
 
 const TimeFormat = 'YYYY-MM-DD HH:mm:ss';
 
@@ -199,7 +199,7 @@ export class Ram extends Chat implements BrowserUser<Account> {
 
       await page.goto('https://chat.ramxn.dev/chat/');
       await sleep(10000);
-      account.cookie = await page.cookies('https://chat.ramxn.dev');
+      account.cookie = await page.cookies('https://chat.ramxn.dev') as any;
       if (account.cookie.length === 0) {
         throw new Error('ram got cookie failed');
       }

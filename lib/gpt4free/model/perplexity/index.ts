@@ -177,7 +177,9 @@ class Child extends ComChild<Account> {
       async ({ response }) => {
         try {
           // 获取code
-          const code = +response.payloadData.match(/\d+/)[0];
+          const match = response.payloadData.match(/\d+/);
+          if (!match) throw new Error('No code found in response');
+          const code = +match[0];
           this.logger.debug(response.payloadData);
           const dataStr = response.payloadData.replace(/\d+/, '').trim();
           if (!dataStr) {

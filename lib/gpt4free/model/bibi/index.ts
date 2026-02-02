@@ -165,7 +165,7 @@ export class Bibi extends Chat {
   dynamicRouter(router: Router): boolean {
     router.post('/summary', checkBody(SummaryReqJoi), async (ctx) => {
       const child = await this.pool.pop();
-      const res = await child.summary(ctx.request.body as SummaryReq);
+      const res = await child.summary((ctx.request as any).body as SummaryReq);
       ctx.body = res;
     });
     router.get('/subtitle', checkQuery(SubtitleReqJoi), async (ctx) => {
@@ -175,17 +175,17 @@ export class Bibi extends Chat {
     });
     router.post('/chat', checkBody(ChatReqJoi), async (ctx) => {
       const child = await this.pool.pop();
-      const res = await child.chat(ctx.request.body as ChatReq);
+      const res = await child.chat((ctx.request as any).body as ChatReq);
       ctx.body = res;
     });
     router.post('/express', checkBody(ExpressReqJoi), async (ctx) => {
       const child = await this.pool.pop();
-      const res = await child.express(ctx.request.body as ExpressReq);
+      const res = await child.express((ctx.request as any).body as ExpressReq);
       ctx.body = res;
     });
     router.post('/vision', checkBody(VisionReqJoi), async (ctx) => {
       const child = await this.pool.pop();
-      const res = await child.vision(ctx.request.body as VisionReq);
+      const res = await child.vision((ctx.request as any).body as VisionReq);
       ctx.body = res;
     });
     return true;

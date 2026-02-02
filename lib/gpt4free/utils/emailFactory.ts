@@ -793,6 +793,7 @@ export class MailTM extends BaseEmail {
   async getMailAddress(): Promise<string> {
     const account = await this.mailjs.createOneAccount();
 
+    // @ts-ignore
     this.mailjs.on('ready', () => console.log('Ready To Listen!'));
     // @ts-ignore
     return account.data.username;

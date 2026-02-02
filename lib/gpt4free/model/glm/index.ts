@@ -29,9 +29,9 @@ import Application from 'koa';
 import jwt from 'jsonwebtoken';
 import Router from 'koa-router';
 import { chatModel } from '../index';
-import { GenVideoReq } from '../luma/define';
-import { Child } from '../luma/child';
-import { LumaPrompt } from '../luma/prompt';
+// import { GenVideoReq } from '../luma/define';
+// import { Child } from '../luma/child';
+// import { LumaPrompt } from '../luma/prompt';
 import {
   AsyncResultRes,
   VideoGenerationsReq,
@@ -354,7 +354,7 @@ export class GLM extends Chat {
 
   dynamicRouter(router: Router): boolean {
     router.post('/videos/generations', async (ctx) => {
-      const body = ctx.request.body as any;
+      const body = (ctx.request as any).body as any;
       const res = await this.videoGenerations(body);
       this.logger.info(
         `/videos/generations,req: ${JSON.stringify(body)} res: ${JSON.stringify(

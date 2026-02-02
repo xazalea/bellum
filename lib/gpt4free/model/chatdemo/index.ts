@@ -14,7 +14,7 @@ import moment from 'moment';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
 import es from 'event-stream';
 import { CreateAxiosProxy } from '../../utils/proxyAgent';
-import { CreateAxiosDefaults } from 'axios/index';
+import { CreateAxiosDefaults } from 'axios';
 
 const TimeFormat = 'YYYY-MM-DD HH:mm:ss';
 
@@ -168,7 +168,7 @@ export class ChatDemo extends Chat implements BrowserUser<Account> {
 
       await page.goto('https://chat.chatgptdemo.net/');
       await sleep(2000);
-      account.cookie = await page.cookies('https://chat.chatgptdemo.net');
+      account.cookie = await page.cookies('https://chat.chatgptdemo.net') as any;
       if (account.cookie.length === 0) {
         throw new Error('demochat got cookie failed');
       }

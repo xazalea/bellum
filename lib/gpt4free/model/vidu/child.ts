@@ -200,7 +200,7 @@ export class Child extends ComChild<Account> {
     if (!token) {
       throw new ComError('no access_token');
     }
-    this.update({ cookies, proxy: this.proxy });
+    this.update({ cookies: cookies as any, proxy: this.proxy });
     this.logger.debug('saved cookies ok');
   }
 

@@ -307,7 +307,7 @@ export class Cursor extends Chat implements BrowserUser<Account> {
           // 对该元素进行截图并获得一个 Buffer
           const imageBuffer = await element.screenshot();
           // 将 Buffer 转换为 Base64 格式的字符串
-          const base64String = imageBuffer.toString('base64');
+          const base64String = (imageBuffer as Buffer).toString('base64');
           const captcha = await getCaptchaCode(base64String);
           if (!captcha) {
             this.logger.error('got captcha failed');

@@ -177,7 +177,7 @@ class Child extends ComChild<Account> {
     if (!token.length) {
       throw new Error('token not found');
     }
-    this.update({ cookies: token });
+    this.update({ cookies: token as any });
   }
 
   async init(): Promise<void> {

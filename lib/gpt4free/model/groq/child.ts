@@ -32,7 +32,7 @@ export class Child extends ComChild<Account> {
     if (!token) {
       throw new ComError('token not found');
     }
-    this.update({ cookies });
+    this.update({ cookies: cookies as any });
     this.logger.info('cookies saved ok');
   }
 

@@ -172,7 +172,7 @@ export class OpenPrompt extends Chat implements BrowserUser<Account> {
       const [page] = await browser.pages();
       await page.setViewport({ width: 1920, height: 1080 });
       if (account.cookie?.length > 0) {
-        await page.setCookie(...account.cookie);
+        await page.setCookie(...(account.cookie as any));
         await page.goto('https://openprompt.co/');
         if (await this.ifLogin(page)) {
           setTimeout(() => browser.close().catch(), 1000);
@@ -236,7 +236,7 @@ export class OpenPrompt extends Chat implements BrowserUser<Account> {
       if (!ok) {
         throw new Error('openprompt login failed');
       }
-      account.cookie = await page.cookies('https://openprompt.co/');
+      account.cookie = await page.cookies('https://openprompt.co/') as any;
       this.accountPool.syncfile();
       setTimeout(() => browser.close().catch(), 1000);
       this.logger.info('register openprompt successfully');

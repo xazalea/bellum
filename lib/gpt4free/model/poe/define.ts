@@ -1,7 +1,7 @@
 import { ModelType } from '../base';
 import { Config, PoeModelConfig } from '../../utils/config';
 import { Page } from 'puppeteer';
-import { PoeAuto } from '../poeauto';
+// import { PoeAuto } from '../poeauto';
 import winston from 'winston';
 export const InputSelector = 'textarea';
 export const ClearSelector = 'footer > div > div > div > button > svg';
