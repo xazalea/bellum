@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
-import { ChatModelFactory } from '@/lib/gpt4free/model/index';
-import { Site, ModelType } from '@/lib/gpt4free/model/base';
+import { Site, ModelType } from '@/lib/gpt4free/model/enums';
+
+// Dynamic import to avoid execution during build
+const getChatModelFactory = async () => {
+  const { ChatModelFactory } = await import('@/lib/gpt4free/model/index');
+  return ChatModelFactory;
+};
+
+// Check if we're in build mode
+const isBuildTime = typeof process !== 'undefined' && 
+  (process.env.NEXT_PHASE === 'phase-production-build' || 
+   process.env.CF_PAGES === '1' ||
+   process.env.NEXT_PHASE);
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,7 +75,12 @@ const siteModels: Record<string, string[]> = {
 };
 
 export async function GET() {
+  // Immediately return during build to prevent any code execution
+  if (isBuildTime) {
+    return NextResponse.json([]);
+  }
   try {
+    const ChatModelFactory = await getChatModelFactory();
     const factory = new ChatModelFactory();
     const supports: SiteSupport[] = [];
 

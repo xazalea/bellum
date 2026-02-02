@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Site, ModelType } from '@/lib/gpt4free/model/base';
+import { Site, ModelType } from '@/lib/gpt4free/model/enums';
 import type { Message } from '@/lib/gpt4free/model/base';
 
 // Check if we're in build mode - if so, export stub handlers
