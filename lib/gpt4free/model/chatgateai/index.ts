@@ -24,7 +24,7 @@ import { Page } from 'puppeteer';
 import { AxiosInstance } from 'axios';
 import es from 'event-stream';
 // @ts-ignore
-import { Session } from 'tls-client/dist/esm/sessions';
+// import { Session } from 'tls-client/dist/esm/sessions';
 import { randomInt } from 'crypto';
 
 const ModelMap: Partial<Record<ModelType, string>> = {

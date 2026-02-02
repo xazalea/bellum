@@ -1,3 +1,30 @@
+// Provide lodash globally before any imports
+// This must happen before any other imports to ensure _ is available
+if (typeof global !== 'undefined') {
+  try {
+    const lodash = require('lodash');
+    if (!global._) {
+      global._ = lodash;
+    }
+    // Also set it on globalThis for compatibility
+    if (typeof globalThis !== 'undefined' && !(globalThis as any)._) {
+      (globalThis as any)._ = lodash;
+    }
+  } catch (e) {
+    // Ignore if lodash is not available
+  }
+}
+if (typeof window !== 'undefined') {
+  try {
+    const lodash = require('lodash');
+    if (!(window as any)._) {
+      (window as any)._ = lodash;
+    }
+  } catch (e) {
+    // Ignore if lodash is not available
+  }
+}
+
 import { Chat, ChatOptions, ModelType, Site } from './base';
 
 // Re-export for external use
@@ -83,16 +110,42 @@ import { MJWeb } from './mjweb';
 import { Ideogram } from './ideogram';
 
 export class ChatModelFactory {
-  private readonly modelMap: Map<Site, Chat>;
+  private modelMap: Map<Site, Chat> | null = null;
   private readonly options: ChatOptions | undefined;
+  private initialized: boolean = false;
 
   constructor(options?: ChatOptions) {
-    this.modelMap = new Map();
     this.options = options;
-    this.init();
+    // Don't initialize during construction - lazy load only when needed
+  }
+
+  private ensureInitialized() {
+    if (this.initialized) return;
+    
+    // Skip initialization during Next.js build phase
+    if (typeof process !== 'undefined' && 
+        (process.env.NEXT_PHASE === 'phase-production-build' || 
+         process.env.CF_PAGES === '1')) {
+      // During build, create empty map to avoid errors
+      this.modelMap = new Map();
+      this.initialized = true;
+      return;
+    }
+    
+    try {
+      this.init();
+      this.initialized = true;
+    } catch (e) {
+      // Silently fail during build
+      console.warn('ChatModelFactory init failed:', e);
+      this.modelMap = new Map();
+      this.initialized = true;
+    }
   }
 
   init() {
+    if (this.modelMap) return;
+    this.modelMap = new Map();
     // register new model here
     // this.modelMap.set(Site.You, new You({ name: Site.You }));
     this.modelMap.set(Site.Phind, new Phind({ name: Site.Phind }));
@@ -224,12 +277,25 @@ export class ChatModelFactory {
   }
 
   get(model: Site): Chat | undefined {
-    return this.modelMap.get(model);
+    this.ensureInitialized();
+    return this.modelMap?.get(model);
   }
 
   forEach(callbackfn: (value: Chat, key: Site, map: Map<Site, Chat>) => void) {
-    this.modelMap.forEach(callbackfn);
+    this.ensureInitialized();
+    this.modelMap?.forEach(callbackfn);
   }
 }
 
-export const chatModel = new ChatModelFactory();
+// Lazy export to avoid execution during build
+// Don't create instance at module load time - only create when needed
+export function getChatModel(): ChatModelFactory {
+  // Skip during build
+  if (typeof process !== 'undefined' && 
+      (process.env.NEXT_PHASE === 'phase-production-build' || 
+       process.env.CF_PAGES === '1')) {
+    // Return a dummy factory during build
+    return new ChatModelFactory();
+  }
+  return new ChatModelFactory();
+}

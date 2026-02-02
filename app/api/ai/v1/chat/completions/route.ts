@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ChatModelFactory } from '@/lib/gpt4free/model/index';
 import { Site, ModelType } from '@/lib/gpt4free/model/base';
 import type { Message } from '@/lib/gpt4free/model/base';
 import { EventStream, Event } from '@/lib/gpt4free/utils';
 
+// Dynamic import to avoid execution during build
+const getChatModelFactory = async () => {
+  // Skip during build
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+    throw new Error('ChatModelFactory not available during build');
+  }
+  const { ChatModelFactory } = await import('@/lib/gpt4free/model/index');
+  return ChatModelFactory;
+};
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
+// Prevent Next.js from trying to collect page data during build
+export const generateStaticParams = async () => [];
 
 interface OpenAIChatRequest {
   model: string;
@@ -37,6 +50,10 @@ interface OpenAIChatResponse {
 }
 
 export async function POST(req: NextRequest) {
+  // Skip execution during build
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+    return NextResponse.json({ error: { message: 'Service unavailable during build', type: 'server_error' } }, { status: 503 });
+  }
   try {
     const body: OpenAIChatRequest = await req.json();
     const { model, messages, stream = false, site = Site.Auto } = body;
@@ -48,6 +65,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ChatModelFactory = await getChatModelFactory();
     const factory = new ChatModelFactory();
     const chatModel = factory.get(site as Site);
 

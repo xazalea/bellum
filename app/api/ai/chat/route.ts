@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ChatModelFactory } from '@/lib/gpt4free/model/index';
 import { Site, ModelType } from '@/lib/gpt4free/model/base';
 import type { Message } from '@/lib/gpt4free/model/base';
+
+// Dynamic import to avoid execution during build
+const getChatModelFactory = async () => {
+  // Skip during build
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+    throw new Error('ChatModelFactory not available during build');
+  }
+  const { ChatModelFactory } = await import('@/lib/gpt4free/model/index');
+  return ChatModelFactory;
+};
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+export const revalidate = 0;
+// Prevent Next.js from trying to collect page data during build
+export const generateStaticParams = async () => [];
 
 interface ChatRequest {
   prompt: string | Message[];
@@ -26,6 +38,10 @@ function parseMessages(prompt: string | Message[]): Message[] {
 }
 
 export async function POST(req: NextRequest) {
+  // Skip execution during build
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+    return NextResponse.json({ error: 'Service unavailable during build' }, { status: 503 });
+  }
   try {
     const body: ChatRequest = await req.json();
     const { prompt, model = ModelType.GPT3p5Turbo, site = Site.Auto } = body;
@@ -37,6 +53,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ChatModelFactory = await getChatModelFactory();
     const factory = new ChatModelFactory();
     const chatModel = factory.get(site as Site);
 
@@ -74,6 +91,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  // Skip execution during build
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+    return NextResponse.json({ error: 'Service unavailable during build' }, { status: 503 });
+  }
   const searchParams = req.nextUrl.searchParams;
   const prompt = searchParams.get('prompt');
   const model = searchParams.get('model') || ModelType.GPT3p5Turbo;
@@ -87,6 +108,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const ChatModelFactory = await getChatModelFactory();
     const factory = new ChatModelFactory();
     const chatModel = factory.get(site as Site);
 

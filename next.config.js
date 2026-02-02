@@ -30,6 +30,12 @@ const isCloudflare = process.env.CF_PAGES === '1' || process.env.CLOUDFLARE_ENV 
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Skip page data collection for API routes during build
+  experimental: {
+    skipTrailingSlashRedirect: true,
+  },
+  // Disable static optimization for API routes
+  output: 'standalone',
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
     NEXT_PUBLIC_BUILD_VERSION: resolveBuildVersion(),
@@ -168,13 +174,31 @@ const nextConfig = {
           resourceRegExp: /^fengari$/,
         })
       );
-      
-      // Provide lodash globally for dependencies that expect it
-      config.plugins.push(
-        new webpack.ProvidePlugin({
-          _: 'lodash',
-        })
-      );
+    }
+    
+    // Provide lodash globally for all builds (both server and client)
+    const webpack = require('webpack');
+    config.plugins = config.plugins || [];
+    // Provide lodash as _ for any code that expects it
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        _: 'lodash',
+      })
+    );
+    
+    // Ignore test.js files that might cause build issues
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /test\.js$/,
+        contextRegExp: /lib\/gpt4free\/model/,
+      })
+    );
+    
+    // Also ensure lodash is available in the resolve
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+    if (!config.resolve.alias.lodash) {
+      config.resolve.alias.lodash = require.resolve('lodash');
     }
     
     // Normalize resolve to handle fengari

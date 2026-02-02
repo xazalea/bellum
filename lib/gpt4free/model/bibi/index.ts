@@ -27,7 +27,7 @@ import { v4 } from 'uuid';
 import { Child } from './child';
 import Router from 'koa-router';
 import { checkBody, checkQuery } from '../../utils/middleware';
-import { chatModel } from '../index';
+// import { chatModel } from '../index'; // Lazy import to avoid execution during build
 import { BibiPrompt } from './prompt';
 
 export class Bibi extends Chat {
@@ -105,6 +105,8 @@ export class Bibi extends Chat {
   }
 
   async askStream(req: ChatRequest, stream: EventStream): Promise<void> {
+    const { getChatModel } = await import('../index');
+    const chatModel = getChatModel();
     const auto = chatModel.get(Site.Auto);
     let old = '';
     const pt = new ThroughEventStream(
