@@ -34,8 +34,6 @@ const nextConfig = {
   experimental: {
     skipTrailingSlashRedirect: true,
   },
-  // Disable static optimization for API routes
-  output: 'standalone',
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
     NEXT_PUBLIC_BUILD_VERSION: resolveBuildVersion(),

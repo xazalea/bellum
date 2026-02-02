@@ -1,12 +1,18 @@
 import { NextRequest } from 'next/server';
 import { Site, ModelType } from '@/lib/gpt4free/model/base';
 import type { Message } from '@/lib/gpt4free/model/base';
-import { EventStream, Event } from '@/lib/gpt4free/utils';
+// Dynamic import to avoid execution during build
+// import { EventStream, Event } from '@/lib/gpt4free/utils';
+
+// Check if we're in build mode - if so, export stub handlers
+const isBuildTime = typeof process !== 'undefined' && 
+  (process.env.NEXT_PHASE === 'phase-production-build' || 
+   process.env.CF_PAGES === '1' ||
+   process.env.NEXT_PHASE);
 
 // Dynamic import to avoid execution during build
 const getChatModelFactory = async () => {
-  // Skip during build
-  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+  if (isBuildTime) {
     throw new Error('ChatModelFactory not available during build');
   }
   const { ChatModelFactory } = await import('@/lib/gpt4free/model/index');
@@ -34,9 +40,10 @@ function parseMessages(prompt: string | Message[]): Message[] {
 }
 
 export async function POST(req: NextRequest) {
-  // Skip execution during build
-  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
-    return new Response('Service unavailable during build', { status: 503 });
+  // Immediately return during build to prevent any code execution
+  if (isBuildTime) {
+    const encoder = new TextEncoder();
+    return new Response(encoder.encode('Service unavailable during build'), { status: 503 });
   }
   try {
     const body: ChatRequest = await req.json();
@@ -77,6 +84,8 @@ export async function POST(req: NextRequest) {
     }
 
     const messages = parseMessages(prompt);
+    // Dynamic import of utils to avoid execution during build
+    const { EventStream, Event } = await import('@/lib/gpt4free/utils');
     const eventStream = new EventStream();
 
     // Start the stream in the background
@@ -181,6 +190,8 @@ export async function GET(req: NextRequest) {
     }
 
     const messages: Message[] = [{ role: 'user', content: prompt }];
+    // Dynamic import of utils to avoid execution during build
+    const { EventStream, Event } = await import('@/lib/gpt4free/utils');
     const eventStream = new EventStream();
 
     // Start the stream in the background

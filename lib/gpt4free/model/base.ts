@@ -19,10 +19,11 @@ import {
   ImageEditRequest,
 } from './define';
 import { SongOptions } from './suno/define';
-import { Chatgateai } from './chatgateai';
-import { MJPlus } from './mjplus';
+// Commented out to avoid execution during build - these are only used in dynamicRouter
+// import { Chatgateai } from './chatgateai';
+// import { MJPlus } from './mjplus';
 import Router from 'koa-router';
-import { Vidu } from './vidu';
+// import { Vidu } from './vidu';
 
 export interface ChatOptions {
   name: string;

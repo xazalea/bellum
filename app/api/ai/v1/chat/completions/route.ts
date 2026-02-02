@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Site, ModelType } from '@/lib/gpt4free/model/base';
 import type { Message } from '@/lib/gpt4free/model/base';
-import { EventStream, Event } from '@/lib/gpt4free/utils';
+// Dynamic import to avoid execution during build
+// import { EventStream, Event } from '@/lib/gpt4free/utils';
+
+// Check if we're in build mode - if so, export stub handlers
+const isBuildTime = typeof process !== 'undefined' && 
+  (process.env.NEXT_PHASE === 'phase-production-build' || 
+   process.env.CF_PAGES === '1' ||
+   process.env.NEXT_PHASE);
 
 // Dynamic import to avoid execution during build
 const getChatModelFactory = async () => {
-  // Skip during build
-  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+  if (isBuildTime) {
     throw new Error('ChatModelFactory not available during build');
   }
   const { ChatModelFactory } = await import('@/lib/gpt4free/model/index');
@@ -50,8 +56,8 @@ interface OpenAIChatResponse {
 }
 
 export async function POST(req: NextRequest) {
-  // Skip execution during build
-  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.CF_PAGES === '1') {
+  // Immediately return during build to prevent any code execution
+  if (isBuildTime) {
     return NextResponse.json({ error: { message: 'Service unavailable during build', type: 'server_error' } }, { status: 503 });
   }
   try {
@@ -77,6 +83,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (stream) {
+      // Dynamic import of utils to avoid execution during build
+      const { EventStream, Event } = await import('@/lib/gpt4free/utils');
       // Streaming response
       const eventStream = new EventStream();
 
