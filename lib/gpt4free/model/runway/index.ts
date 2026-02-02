@@ -26,7 +26,7 @@ import {
 import Router from 'koa-router';
 import { checkBody, checkParams, checkQuery } from '../../utils/middleware';
 import Joi from 'joi';
-import { chatModel } from '../index';
+import { getChatModel } from '../index';
 import { RunwayPrompt } from './prompt';
 import moment from 'moment';
 import {
@@ -112,7 +112,7 @@ export class Runway extends Chat {
   }
 
   async askStream(req: ChatRequest, stream: EventStream): Promise<void> {
-    const auto = chatModel.get(Site.Auto);
+    const auto = getChatModel().get(Site.Auto);
     let old = '';
     const pt = new ThroughEventStream(
       (event, data) => {

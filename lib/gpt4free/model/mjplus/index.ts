@@ -9,7 +9,7 @@ import {
   sleep,
   ThroughEventStream,
 } from '../../utils';
-import { chatModel } from '../index';
+import { getChatModel } from '../index';
 import { MJPlusPrompt } from './prompt';
 import {
   Account,
@@ -272,7 +272,7 @@ export class MJPlus extends Chat {
   async askStream(req: ChatRequest, stream: EventStream): Promise<void> {
     const child = await this.pool.pop();
     try {
-      const auto = chatModel.get(Site.Auto);
+      const auto = getChatModel().get(Site.Auto);
       let old = '';
       const pt = new ThroughEventStream(
         (event, data) => {

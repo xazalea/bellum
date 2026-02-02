@@ -26,7 +26,7 @@ import moment from 'moment/moment';
 import cors from '@koa/cors';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
-import { chatModel } from './model';
+import { getChatModel } from './model';
 import { SaveMessagesToLogstash, TraceLogger } from './utils/log';
 // import apm from 'elastic-apm-node';
 import Busboy from 'busboy';
@@ -45,7 +45,7 @@ const supportsHandler = async (ctx: Context) => {
     //@ts-ignore
     const site = Site[key];
     //@ts-ignore
-    const chat = chatModel.get(site);
+    const chat = getChatModel().get(site);
     const support: Support = { site: site, models: [] };
     for (const mKey in ModelType) {
       //@ts-ignore
@@ -126,7 +126,7 @@ const AskHandle: Middleware = async (ctx) => {
   if (model !== ModelType.GetGizmoInfo && !prompt) {
     throw new ComError(`need prompt in query`, ComError.Status.BadRequest);
   }
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -172,7 +172,7 @@ const AskStreamHandle: (ESType: new () => EventStream) => Middleware =
     if (model !== ModelType.GetGizmoInfo && !prompt) {
       throw new ComError(`need prompt in query`, ComError.Status.BadRequest);
     }
-    const chat = chatModel.get(site);
+    const chat = getChatModel().get(site);
     if (!chat) {
       throw new ComError(
         `not support site: ${site} `,
@@ -405,7 +405,7 @@ const audioHandle: Middleware = async (ctx, next) => {
     ...(ctx.request.body as any),
     ...(ctx.params as any),
   } as any;
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -418,7 +418,7 @@ const songCreateHandle: Middleware = async (ctx, next) => {
     ...(ctx.request.body as any),
     ...(ctx.params as any),
   } as any;
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -431,7 +431,7 @@ const songFeedHandle: Middleware = async (ctx, next) => {
     ...(ctx.request.body as any),
     ...(ctx.params as any),
   } as any;
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -487,7 +487,7 @@ const audioTransHandle: Middleware = async (ctx, next) => {
   });
 
   // @ts-ignore
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -501,7 +501,7 @@ const imageGenHandle: Middleware = async (ctx, next) => {
     ...(ctx.request.body as any),
     ...(ctx.params as any),
   } as any;
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -551,7 +551,7 @@ const imagesEditsHandle: Middleware = async (ctx, next) => {
   });
 
   // @ts-ignore
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -575,7 +575,7 @@ const createVideoTaskHandle: Middleware = async (ctx, next) => {
     ...(ctx.request.body as any),
     ...(ctx.params as any),
   } as any;
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -588,7 +588,7 @@ const queryVideoTaskHandle: Middleware = async (ctx, next) => {
     ...(ctx.request.body as any),
     ...(ctx.params as any),
   } as any;
-  const chat = chatModel.get(site);
+  const chat = getChatModel().get(site);
   if (!chat) {
     throw new ComError(`not support site: ${site} `, ComError.Status.NotFound);
   }
@@ -634,7 +634,7 @@ export const registerApp = () => {
   app.use(bodyParser({ jsonLimit: '100mb' }));
   app.use(checkApiKey);
   router.get('/webshow/:site', async (ctx) => {
-    const model = chatModel.get(ctx.params.site as Site);
+    const model = getChatModel().get(ctx.params.site as Site);
     if (!model) {
       ctx.status = 404;
       ctx.body = 'not found';
@@ -683,7 +683,7 @@ export const registerApp = () => {
     }),
     chatSaveHandler,
   );
-  chatModel.forEach((chat, site) => {
+  getChatModel().forEach((chat, site) => {
     // 增加前缀 dynamic/:site
     const dynamicRouter = new Router({ prefix: `/dynamic/${site}` });
     if (chat.dynamicRouter(dynamicRouter)) {

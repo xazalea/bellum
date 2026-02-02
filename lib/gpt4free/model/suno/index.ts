@@ -20,7 +20,7 @@ import {
   sleep,
   ThroughEventStream,
 } from '../../utils';
-import { chatModel } from '../index';
+import { getChatModel } from '../index';
 import { prompt } from './prompt';
 import moment from 'moment';
 import Application from 'koa';
@@ -100,7 +100,7 @@ export class Suno extends Chat {
   async askStream(req: ChatRequest, stream: EventStream): Promise<void> {
     req.messages = req.messages.filter((v) => v.role !== 'system');
     const child = await this.pool.pop();
-    const auto = chatModel.get(Site.Auto);
+    const auto = getChatModel().get(Site.Auto);
     let old = '';
     let lastLength = 0;
     let titleOK = false;

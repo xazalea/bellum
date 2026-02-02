@@ -29,7 +29,7 @@ import {
   MessageData,
   ThroughEventStream,
 } from '../../utils';
-import { chatModel } from '../index';
+import { getChatModel } from '../index';
 import {
   GatewayDMessageCreate,
   GatewayEventName,
@@ -210,7 +210,7 @@ export class Domo extends Chat {
     }
     const child = await this.pool.pop();
     try {
-      const auto = chatModel.get(Site.Auto);
+      const auto = getChatModel().get(Site.Auto);
       let old = '';
       const pt = new ThroughEventStream(
         (event, data) => {
@@ -350,7 +350,7 @@ export class Domo extends Chat {
 
   async videoToVideo(req: ChatRequest, stream: EventStream): Promise<void> {
     const child = await this.pool.pop();
-    const auto = chatModel.get(Site.Auto);
+    const auto = getChatModel().get(Site.Auto);
     const ai = await auto?.ask({
       model: Config.config.domo?.model || ModelType.GPT4_32k,
       messages: [

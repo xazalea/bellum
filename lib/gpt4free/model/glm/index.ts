@@ -28,7 +28,7 @@ import { AsyncStoreSN } from '../../asyncstore';
 import Application from 'koa';
 import jwt from 'jsonwebtoken';
 import Router from 'koa-router';
-import { chatModel } from '../index';
+import { getChatModel } from '../index';
 // import { GenVideoReq } from '../luma/define';
 // import { Child } from '../luma/child';
 // import { LumaPrompt } from '../luma/prompt';
@@ -158,7 +158,7 @@ export class GLM extends Chat {
   }
 
   public async handleCogViewX(req: ChatRequest, stream: EventStream) {
-    const auto = chatModel.get(Site.Auto);
+    const auto = getChatModel().get(Site.Auto);
     let old = '';
     const pt = new ThroughEventStream(
       (event, data) => {

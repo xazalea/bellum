@@ -16,7 +16,7 @@ import {
   sleep,
   ThroughEventStream,
 } from '../../utils';
-import { chatModel } from '../index';
+import { getChatModel } from '../index';
 import { Config } from '../../utils/config';
 import Router from 'koa-router';
 import { checkBody } from '../../utils/middleware';
@@ -90,7 +90,7 @@ export class Ideogram extends Chat {
   }
 
   async askStream(req: ChatRequest, stream: EventStream): Promise<void> {
-    const auto = chatModel.get(Site.Auto);
+    const auto = getChatModel().get(Site.Auto);
     let old = '';
     const pt = new ThroughEventStream(
       (event, data) => {
