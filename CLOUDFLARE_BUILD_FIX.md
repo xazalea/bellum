@@ -66,5 +66,10 @@ You should see:
 ### After Fixing Configuration
 
 1. Save the build settings in Cloudflare dashboard
-2. Trigger a new deployment (push a commit or click "Retry deployment")
-3. The build should now succeed
+2. **IMPORTANT**: Remove or fix the deploy command:
+   - Go to **Settings** → **Builds & deployments**
+   - **Deploy command**: Leave **EMPTY** (Cloudflare Pages auto-deploys after build)
+   - OR if you must have a deploy command, use: `wrangler pages deploy .vercel/output/static --project-name=bellum`
+   - ❌ **DO NOT** use `wrangler deploy` (that's for Workers, not Pages)
+3. Trigger a new deployment (push a commit or click "Retry deployment")
+4. The build and deployment should now succeed

@@ -48,7 +48,14 @@ NEXT_PUBLIC_PLATFORM=cloudflare
 
 (Add your Firebase keys, etc. from `.env.local`)
 
-### Step 3: Deploy!
+### Step 3: Configure Deploy Command (IMPORTANT!)
+
+**Deploy command**: Leave **EMPTY**
+- Cloudflare Pages automatically deploys after build completes
+- ❌ **DO NOT** use `wrangler deploy` (that's for Workers, not Pages)
+- ✅ If you must set one, use: `wrangler pages deploy .vercel/output/static --project-name=bellum`
+
+### Step 4: Deploy!
 
 Click **Save and Deploy**
 
