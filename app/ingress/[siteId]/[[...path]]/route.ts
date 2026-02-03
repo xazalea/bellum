@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { enqueueIngressRequest } from '@/lib/server/fabrik-ingress-rendezvous';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 function toBase64(bytes: ArrayBuffer): string {

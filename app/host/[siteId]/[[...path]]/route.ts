@@ -4,7 +4,7 @@ import { adminDb } from '@/app/api/user/_util';
 import { requireTelegramBotToken, telegramDownloadFileBytes } from '@/lib/server/telegram';
 import { FieldValue } from 'firebase-admin/firestore';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 type SiteRecord = {

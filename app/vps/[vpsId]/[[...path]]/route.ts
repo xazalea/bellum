@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { enqueueRequest } from '@/lib/server/vps-rendezvous';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 function fromBase64(b64: string): Uint8Array {
