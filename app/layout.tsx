@@ -40,7 +40,7 @@ export default function RootLayout({
       <body className="min-h-screen w-full bg-nacho-bg text-nacho-primary font-sans antialiased">
         <div className="min-h-screen w-full">
           <AppHeader />
-          <div className="pt-16">{children}</div>
+          <div className="pt-16 animate-fade-in">{children}</div>
         </div>
         <ClientInit />
       </body>

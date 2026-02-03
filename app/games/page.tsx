@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AnimatedGradientText } from '@/components/ui/animated-gradient-text';
+import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 import { fetchGames, Game, getProxiedGameUrl } from '@/lib/games-parser';
 import { discordDB, InstalledApp } from '@/lib/persistence/discord-db';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
@@ -120,11 +122,24 @@ export default function GamesPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 py-10">
+    <main className="relative mx-auto w-full max-w-7xl px-5 py-10">
+      {/* Animated Background Grid */}
+      <AnimatedGridPattern
+        numSquares={30}
+        maxOpacity={0.1}
+        duration={3}
+        repeatDelay={1}
+        className="fixed inset-0 -z-10 h-screen w-screen fill-nacho-accent/20 stroke-nacho-accent/20"
+      />
+      
       <div className="space-y-8">
-        <header className="flex justify-between items-end border-b border-nacho-border pb-6">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-nacho-primary tracking-tight">Games Arcade</h1>
+        <header className="flex justify-between items-end border-b border-nacho-border pb-6 backdrop-blur-sm">
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold tracking-tight">
+              <AnimatedGradientText className="text-4xl font-bold">
+                Games Arcade
+              </AnimatedGradientText>
+            </h1>
             <p className="text-nacho-secondary text-lg">
               {totalGames > 0 ? `${totalGames.toLocaleString()} HTML5 games available` : 'Retro & HTML5 gaming library'}
             </p>
@@ -159,14 +174,14 @@ export default function GamesPage() {
         {selectedGame ? (
           <div className="w-full h-[85vh] flex flex-col space-y-4 animate-fade-in">
             <div className="flex justify-between items-center">
-                <Button onClick={() => setSelectedGame(null)} className="bg-nacho-surface hover:bg-nacho-card-hover text-nacho-primary border-nacho-border">
+                <Button onClick={() => setSelectedGame(null)} variant="outline">
                   <span className="material-symbols-outlined mr-2">arrow_back</span>
                   Back to Library
                 </Button>
                 <Button 
                     onClick={(e) => handleInstall(e, selectedGame)}
                     disabled={!!installing}
-                    className="bg-nacho-accent hover:bg-blue-600 text-white border-none"
+                    variant="shimmer"
                 >
                     {installing === selectedGame.id ? (
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
@@ -229,13 +244,14 @@ export default function GamesPage() {
             )}
 
             {!loading && games.length === 0 && !error && (
-              <div className="text-center py-20 bg-nacho-surface rounded-nacho border border-nacho-border">
+              <div className="text-center py-20 bg-nacho-surface rounded-nacho border border-nacho-border backdrop-blur-sm">
                 <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4">sports_esports</span>
                 <h3 className="text-xl font-bold text-nacho-primary">No Games Loaded</h3>
                 <p className="text-nacho-secondary">Try reloading the catalog.</p>
                 <Button
                   onClick={() => loadGames(1, false)}
-                  className="mt-6 bg-nacho-accent text-white border-none"
+                  variant="shimmer"
+                  className="mt-6"
                 >
                   Reload Games
                 </Button>
@@ -269,7 +285,8 @@ export default function GamesPage() {
                     items.push(
                       <Card
                         key={game.id}
-                        className="group absolute p-0 overflow-hidden bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                        variant="magic"
+                        className="group absolute p-0 overflow-hidden bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] cursor-pointer"
                         style={{ width: cardWidth, height: cardHeight, transform: `translate(${left}px, ${top}px)`, willChange: 'transform' }}
                         onClick={() => {
                           setSelectedGame(game);
@@ -327,11 +344,12 @@ export default function GamesPage() {
                 </p>
                 <Button 
                   onClick={() => setPage(p => p + 1)} 
-                  disabled={loading} 
-                  className="min-w-[200px] bg-nacho-surface hover:bg-nacho-card-hover text-nacho-primary border-nacho-border"
+                  disabled={loading}
+                  variant="shimmer"
+                  className="min-w-[200px]"
                 >
                   {loading ? (
-                    <span className="w-5 h-5 border-2 border-nacho-secondary border-t-transparent rounded-full animate-spin"></span>
+                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                   ) : (
                     <>
                       <span>Load More Games</span>
