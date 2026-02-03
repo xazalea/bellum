@@ -19,15 +19,22 @@ Cloudflare Pages **automatically deploys** after a successful build. You don't n
 4. Save settings
 5. Retry deployment
 
-### Option 2: Use Correct Deploy Command
+### Option 2: Use Correct Deploy Command (If Required)
 
 If you must have a deploy command (not recommended), use:
 
 ```
-wrangler pages deploy .vercel/output/static --project-name=bellum
+npx wrangler pages deploy .vercel/output/static --project-name=challengerdeep
+```
+
+**OR** if using pnpm:
+
+```
+pnpm exec wrangler pages deploy .vercel/output/static --project-name=challengerdeep
 ```
 
 **NOT** `wrangler deploy` (that's for Workers, not Pages)
+**NOT** `wrangler pages deploy` (wrangler not in PATH - use `npx wrangler` or `pnpm exec wrangler`)
 
 ### Why This Happens
 

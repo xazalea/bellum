@@ -50,10 +50,11 @@ NEXT_PUBLIC_PLATFORM=cloudflare
 
 ### Step 3: Configure Deploy Command (IMPORTANT!)
 
-**Deploy command**: Leave **EMPTY**
+**Deploy command**: Leave **EMPTY** (Recommended)
 - Cloudflare Pages automatically deploys after build completes
 - ❌ **DO NOT** use `wrangler deploy` (that's for Workers, not Pages)
-- ✅ If you must set one, use: `wrangler pages deploy .vercel/output/static --project-name=bellum`
+- ❌ **DO NOT** use `wrangler pages deploy` (wrangler not in PATH)
+- ✅ If you must set one, use: `npx wrangler pages deploy .vercel/output/static --project-name=challengerdeep`
 
 ### Step 4: Deploy!
 
