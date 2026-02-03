@@ -48,13 +48,14 @@ NEXT_PUBLIC_PLATFORM=cloudflare
 
 (Add your Firebase keys, etc. from `.env.local`)
 
-### Step 3: Configure Deploy Command (IMPORTANT!)
+### Step 3: Configure Deploy Command (CRITICAL!)
 
-**Deploy command**: Leave **EMPTY** (Recommended)
-- Cloudflare Pages automatically deploys after build completes
-- ❌ **DO NOT** use `wrangler deploy` (that's for Workers, not Pages)
-- ❌ **DO NOT** use `wrangler pages deploy` (wrangler not in PATH)
-- ✅ If you must set one, use: `npx wrangler pages deploy .vercel/output/static --project-name=challengerdeep`
+**Deploy command**: **MUST BE EMPTY** ⚠️
+- Cloudflare Pages **automatically deploys** after build completes
+- ❌ **DO NOT** set any deploy command
+- ❌ **DO NOT** use `wrangler deploy` (Workers command)
+- ❌ **DO NOT** use `wrangler pages deploy` (requires auth, causes errors)
+- ✅ **Leave it completely empty** - Pages handles deployment automatically
 
 ### Step 4: Deploy!
 

@@ -14,39 +14,38 @@ Your Cloudflare Pages build is now **working perfectly**!
 ## 🚀 Final Deployment Step
 
 ### The Issue
-The build succeeds, but deployment fails with:
+The build succeeds, but deployment fails with authentication errors:
+```
+✘ [ERROR] A request to the Cloudflare API failed.
+Authentication error [code: 10000]
+```
+
+**OR** earlier it failed with:
 ```
 /bin/sh: 1: wrangler: not found
 ```
 
-### The Solution
+### The Solution: Remove Deploy Command (REQUIRED)
 
-**Option 1: Remove Deploy Command (RECOMMENDED)**
+**Cloudflare Pages automatically deploys after a successful build.** You do NOT need a deploy command.
 
 1. Go to Cloudflare Pages Dashboard → Your Project → **Settings** → **Builds & deployments**
 2. Find **"Deploy command"** field
-3. **Delete/clear the value** (leave it empty)
+3. **Delete/clear the value completely** (leave it empty)
 4. Save settings
-5. Cloudflare Pages will **automatically deploy** after build
+5. Cloudflare Pages will **automatically deploy** after build completes
 
 **Why this works:**
-- Cloudflare Pages automatically deploys the build output
-- No deploy command needed
-- This is the standard way to deploy Pages projects
+- ✅ Cloudflare Pages automatically deploys the build output from `.vercel/output/static`
+- ✅ No authentication needed
+- ✅ No deploy command needed
+- ✅ This is the standard and recommended way to deploy Pages projects
+- ✅ Avoids API token permission issues
 
----
-
-**Option 2: Fix Deploy Command (If Required)**
-
-If you must have a deploy command, use:
-
-```
-npx wrangler pages deploy .vercel/output/static --project-name=challengerdeep
-```
-
-**NOT:**
-- ❌ `wrangler pages deploy` (wrangler not in PATH)
-- ❌ `wrangler deploy` (wrong command for Pages)
+**Why deploy commands cause problems:**
+- ❌ Requires API token with correct permissions
+- ❌ Can fail with authentication errors
+- ❌ Not necessary - Pages handles deployment automatically
 
 ---
 
