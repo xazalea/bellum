@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
-import { Site, ModelType } from '@/lib/gpt4free/model/enums';
 
-// Dynamic import to avoid execution during build
+// Dynamic imports to avoid webpack static analysis during build
 const getChatModelFactory = async () => {
-  const { ChatModelFactory } = await import('@/lib/gpt4free/model/index');
+  const { ChatModelFactory } = await import(
+    /* webpackIgnore: true */
+    '@/lib/gpt4free/model/index'
+  );
   return ChatModelFactory;
+};
+
+const getEnums = async () => {
+  const { Site, ModelType } = await import(
+    /* webpackIgnore: true */
+    '@/lib/gpt4free/model/enums'
+  );
+  return { Site, ModelType };
 };
 
 // Check if we're in build mode
@@ -21,8 +31,10 @@ interface SiteSupport {
   models: string[];
 }
 
-// Map of sites to their supported models
-const siteModels: Record<string, string[]> = {
+// Map of sites to their supported models (will be populated at runtime)
+const getSiteModels = async (): Promise<Record<string, string[]>> => {
+  const { Site, ModelType } = await getEnums();
+  return {
   [Site.Phind]: [ModelType.GPT4, ModelType.GPT3p5Turbo],
   [Site.FakeOpen]: [ModelType.GPT4, ModelType.GPT3p5Turbo, ModelType.GPT4Turbo],
   [Site.MerlinGmail]: [ModelType.GPT4, ModelType.GPT3p5Turbo],
@@ -72,6 +84,7 @@ const siteModels: Record<string, string[]> = {
   [Site.Midjourney]: [ModelType.GPT4],
   [Site.Hypotenuse]: [ModelType.GPT4, ModelType.GPT3p5Turbo],
   [Site.Perplexity]: [ModelType.GPT4, ModelType.GPT3p5Turbo],
+  };
 };
 
 export async function GET() {
@@ -80,6 +93,8 @@ export async function GET() {
     return NextResponse.json([]);
   }
   try {
+    const { ModelType } = await getEnums();
+    const siteModels = await getSiteModels();
     const ChatModelFactory = await getChatModelFactory();
     const factory = new ChatModelFactory();
     const supports: SiteSupport[] = [];

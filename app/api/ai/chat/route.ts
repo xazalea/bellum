@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Site, ModelType } from '@/lib/gpt4free/model/enums';
-import type { Message } from '@/lib/gpt4free/model/base';
 
 // Check if we're in build mode - if so, export stub handlers
 const isBuildTime = typeof process !== 'undefined' && 
@@ -8,14 +6,29 @@ const isBuildTime = typeof process !== 'undefined' &&
    process.env.CF_PAGES === '1' ||
    process.env.NEXT_PHASE);
 
-// Dynamic import to avoid execution during build
+// Dynamic imports to avoid webpack static analysis during build
 const getChatModelFactory = async () => {
   if (isBuildTime) {
     throw new Error('ChatModelFactory not available during build');
   }
-  const { ChatModelFactory } = await import('@/lib/gpt4free/model/index');
+  const { ChatModelFactory } = await import(
+    /* webpackIgnore: true */
+    '@/lib/gpt4free/model/index'
+  );
   return ChatModelFactory;
 };
+
+const getEnums = async () => {
+  const { Site, ModelType } = await import(
+    /* webpackIgnore: true */
+    '@/lib/gpt4free/model/enums'
+  );
+  return { Site, ModelType };
+};
+
+// Message is a type, not a value, so we can't import it dynamically
+// We'll use 'any' for the type in Edge runtime to avoid build-time analysis
+type Message = any;
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
@@ -25,7 +38,7 @@ export const revalidate = 0;
 export const generateStaticParams = async () => [];
 
 interface ChatRequest {
-  prompt: string | Message[];
+  prompt: string | any[];
   model?: string;
   site?: string;
 }
@@ -35,7 +48,7 @@ interface ChatResponse {
   error?: string;
 }
 
-function parseMessages(prompt: string | Message[]): Message[] {
+async function parseMessages(prompt: string | any[]): Promise<any[]> {
   if (typeof prompt === 'string') {
     return [{ role: 'user', content: prompt }];
   }
@@ -48,6 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Service unavailable during build' }, { status: 503 });
   }
   try {
+    const { Site, ModelType } = await getEnums();
     const body: ChatRequest = await req.json();
     const { prompt, model = ModelType.GPT3p5Turbo, site = Site.Auto } = body;
 
@@ -60,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     const ChatModelFactory = await getChatModelFactory();
     const factory = new ChatModelFactory();
-    const chatModel = factory.get(site as Site);
+    const chatModel = factory.get(site as any);
 
     if (!chatModel) {
       return NextResponse.json(
@@ -69,12 +83,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const messages = parseMessages(prompt);
+    const messages = await parseMessages(prompt);
 
     const result = await chatModel.ask({
       prompt: '',
       messages: messages,
-      model: model as ModelType,
+      model: model as any,
     });
 
     const response: ChatResponse = {
@@ -100,6 +114,7 @@ export async function GET(req: NextRequest) {
   if (isBuildTime) {
     return NextResponse.json({ error: 'Service unavailable during build' }, { status: 503 });
   }
+  const { Site, ModelType } = await getEnums();
   const searchParams = req.nextUrl.searchParams;
   const prompt = searchParams.get('prompt');
   const model = searchParams.get('model') || ModelType.GPT3p5Turbo;
@@ -115,7 +130,7 @@ export async function GET(req: NextRequest) {
   try {
     const ChatModelFactory = await getChatModelFactory();
     const factory = new ChatModelFactory();
-    const chatModel = factory.get(site as Site);
+    const chatModel = factory.get(site as any);
 
     if (!chatModel) {
       return NextResponse.json(
@@ -124,12 +139,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const messages: Message[] = [{ role: 'user', content: prompt }];
+    const messages = [{ role: 'user', content: prompt }];
 
     const result = await chatModel.ask({
       prompt: '',
       messages: messages,
-      model: model as ModelType,
+      model: model as any,
     });
 
     const response: ChatResponse = {

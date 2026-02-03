@@ -197,26 +197,31 @@ const nextConfig = {
     );
     
     // Ignore node: prefixed modules for Edge Runtime builds
-    if (isCloudflare || isEdgeRuntime) {
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^node:/,
-        })
-      );
+    if (isCloudflare) {
+      // Use NormalModuleReplacementPlugin to replace node: modules with empty module
+      const emptyModulePath = require.resolve('./lib/webpack/empty-module.js');
+      const nodeModules = ['child_process', 'net', 'tls', 'fs', 'path', 'crypto', 'stream', 'util', 'events', 'buffer', 'process', 'os', 'http', 'https', 'url', 'zlib', 'assert', 'querystring', 'dns', 'dgram', 'cluster', 'module', 'readline', 'repl', 'string_decoder', 'timers', 'tty', 'vm', 'worker_threads'];
+      nodeModules.forEach(moduleName => {
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            new RegExp(`^node:${moduleName}$`),
+            emptyModulePath
+          )
+        );
+      });
     }
     
     // Always replace node:assert with empty module to prevent build errors
     // This is needed for pages that get prerendered even though they're client components
-    try {
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(
-          /^node:assert$/,
-          require.resolve('./lib/webpack/empty-module.js')
-        )
-      );
-    } catch (e) {
-      // Ignore if empty-module.js doesn't exist yet
-    }
+    // (webpack is already declared above)
+    const emptyModulePath = require.resolve('./lib/webpack/empty-module.js');
+    // Add replacement early in the plugin chain
+    config.plugins.unshift(
+      new webpack.NormalModuleReplacementPlugin(
+        /^node:assert$/,
+        emptyModulePath
+      )
+    );
     
     // Also ensure lodash is available in the resolve
     config.resolve = config.resolve || {};
@@ -235,7 +240,7 @@ const nextConfig = {
     }
 
     // Edge Runtime builds (including Cloudflare) can't bundle Node-only modules
-    if (isCloudflare || isEdgeRuntime) {
+    if (isCloudflare) {
       config.resolve.alias = {
         ...config.resolve.alias,
         '@elastic/ecs-winston-format': false,
