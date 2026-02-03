@@ -34,9 +34,9 @@ Your app is **already configured** for Cloudflare:
 
 **Build settings:**
 ```
-Build command:       npm run build
-Build output:        .next
-Root directory:      /
+Build command:       pnpm run build:cloudflare
+Build output:        .vercel/output/static
+Root directory:      (leave EMPTY - do not use "/")
 Node version:        22
 ```
 

@@ -1,0 +1,11 @@
+{
+  "build": {
+    "command": "pnpm run build:cloudflare",
+    "output": ".vercel/output/static",
+    "root": "."
+  },
+  "environment": {
+    "NODE_VERSION": "22",
+    "NEXT_PUBLIC_PLATFORM": "cloudflare"
+  }
+}

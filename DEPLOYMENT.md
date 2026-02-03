@@ -51,9 +51,9 @@ pnpm install
    - Select your repository
 
 2. **Build Configuration**:
-   - **Build command**: `npm run build:cloudflare`
+   - **Build command**: `pnpm run build:cloudflare`
    - **Build output directory**: `.vercel/output/static`
-   - **Root directory**: `/`
+   - **Root directory**: Leave **EMPTY** (or use `.` if empty is not allowed)
    - **Environment variables**: (see below)
 
 3. **Deploy**: Push to your branch and Cloudflare will auto-deploy
