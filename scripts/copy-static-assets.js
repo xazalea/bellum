@@ -41,6 +41,29 @@ if (fs.existsSync(nextAppDir)) {
   });
 }
 
+// Copy Next.js static chunks (_next/static) - these are required for the app to work
+const nextStaticDir = path.join(nextDir, 'static');
+if (fs.existsSync(nextStaticDir)) {
+  console.log('📦 Copying Next.js static chunks...');
+  const nextStaticOutput = path.join(outputDir, '_next/static');
+  copyRecursiveSync(nextStaticDir, nextStaticOutput);
+  console.log('  ✓ Copied _next/static directory');
+}
+
+// Restore _routes.json to original format (worker handles all routes)
+const routesJsonPath = path.join(outputDir, '_routes.json');
+if (fs.existsSync(routesJsonPath)) {
+  // Reset to original next-on-pages format
+  const originalRoutes = {
+    version: 1,
+    description: "Built with @cloudflare/next-on-pages@1.13.16.",
+    include: ["/*"],
+    exclude: ["/_next/static/*"]
+  };
+  fs.writeFileSync(routesJsonPath, JSON.stringify(originalRoutes, null, 2));
+  console.log('✅ Restored _routes.json to original format');
+}
+
 console.log('✅ Static assets copied successfully');
 
 function copyRecursiveSync(src, dest) {
