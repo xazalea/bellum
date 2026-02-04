@@ -4,4 +4,6 @@ module.exports = {
   skipValidation: true,
   // Use the standard output directory
   outputDir: '.vercel/output/static',
+  // Ensure static assets are included
+  minify: false,
 };
