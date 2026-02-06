@@ -39,7 +39,6 @@ import { newInjectedPage } from 'fingerprint-injector';
 import { FingerprintGenerator } from 'fingerprint-generator';
 import path from 'path';
 import fs, { createWriteStream } from 'fs';
-import { fileTypeFromFile } from 'file-type';
 import { promisify } from 'util';
 import { io } from 'socket.io-client';
 import type { ManagerOptions, Socket, SocketOptions } from 'socket.io-client';
@@ -1048,6 +1047,7 @@ export async function downloadImageToBase64(fileUrl: string): Promise<{
       throw new ComError(`download failed`, ComError.Status.BadRequest);
     }
     const base64Data = fs.readFileSync(tempFilePath).toString('base64');
+    const { fileTypeFromFile } = await import('file-type');
     return {
       base64Data,
       mimeType: (await fileTypeFromFile(tempFilePath))?.mime || 'image/jpeg',

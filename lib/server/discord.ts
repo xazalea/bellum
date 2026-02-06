@@ -1,5 +1,4 @@
 import 'server-only';
-import { createHash } from 'crypto';
 
 type DiscordWebhookResponse = {
   id: string;
@@ -90,8 +89,13 @@ export function getDiscordWebhookCount(): number {
   return getDiscordWebhookUrls().length;
 }
 
-export function sha256Hash(data: Uint8Array): string {
-  return createHash('sha256').update(data).digest('hex');
+export async function sha256Hash(data: Uint8Array): Promise<string> {
+  // Use Web Crypto API for better compatibility with Edge Runtime
+  // Cast to any to avoid SharedArrayBuffer issues with BufferSource in some TS versions
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data as any);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
 }
 
 function classifyDiscordError(json: DiscordErrorResponse | null, statusCode: number): DiscordError {
@@ -146,7 +150,7 @@ export async function discordSendFile(opts: {
   sha256?: string;
 }): Promise<{ messageId: string; attachmentUrl: string; sha256: string }> {
   // Calculate hash if not provided
-  const hash = opts.sha256 || sha256Hash(opts.bytes);
+  const hash = opts.sha256 || await sha256Hash(opts.bytes);
 
   // Include hash in content for verification
   const contentWithHash = `${opts.content}\nSHA256:${hash}`;
@@ -243,7 +247,7 @@ export async function discordDownloadFile(opts: {
 
   // Verify hash if provided
   if (opts.expectedSha256) {
-    const actualHash = sha256Hash(bytes);
+    const actualHash = await sha256Hash(bytes);
     if (actualHash !== opts.expectedSha256) {
       throw new DiscordError(
         `Hash mismatch: expected ${opts.expectedSha256}, got ${actualHash}`,

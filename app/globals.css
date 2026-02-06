@@ -24,6 +24,10 @@
   --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   color: var(--nacho-text);
   background: var(--nacho-bg);
@@ -36,14 +40,16 @@ body {
 .nacho-card {
   background: var(--nacho-card);
   border: 1px solid var(--nacho-border);
-  border-radius: 0.85rem;
+  border-radius: 1.25rem;
   box-shadow: var(--shadow-soft);
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nacho-card:hover {
   background: var(--nacho-card-hover);
   border-color: var(--nacho-border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
 .nacho-btn {
