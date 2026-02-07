@@ -68,17 +68,20 @@ const config: Config = {
   		},
   		fontFamily: {
   			sans: [
-  				'Inter"',
+				'var(--font-inter)',
+				'Inter',
   				'system-ui',
   				'sans-serif'
   			],
   			display: [
-  				'Inter"',
+				'var(--font-inter)',
+				'Inter',
   				'system-ui',
   				'sans-serif'
   			],
   			body: [
-  				'Inter"',
+				'var(--font-inter)',
+				'Inter',
   				'system-ui',
   				'sans-serif'
   			]

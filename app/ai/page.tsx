@@ -229,7 +229,7 @@ export default function AIPage() {
                           Start a conversation
                         </h3>
                         <p className="text-nacho-text-secondary">
-                          Ask me anything! I'm powered by multiple AI providers.
+                          Ask me anything! I&apos;m powered by multiple AI providers.
                         </p>
                       </div>
                     </div>

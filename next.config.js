@@ -30,12 +30,10 @@ const isCloudflare = process.env.CF_PAGES === '1' || process.env.CLOUDFLARE_ENV 
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use trailingSlash: true for cleaner URLs on Cloudflare Pages
-  trailingSlash: true,
-  // Skip page data collection for API routes during build
-  experimental: {
-    skipTrailingSlashRedirect: true,
-  },
+  // Ensure no .html extension and no trailing slash for clean URLs
+  trailingSlash: false,
+  // Skip trailing slash redirect for better performance on Cloudflare
+  skipTrailingSlashRedirect: true,
   // Skip static generation for storage page (client component with Node.js dependencies)
   async rewrites() {
     return [
