@@ -30,13 +30,25 @@ const isCloudflare = process.env.CF_PAGES === '1' || process.env.CLOUDFLARE_ENV 
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Skip page data collection for API routes during build
-  experimental: {
-    skipTrailingSlashRedirect: true,
-  },
+  // Ensure no .html extension and no trailing slash for clean URLs
+  trailingSlash: false,
+  // Skip trailing slash redirect for better performance on Cloudflare
+  skipTrailingSlashRedirect: true,
   // Skip static generation for storage page (client component with Node.js dependencies)
   async rewrites() {
-    return [];
+    return [
+      { source: '/assets/:path*', destination: '/unblocker/assets/:path*' },
+      { source: '/styles/:path*', destination: '/unblocker/styles/:path*' },
+      { source: '/pages/:path*', destination: '/unblocker/pages/:path*' },
+      { source: '/homework/:path*', destination: '/unblocker/homework/:path*' },
+      { source: '/stores/:path*', destination: '/unblocker/stores/:path*' },
+      { source: '/baremux/:path*', destination: '/unblocker/baremux/:path*' },
+      { source: '/fa/:path*', destination: '/unblocker/fa/:path*' },
+      { source: '/sw.js', destination: '/unblocker/sw.js' },
+      { source: '/start.html', destination: '/unblocker/start.html' },
+      { source: '/newtab.html', destination: '/unblocker/newtab.html' },
+      { source: '/404.html', destination: '/unblocker/404.html' },
+    ];
   },
   env: {
     NEXT_PUBLIC_BUILD_COMMIT: resolveBuildCommit(),
@@ -55,13 +67,14 @@ const nextConfig = {
   
   // Experimental features for performance
   experimental: {
-    // optimizeCss requires critters package - disabled for now
     // optimizeCss: true,
     optimizePackageImports: ['react', 'react-dom'],
   },
   
   // Aggressive code splitting
-  webpack: (config, { dev, isServer }) => {
+  webpack: (config, { dev, isServer, nextRuntime }) => {
+    const webpack = require('webpack');
+
     if (!dev && !isServer) {
       // Production optimizations
       config.optimization = {
@@ -73,27 +86,23 @@ const nextConfig = {
           cacheGroups: {
             default: false,
             vendors: false,
-            // Emulator code in separate chunk
             emulator: {
               name: 'emulator',
               test: /[\\/]lib[\\/](emulators|vm)[\\/]/,
               priority: 30,
               reuseExistingChunk: true,
             },
-            // WASM modules
             wasm: {
               name: 'wasm',
               test: /\.wasm$/,
               priority: 40,
             },
-            // React vendor
             react: {
               name: 'react',
               test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
               priority: 20,
               reuseExistingChunk: true,
             },
-            // Other vendors
             vendor: {
               name: 'vendor',
               test: /[\\/]node_modules[\\/]/,
@@ -112,83 +121,24 @@ const nextConfig = {
       layers: true,
     };
     
-    // Handle WASM files
     config.module.rules.push({
       test: /\.wasm$/,
       type: 'webassembly/async',
     });
 
-    // Allow Markdown imports from dependencies that include README files
     config.module.rules.push({
       test: /\.md$/,
       type: 'asset/source',
     });
     
-    // Fix for fengari (Lua) - ignore Node.js modules in browser
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        child_process: false,
-        net: false,
-        tls: false,
-        crypto: false,
-        stream: false,
-        url: false,
-        zlib: false,
-        http: false,
-        https: false,
-        assert: false,
-        os: false,
-        path: false,
-      };
-    }
-    
-    // Ignore fengari's Node.js-specific modules in browser builds
-    if (!isServer) {
-      const webpack = require('webpack');
-      config.plugins = config.plugins || [];
-      
-      // Ignore Node.js modules when imported by fengari
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^(fs|child_process|net|tls|crypto|stream|url|zlib|http|https|assert|os|path)$/,
-          contextRegExp: /fengari/,
-        })
-      );
-      
-      // Also ignore fengari during SSR (server-side builds)
-      if (isServer) {
-        config.plugins.push(
-          new webpack.IgnorePlugin({
-            resourceRegExp: /^fengari$/,
-          })
-        );
-      }
-    }
-    
-    // For server builds, completely ignore fengari
-    if (isServer) {
-      const webpack = require('webpack');
-      config.plugins = config.plugins || [];
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^fengari$/,
-        })
-      );
-    }
-    
-    // Provide lodash globally for all builds (both server and client)
-    const webpack = require('webpack');
-    config.plugins = config.plugins || [];
-    // Provide lodash as _ for any code that expects it
+    // Provide lodash globally
     config.plugins.push(
       new webpack.ProvidePlugin({
         _: 'lodash',
       })
     );
     
-    // Ignore test.js files that might cause build issues
+    // Ignore test.js files
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /test\.js$/,
@@ -196,10 +146,11 @@ const nextConfig = {
       })
     );
     
-    // Ignore node: prefixed modules for Edge Runtime builds
-    if (isCloudflare) {
-      // Use NormalModuleReplacementPlugin to replace node: modules with empty module
+    // Fix for Edge Runtime / Cloudflare / Client
+    if (nextRuntime === 'edge' || isCloudflare || !isServer) {
       const emptyModulePath = require.resolve('./lib/webpack/empty-module.js');
+
+      // Replace node: modules with empty module
       const nodeModules = ['child_process', 'net', 'tls', 'fs', 'path', 'crypto', 'stream', 'util', 'events', 'buffer', 'process', 'os', 'http', 'https', 'url', 'zlib', 'assert', 'querystring', 'dns', 'dgram', 'cluster', 'module', 'readline', 'repl', 'string_decoder', 'timers', 'tty', 'vm', 'worker_threads'];
       nodeModules.forEach(moduleName => {
         config.plugins.push(
@@ -209,38 +160,8 @@ const nextConfig = {
           )
         );
       });
-    }
-    
-    // Always replace node:assert with empty module to prevent build errors
-    // This is needed for pages that get prerendered even though they're client components
-    // (webpack is already declared above)
-    const emptyModulePath = require.resolve('./lib/webpack/empty-module.js');
-    // Add replacement early in the plugin chain
-    config.plugins.unshift(
-      new webpack.NormalModuleReplacementPlugin(
-        /^node:assert$/,
-        emptyModulePath
-      )
-    );
-    
-    // Also ensure lodash is available in the resolve
-    config.resolve = config.resolve || {};
-    config.resolve.alias = config.resolve.alias || {};
-    if (!config.resolve.alias.lodash) {
-      config.resolve.alias.lodash = require.resolve('lodash');
-    }
-    
-    // Normalize resolve to handle fengari
-    config.resolve = config.resolve || {};
-    config.resolve.alias = config.resolve.alias || {};
-    
-    // Alias fengari to empty module for server builds
-    if (isServer) {
-      config.resolve.alias.fengari = false;
-    }
 
-    // Edge Runtime builds (including Cloudflare) can't bundle Node-only modules
-    if (isCloudflare) {
+      // Also handle non-prefixed modules in resolve.alias
       config.resolve.alias = {
         ...config.resolve.alias,
         '@elastic/ecs-winston-format': false,
@@ -257,7 +178,6 @@ const nextConfig = {
         'tunnel': false,
         'winston': false,
         'winston-transport': false,
-        // Node.js core modules not available in Edge Runtime
         'fs': false,
         'path': false,
         'crypto': false,
@@ -287,42 +207,30 @@ const nextConfig = {
         'tty': false,
         'vm': false,
         'worker_threads': false,
-        // Firebase Admin requires Node.js runtime
         'firebase-admin': false,
         '@google-cloud/firestore': false,
         'google-auth-library': false,
         'google-gax': false,
-        // Node.js prefixed core modules (node:net, node:fs, etc.)
-        'node:net': false,
-        'node:fs': false,
-        'node:path': false,
-        'node:crypto': false,
-        'node:stream': false,
-        'node:util': false,
-        'node:events': false,
-        'node:buffer': false,
-        'node:process': false,
-        'node:os': false,
-        'node:child_process': false,
-        'node:tls': false,
-        'node:http': false,
-        'node:https': false,
-        'node:url': false,
-        'node:zlib': false,
-        'node:assert': false,
-        'node:querystring': false,
-        'node:dns': false,
-        'node:dgram': false,
-        'node:cluster': false,
-        'node:module': false,
-        'node:readline': false,
-        'node:repl': false,
-        'node:string_decoder': false,
-        'node:timers': false,
-        'node:tty': false,
-        'node:vm': false,
-        'node:worker_threads': false,
       };
+    }
+
+    // Always replace node:assert with empty module
+    const emptyModulePath = require.resolve('./lib/webpack/empty-module.js');
+    config.plugins.unshift(
+      new webpack.NormalModuleReplacementPlugin(
+        /^node:assert$/,
+        emptyModulePath
+      )
+    );
+
+    // Ensure lodash is available
+    if (!config.resolve.alias.lodash) {
+      config.resolve.alias.lodash = require.resolve('lodash');
+    }
+
+    // Alias fengari to empty module for server builds (non-edge)
+    if (isServer && nextRuntime !== 'edge') {
+      config.resolve.alias.fengari = false;
     }
     
     return config;
@@ -336,8 +244,6 @@ const nextConfig = {
         : [];
     return [
       {
-        // Default: keep security headers, but DO NOT force cross-origin isolation globally.
-        // Some third-party scripts (e.g. Vercel toolbar/feedback) are cross-origin and will be blocked by COEP.
         source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -350,7 +256,6 @@ const nextConfig = {
           ...hsts,
         ],
       },
-      // Enable cross-origin isolation ONLY where needed (SharedArrayBuffer for VMs / fast runner).
       {
         source: '/android/:path*',
         headers: [
@@ -373,15 +278,6 @@ const nextConfig = {
         ],
       },
       {
-        source: '/vercel.live/:path*',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-        ],
-      },
-      // Ads run inside an internal iframe route. Disable COEP/COOP there so the ad can load cross-origin resources
-      // without breaking cross-origin isolation for the main app.
-      {
         source: '/ad/:path*',
         headers: [
           { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
@@ -389,99 +285,12 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'no-store' },
         ],
       },
-      // Cherri (Unblocker) loads several cross-origin CDN scripts/styles by design.
-      // COEP/COOP would block them. We scope-disable isolation for those paths only.
       {
         source: '/unblocker/:path*',
         headers: [
           { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
           { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          // Cherri is a pinned snapshot; cache aggressively.
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      // Absolute-path buckets used by Cherri (rewritten to /unblocker/*).
-      // Cache aggressively + allow cross-origin subresources (no COEP/COOP isolation).
-      {
-        source: '/assets/:path*',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/styles/:path*',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/homework/:path*',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/stores/:path*',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/fa/:path*',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        source: '/baremux/:path*',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      // HTML entrypoints should revalidate, but still allow CDN subresources.
-      {
-        source: '/start.html',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-        ],
-      },
-      {
-        source: '/newtab.html',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-        ],
-      },
-      {
-        source: '/404.html',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-        ],
-      },
-      // Service workers MUST update promptly.
-      {
-        source: '/sw.js',
-        headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
-          { key: 'Cache-Control', value: 'no-store' },
         ],
       },
       {
@@ -495,24 +304,6 @@ const nextConfig = {
       }
     ];
   },
-
-  // Rewrites to host Cherri under /unblocker while keeping absolute asset paths.
-  // Cherri uses absolute URLs like /assets/*, /pages/*, /stores/*, /sw.js, etc.
-  async rewrites() {
-    return [
-      { source: '/assets/:path*', destination: '/unblocker/assets/:path*' },
-      { source: '/styles/:path*', destination: '/unblocker/styles/:path*' },
-      { source: '/pages/:path*', destination: '/unblocker/pages/:path*' },
-      { source: '/homework/:path*', destination: '/unblocker/homework/:path*' },
-      { source: '/stores/:path*', destination: '/unblocker/stores/:path*' },
-      { source: '/baremux/:path*', destination: '/unblocker/baremux/:path*' },
-      { source: '/fa/:path*', destination: '/unblocker/fa/:path*' },
-      { source: '/sw.js', destination: '/unblocker/sw.js' },
-      { source: '/start.html', destination: '/unblocker/start.html' },
-      { source: '/newtab.html', destination: '/unblocker/newtab.html' },
-      { source: '/404.html', destination: '/unblocker/404.html' },
-    ];
-  },
   
   // Image optimization
   images: {
@@ -522,4 +313,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-

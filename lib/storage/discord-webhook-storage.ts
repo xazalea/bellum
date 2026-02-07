@@ -34,7 +34,6 @@ export interface QuotaInfo {
   availableBytes: number;
 }
 
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/1462182344021770413/VAvTz9ibnGBLEhI3GRHFfbsyy0uw5AsLGihzbTrkorkvivBEiEDLg9s2fduZKIwDeqY9';
 const MAX_CHUNK_SIZE = 24 * 1024 * 1024; // 24MB (safe margin below Discord's 25MB limit)
 const QUOTA_PER_FINGERPRINT = 4 * 1024 * 1024 * 1024; // 4GB per user
 
@@ -137,27 +136,33 @@ export async function listFiles(): Promise<FileMetadata[]> {
 async function uploadChunkToDiscord(
   chunk: Blob,
   fileName: string,
-  chunkIndex: number
+  chunkIndex: number,
+  totalChunks: number,
+  fileId: string
 ): Promise<{ messageId: string; attachmentUrl: string }> {
-  const formData = new FormData();
-  formData.append('file', chunk, `${fileName}.part${chunkIndex}`);
-  formData.append('content', `[Challenger Storage] ${fileName} - Chunk ${chunkIndex + 1}`);
+  const uid = await getDeviceFingerprintId();
 
-  const response = await fetch(WEBHOOK_URL, {
+  const response = await fetch('/api/discord/upload', {
     method: 'POST',
-    body: formData,
+    headers: {
+      'x-nacho-userid': uid,
+      'X-File-Name': fileName,
+      'X-Upload-Id': fileId,
+      'X-Chunk-Index': chunkIndex.toString(),
+      'X-Chunk-Total': totalChunks.toString(),
+    },
+    body: chunk,
   });
 
   if (!response.ok) {
-    throw new Error(`Discord webhook upload failed: ${response.status} ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(`Upload failed: ${errorData.error || response.statusText}`);
   }
 
   const data = await response.json();
-  
-  // Discord webhook response includes the message ID and attachments
   return {
-    messageId: data.id,
-    attachmentUrl: data.attachments[0].url,
+    messageId: data.messageId,
+    attachmentUrl: data.attachmentUrl,
   };
 }
 
@@ -228,7 +233,9 @@ export async function uploadFile(
       const { messageId, attachmentUrl } = await uploadChunkToDiscord(
         chunkBlob,
         file.name,
-        i
+        i,
+        totalChunks,
+        fileId
       );
 
       messageIds.push(messageId);
@@ -293,17 +300,24 @@ export async function downloadFile(
     throw new Error(`File not found: ${fileId}`);
   }
 
+  const uid = await getDeviceFingerprintId();
   console.log(`[Challenger Storage] Downloading ${metadata.fileName} (${metadata.chunkCount} chunks)...`);
 
   const chunks: Blob[] = [];
   let downloadedBytes = 0;
 
   // Download all chunks
-  for (let i = 0; i < metadata.attachmentUrls.length; i++) {
-    const url = metadata.attachmentUrls[i];
+  for (let i = 0; i < metadata.messageIds.length; i++) {
+    const messageId = metadata.messageIds[i];
     
     try {
-      const response = await fetch(url);
+      // Use our secure backend to download the file (handles auth and ownership)
+      const response = await fetch(`/api/discord/file?messageId=${messageId}`, {
+        headers: {
+          'x-nacho-userid': uid,
+        }
+      });
+
       if (!response.ok) {
         throw new Error(`Failed to download chunk ${i}: ${response.status}`);
       }

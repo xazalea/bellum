@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { getNachoIdentity } from '@/lib/auth/nacho-identity';
 
 type Status = 'unknown' | 'connected' | 'disconnected';
@@ -50,11 +51,14 @@ export function ClusterIndicator() {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-nacho-border bg-nacho-surface px-3 py-2 text-xs text-nacho-secondary">
+    <Link
+      href="/cluster"
+      className="flex items-center gap-2 rounded-lg border border-nacho-border bg-nacho-surface px-3 py-2 text-xs text-nacho-secondary hover:border-nacho-accent hover:text-nacho-primary transition-all duration-300"
+    >
       <span className={`h-2 w-2 rounded-full ${dotClass}`} />
       <span className="hidden sm:inline">Cluster</span>
       <span className="text-nacho-primary">{count}</span>
-    </div>
+    </Link>
   );
 }
 
