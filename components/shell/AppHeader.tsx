@@ -7,10 +7,12 @@ import { cn } from '@/lib/utils';
 import { ClusterIndicator } from '@/components/shell/ClusterIndicator';
 
 const NAV = [
+  { href: '/', label: 'Home' },
+  { href: '/games', label: 'Games' },
+  { href: '/ai', label: 'AI' },
   { href: '/android', label: 'Android' },
   { href: '/windows', label: 'Windows' },
   { href: '/library', label: 'Library' },
-  { href: '/games', label: 'Games' },
   { href: '/storage', label: 'Storage' },
   { href: '/account', label: 'Account' },
 ];
@@ -20,10 +22,10 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-nacho-border/50 bg-nacho-bg/80 backdrop-blur-xl shadow-lg">
+    <header className="fixed top-0 z-50 w-full border-b border-nacho-border/50 bg-nacho-bg/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
         <div className="flex items-center gap-6">
-          <Link href="/games" className="flex items-center gap-3 group">
+          <Link href="/" className="flex items-center gap-3 group">
             <div className="h-8 w-8 rounded-lg border border-nacho-accent/30 bg-gradient-to-br from-nacho-accent/20 to-nacho-surface group-hover:border-nacho-accent/50 transition-all duration-300 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]" />
             <div className="leading-tight">
               <div className="text-sm font-semibold tracking-tight text-nacho-primary group-hover:text-nacho-accent transition-colors">Bellum</div>

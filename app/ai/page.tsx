@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { ChatMessage } from '@/components/ai/ChatMessage';
 import { ModelSelector } from '@/components/ai/ModelSelector';
 import { Send, Trash2, Sparkles } from 'lucide-react';
+import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -56,10 +57,12 @@ export default function AIPage() {
     abortControllerRef.current = new AbortController();
 
     try {
+      const uid = await getDeviceFingerprintId();
       const response = await fetch('/api/ai/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-nacho-userid': uid,
         },
         body: JSON.stringify({
           prompt: [...messages, userMessage],
@@ -226,7 +229,7 @@ export default function AIPage() {
                           Start a conversation
                         </h3>
                         <p className="text-nacho-text-secondary">
-                          Ask me anything! I'm powered by multiple AI providers.
+                          Ask me anything! I&apos;m powered by multiple AI providers.
                         </p>
                       </div>
                     </div>

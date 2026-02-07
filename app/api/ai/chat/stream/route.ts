@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { requireAuthedUser } from '@/app/api/user/_util';
+import { requireSameOrigin, rateLimit } from '@/lib/server/security';
 
 // Check if we're in build mode - if so, export stub handlers
 const isBuildTime = typeof process !== 'undefined' && 
@@ -57,6 +59,10 @@ export async function POST(req: NextRequest) {
     return new Response(encoder.encode('Service unavailable during build'), { status: 503 });
   }
   try {
+    requireSameOrigin(req);
+    const { uid } = await requireAuthedUser(req);
+    rateLimit(req, { scope: 'ai_chat', limit: 20, windowMs: 60_000, key: uid });
+
     const body: ChatRequest = await req.json();
     const { Site, ModelType } = await getEnums();
     const { prompt, model = ModelType.GPT3p5Turbo, site = Site.Auto } = body;
@@ -161,6 +167,14 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  try {
+    requireSameOrigin(req);
+    const { uid } = await requireAuthedUser(req);
+    rateLimit(req, { scope: 'ai_chat', limit: 20, windowMs: 60_000, key: uid });
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 401 });
+  }
+
   const searchParams = req.nextUrl.searchParams;
   const prompt = searchParams.get('prompt');
   const { Site, ModelType } = await getEnums();

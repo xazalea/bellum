@@ -353,9 +353,10 @@ export class BinaryLoader {
     }
 
     // In Node.js environment, read from filesystem
-    if (typeof require !== 'undefined') {
+    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
       try {
-        const fs = require('fs').promises;
+        // Use dynamic import to avoid Webpack resolving 'fs' in browser
+        const fs = (await import('fs')).default.promises;
         const buffer = await fs.readFile(path);
         return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
       } catch (error) {
