@@ -61,7 +61,9 @@ const nextConfig = {
   },
   
   // Aggressive code splitting
-  webpack: (config, { dev, isServer }) => {
+  webpack: (config, { dev, isServer, webpack }) => {
+    const isCloudflare = process.env.CF_PAGES === '1';
+    
     if (!dev && !isServer) {
       // Production optimizations
       config.optimization = {
@@ -146,7 +148,6 @@ const nextConfig = {
     
     // Ignore fengari's Node.js-specific modules in browser builds
     if (!isServer) {
-      const webpack = require('webpack');
       config.plugins = config.plugins || [];
       
       // Ignore Node.js modules when imported by fengari
@@ -169,7 +170,6 @@ const nextConfig = {
     
     // For server builds, completely ignore fengari
     if (isServer) {
-      const webpack = require('webpack');
       config.plugins = config.plugins || [];
       config.plugins.push(
         new webpack.IgnorePlugin({
@@ -179,7 +179,6 @@ const nextConfig = {
     }
     
     // Provide lodash globally for all builds (both server and client)
-    const webpack = require('webpack');
     config.plugins = config.plugins || [];
     // Provide lodash as _ for any code that expects it
     config.plugins.push(

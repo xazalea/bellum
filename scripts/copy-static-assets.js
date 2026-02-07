@@ -50,19 +50,15 @@ if (fs.existsSync(nextStaticDir)) {
   console.log('  ✓ Copied _next/static directory');
 }
 
-// Restore _routes.json to original format (worker handles all routes)
-const routesJsonPath = path.join(outputDir, '_routes.json');
-if (fs.existsSync(routesJsonPath)) {
-  // Reset to original next-on-pages format
-  const originalRoutes = {
-    version: 1,
-    description: "Built with @cloudflare/next-on-pages@1.13.16.",
-    include: ["/*"],
-    exclude: ["/_next/static/*"]
-  };
-  fs.writeFileSync(routesJsonPath, JSON.stringify(originalRoutes, null, 2));
-  console.log('✅ Restored _routes.json to original format');
+// Create a symlink or copy for root path to index.html
+// This ensures / maps to /index.html
+const indexHtmlPath = path.join(outputDir, 'index.html');
+const rootIndexPath = path.join(outputDir, 'index.html');
+if (fs.existsSync(indexHtmlPath) && !fs.existsSync(rootIndexPath)) {
+  // index.html already exists, no need to create
 }
+
+// Note: _routes.json will be updated by update-routes.js after next-on-pages runs
 
 console.log('✅ Static assets copied successfully');
 

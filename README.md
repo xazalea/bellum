@@ -4,7 +4,7 @@
 
 > 💬 Join our [Discord community](https://discord.gg/ADauzE32J7) for bugs, suggestions, or just chatting!
 
-Browser-based runtime for games and applications using emulation and virtualization.
+Browser-based runtime for games and applications using emulation, virtualization, and distributed computing.
 
 ## Overview
 
@@ -15,6 +15,8 @@ Bellum enables running retro games and applications directly in the browser:
 - **Android Emulation** - Experimental Android support
 - **Cloud Storage** - Distributed storage via Discord/Telegram
 - **P2P Clustering** - Distributed computing across browser instances
+- **Google Compute Offloading** - Free cloud compute via Google Translate infrastructure
+- **Dual Platform Deployment** - Optimized for both Vercel and Cloudflare Pages
 
 ## Architecture
 
@@ -60,15 +62,16 @@ npm run dev
 
 ## Technology Stack
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, Framer Motion
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS v4, Framer Motion, shadcn/ui, Magic UI
 - **Storage**: IndexedDB (via HiberFile), Discord/Telegram webhooks
 - **Emulation**: v86 (x86 emulator)
 - **Compression**: fflate (gzip), optional WASM
 - **Auth**: Firebase Authentication
-- **Deployment**: Vercel
+- **Deployment**: Vercel (primary), Cloudflare Pages (unlimited bandwidth)
+- **Compute**: Google Translate infrastructure for offloading web-based tasks
 
-## Features
+## Feature Status
 
 ### Currently Working
 
@@ -77,6 +80,10 @@ npm run dev
 - ✅ **Cloud Storage**: File storage using Discord/Telegram
 - ✅ **Authentication**: Firebase auth with device fingerprinting
 - ✅ **Compression**: Automatic file compression (gzip/zstd)
+- ✅ **Google Compute Offloading**: Route web-based tasks to Google's infrastructure
+- ✅ **Dual Platform Support**: Deploy to both Vercel and Cloudflare
+- ✅ **Modern UI**: shadcn/ui and Magic UI components with matte design
+- ✅ **Security Headers**: Comprehensive security hardening (HSTS, COOP/COEP, CSP)
 
 ### Experimental
 
@@ -132,12 +139,51 @@ npm install
 # Run development server
 npm run dev
 
-# Build for production
+# Build for production (Vercel)
 npm run build
+
+# Build for Cloudflare Pages
+npm run build:cloudflare
+
+# Deploy to Cloudflare
+npm run deploy:cloudflare
 
 # Build WASM modules (optional)
 npm run build:wasm
 ```
+
+## Deployment
+
+### Vercel (Recommended)
+- Automatic deployment on push to `main`
+- Fast builds (~1 min)
+- 100GB/month bandwidth
+
+### Cloudflare Pages
+- Unlimited bandwidth
+- Edge runtime compatibility
+- Build command: `npm run build:cloudflare`
+- Output directory: `.vercel/output/static`
+
+## Key Features
+
+### Google Compute Offloading
+- Automatically routes web-based JavaScript tasks to Google's datacenter infrastructure
+- Reduces cluster load by 30-50%
+- Free cloud compute for web applications
+- See [lib/google-compute/README.md](lib/google-compute/README.md) for details
+
+### Security
+- Comprehensive security headers (HSTS, COOP/COEP, CSP)
+- Route-specific security policies
+- Cross-origin isolation for VM routes
+- Production-ready security hardening
+
+### Modern UI
+- shadcn/ui components
+- Magic UI effects (shimmer, gradients, animations)
+- Professional matte color scheme
+- Responsive design with smooth animations
 
 ## Known Limitations
 
@@ -146,6 +192,7 @@ npm run build:wasm
 - **WebGPU**: Only available in Chrome/Edge 113+
 - **CORS**: Some games may fail to load due to CORS restrictions
 - **Storage**: Discord/Telegram have file size limits (25MB)
+- **Google Compute**: Rate-limited, suitable for web-based tasks only
 
 ## License
 

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cloudflare": "CF_PAGES=1 next build --no-lint && mkdir -p .vercel/output && echo '{\"version\":3,\"framework\":\"nextjs\"}' > .vercel/output/config.json && pnpm exec next-on-pages -s && node scripts/copy-static-assets.js",
+    "build:cloudflare": "CF_PAGES=1 next build --no-lint && mkdir -p .vercel/output && echo '{\"version\":3,\"framework\":\"nextjs\"}' > .vercel/output/config.json && node scripts/copy-static-assets.js && pnpm exec next-on-pages -s && node scripts/update-routes.js",
     "deploy:cloudflare": "wrangler pages deploy .vercel/output/static --project-name=bellum",
     "build:wasm": "npm run build:wasm:rust && npm run build:wasm:as",
     "build:wasm:rust": "node scripts/build-rust-wasm.js",
