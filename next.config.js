@@ -72,15 +72,9 @@ const nextConfig = {
   },
   
   // Aggressive code splitting
-<<<<<<< HEAD
-  webpack: (config, { dev, isServer, webpack }) => {
-    const isCloudflare = process.env.CF_PAGES === '1';
-    
-=======
   webpack: (config, { dev, isServer, nextRuntime }) => {
     const webpack = require('webpack');
-
->>>>>>> 99e36c6154dbb1613e773df4bec7bc13d15e9de0
+    const isCloudflare = process.env.CF_PAGES === '1';
     if (!dev && !isServer) {
       // Production optimizations
       config.optimization = {
@@ -137,7 +131,6 @@ const nextConfig = {
       type: 'asset/source',
     });
     
-<<<<<<< HEAD
     // Fix for fengari (Lua) - ignore Node.js modules in browser
     if (!isServer) {
       config.resolve.fallback = {
@@ -169,15 +162,6 @@ const nextConfig = {
           contextRegExp: /fengari/,
         })
       );
-      
-      // Also ignore fengari during SSR (server-side builds)
-      if (isServer) {
-        config.plugins.push(
-          new webpack.IgnorePlugin({
-            resourceRegExp: /^fengari$/,
-          })
-        );
-      }
     }
     
     // For server builds, completely ignore fengari
@@ -192,10 +176,6 @@ const nextConfig = {
     
     // Provide lodash globally for all builds (both server and client)
     config.plugins = config.plugins || [];
-    // Provide lodash as _ for any code that expects it
-=======
-    // Provide lodash globally
->>>>>>> 99e36c6154dbb1613e773df4bec7bc13d15e9de0
     config.plugins.push(
       new webpack.ProvidePlugin({
         _: 'lodash',
