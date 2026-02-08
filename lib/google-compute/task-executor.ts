@@ -194,10 +194,18 @@ export class TaskExecutor {
           return;
         }
 
-        const originalLog = win.console.log;
-        win.console.log = (...args: unknown[]) => {
+        // Type assertion for console access
+        const winConsole = (win as any).console;
+        if (!winConsole || !winConsole.log) {
+          clearTimeout(timeoutId);
+          reject(new Error('Cannot access iframe console'));
+          return;
+        }
+
+        const originalLog = winConsole.log;
+        winConsole.log = (...args: unknown[]) => {
           consoleLogs.push(args);
-          originalLog.apply(win.console, args);
+          originalLog.apply(winConsole, args);
 
           // Check if we got a result marker
           if (args[0] === '__RESULT__') {
