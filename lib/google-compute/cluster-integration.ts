@@ -53,20 +53,24 @@ export class GoogleComputeVirtualPeer {
 
     return {
       id: this.id,
-      label: 'Google Compute',
+      type: 'worker',
       status: capacity.available ? 'connected' : 'disconnected',
       workload: capacity.utilizationPercent / 100,
       capabilities: {
         computeUnits: 16, // Assume datacenter-class
         memory: 16 * 1024 * 1024 * 1024, // 16GB
         gpuVRAM: 0, // No GPU
-        supportedTypes: ['compute', 'web', 'javascript'],
+        bandwidth: 1000 * 1024 * 1024, // 1Gbps
+        battery: null, // N/A for datacenter
+        thermalState: 'nominal',
       },
       connection: {
+        type: 'webrtc', // Virtual connection type
+        channel: null, // No actual channel for virtual peer
         latency: 200, // Assume 200ms average
         bandwidth: 1000 * 1024 * 1024, // 1Gbps
-        protocol: 'https',
       },
+      lastHeartbeat: Date.now(),
     };
   }
 
