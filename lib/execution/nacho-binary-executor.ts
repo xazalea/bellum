@@ -484,17 +484,17 @@ export class NachoBinaryExecutor {
             
             // Update instruction pointer
             const lastInstr = block.instructions[block.instructions.length - 1];
+            const firstInstr = block.instructions[0];
             if (context.binary.architecture === 'x86' || context.binary.architecture === 'x86_64') {
-                context.registers.rip = (context.registers.rip || 0) + block.instructions[0].addr ? 1 : block.instructions.length;
+                context.registers.rip = (context.registers.rip || 0) + (firstInstr?.addr ?? block.instructions.length);
             } else {
-                context.registers.pc = (context.registers.pc || 0) + block.instructions[0].addr ? 1 : block.instructions.length;
+                context.registers.pc = (context.registers.pc || 0) + (firstInstr?.addr ?? block.instructions.length);
             }
             
             // Check for system calls
-            const firstInstr = block.instructions[0];
-            if (firstInstr.opcode.toLowerCase() === 'syscall' || 
+            if (firstInstr && (firstInstr.opcode.toLowerCase() === 'syscall' ||
                 firstInstr.opcode.toLowerCase() === 'int' ||
-                firstInstr.opcode.toLowerCase() === 'svc') {
+                firstInstr.opcode.toLowerCase() === 'svc')) {
                 
                 // Extract syscall number and arguments
                 const syscallNum = context.registers.rax || context.registers.r0 || 0;
@@ -580,8 +580,9 @@ export class NachoBinaryExecutor {
                     
                 case 0x21: // NtFreeVirtualMemory
                     const freeAddr = args[0];
-                    enhancedMemoryManager.free(freeAddr);
-                    console.log(`[NachoExec] Freed memory at 0x${freeAddr.toString(16)}`);
+                    const freeSize = args[1] || 4096; // Size parameter, default to page size if not provided
+                    enhancedMemoryManager.free(freeAddr, freeSize);
+                    console.log(`[NachoExec] Freed memory at 0x${freeAddr.toString(16)}, size: ${freeSize}`);
                     return 0; // STATUS_SUCCESS
                     
                 case 0x30: // NtQuerySystemInformation
