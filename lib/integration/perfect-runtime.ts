@@ -125,19 +125,22 @@ export class PerfectRuntime {
         if (!this.initialized) throw new Error('Runtime not initialized');
         if (!this.binaryExecutor) throw new Error('Binary executor not initialized');
         
+        // Store in local variable for TypeScript narrowing
+        const binaryExecutor = this.binaryExecutor;
+        
         return exceptionHandler.wrapAsync(async () => {
             console.log('[Runtime] 🪟 Executing Windows EXE with NachoBinaryExecutor...');
             
             const startTime = performance.now();
             
             // Load binary into executor
-            const context = await this.binaryExecutor.loadBinary(exeData);
+            const context = await binaryExecutor.loadBinary(exeData);
             
             console.log(`[Runtime] Binary loaded: ${context.binary.format}, ${context.binary.architecture}`);
             console.log(`[Runtime] Entry point: 0x${context.binary.entryPoint.toString(16)}`);
             
             // Execute binary (this will use FastInterpreter, JIT, and GPU as needed)
-            const exitCode = await this.binaryExecutor.execute(context);
+            const exitCode = await binaryExecutor.execute(context);
             
             const executionTime = performance.now() - startTime;
             
@@ -155,7 +158,7 @@ export class PerfectRuntime {
             hotPathProfiler.printReport();
             
             // Print executor report
-            this.binaryExecutor.printReport();
+            binaryExecutor.printReport();
             
             return {
                 success: true,
@@ -175,13 +178,16 @@ export class PerfectRuntime {
         if (!this.initialized) throw new Error('Runtime not initialized');
         if (!this.binaryExecutor) throw new Error('Binary executor not initialized');
         
+        // Store in local variable for TypeScript narrowing
+        const binaryExecutor = this.binaryExecutor;
+        
         return exceptionHandler.wrapAsync(async () => {
             console.log('[Runtime] 🤖 Executing Android APK with NachoBinaryExecutor...');
             
             const startTime = performance.now();
             
             // Load binary into executor
-            const context = await this.binaryExecutor.loadBinary(apkData);
+            const context = await binaryExecutor.loadBinary(apkData);
             
             console.log(`[Runtime] Binary loaded: ${context.binary.format}, ${context.binary.architecture}`);
             
@@ -189,7 +195,7 @@ export class PerfectRuntime {
             await completeDalvikInterpreter.initialize();
             
             // Execute binary
-            const exitCode = await this.binaryExecutor.execute(context);
+            const exitCode = await binaryExecutor.execute(context);
             
             const executionTime = performance.now() - startTime;
             
@@ -205,7 +211,7 @@ export class PerfectRuntime {
             hotPathProfiler.printReport();
             
             // Print executor report
-            this.binaryExecutor.printReport();
+            binaryExecutor.printReport();
             
             return {
                 success: true,
