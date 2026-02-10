@@ -9,9 +9,16 @@ export interface RuntimeConfig {
     env: Record<string, string>;
 }
 
+export interface RuntimeStatus {
+    message: string;
+    detail?: string;
+    state?: 'loading' | 'ready' | 'error' | 'running';
+}
+
 export class RuntimeManager {
     private static instance: RuntimeManager;
     private activeLoader: any = null;
+    private statusCallback: ((status: RuntimeStatus) => void) | null = null;
 
     private constructor() {}
 
@@ -24,6 +31,16 @@ export class RuntimeManager {
 
     getActiveLoader(): any {
         return this.activeLoader;
+    }
+
+    setStatusCallback(callback: (status: RuntimeStatus) => void): void {
+        this.statusCallback = callback;
+    }
+
+    private updateStatus(status: RuntimeStatus): void {
+        if (this.statusCallback) {
+            this.statusCallback(status);
+        }
     }
 
     /**
@@ -84,6 +101,17 @@ export class RuntimeManager {
             try { this.activeLoader.stop(); } catch(e) {}
         }
         this.activeLoader = new V86TurboLoader();
+        
+        // Wire up status callback to loader
+        if (this.statusCallback) {
+            this.activeLoader.onStatusUpdate = (status: string, detail?: string) => {
+                this.updateStatus({
+                    message: status,
+                    detail: detail,
+                    state: 'loading'
+                });
+            };
+        }
         await this.activeLoader.load(container, filePath, type);
     }
     

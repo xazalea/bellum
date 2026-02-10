@@ -177,6 +177,7 @@ export default function LibraryPage() {
 
       // If archived to cold store, restore first.
       if (!app.isActive) {
+        setRunnerStatus('Activating from archive…');
         await lib.activateApp(app.id);
         refreshApps();
       }
@@ -184,31 +185,51 @@ export default function LibraryPage() {
       // Reload latest app entry (storagePath may have changed during activation)
       const latest = lib.getApps().find((a) => a.id === app.id) || app;
 
+      // Clear container and prepare for execution
       runContainerRef.current.innerHTML = '';
+      
+      // Set up status callback for real-time updates
+      runtime.setStatusCallback((status) => {
+        setRunnerStatus(`${status.message}${status.detail ? ` (${status.detail})` : ''}`);
+        if (status.state === 'error') {
+          console.error('Runtime error:', status.detail);
+        }
+      });
+
+      // Prepare runtime
+      setRunnerStatus('Analyzing binary…');
       const { type, config } = await runtime.prepareRuntime(latest.storagePath);
-      setRunnerStatus(`Launching (${type})…`);
+      
+      // Launch execution with new RuntimeManager
+      setRunnerStatus(`Launching ${type}…`);
       await runtime.launch(runContainerRef.current, type, latest.storagePath, config);
 
-      // Attach best-effort status hooks for loaders that expose them (e.g. NachoLoader).
-      try {
-        const loader = runtime.getActiveLoader?.();
-        if (loader && typeof loader === 'object') {
-          if ('onStatusUpdate' in loader) {
-            (loader as any).onStatusUpdate = (status: string, detail?: string) => {
-              setRunnerStatus(`${status}${detail ? `: ${detail}` : ''}`);
-            };
+      // Display statistics periodically
+      const statsInterval = setInterval(() => {
+        try {
+          const stats = runtime.getStatistics();
+          if (stats.instructionsExecuted > 0) {
+            setRunnerStatus(
+              `Running | ${stats.instructionsExecuted.toLocaleString()} instructions | ` +
+              `${(stats.executionTime / 1000).toFixed(2)}s | ` +
+              `${(stats.memoryUsed / 1024 / 1024).toFixed(1)} MB`
+            );
           }
+        } catch (e) {
+          clearInterval(statsInterval);
         }
-      } catch {
-        // ignore
-      }
+      }, 1000);
+
+      // Store interval ID to clear on stop
+      (runtime as any)._statsInterval = statsInterval;
 
       setRunnerStatus('Running');
     } catch (e) {
       console.error('Failed to launch local app', e);
-      alert('Failed to launch file.');
+      const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+      alert(`Failed to launch file: ${errorMsg}`);
       setLaunchingLocal(null);
-      setRunnerStatus('Error');
+      setRunnerStatus(`Error: ${errorMsg}`);
     } finally {
       setBusy(null);
     }
@@ -254,9 +275,18 @@ export default function LibraryPage() {
             <Button
               onClick={() => {
                 try {
-                  runtimeRef.current?.stop();
-                } catch {
-                  // ignore
+                  const runtime = runtimeRef.current;
+                  if (runtime) {
+                    // Clear stats interval if exists
+                    const statsInterval = (runtime as any)._statsInterval;
+                    if (statsInterval) {
+                      clearInterval(statsInterval);
+                      delete (runtime as any)._statsInterval;
+                    }
+                    runtime.stop();
+                  }
+                } catch (e) {
+                  console.error('Error stopping runtime:', e);
                 }
                 setLaunchingGame(null);
                 setLaunchingLocal(null);

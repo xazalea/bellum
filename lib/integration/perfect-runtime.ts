@@ -1,6 +1,6 @@
 /**
  * Perfect Runtime - Complete Integration
- * Ties together all components for real binary execution
+ * Ties together all components for real binary execution with NachoBinaryExecutor
  */
 
 import { syscallDispatcher, SyscallContext, ProcessExitException } from '../syscalls/syscall-dispatcher';
@@ -12,10 +12,13 @@ import { exceptionHandler, ExceptionType, ExceptionAction } from '../engine/exce
 import { directXWebGPU } from '../directx/directx-webgpu-impl';
 import { PEParser } from '../transpiler/pe_parser';
 import { DEXParser } from '../transpiler/dex_parser';
-import { X86DecoderFull } from '../transpiler/lifter/decoders/x86-full';
-import { FastInterpreter } from '../execution/fast-interpreter';
 import { PersistentKernelEngineV2, WorkType } from '../nexus/gpu/persistent-kernels-v2';
 import { Megakernel } from '../../src/nacho/engine/megakernel';
+import { NachoBinaryExecutor, type ExecutionContext } from '../execution/nacho-binary-executor';
+import { NachoJITCompiler } from '../jit/nacho-jit-compiler';
+import { NachoGPURuntime } from '../gpu/nacho-gpu-runtime';
+import { hotPathProfiler } from '../execution/profiler';
+import { ntKernelGPU } from '../nexus/os/nt-kernel-gpu';
 
 /**
  * Perfect Runtime - Unified execution environment
@@ -25,39 +28,94 @@ export class PerfectRuntime {
     private megakernel: Megakernel | null = null;
     private canvas: HTMLCanvasElement | null = null;
     private initialized: boolean = false;
+    private binaryExecutor: NachoBinaryExecutor | null = null;
+    private jitCompiler: NachoJITCompiler | null = null;
+    private gpuRuntime: NachoGPURuntime | null = null;
     
     /**
      * Initialize runtime
      */
     async initialize(canvas: HTMLCanvasElement): Promise<void> {
-        console.log('[Runtime] Initializing Perfect Runtime...');
+        if (this.initialized) {
+            console.warn('[Runtime] Already initialized');
+            return;
+        }
         
-        this.canvas = canvas;
-        
-        // Setup exception handlers
-        this.setupExceptionHandlers();
-        
-        // Initialize DirectX translation layer
-        await directXWebGPU.initialize(canvas);
-        
-        // Initialize GPU compute engine
-        this.gpuEngine = new PersistentKernelEngineV2({
-            numKernels: 10000,
-            workgroupSize: 256,
-        });
-        await this.gpuEngine.initialize();
-        // GPU engine doesn't have a start method, initialize is sufficient
-        
-        // Initialize megakernel for physics
-        this.megakernel = Megakernel.getInstance();
-        
-        // Setup Win32 subsystems
-        user32.setCanvas(canvas);
-        
-        this.initialized = true;
-        
-        console.log('[Runtime] ✅ Perfect Runtime initialized');
-        this.printCapabilities();
+        try {
+            console.log('[Runtime] Initializing Perfect Runtime...');
+            
+            // Check browser compatibility
+            if (typeof navigator === 'undefined') {
+                throw new Error('Navigator not available - this must run in a browser');
+            }
+            
+            if (!navigator.gpu) {
+                throw new Error('WebGPU not supported. Please use Chrome 113+, Edge 113+, or another WebGPU-compatible browser.');
+            }
+            
+            this.canvas = canvas;
+            
+            // Setup exception handlers
+            this.setupExceptionHandlers();
+            
+            // Initialize DirectX translation layer
+            try {
+                await directXWebGPU.initialize(canvas);
+            } catch (error) {
+                console.warn('[Runtime] DirectX→WebGPU initialization failed:', error);
+                // Continue without DirectX support
+            }
+            
+            // Initialize GPU compute engine
+            try {
+                this.gpuEngine = new PersistentKernelEngineV2({
+                    numKernels: 10000,
+                    workgroupSize: 256,
+                });
+                await this.gpuEngine.initialize();
+            } catch (error) {
+                console.warn('[Runtime] GPU compute engine failed to initialize:', error);
+                // Continue without GPU acceleration (will use interpreter only)
+            }
+            
+            // Initialize NT Kernel GPU
+            try {
+                await ntKernelGPU.initialize();
+            } catch (error) {
+                console.warn('[Runtime] NT Kernel GPU initialization failed:', error);
+                // Continue without NT Kernel (system calls will use fallbacks)
+            }
+            
+            // Initialize JIT compiler and GPU runtime
+            this.jitCompiler = new NachoJITCompiler();
+            this.gpuRuntime = new NachoGPURuntime();
+            
+            // Initialize binary executor
+            this.binaryExecutor = new NachoBinaryExecutor(this.jitCompiler, this.gpuRuntime);
+            
+            // Initialize megakernel for physics
+            try {
+                this.megakernel = Megakernel.getInstance();
+            } catch (error) {
+                console.warn('[Runtime] Megakernel initialization failed:', error);
+                // Continue without physics engine
+            }
+            
+            // Setup Win32 subsystems
+            user32.setCanvas(canvas);
+            
+            // Start hot path profiler
+            hotPathProfiler.startProfiling();
+            
+            this.initialized = true;
+            
+            console.log('[Runtime] ✅ Perfect Runtime initialized');
+            this.printCapabilities();
+        } catch (error) {
+            console.error('[Runtime] Initialization failed:', error);
+            this.initialized = false;
+            throw new Error(`Runtime initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
     
     /**
@@ -65,53 +123,47 @@ export class PerfectRuntime {
      */
     async executeWindows(exeData: ArrayBuffer): Promise<ExecutionResult> {
         if (!this.initialized) throw new Error('Runtime not initialized');
+        if (!this.binaryExecutor) throw new Error('Binary executor not initialized');
         
         return exceptionHandler.wrapAsync(async () => {
-            console.log('[Runtime] 🪟 Executing Windows EXE...');
+            console.log('[Runtime] 🪟 Executing Windows EXE with NachoBinaryExecutor...');
             
-            // Parse PE file
-            const peParser = new PEParser(exeData);
-            const peFile = peParser.parse();
+            const startTime = performance.now();
             
-            console.log(`[Runtime] PE: ${peFile.fileHeader.machine === 0x8664 ? 'x64' : 'x86'}, Entry: 0x${peFile.optionalHeader.addressOfEntryPoint.toString(16)}`);
+            // Load binary into executor
+            const context = await this.binaryExecutor.loadBinary(exeData);
             
-            // Load into memory
-            const imageBase = typeof peFile.optionalHeader.imageBase === 'bigint' 
-              ? Number(peFile.optionalHeader.imageBase) 
-              : peFile.optionalHeader.imageBase;
-            const loaded = peParser.loadIntoMemory(peFile, imageBase);
+            console.log(`[Runtime] Binary loaded: ${context.binary.format}, ${context.binary.architecture}`);
+            console.log(`[Runtime] Entry point: 0x${context.binary.entryPoint.toString(16)}`);
             
-            // Allocate memory region
-            const codeBase = enhancedMemoryManager.allocateAt(
-                imageBase,
-                loaded.memory.length,
-                MemoryProtection.READ_WRITE_EXECUTE
-            );
+            // Execute binary (this will use FastInterpreter, JIT, and GPU as needed)
+            const exitCode = await this.binaryExecutor.execute(context);
             
-            // Write code to memory
-            enhancedMemoryManager.write(codeBase, loaded.memory);
+            const executionTime = performance.now() - startTime;
             
-            // Decode instructions
-            const decoder = new X86DecoderFull();
-            const block = decoder.decode(loaded.memory, 0, loaded.entryPoint);
+            // Get profiling statistics
+            const profilingStats = hotPathProfiler.getStatistics();
             
-            console.log(`[Runtime] Decoded ${block.instructions.length} instructions`);
+            console.log(`[Runtime] ✅ Execution complete`);
+            console.log(`[Runtime] Exit code: ${exitCode}`);
+            console.log(`[Runtime] Execution time: ${executionTime.toFixed(2)}ms`);
+            console.log(`[Runtime] Instructions executed: ${profilingStats.totalExecutions}`);
+            console.log(`[Runtime] WASM compiled blocks: ${profilingStats.wasmCompiledBlocks}`);
+            console.log(`[Runtime] GPU compiled blocks: ${profilingStats.gpuCompiledBlocks}`);
             
-            // Execute with interpreter
-            const interpreter = new FastInterpreter();
+            // Print profiling report
+            hotPathProfiler.printReport();
             
-            // Execute instructions
-            const result = interpreter.execute(block.instructions, loaded.entryPoint);
-            
-            console.log(`[Runtime] ✅ Execution complete. Instructions: ${result.instructionsExecuted}, Time: ${result.executionTime}ms`);
+            // Print executor report
+            this.binaryExecutor.printReport();
             
             return {
                 success: true,
-                exitCode: result.exitCode,
-                instructionsExecuted: result.instructionsExecuted,
-                cyclesElapsed: result.instructionsExecuted, // Approximate cycles
+                exitCode: exitCode,
+                instructionsExecuted: profilingStats.totalExecutions,
+                cyclesElapsed: profilingStats.totalExecutions, // Approximate cycles
                 memoryUsed: enhancedMemoryManager.getStatistics().usedSize,
-                executionTimeMs: result.executionTime,
+                executionTimeMs: executionTime,
             };
         }, 'Windows EXE execution');
     }
@@ -121,30 +173,47 @@ export class PerfectRuntime {
      */
     async executeAndroid(apkData: ArrayBuffer): Promise<ExecutionResult> {
         if (!this.initialized) throw new Error('Runtime not initialized');
+        if (!this.binaryExecutor) throw new Error('Binary executor not initialized');
         
         return exceptionHandler.wrapAsync(async () => {
-            console.log('[Runtime] 🤖 Executing Android APK...');
+            console.log('[Runtime] 🤖 Executing Android APK with NachoBinaryExecutor...');
             
-            // Parse DEX file
-            const dexParser = new DEXParser(apkData);
-            const dexFile = dexParser.parse();
+            const startTime = performance.now();
             
-            console.log(`[Runtime] DEX: ${dexFile.header.stringIdsSize} strings, ${dexFile.header.classDefsSize} classes`);
+            // Load binary into executor
+            const context = await this.binaryExecutor.loadBinary(apkData);
             
-            // Initialize and register classes from DEX file
+            console.log(`[Runtime] Binary loaded: ${context.binary.format}, ${context.binary.architecture}`);
+            
+            // For DEX files, we also initialize Dalvik interpreter
             await completeDalvikInterpreter.initialize();
-            // Note: In a full implementation, we would parse and register all classes from the DEX file
-            // For now, we just initialize the interpreter
+            
+            // Execute binary
+            const exitCode = await this.binaryExecutor.execute(context);
+            
+            const executionTime = performance.now() - startTime;
+            
+            // Get profiling statistics
+            const profilingStats = hotPathProfiler.getStatistics();
             
             console.log(`[Runtime] ✅ Android execution complete`);
+            console.log(`[Runtime] Exit code: ${exitCode}`);
+            console.log(`[Runtime] Execution time: ${executionTime.toFixed(2)}ms`);
+            console.log(`[Runtime] Instructions executed: ${profilingStats.totalExecutions}`);
+            
+            // Print profiling report
+            hotPathProfiler.printReport();
+            
+            // Print executor report
+            this.binaryExecutor.printReport();
             
             return {
                 success: true,
-                exitCode: 0,
-                instructionsExecuted: 0, // Would track in Dalvik
-                cyclesElapsed: 0,
+                exitCode: exitCode,
+                instructionsExecuted: profilingStats.totalExecutions,
+                cyclesElapsed: profilingStats.totalExecutions,
                 memoryUsed: enhancedMemoryManager.getStatistics().usedSize,
-                executionTimeMs: 0,
+                executionTimeMs: executionTime,
             };
         }, 'Android APK execution');
     }
@@ -204,12 +273,26 @@ export class PerfectRuntime {
     async shutdown(): Promise<void> {
         console.log('[Runtime] Shutting down...');
         
+        // Stop profiling
+        hotPathProfiler.stopProfiling();
+        
+        // Shutdown binary executor
+        if (this.binaryExecutor) {
+            this.binaryExecutor.shutdown();
+        }
+        
+        // Shutdown NT Kernel GPU
+        await ntKernelGPU.shutdown();
+        
+        // Shutdown GPU engine
         if (this.gpuEngine) {
             await this.gpuEngine.terminate();
         }
         
         enhancedMemoryManager.getStatistics(); // Final stats
         exceptionHandler.clearHistory();
+        
+        this.initialized = false;
         
         console.log('[Runtime] ✅ Shutdown complete');
     }
