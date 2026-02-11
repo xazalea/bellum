@@ -37,7 +37,8 @@
     "public/optimizers",
     "tests",
     "**/*.bench.ts",
-    "wasm/**/*"
+    "wasm/**/*",
+    "saphire-repo"
   ]
 }
 

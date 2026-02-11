@@ -16,64 +16,46 @@ if (!fs.existsSync(routesJsonPath)) {
 
 const routes = JSON.parse(fs.readFileSync(routesJsonPath, 'utf8'));
 
-// Exclude static HTML files - let Cloudflare Pages serve them directly
-const htmlExcludes = [
-  '/*.html',
-  '/index.html',
-  '/games.html',
-  '/account.html',
-  '/ai.html',
-  '/android.html',
-  '/cluster.html',
-  '/library.html',
-  '/storage.html',
-  '/virtual-machines.html',
-  '/vps.html',
-  '/windows.html',
-  '/_not-found.html',
-  '/404.html'
-];
+// For Cloudflare Pages with Next.js, we want the worker to handle ALL routes
+// Clear all exclusions so the Next.js worker handles everything, including the root route
+// This ensures proper routing and prevents 404 errors
 
-// Merge excludes
-if (!routes.exclude) {
-  routes.exclude = [];
+// Ensure version is set (required by Cloudflare Pages)
+if (!routes.version) {
+  routes.version = 1;
 }
 
-const existingExcludes = new Set(routes.exclude);
-htmlExcludes.forEach(exclude => {
-  if (!existingExcludes.has(exclude)) {
-    routes.exclude.push(exclude);
-  }
-});
+// Clear all exclusions - let Next.js worker handle all routes
+routes.exclude = [];
 
-fs.writeFileSync(routesJsonPath, JSON.stringify(routes, null, 2));
-console.log('✅ Updated _routes.json to exclude static HTML files');
+// Optional: Only exclude truly static assets that never need Next.js processing
+// But be careful - even these might need to go through Next.js for proper headers
+// For now, exclude nothing to ensure everything works
 
-// Also update _redirects file to map routes without .html to .html files
+// Ensure the structure is correct for Cloudflare Pages
+// Format: { version: 1, exclude: [] }
+// Empty exclude array means worker handles ALL routes
+const finalRoutes = {
+  version: 1,
+  exclude: [], // Empty = worker handles everything (including root)
+};
+
+fs.writeFileSync(routesJsonPath, JSON.stringify(finalRoutes, null, 2));
+console.log('✅ Updated _routes.json (Next.js worker handles all routes)');
+console.log(`   Structure: version=${finalRoutes.version}, exclude=[${finalRoutes.exclude.length} items]`);
+
+// Also update _redirects file
+// For Next.js on Cloudflare Pages, we should NOT use _redirects for routing
+// The worker handles all routing. Only use _redirects for static assets if needed.
 const redirectsPath = path.join(process.cwd(), '.vercel/output/static/_redirects');
 const redirects = [
-  '# Cloudflare Pages redirects - map routes to .html files',
-  '/ /index.html 200',
-  '/games /games.html 200',
-  '/account /account.html 200',
-  '/ai /ai.html 200',
-  '/android /android.html 200',
-  '/cluster /cluster.html 200',
-  '/library /library.html 200',
-  '/storage /storage.html 200',
-  '/virtual-machines /virtual-machines.html 200',
-  '/vps /vps.html 200',
-  '/windows /windows.html 200',
+  '# Cloudflare Pages _redirects',
+  '# Next.js worker handles all routing - no redirects needed',
+  '# Static assets are served directly by Cloudflare Pages',
   '',
-  '# Don\'t redirect static files',
-  '/_next/* 200',
-  '/favicon.ico 200',
-  '/images/* 200',
-  '/v86/* 200',
-  '/wasm/* 200',
-  '/games.xml 200',
-  '/sw.js 200',
+  '# Only specify static assets that should bypass the worker',
+  '# (Usually not needed - worker can handle these too)',
 ].join('\n');
 
 fs.writeFileSync(redirectsPath, redirects);
-console.log('✅ Updated _redirects to map routes to .html files');
+console.log('✅ Updated _redirects (Next.js worker handles all routes)');

@@ -485,10 +485,12 @@ export class NachoBinaryExecutor {
             // Update instruction pointer
             const lastInstr = block.instructions[block.instructions.length - 1];
             const firstInstr = block.instructions[0];
-            if (context.binary.architecture === 'x86' || context.binary.architecture === 'x86_64') {
-                context.registers.rip = (context.registers.rip || 0) + (firstInstr?.addr ?? block.instructions.length);
-            } else {
-                context.registers.pc = (context.registers.pc || 0) + (firstInstr?.addr ?? block.instructions.length);
+            if (block.instructions.length > 0 && firstInstr) {
+                if (context.binary.architecture === 'x86' || context.binary.architecture === 'x86_64') {
+                    context.registers.rip = (context.registers.rip || 0) + (firstInstr.addr ?? block.instructions.length);
+                } else {
+                    context.registers.pc = (context.registers.pc || 0) + (firstInstr.addr ?? block.instructions.length);
+                }
             }
             
             // Check for system calls

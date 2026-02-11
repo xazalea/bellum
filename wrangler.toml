@@ -1,6 +1,12 @@
-name = "bellum"
+# Cloudflare Pages Configuration
+# This file is used for Pages deployment (not Workers)
+# Pages projects use .pages.dev domains, not .workers.dev
+
+name = "challenger"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
+
+# Pages-specific configuration
 pages_build_output_dir = ".vercel/output/static"
 
 [env.production]

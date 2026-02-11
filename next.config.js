@@ -34,6 +34,8 @@ const nextConfig = {
   trailingSlash: false,
   // Skip trailing slash redirect for better performance on Cloudflare
   skipTrailingSlashRedirect: true,
+  // Exclude saphire-repo from build - it's a separate project
+  // Next.js will still discover files, but TypeScript exclude + webpack ignore should prevent compilation
   // Skip static generation for storage page (client component with Node.js dependencies)
   async rewrites() {
     return [
@@ -189,6 +191,33 @@ const nextConfig = {
         contextRegExp: /lib\/gpt4free\/model/,
       })
     );
+    
+    // Exclude saphire-repo directory from build (it's a separate project)
+    // Prevent Next.js from trying to compile files in saphire-repo
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        checkResource(resource, context) {
+          // Exclude any file that's in the saphire-repo directory
+          if (context && context.includes('saphire-repo')) {
+            return true;
+          }
+          // Also check if the resource path includes saphire-repo
+          if (resource && resource.includes('saphire-repo')) {
+            return true;
+          }
+          return false;
+        },
+      })
+    );
+    
+    // Also add to watchOptions to prevent watching
+    if (!config.watchOptions) {
+      config.watchOptions = {};
+    }
+    config.watchOptions.ignored = [
+      ...(Array.isArray(config.watchOptions.ignored) ? config.watchOptions.ignored : []),
+      '**/saphire-repo/**',
+    ];
     
     // Fix for Edge Runtime / Cloudflare / Client
     if (nextRuntime === 'edge' || isCloudflare || !isServer) {
