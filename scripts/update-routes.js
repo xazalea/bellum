@@ -33,16 +33,18 @@ routes.exclude = [];
 // For now, exclude nothing to ensure everything works
 
 // Ensure the structure is correct for Cloudflare Pages
-// Format: { version: 1, exclude: [] }
-// Empty exclude array means worker handles ALL routes
+// Format: { version: 1, include: string[], exclude: string[] }
+// Cloudflare requires at least one include rule
+// Include all routes so worker handles everything
 const finalRoutes = {
   version: 1,
-  exclude: [], // Empty = worker handles everything (including root)
+  include: ['/*'], // Include all routes - worker handles everything
+  exclude: [], // Empty = no exclusions, worker handles all routes
 };
 
 fs.writeFileSync(routesJsonPath, JSON.stringify(finalRoutes, null, 2));
 console.log('✅ Updated _routes.json (Next.js worker handles all routes)');
-console.log(`   Structure: version=${finalRoutes.version}, exclude=[${finalRoutes.exclude.length} items]`);
+console.log(`   Structure: version=${finalRoutes.version}, include=[${finalRoutes.include.length} items], exclude=[${finalRoutes.exclude.length} items]`);
 
 // Also update _redirects file
 // For Next.js on Cloudflare Pages, we should NOT use _redirects for routing
