@@ -20,6 +20,33 @@ interface Game {
   platform: string;
 }
 
+// Fisher-Yates shuffle algorithm with seed for consistency
+function shuffleArray<T>(array: T[], seed?: string): T[] {
+  const shuffled = [...array];
+  let random = seed ? seededRandom(seed) : Math.random;
+  
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled;
+}
+
+// Simple seeded random number generator
+function seededRandom(seed: string) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash = hash & hash;
+  }
+  
+  return function() {
+    hash = (hash * 9301 + 49297) % 233280;
+    return hash / 233280;
+  };
+}
+
 async function parseGamesXml(): Promise<Game[]> {
   const now = Date.now();
   
@@ -92,9 +119,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
+    const randomize = searchParams.get('randomize') === 'true';
+    const seed = searchParams.get('seed') || 'default-seed';
     
     // Parse games (uses cache if available)
-    const allGames = await parseGamesXml();
+    let allGames = await parseGamesXml();
+    
+    // Randomize if requested (with seed for consistency within session)
+    if (randomize) {
+      allGames = shuffleArray(allGames, seed);
+    }
     
     // Paginate
     const start = (page - 1) * limit;

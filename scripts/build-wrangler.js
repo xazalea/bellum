@@ -19,33 +19,38 @@ try {
   
   log('Starting Wrangler build for Cloudflare Pages');
   
-  // Step 2: Run Next.js build
+  // Step 2: Clean previous build
+  const vercelOutputDir = path.join(process.cwd(), '.vercel/output');
+  if (fs.existsSync(vercelOutputDir)) {
+    log('Cleaning previous Vercel output...');
+    fs.rmSync(vercelOutputDir, { recursive: true, force: true });
+  }
+  
+  // Step 3: Run Next.js build
   log('Building Next.js application...');
-  execSync('next build --no-lint', { 
+  execSync('next build', { 
     stdio: 'inherit',
-    env: { ...process.env, CF_PAGES: '1' }
+    env: { 
+      ...process.env, 
+      CF_PAGES: '1',
+      NODE_ENV: 'production'
+    }
   });
   log('Next.js build completed');
   
-  // Step 3: Copy static assets (if script exists)
-  const copyStaticScript = path.join(__dirname, 'copy-static-assets.js');
-  if (fs.existsSync(copyStaticScript)) {
-    log('Copying static assets...');
-    execSync(`node ${copyStaticScript}`, { stdio: 'inherit' });
-    log('Static assets copied');
-  }
-  
   // Step 4: Run next-on-pages to convert to Cloudflare format
   log('Converting to Cloudflare Pages format...');
-  execSync('pnpm exec next-on-pages -s', { stdio: 'inherit' });
+  execSync('pnpm exec next-on-pages', { stdio: 'inherit' });
   log('Conversion completed');
   
-  // Step 5: Update routes (if script exists)
+  // Step 5: Update routes configuration
   const updateRoutesScript = path.join(__dirname, 'update-routes.js');
   if (fs.existsSync(updateRoutesScript)) {
     log('Updating routes...');
     execSync(`node ${updateRoutesScript}`, { stdio: 'inherit' });
     log('Routes updated');
+  } else {
+    log('⚠️  Warning: update-routes.js not found, skipping route updates');
   }
   
   log('✅ Build completed successfully');

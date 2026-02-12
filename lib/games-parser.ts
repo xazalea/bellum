@@ -229,11 +229,19 @@ async function getCatalog(): Promise<GamesCatalog | null> {
  * Fetch games from API (server-side parsing for better performance)
  * Falls back to client-side parsing if API fails
  */
-export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[], total: number }> {
+export async function fetchGames(page = 1, limit = 50, randomize = true, seed?: string): Promise<{ games: Game[], total: number }> {
   try {
     // Try API first (server-side parsing is much faster)
-    console.log(`[GamesParser] Fetching games from API (page ${page}, limit ${limit})`);
-    const apiUrl = `/api/games?page=${page}&limit=${limit}`;
+    console.log(`[GamesParser] Fetching games from API (page ${page}, limit ${limit}, randomize: ${randomize})`);
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      randomize: randomize.toString(),
+    });
+    if (seed) {
+      params.set('seed', seed);
+    }
+    const apiUrl = `/api/games?${params.toString()}`;
     const response = await fetch(apiUrl);
     
     if (response.ok) {
@@ -265,23 +273,11 @@ export async function fetchGames(page = 1, limit = 50): Promise<{ games: Game[],
 }
 
 /**
- * Proxies a game URL using the Nacho Proxy strategy
+ * Proxies a game URL using the server-side proxy endpoint
+ * This bypasses iframe detection by serving games through our proxy
+ * which modifies headers and scripts that prevent embedding
  */
 export function getProxiedGameUrl(originalUrl: string): string {
-  // If we had a dedicated proxy endpoint: return `/api/proxy?url=${encodeURIComponent(originalUrl)}`;
-  // For now, we rely on the Service Worker intercepting fetch requests with 'X-Nacho-Proxy' header.
-  // But for an iframe src, we can't easily add headers.
-  // We might need a rewrite URL if the SW intercepts matching patterns.
-  
-  // Checking nacho-proxy-sw.js:
-  // It intercepts fetch if X-Nacho-Proxy header OR if hostname matches specific domains.
-  // For iframes, we can't set headers.
-  // Does it have a URL-based trigger?
-  // "shouldProxy" checks hostname includes gamedistribution, cloudflare, etc.
-  
-  // If we really need to force proxy, we might need a wrapper page that fetches blob and serves it,
-  // or a backend route.
-  
-  // Let's assume direct URL works if SW is active and domain matches.
-  return originalUrl;
+  // Use the new proxy endpoint that handles iframe detection bypass
+  return `/api/proxy/game?url=${encodeURIComponent(originalUrl)}`;
 }

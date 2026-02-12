@@ -7,21 +7,21 @@
 }
 
 :root {
-  /* Professional Matte Color Palette */
+  /* Minimalist Matte Dark Palette */
   --nacho-bg: #0a0e1a;
-  --nacho-surface: rgba(20, 25, 38, 0.6);
-  --nacho-card: rgba(18, 23, 36, 0.75);
-  --nacho-card-hover: rgba(25, 32, 48, 0.85);
-  --nacho-primary: #f0f4f8;
-  --nacho-text: #e2e8f0;
-  --nacho-secondary: #94a3b8;
-  --nacho-muted: #64748b;
-  --nacho-border: rgba(100, 116, 139, 0.15);
-  --nacho-border-hover: rgba(100, 116, 139, 0.3);
+  --nacho-surface: rgba(20, 25, 38, 0.5);
+  --nacho-card: rgba(18, 23, 36, 0.6);
+  --nacho-card-hover: rgba(25, 32, 48, 0.7);
+  --nacho-primary: #e5e7eb;
+  --nacho-text: #d1d5db;
+  --nacho-secondary: #9ca3af;
+  --nacho-muted: #6b7280;
+  --nacho-border: rgba(100, 116, 139, 0.12);
+  --nacho-border-hover: rgba(100, 116, 139, 0.25);
   --nacho-accent: #6366f1;
   --nacho-accent-hover: #818cf8;
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 0 rgba(99, 102, 241, 0);
 }
 
 html {
@@ -36,46 +36,46 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Challenger Deep Components - Minimalist Refined Styles */
+/* Minimalist Matte Dark Components */
 .nacho-card {
   background: var(--nacho-card);
   border: 1px solid var(--nacho-border);
-  border-radius: 1.25rem;
+  border-radius: 0.75rem;
   box-shadow: var(--shadow-soft);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .nacho-card:hover {
   background: var(--nacho-card-hover);
   border-color: var(--nacho-border-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 
 .nacho-btn {
-  background: rgba(77, 124, 255, 0.12);
-  border: 1px solid rgba(77, 124, 255, 0.22);
+  background: rgba(77, 124, 255, 0.1);
+  border: 1px solid rgba(77, 124, 255, 0.2);
   color: var(--nacho-primary);
-  padding: 0.6rem 0.95rem;
-  border-radius: 0.75rem;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .nacho-btn:hover {
-  background: rgba(77, 124, 255, 0.18);
-  border-color: rgba(77, 124, 255, 0.35);
+  background: rgba(77, 124, 255, 0.15);
+  border-color: rgba(77, 124, 255, 0.3);
 }
 
 .nacho-btn:active {
-  transform: translateY(1px);
+  background: rgba(77, 124, 255, 0.2);
 }
 
 .bellum-input {
-  background: rgba(17, 28, 52, 0.35);
+  background: rgba(17, 28, 52, 0.3);
   border: 1px solid var(--nacho-border);
-  border-radius: 0.8rem;
+  border-radius: 0.5rem;
   color: var(--nacho-primary);
-  padding: 0.75rem 0.9rem;
+  padding: 0.625rem 0.875rem;
   width: 100%;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
@@ -83,7 +83,7 @@ body {
 .bellum-input:focus {
   outline: none;
   border-color: var(--nacho-accent);
-  background: rgba(17, 28, 52, 0.55);
+  background: rgba(17, 28, 52, 0.45);
 }
 
 .bellum-input::placeholder {

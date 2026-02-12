@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getGoogleComputeService } from '@/lib/google-compute';
 import type { ComputeTask } from '@/lib/google-compute';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {

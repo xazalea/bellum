@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGoogleComputeService, getLoadAnalyzer } from '@/lib/google-compute';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {

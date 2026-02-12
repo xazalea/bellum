@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server';
 
-// Dynamic imports to avoid webpack static analysis during build
+// Completely opaque imports that bundlers cannot analyze
 const getChatModelFactory = async () => {
-  const { ChatModelFactory } = await import(
-    /* webpackIgnore: true */
-    '@/lib/gpt4free/model/index'
-  );
-  return ChatModelFactory;
+  const parts = ['@', '/', 'lib', '/', 'gpt4free', '/', 'model', '/', 'index'];
+  const path = parts.join('');
+  const dynamicImport = new Function('p', 'return import(p)');
+  const module = await dynamicImport(path);
+  return module.ChatModelFactory;
 };
 
 const getEnums = async () => {
-  const { Site, ModelType } = await import(
-    /* webpackIgnore: true */
-    '@/lib/gpt4free/model/enums'
-  );
-  return { Site, ModelType };
+  const parts = ['@', '/', 'lib', '/', 'gpt4free', '/', 'model', '/', 'enums'];
+  const path = parts.join('');
+  const dynamicImport = new Function('p', 'return import(p)');
+  const module = await dynamicImport(path);
+  return { Site: module.Site, ModelType: module.ModelType };
 };
 
 // Check if we're in build mode
@@ -99,7 +99,7 @@ export async function GET() {
     const factory = new ChatModelFactory();
     const supports: SiteSupport[] = [];
 
-    factory.forEach((chat, site) => {
+    factory.forEach((chat: any, site: string) => {
       const models = siteModels[site] || [ModelType.GPT3p5Turbo];
       supports.push({
         site,

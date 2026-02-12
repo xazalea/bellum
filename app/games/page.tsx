@@ -22,6 +22,9 @@ export default function GamesPage() {
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [scrollState, setScrollState] = useState({ scrollTop: 0, viewportHeight: 0, containerTop: 0 });
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sessionSeed = useRef<string>(`seed-${Date.now()}-${Math.random()}`).current;
 
   const filteredGames = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -66,7 +69,7 @@ export default function GamesPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchGames(pageToLoad, 24);
+      const data = await fetchGames(pageToLoad, 24, true, sessionSeed);
       setTotalGames(data.total);
       if (append) {
         setGames(prev => [...prev, ...data.games]);
@@ -79,7 +82,7 @@ export default function GamesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sessionSeed]);
 
   useEffect(() => {
     loadGames(1, false);
@@ -97,6 +100,41 @@ export default function GamesPage() {
       loadGames(page, true);
     }
   }, [page, loadGames]);
+
+  // Infinite scroll using Intersection Observer
+  useEffect(() => {
+    if (!loadMoreTriggerRef.current || selectedGame || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !isLoadingMore && games.length < totalGames) {
+          setIsLoadingMore(true);
+          setPage((p) => p + 1);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(loadMoreTriggerRef.current);
+
+    return () => {
+      if (loadMoreTriggerRef.current) {
+        observer.unobserve(loadMoreTriggerRef.current);
+      }
+    };
+  }, [games.length, totalGames, isLoadingMore, selectedGame, loading]);
+
+  // Reset loading more state when new games are loaded
+  useEffect(() => {
+    if (games.length > 0) {
+      setIsLoadingMore(false);
+    }
+  }, [games.length]);
 
   const handleInstall = async (e: React.MouseEvent, game: Game) => {
     e.stopPropagation();
@@ -123,24 +161,22 @@ export default function GamesPage() {
 
   return (
     <main className="relative mx-auto w-full max-w-7xl px-5 py-10">
-      {/* Animated Background Grid */}
+      {/* Subtle Background Pattern */}
       <AnimatedGridPattern
         numSquares={30}
-        maxOpacity={0.1}
+        maxOpacity={0.03}
         duration={3}
         repeatDelay={1}
-        className="fixed inset-0 -z-10 h-screen w-screen fill-nacho-accent/20 stroke-nacho-accent/20"
+        className="fixed inset-0 -z-10 h-screen w-screen fill-nacho-accent/10 stroke-nacho-accent/10"
       />
       
       <div className="space-y-8">
-        <header className="flex justify-between items-end border-b border-nacho-border pb-6 backdrop-blur-sm">
-          <div className="space-y-3">
-            <h1 className="text-4xl font-bold tracking-tight">
-              <AnimatedGradientText className="text-4xl font-bold">
-                Games Arcade
-              </AnimatedGradientText>
+        <header className="flex justify-between items-end border-b border-nacho-border/50 pb-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-nacho-primary">
+              Games Arcade
             </h1>
-            <p className="text-nacho-secondary text-lg">
+            <p className="text-nacho-secondary text-base">
               {totalGames > 0 ? `${totalGames.toLocaleString()} HTML5 games available` : 'Retro & HTML5 gaming library'}
             </p>
           </div>
@@ -148,23 +184,23 @@ export default function GamesPage() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search games by ID..."
+                placeholder="Search games..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2 pl-10 bg-nacho-surface border border-nacho-border rounded-nacho text-nacho-primary placeholder-nacho-muted focus:outline-none focus:border-nacho-accent transition-colors w-64"
+                className="px-4 py-2 pl-10 bg-nacho-surface/80 border border-nacho-border/50 rounded-lg text-nacho-primary placeholder-nacho-muted focus:outline-none focus:border-nacho-accent/70 transition-colors w-64"
               />
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-nacho-muted text-[18px]">search</span>
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-nacho-muted text-[16px]">search</span>
             </div>
           </div>
         </header>
 
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-nacho flex items-center gap-3 text-red-400">
-            <span className="material-symbols-outlined">error</span>
-            <p className="flex-1">{error}</p>
+          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3 text-red-400">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            <p className="flex-1 text-sm">{error}</p>
             <Button
               onClick={() => loadGames(1, false)}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30"
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30 text-sm px-4 py-2"
             >
               Retry
             </Button>
@@ -172,27 +208,28 @@ export default function GamesPage() {
         )}
 
         {selectedGame ? (
-          <div className="w-full h-[85vh] flex flex-col space-y-4 animate-fade-in">
+          <div className="w-full h-[85vh] flex flex-col space-y-4">
             <div className="flex justify-between items-center">
-                <Button onClick={() => setSelectedGame(null)} variant="outline">
-                  <span className="material-symbols-outlined mr-2">arrow_back</span>
+                <Button onClick={() => setSelectedGame(null)} variant="outline" className="text-sm">
+                  <span className="material-symbols-outlined mr-2 text-[18px]">arrow_back</span>
                   Back to Library
                 </Button>
                 <Button 
                     onClick={(e) => handleInstall(e, selectedGame)}
                     disabled={!!installing}
                     variant="shimmer"
+                    className="text-sm"
                 >
                     {installing === selectedGame.id ? (
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
                     ) : (
-                        <span className="material-symbols-outlined mr-2">download</span>
+                        <span className="material-symbols-outlined mr-2 text-[18px]">download</span>
                     )}
                     {installing === selectedGame.id ? 'Saving...' : 'Install to Library'}
                 </Button>
             </div>
             
-            <div className="flex-grow bg-black rounded-nacho overflow-hidden border border-nacho-border shadow-2xl relative">
+            <div className="flex-grow bg-black rounded-lg overflow-hidden border border-nacho-border/50 relative">
                     {gameLoading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-nacho-bg z-10">
                         <div className="text-center space-y-4">
@@ -211,20 +248,20 @@ export default function GamesPage() {
                     />
                 </div>
             
-            <div className="flex items-center justify-between bg-nacho-surface p-4 rounded-nacho border border-nacho-border">
+            <div className="flex items-center justify-between bg-nacho-surface/80 p-4 rounded-lg border border-nacho-border/50">
               <div>
-                  <h2 className="text-xl font-bold text-nacho-primary">{selectedGame.title}</h2>
+                  <h2 className="text-lg font-semibold text-nacho-primary">{selectedGame.title}</h2>
                   <p className="text-sm text-nacho-muted mt-1">{selectedGame.description || 'No description available.'}</p>
               </div>
-              <span className="text-xs font-mono text-nacho-accent px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">HTML5</span>
+              <span className="text-xs font-mono text-nacho-accent px-3 py-1 bg-blue-500/10 rounded-md border border-blue-500/20">HTML5</span>
                 </div>
             </div>
         ) : (
             <>
-            {/* Featured Hero (Placeholder for first game) */}
+            {/* Featured Hero */}
             {games.length > 0 && (
-                <div className="relative h-64 rounded-nacho overflow-hidden group cursor-pointer border border-nacho-border shadow-nacho" onClick={() => setSelectedGame(games[0])}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-nacho-bg via-transparent to-transparent z-10"></div>
+                <div className="relative h-64 rounded-lg overflow-hidden group cursor-pointer border border-nacho-border/50" onClick={() => setSelectedGame(games[0])}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-nacho-bg via-nacho-bg/40 to-transparent z-10"></div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={games[0].thumb}
@@ -232,26 +269,25 @@ export default function GamesPage() {
                       width={1280}
                       height={720}
                       loading="lazy"
-                      className="w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105 transition-all duration-700"
-                      style={{ willChange: 'transform' }}
+                      className="w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity duration-300"
                     />
-                    <div className="absolute bottom-0 left-0 p-8 z-20 space-y-2">
-                        <span className="px-2 py-1 bg-nacho-accent text-white text-xs font-bold rounded uppercase tracking-wider">Featured</span>
-                        <h2 className="text-3xl font-bold text-white">{games[0].title}</h2>
-                        <p className="text-gray-300 max-w-xl truncate">{games[0].description}</p>
+                    <div className="absolute bottom-0 left-0 p-6 z-20 space-y-2">
+                        <span className="px-2 py-1 bg-nacho-accent/90 text-white text-xs font-semibold rounded uppercase tracking-wider">Featured</span>
+                        <h2 className="text-2xl font-bold text-white">{games[0].title}</h2>
+                        <p className="text-gray-300 text-sm max-w-xl truncate">{games[0].description}</p>
                     </div>
                 </div>
             )}
 
             {!loading && games.length === 0 && !error && (
-              <div className="text-center py-20 bg-nacho-surface rounded-nacho border border-nacho-border backdrop-blur-sm">
-                <span className="material-symbols-outlined text-6xl text-nacho-muted mb-4">sports_esports</span>
-                <h3 className="text-xl font-bold text-nacho-primary">No Games Loaded</h3>
-                <p className="text-nacho-secondary">Try reloading the catalog.</p>
+              <div className="text-center py-20 bg-nacho-surface/80 rounded-lg border border-nacho-border/50">
+                <span className="material-symbols-outlined text-5xl text-nacho-muted mb-4">sports_esports</span>
+                <h3 className="text-lg font-semibold text-nacho-primary">No Games Loaded</h3>
+                <p className="text-nacho-secondary text-sm mt-2">Try reloading the catalog.</p>
                 <Button
                   onClick={() => loadGames(1, false)}
                   variant="shimmer"
-                  className="mt-6"
+                  className="mt-6 text-sm"
                 >
                   Reload Games
                 </Button>
@@ -285,8 +321,8 @@ export default function GamesPage() {
                     items.push(
                       <Card
                         key={game.id}
-                        variant="magic"
-                        className="group absolute p-0 overflow-hidden bg-nacho-surface border-nacho-border hover:border-nacho-accent transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] cursor-pointer"
+                        variant="default"
+                        className="group absolute p-0 overflow-hidden bg-nacho-surface/80 border-nacho-border/50 hover:border-nacho-accent/60 transition-all duration-200 hover:-translate-y-1 cursor-pointer"
                         style={{ width: cardWidth, height: cardHeight, transform: `translate(${left}px, ${top}px)`, willChange: 'transform' }}
                         onClick={() => {
                           setSelectedGame(game);
@@ -302,21 +338,21 @@ export default function GamesPage() {
                               width={600}
                               height={800}
                               loading="lazy"
-                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-300"
+                              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-200"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-nacho-surface">
-                              <span className="material-symbols-outlined text-4xl text-nacho-muted">sports_esports</span>
+                            <div className="w-full h-full flex items-center justify-center bg-nacho-surface/80">
+                              <span className="material-symbols-outlined text-3xl text-nacho-muted">sports_esports</span>
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-100 transition-opacity"></div>
-                          <div className="absolute bottom-0 left-0 w-full p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                            <h4 className="font-bold text-sm text-white truncate mb-1">{game.title}</h4>
-                            <div className="flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
+                          <div className="absolute bottom-0 left-0 w-full p-3">
+                            <h4 className="font-semibold text-sm text-white truncate mb-1">{game.title}</h4>
+                            <div className="flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                               <span className="text-[10px] text-gray-400">Arcade</span>
                               <button
                                 onClick={(e) => handleInstall(e, game)}
-                                className="p-1.5 bg-nacho-accent rounded-full text-white hover:bg-blue-400 transition-colors"
+                                className="p-1.5 bg-nacho-accent/90 rounded-md text-white hover:bg-nacho-accent transition-colors"
                                 title="Install to Library"
                               >
                                 <span className="material-symbols-outlined text-[14px]">download</span>
@@ -338,25 +374,16 @@ export default function GamesPage() {
             </div>
                 
             {games.length < totalGames && (
-              <div className="flex flex-col items-center gap-4 pt-12 pb-20">
+              <div ref={loadMoreTriggerRef} className="flex flex-col items-center gap-4 pt-12 pb-20">
                 <p className="text-nacho-secondary text-sm">
                   Showing {games.length.toLocaleString()} of {totalGames.toLocaleString()} games
                 </p>
-                <Button 
-                  onClick={() => setPage(p => p + 1)} 
-                  disabled={loading}
-                  variant="shimmer"
-                  className="min-w-[200px]"
-                >
-                  {loading ? (
-                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  ) : (
-                    <>
-                      <span>Load More Games</span>
-                      <span className="material-symbols-outlined ml-2">expand_more</span>
-                    </>
-                  )}
-                </Button>
+                {isLoadingMore && (
+                  <div className="flex items-center gap-3 text-nacho-secondary">
+                    <span className="w-5 h-5 border-2 border-nacho-accent border-t-transparent rounded-full animate-spin"></span>
+                    <span>Loading more games...</span>
+                  </div>
+                )}
               </div>
             )}
             </>

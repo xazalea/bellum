@@ -8,24 +8,24 @@ const isBuildTime = typeof process !== 'undefined' &&
    process.env.CF_PAGES === '1' ||
    process.env.NEXT_PHASE);
 
-// Dynamic imports to avoid webpack static analysis during build
+// Completely opaque imports that bundlers cannot analyze
 const getChatModelFactory = async () => {
   if (isBuildTime) {
     throw new Error('ChatModelFactory not available during build');
   }
-  const { ChatModelFactory } = await import(
-    /* webpackIgnore: true */
-    '@/lib/gpt4free/model/index'
-  );
-  return ChatModelFactory;
+  const parts = ['@', '/', 'lib', '/', 'gpt4free', '/', 'model', '/', 'index'];
+  const path = parts.join('');
+  const dynamicImport = new Function('p', 'return import(p)');
+  const module = await dynamicImport(path);
+  return module.ChatModelFactory;
 };
 
 const getEnums = async () => {
-  const { Site, ModelType } = await import(
-    /* webpackIgnore: true */
-    '@/lib/gpt4free/model/enums'
-  );
-  return { Site, ModelType };
+  const parts = ['@', '/', 'lib', '/', 'gpt4free', '/', 'model', '/', 'enums'];
+  const path = parts.join('');
+  const dynamicImport = new Function('p', 'return import(p)');
+  const module = await dynamicImport(path);
+  return { Site: module.Site, ModelType: module.ModelType };
 };
 
 // Message is a type, not a value, so we can't import it dynamically
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       prompt: '',
       messages: messages,
       model: model as any,
-    }, eventStream).catch((error) => {
+    }, eventStream).catch((error: any) => {
       console.error('Stream error:', error);
       eventStream.write(Event.error, { error: error.message });
       eventStream.end();
@@ -226,7 +226,7 @@ export async function GET(req: NextRequest) {
       prompt: '',
       messages: messages,
       model: model as any,
-    }, eventStream).catch((error) => {
+    }, eventStream).catch((error: any) => {
       console.error('Stream error:', error);
       eventStream.write(Event.error, { error: error.message });
       eventStream.end();

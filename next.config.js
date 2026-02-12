@@ -63,6 +63,10 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
+  // For Cloudflare Pages, we need to generate the Vercel build output
+  // Remove 'export' output mode to enable server-side functions
+  ...(isCloudflare ? {} : {}),
+  
   // Performance optimizations
   swcMinify: true,
   compress: true,

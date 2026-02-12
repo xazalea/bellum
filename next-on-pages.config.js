@@ -6,5 +6,4 @@ module.exports = {
   outputDir: '.vercel/output/static',
   // Ensure static assets are included
   minify: false,
-  // Don't skip any routes - ensure worker handles everything
 };
