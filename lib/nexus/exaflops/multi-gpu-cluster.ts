@@ -157,12 +157,14 @@ export class MultiGPUCluster {
      * Add GPU to cluster
      */
     private async addGPU(adapter: GPUAdapter, type: 'discrete' | 'integrated' | 'external'): Promise<void> {
+        // Clamp all requested limits to the adapter's supported maximums
+        const al = (adapter as any).limits as Record<string, number>;
         const device = await adapter.requestDevice({
             requiredLimits: {
-                maxStorageBufferBindingSize: 2 * 1024 * 1024 * 1024,
-                maxComputeWorkgroupSizeX: 1024,
-                maxComputeWorkgroupSizeY: 1024,
-                maxComputeWorkgroupStorageSize: 32768
+                maxStorageBufferBindingSize: al.maxStorageBufferBindingSize,
+                maxComputeWorkgroupSizeX: Math.min(1024, al.maxComputeWorkgroupSizeX),
+                maxComputeWorkgroupSizeY: Math.min(1024, al.maxComputeWorkgroupSizeY),
+                maxComputeWorkgroupStorageSize: Math.min(32768, al.maxComputeWorkgroupStorageSize)
             }
         });
         

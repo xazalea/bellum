@@ -147,20 +147,16 @@ export class MaxPerformanceEngine {
             throw new Error('No GPU adapter found');
         }
 
-        // Request maximum limits
-        const limits = (adapter as any).limits || {};
-        
+        // Clamp all requested limits to the adapter's supported maximums
+        const al = (adapter as any).limits as Record<string, number>;
         this.device = await adapter.requestDevice({
             requiredFeatures: ['timestamp-query' as GPUFeatureName].filter(f => 
                 adapter.features.has(f as GPUFeatureName)
             ),
             requiredLimits: {
-                maxStorageBufferBindingSize: Math.min(
-                    2 * 1024 * 1024 * 1024,
-                    limits.maxStorageBufferBindingSize
-                ),
-                maxComputeWorkgroupSizeX: Math.min(256, limits.maxComputeWorkgroupSizeX),
-                maxComputeInvocationsPerWorkgroup: Math.min(256, limits.maxComputeInvocationsPerWorkgroup)
+                maxStorageBufferBindingSize: al.maxStorageBufferBindingSize,
+                maxComputeWorkgroupSizeX: Math.min(256, al.maxComputeWorkgroupSizeX),
+                maxComputeInvocationsPerWorkgroup: Math.min(256, al.maxComputeInvocationsPerWorkgroup)
             }
         });
 

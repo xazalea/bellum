@@ -115,25 +115,16 @@ export class NachoGPURuntime {
           // requestAdapterInfo not available
         }
 
-        // Request device with maximum limits
-        const limits = (this.adapter as any).limits || {};
+        // Clamp all requested limits to the adapter's supported maximums
+        const al = (this.adapter as any).limits as Record<string, number>;
         this.device = await this.adapter.requestDevice({
             requiredLimits: {
-                maxStorageBufferBindingSize: Math.min(
-                    2 * 1024 * 1024 * 1024,
-                    limits.maxStorageBufferBindingSize
-                ),
-                maxComputeWorkgroupSizeX: Math.min(
-                    this.config.workgroupSize,
-                    limits.maxComputeWorkgroupSizeX
-                ),
-                maxComputeWorkgroupsPerDimension: limits.maxComputeWorkgroupsPerDimension,
-                maxComputeInvocationsPerWorkgroup: Math.min(
-                    this.config.workgroupSize,
-                    limits.maxComputeInvocationsPerWorkgroup
-                ),
-                maxBufferSize: limits.maxBufferSize,
-                maxStorageBuffersPerShaderStage: limits.maxStorageBuffersPerShaderStage
+                maxStorageBufferBindingSize: al.maxStorageBufferBindingSize,
+                maxComputeWorkgroupSizeX: Math.min(this.config.workgroupSize, al.maxComputeWorkgroupSizeX),
+                maxComputeWorkgroupsPerDimension: al.maxComputeWorkgroupsPerDimension,
+                maxComputeInvocationsPerWorkgroup: Math.min(this.config.workgroupSize, al.maxComputeInvocationsPerWorkgroup),
+                maxBufferSize: al.maxBufferSize,
+                maxStorageBuffersPerShaderStage: al.maxStorageBuffersPerShaderStage
             }
         });
 

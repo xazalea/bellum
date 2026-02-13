@@ -66,10 +66,12 @@ export class GPUHyperthreadingEngine {
             throw new Error('No GPU adapter found');
         }
 
+        // Clamp all requested limits to the adapter's supported maximums
+        const al = (adapter as any).limits as Record<string, number>;
         this.device = await adapter.requestDevice({
             requiredLimits: {
-                maxStorageBufferBindingSize: 2 * 1024 * 1024 * 1024,
-                maxComputeWorkgroupSizeX: 256
+                maxStorageBufferBindingSize: al.maxStorageBufferBindingSize,
+                maxComputeWorkgroupSizeX: Math.min(256, al.maxComputeWorkgroupSizeX)
             }
         });
 

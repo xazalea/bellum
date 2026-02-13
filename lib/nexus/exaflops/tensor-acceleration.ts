@@ -70,12 +70,14 @@ export class TensorAccelerationEngine {
             features.push('shader-f16' as GPUFeatureName);
         }
 
+        // Clamp all requested limits to the adapter's supported maximums
+        const al = (adapter as any).limits as Record<string, number>;
         this.device = await adapter.requestDevice({
             requiredFeatures: features,
             requiredLimits: {
-                maxStorageBufferBindingSize: 2 * 1024 * 1024 * 1024,
-                maxComputeWorkgroupSizeX: 256,
-                maxComputeWorkgroupSizeY: 256
+                maxStorageBufferBindingSize: al.maxStorageBufferBindingSize,
+                maxComputeWorkgroupSizeX: Math.min(256, al.maxComputeWorkgroupSizeX),
+                maxComputeWorkgroupSizeY: Math.min(256, al.maxComputeWorkgroupSizeY)
             }
         });
 

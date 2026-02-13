@@ -11,15 +11,17 @@ export class GPUManager {
         const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
         if (!adapter) throw new Error('No GPU Adapter Found');
         
-        // Check limits before requesting
-        const supportedMaxStorage = (adapter as any).limits?.maxStorageBufferBindingSize || 128 * 1024 * 1024;
-        const requestedMaxStorage = Math.min(2 * 1024 * 1024 * 1024, supportedMaxStorage);
+        // Only request features the adapter actually supports
+        const wantedFeatures: GPUFeatureName[] = ['shader-f16' as GPUFeatureName, 'bgra8unorm-storage' as GPUFeatureName];
+        const supportedFeatures = wantedFeatures.filter(f => adapter.features.has(f));
         
+        // Clamp all requested limits to the adapter's supported maximums
+        const al = (adapter as any).limits as Record<string, number>;
         this.device = await adapter.requestDevice({
-            requiredFeatures: ['shader-f16', 'bgra8unorm-storage'], // Advanced features
+            requiredFeatures: supportedFeatures,
             requiredLimits: {
-                maxComputeWorkgroupSizeX: 256,
-                maxStorageBufferBindingSize: requestedMaxStorage
+                maxComputeWorkgroupSizeX: Math.min(256, al.maxComputeWorkgroupSizeX),
+                maxStorageBufferBindingSize: al.maxStorageBufferBindingSize
             }
         });
 
