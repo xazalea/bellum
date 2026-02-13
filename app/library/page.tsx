@@ -25,50 +25,33 @@ export default function LibraryPage() {
 
   useEffect(() => {
     const init = async () => {
-      // Set timeout to prevent infinite loading
       const timeout = setTimeout(() => {
         if (loading) {
           console.error('[Library] Initialization timed out');
           setError('Initialization timed out. Please refresh the page.');
           setLoading(false);
         }
-      }, 10000); // 10 second timeout
+      }, 10000);
 
       try {
-        console.log('[Library] Starting initialization...');
-        
-        // Initialize Discord profile
         const fp = await getDeviceFingerprintId();
-        console.log('[Library] Got fingerprint:', fp);
-        
         const p = await discordDB.init(fp);
-        console.log('[Library] Discord profile loaded');
         setProfile(p);
 
-        // Initialize app library
         try {
-          console.log('[Library] Initializing AppLibraryManager...');
-        const lib = new AppLibraryManager(puterClient);
-        await lib.init();
-        libraryRef.current = lib;
-        setApps([...lib.getApps()]);
-          console.log('[Library] AppLibraryManager initialized with', lib.getApps().length, 'apps');
+          const lib = new AppLibraryManager(puterClient);
+          await lib.init();
+          libraryRef.current = lib;
+          setApps([...lib.getApps()]);
         } catch (libErr) {
-          console.error('[Library] AppLibraryManager failed, continuing without it:', libErr);
-          // Don't fail completely, just log the error
+          console.error('[Library] AppLibraryManager failed:', libErr);
         }
 
-        // Initialize runtime manager
         try {
-          console.log('[Library] Initializing RuntimeManager...');
-        runtimeRef.current = RuntimeManager.getInstance();
-          console.log('[Library] RuntimeManager initialized');
+          runtimeRef.current = RuntimeManager.getInstance();
         } catch (runtimeErr) {
-          console.error('[Library] RuntimeManager failed, continuing without it:', runtimeErr);
-          // Don't fail completely, just log the error
+          console.error('[Library] RuntimeManager failed:', runtimeErr);
         }
-        
-        console.log('[Library] Initialization complete');
       } catch (err) {
         console.error('[Library] Failed to load library:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize library');
@@ -175,20 +158,15 @@ export default function LibraryPage() {
 
       if (!runContainerRef.current) throw new Error('missing_container');
 
-      // If archived to cold store, restore first.
       if (!app.isActive) {
         setRunnerStatus('Activating from archive…');
         await lib.activateApp(app.id);
         refreshApps();
       }
 
-      // Reload latest app entry (storagePath may have changed during activation)
       const latest = lib.getApps().find((a) => a.id === app.id) || app;
-
-      // Clear container and prepare for execution
       runContainerRef.current.innerHTML = '';
-      
-      // Set up status callback for real-time updates
+
       runtime.setStatusCallback((status) => {
         setRunnerStatus(`${status.message}${status.detail ? ` (${status.detail})` : ''}`);
         if (status.state === 'error') {
@@ -196,15 +174,12 @@ export default function LibraryPage() {
         }
       });
 
-      // Prepare runtime
       setRunnerStatus('Analyzing binary…');
       const { type, config } = await runtime.prepareRuntime(latest.storagePath);
-      
-      // Launch execution with new RuntimeManager
+
       setRunnerStatus(`Launching ${type}…`);
       await runtime.launch(runContainerRef.current, type, latest.storagePath, config);
 
-      // Display statistics periodically
       const statsInterval = setInterval(() => {
         try {
           const stats = runtime.getStatistics();
@@ -220,9 +195,7 @@ export default function LibraryPage() {
         }
       }, 1000);
 
-      // Store interval ID to clear on stop
       (runtime as any)._statsInterval = statsInterval;
-
       setRunnerStatus('Running');
     } catch (e) {
       console.error('Failed to launch local app', e);
@@ -236,48 +209,43 @@ export default function LibraryPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 py-10">
-      <div className="flex items-end justify-between gap-6 border-b border-nacho-border pb-6">
-          <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Library</h1>
-          <p className="text-sm text-nacho-secondary">Upload APK/EXE and run directly.</p>
+    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+      {/* Header */}
+      <div className="flex items-end justify-between gap-6 border-b border-ocean-border pb-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Library</h1>
+          <p className="text-sm text-ocean-secondary">Upload APK/EXE and run directly.</p>
         </div>
-        <div className="flex items-center gap-3 text-xs text-nacho-secondary">
-          <span className={`h-2 w-2 rounded-full ${profile ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+        <div className="flex items-center gap-2 text-xs text-ocean-muted">
+          <span className={`h-1.5 w-1.5 rounded-full ${profile ? 'bg-emerald-400' : 'bg-slate-500'}`} />
           <span>{profile ? 'Synced' : 'Offline'}</span>
-          </div>
-          </div>
+        </div>
+      </div>
 
-      {/* Error Display */}
+      {/* Error */}
       {error && (
-        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-nacho flex items-center gap-3 text-red-400">
-          <span className="material-symbols-outlined">error</span>
+        <div className="mt-6 p-4 border border-red-500/20 rounded-md flex items-center gap-3 text-sm text-red-400">
+          <span className="material-symbols-outlined text-[18px]">error</span>
           <p className="flex-1">{error}</p>
-          <Button
-            onClick={() => window.location.reload()}
-            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30"
-          >
-            Retry
-          </Button>
+          <Button onClick={() => window.location.reload()} className="text-xs">Retry</Button>
         </div>
       )}
 
       {/* Runner Overlay */}
       {(launchingGame || launchingLocal) && (
-            <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center justify-between border-b border-nacho-border bg-nacho-surface px-4 py-3">
-                    <div className="flex items-center gap-3">
-              <div className="text-sm font-semibold text-nacho-primary">
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <div className="flex items-center justify-between border-b border-ocean-border bg-ocean-bg px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-medium text-ocean-primary">
                 {launchingGame?.title || launchingLocal?.name}
               </div>
-              <div className="text-[11px] text-nacho-muted">{launchingGame ? 'Game' : runnerStatus}</div>
-                    </div>
+              <div className="text-[11px] text-ocean-muted">{launchingGame ? 'Game' : runnerStatus}</div>
+            </div>
             <Button
               onClick={() => {
                 try {
                   const runtime = runtimeRef.current;
                   if (runtime) {
-                    // Clear stats interval if exists
                     const statsInterval = (runtime as any)._statsInterval;
                     if (statsInterval) {
                       clearInterval(statsInterval);
@@ -292,34 +260,34 @@ export default function LibraryPage() {
                 setLaunchingLocal(null);
                 setRunnerStatus('Idle');
               }}
-              className="border-rose-500/30 bg-rose-500/10 text-rose-200"
+              className="border-rose-500/20 text-rose-300 text-xs"
             >
-                        <span className="material-symbols-outlined mr-2">close</span>
+              <span className="material-symbols-outlined mr-1.5 text-[16px]">close</span>
               Close
-                    </Button>
-                </div>
-                <div className="flex-grow relative">
+            </Button>
+          </div>
+          <div className="flex-grow relative">
             {launchingGame ? (
-                        <iframe 
+              <iframe
                 src={getProxiedGameUrl(
                   launchingGame.id.startsWith('http') ? launchingGame.id : `https://html5.gamedistribution.com/${launchingGame.id}/`
                 )}
-                            className="w-full h-full border-0"
+                className="w-full h-full border-0"
                 title={launchingGame.title}
-                            allowFullScreen
-                        />
-                    ) : (
+                allowFullScreen
+              />
+            ) : (
               <div ref={runContainerRef} className="w-full h-full" />
             )}
           </div>
-                        </div>
-                    )}
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-8">
-        {/* Upload + Local Apps */}
+        {/* Uploads */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-nacho-primary">Uploads</h2>
+            <h2 className="text-xs font-medium text-ocean-muted uppercase tracking-wider">Uploads</h2>
             <label className="inline-flex">
               <input
                 type="file"
@@ -331,56 +299,57 @@ export default function LibraryPage() {
                   e.currentTarget.value = '';
                 }}
               />
-              <span className="nacho-btn inline-flex items-center">
-                <span className="material-symbols-outlined mr-2 text-[16px]">upload_file</span>
+              <span className="ocean-btn inline-flex items-center text-xs cursor-pointer">
+                <span className="material-symbols-outlined mr-1.5 text-[14px]">upload_file</span>
                 Upload
               </span>
             </label>
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
+            <div className="rounded-md border border-ocean-border p-6 text-sm text-ocean-muted">
               Loading…
-                </div>
-          ) : apps.length === 0 ? (
-            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
-              No uploads yet. Add an <span className="text-nacho-primary">APK</span> or <span className="text-nacho-primary">EXE</span>.
             </div>
-        ) : (
-            <div className="space-y-3">
+          ) : apps.length === 0 ? (
+            <div className="rounded-md border border-ocean-border p-6 text-sm text-ocean-muted">
+              No uploads yet. Add an <span className="text-ocean-primary">APK</span> or <span className="text-ocean-primary">EXE</span>.
+            </div>
+          ) : (
+            <div className="space-y-2">
               {apps.map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-nacho-border bg-nacho-surface px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-md border border-ocean-border px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-nacho-primary">{a.name}</div>
-                    <div className="text-xs text-nacho-muted">
+                    <div className="truncate text-sm font-medium text-ocean-primary">{a.name}</div>
+                    <div className="text-xs text-ocean-muted">
                       {a.isActive ? 'Local' : 'Archived'} · {(a.size / (1024 * 1024)).toFixed(2)} MB
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => void runLocal(a)} disabled={busy === 'run' || busy === 'install'}>
-                      <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
+                    <Button onClick={() => void runLocal(a)} disabled={busy === 'run' || busy === 'install'} className="text-xs">
+                      <span className="material-symbols-outlined mr-1 text-[14px]">play_arrow</span>
                       Run
-              </Button>
+                    </Button>
                     <Button
                       onClick={() => void downloadStandalone(a)}
                       disabled={busy === `download-${a.id}` || busy === 'install'}
-                      className="bg-nacho-surface hover:bg-nacho-card-hover text-nacho-primary border-nacho-border"
+                      variant="outline"
+                      className="text-xs"
                     >
-                      <span className="material-symbols-outlined mr-2 text-[16px]">download</span>
-                      Download HTML
+                      <span className="material-symbols-outlined mr-1 text-[14px]">download</span>
+                      HTML
                     </Button>
-                    <Button
+                    <button
                       onClick={() => void removeLocal(a.id)}
                       disabled={busy === a.id}
-                      className="border-rose-500/30 bg-rose-500/10 text-rose-200"
-                                        >
+                      className="p-1.5 text-ocean-muted hover:text-rose-400 transition-colors disabled:opacity-40"
+                    >
                       <span className="material-symbols-outlined text-[16px]">delete</span>
-                    </Button>
+                    </button>
                   </div>
-                    </div>
+                </div>
               ))}
             </div>
           )}
@@ -389,48 +358,48 @@ export default function LibraryPage() {
         {/* Games */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-nacho-primary">Installed Games</h2>
-            <Button onClick={() => (window.location.href = '/games')} disabled={busy === 'install'}>
+            <h2 className="text-xs font-medium text-ocean-muted uppercase tracking-wider">Installed Games</h2>
+            <Button onClick={() => (window.location.href = '/games')} disabled={busy === 'install'} className="text-xs">
               Browse
             </Button>
           </div>
 
           {loading ? (
-            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
+            <div className="rounded-md border border-ocean-border p-6 text-sm text-ocean-muted">
               Loading…
             </div>
           ) : installedGames.length === 0 ? (
-            <div className="rounded-2xl border border-nacho-border bg-nacho-surface p-6 text-sm text-nacho-secondary">
-              No games installed. Install from <span className="text-nacho-primary">Games</span>.
+            <div className="rounded-md border border-ocean-border p-6 text-sm text-ocean-muted">
+              No games installed. Install from <span className="text-ocean-primary">Games</span>.
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {installedGames.map((g) => (
                 <div
                   key={g.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-nacho-border bg-nacho-surface px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-md border border-ocean-border px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-nacho-primary">{g.title}</div>
-                    <div className="text-xs text-nacho-muted">Installed {new Date(g.installedAt).toLocaleDateString()}</div>
+                    <div className="truncate text-sm font-medium text-ocean-primary">{g.title}</div>
+                    <div className="text-xs text-ocean-muted">Installed {new Date(g.installedAt).toLocaleDateString()}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button onClick={() => setLaunchingGame(g)} disabled={busy === 'install'}>
-                      <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
+                    <Button onClick={() => setLaunchingGame(g)} disabled={busy === 'install'} className="text-xs">
+                      <span className="material-symbols-outlined mr-1 text-[14px]">play_arrow</span>
                       Play
                     </Button>
-                                    <Button 
+                    <button
                       onClick={() => void removeGame(g.id)}
                       disabled={busy === g.id}
-                      className="border-rose-500/30 bg-rose-500/10 text-rose-200"
-                                    >
+                      className="p-1.5 text-ocean-muted hover:text-rose-400 transition-colors disabled:opacity-40"
+                    >
                       <span className="material-symbols-outlined text-[16px]">delete</span>
-                      </Button>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-                )}
+          )}
         </section>
       </div>
     </main>

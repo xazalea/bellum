@@ -53,12 +53,11 @@ export function ClusterIndicator() {
   return (
     <Link
       href="/cluster"
-      className="flex items-center gap-2 rounded-lg border border-nacho-border bg-nacho-surface px-3 py-2 text-xs text-nacho-secondary hover:border-nacho-accent hover:text-nacho-primary transition-all duration-300"
+      className="flex items-center gap-2 rounded-md border border-ocean-border px-2.5 py-1.5 text-xs text-ocean-muted hover:text-ocean-secondary transition-colors"
     >
-      <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
       <span className="hidden sm:inline">Cluster</span>
-      <span className="text-nacho-primary">{count}</span>
+      <span className="text-ocean-secondary">{count}</span>
     </Link>
   );
 }
-

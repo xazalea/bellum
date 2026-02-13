@@ -27,7 +27,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0B1120',
+  themeColor: '#0a1118',
 };
 
 export default function RootLayout({
@@ -40,16 +40,15 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Material Symbols */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
       </head>
-      <body className="min-h-screen w-full bg-nacho-bg text-nacho-primary font-sans antialiased">
+      <body className="min-h-screen w-full bg-ocean-bg text-ocean-primary font-sans antialiased">
         <div className="flex flex-col min-h-screen w-full">
           <AppHeader />
-          <main className="flex-grow pt-16 animate-fade-in">{children}</main>
+          <main className="flex-grow pt-16">{children}</main>
           <SiteFooter />
         </div>
         <ClientInit />

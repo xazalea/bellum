@@ -22,15 +22,12 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-nacho-border/50 bg-nacho-bg/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="h-8 w-8 rounded-lg border border-nacho-accent/30 bg-gradient-to-br from-nacho-accent/20 to-nacho-surface group-hover:border-nacho-accent/50 transition-all duration-300 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]" />
-            <div className="leading-tight">
-              <div className="text-sm font-semibold tracking-tight text-nacho-primary group-hover:text-nacho-accent transition-colors">Bellum</div>
-              <div className="text-[11px] text-nacho-muted">browser runtime</div>
-            </div>
+    <header className="fixed top-0 z-50 w-full border-b border-ocean-border bg-ocean-bg/90 backdrop-blur-sm">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        <div className="flex items-center gap-8">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-md bg-ocean-accent/15 border border-ocean-accent/20" />
+            <span className="text-sm font-semibold tracking-tight text-ocean-primary">Bellum</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -41,16 +38,13 @@ export function AppHeader() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'rounded-lg px-3 py-2 text-sm transition-all duration-300 relative',
+                    'px-3 py-1.5 text-[13px] rounded-md transition-colors',
                     active
-                      ? 'bg-nacho-surface text-nacho-primary shadow-md'
-                      : 'text-nacho-secondary hover:bg-nacho-surface/70 hover:text-nacho-primary hover:scale-105'
+                      ? 'text-ocean-primary bg-ocean-surface'
+                      : 'text-ocean-muted hover:text-ocean-secondary'
                   )}
                 >
                   {item.label}
-                  {active && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-nacho-accent rounded-full" />
-                  )}
                 </Link>
               );
             })}
@@ -60,37 +54,37 @@ export function AppHeader() {
         <div className="flex items-center gap-3">
           <ClusterIndicator />
           <button
-            className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-nacho-border bg-nacho-surface text-nacho-primary hover:border-nacho-accent hover:bg-nacho-card-hover transition-all duration-300"
+            className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-md text-ocean-muted hover:text-ocean-primary transition-colors"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
           >
-            <span className="material-symbols-outlined text-[18px]">menu</span>
+            <span className="material-symbols-outlined text-[20px]">menu</span>
           </button>
         </div>
       </div>
 
       {open && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-md animate-fade-in" onClick={() => setOpen(false)}>
+        <div className="md:hidden fixed inset-0 z-50 bg-black/60" onClick={() => setOpen(false)}>
           <div
-            className="absolute right-0 top-0 h-full w-[86vw] max-w-sm border-l border-nacho-border/50 bg-nacho-bg/95 backdrop-blur-xl p-4 shadow-2xl animate-slide-up"
+            className="absolute right-0 top-0 h-full w-72 border-l border-ocean-border bg-ocean-bg p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-nacho-primary">Menu</div>
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-sm font-semibold text-ocean-primary">Menu</span>
               <button
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-nacho-border bg-nacho-surface text-nacho-primary"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-ocean-muted hover:text-ocean-primary"
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
-            <div className="mt-4">
+            <div className="mb-4">
               <ClusterIndicator />
             </div>
 
-            <div className="mt-4 space-y-1">
+            <div className="space-y-0.5">
               {NAV.map((item) => {
                 const active = pathname === item.href;
                 return (
@@ -99,8 +93,10 @@ export function AppHeader() {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      'block rounded-xl px-4 py-3 text-sm transition-all duration-300',
-                      active ? 'bg-nacho-surface text-nacho-primary shadow-md border-l-2 border-nacho-accent' : 'text-nacho-secondary hover:bg-nacho-surface/70 hover:translate-x-1'
+                      'block rounded-md px-3 py-2.5 text-sm transition-colors',
+                      active
+                        ? 'text-ocean-primary bg-ocean-surface'
+                        : 'text-ocean-muted hover:text-ocean-secondary'
                     )}
                   >
                     {item.label}
@@ -114,4 +110,3 @@ export function AppHeader() {
     </header>
   );
 }
-

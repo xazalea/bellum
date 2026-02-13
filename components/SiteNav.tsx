@@ -16,47 +16,38 @@ export function SiteNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 w-full">
-      <div className="ocean-nav">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-nacho-surface border border-nacho-border flex items-center justify-center">
-              <span className="material-symbols-outlined text-nacho-accent">water</span>
-            </div>
-            <div className="leading-tight">
-              <span className="block text-nacho-primary font-semibold tracking-tight">challenger deep</span>
-              <span className="block text-xs text-nacho-muted">deep ocean compute</span>
-            </div>
-          </Link>
+    <header className="sticky top-0 z-40 w-full border-b border-ocean-border bg-ocean-bg/90 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-md bg-ocean-accent/15 border border-ocean-accent/20" />
+          <span className="text-sm font-semibold text-ocean-primary tracking-tight">Bellum</span>
+        </Link>
 
-          <nav className="hidden lg:flex items-center gap-2">
-            {NAV_ITEMS.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                    active
-                      ? 'bg-nacho-surface text-nacho-primary border-nacho-border'
-                      : 'text-nacho-secondary border-transparent hover:border-nacho-border hover:bg-nacho-surface/60'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+        <nav className="hidden lg:flex items-center gap-1">
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-3 py-1.5 rounded-md text-[13px] transition-colors ${
+                  active
+                    ? 'bg-ocean-surface text-ocean-primary'
+                    : 'text-ocean-muted hover:text-ocean-secondary'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/virtual-machines"
-              className="px-4 py-2 rounded-full bg-nacho-accent text-white text-sm font-semibold hover:bg-blue-500 transition-all"
-            >
-              Launch
-            </Link>
-          </div>
-        </div>
+        <Link
+          href="/virtual-machines"
+          className="px-4 py-1.5 rounded-md bg-ocean-accent/90 text-ocean-bg text-sm font-medium hover:bg-ocean-accent transition-colors"
+        >
+          Launch
+        </Link>
       </div>
     </header>
   );

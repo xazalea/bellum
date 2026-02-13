@@ -11,7 +11,7 @@ export default function AndroidPage() {
   const emulatorRef = useRef<OptimizedV86 | null>(null);
   const [state, setState] = useState<BootState>('idle');
   const [error, setError] = useState<string | null>(null);
-  
+
   const canStart = state === 'idle' || state === 'error';
 
   const statusText = useMemo(() => {
@@ -41,7 +41,6 @@ export default function AndroidPage() {
 
       screenRef.current.innerHTML = '';
 
-      // Boot Android-x86 ISO via same-origin proxy (faster + works with COEP/COOP).
       const isoUrl = '/api/isos/android-x86-9.0-r2';
 
       const optimized = await OptimizedV86.create({
@@ -68,50 +67,50 @@ export default function AndroidPage() {
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-5 py-10">
-      <div className="flex items-end justify-between gap-6 border-b border-nacho-border pb-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-nacho-primary">Android</h1>
-          <p className="text-sm text-nacho-secondary">Android OS in the browser.</p>
-              </div>
+    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+      <div className="flex items-end justify-between gap-6 border-b border-ocean-border pb-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Android</h1>
+          <p className="text-sm text-ocean-secondary">Android OS in the browser.</p>
+        </div>
 
         <div className="flex items-center gap-2">
           {canStart ? (
             <Button onClick={start}>
-              <span className="material-symbols-outlined mr-2 text-[16px]">play_arrow</span>
+              <span className="material-symbols-outlined mr-1.5 text-[16px]">play_arrow</span>
               Start
             </Button>
           ) : (
-            <Button onClick={stop} className="border-rose-500/30 bg-rose-500/10 text-rose-200">
-              <span className="material-symbols-outlined mr-2 text-[16px]">stop</span>
+            <Button onClick={stop} className="border-rose-500/20 text-rose-300">
+              <span className="material-symbols-outlined mr-1.5 text-[16px]">stop</span>
               Stop
             </Button>
           )}
 
-          <Button onClick={() => (window.location.href = '/library')}>
-            <span className="material-symbols-outlined mr-2 text-[16px]">bolt</span>
-            Run APK (fast)
-              </Button>
-            </div>
-                </div>
+          <Button onClick={() => (window.location.href = '/library')} variant="outline">
+            <span className="material-symbols-outlined mr-1.5 text-[16px]">bolt</span>
+            Run APK
+          </Button>
+        </div>
+      </div>
 
       {error && (
-        <div className="mt-6 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="mt-6 rounded-md border border-rose-500/20 px-4 py-3 text-sm text-rose-300">
           {error}
-                </div>
+        </div>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-nacho-border bg-black">
-        <div className="flex items-center justify-between border-b border-nacho-border bg-nacho-surface px-4 py-2">
-          <div className="flex items-center gap-2 text-xs text-nacho-secondary">
+      <div className="mt-6 overflow-hidden rounded-md border border-ocean-border bg-black">
+        <div className="flex items-center justify-between border-b border-ocean-border bg-ocean-bg px-4 py-2">
+          <div className="flex items-center gap-2 text-xs text-ocean-muted">
             <span
-              className={`h-2 w-2 rounded-full ${
+              className={`h-1.5 w-1.5 rounded-full ${
                 state === 'running' ? 'bg-emerald-400' : state === 'booting' ? 'bg-amber-400' : 'bg-slate-500'
               }`}
             />
             <span>{statusText}</span>
           </div>
-          <div className="text-[11px] text-nacho-muted">v86</div>
+          <div className="text-[11px] text-ocean-muted">v86</div>
         </div>
 
         <div ref={screenRef} className="h-[70vh] w-full" />

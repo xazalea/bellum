@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ChatMessage } from '@/components/ai/ChatMessage';
 import { ModelSelector } from '@/components/ai/ModelSelector';
-import { Send, Trash2, Sparkles } from 'lucide-react';
+import { Send, Trash2 } from 'lucide-react';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
 
 interface Message {
@@ -53,7 +53,6 @@ export default function AIPage() {
     setInput('');
     setLoading(true);
 
-    // Create abort controller for this request
     abortControllerRef.current = new AbortController();
 
     try {
@@ -123,7 +122,6 @@ export default function AIPage() {
                 throw new Error(data.error);
               }
             } catch (e) {
-              // Ignore JSON parse errors for non-JSON lines
               if (line.includes('error')) {
                 console.error('Stream error:', line);
               }
@@ -165,22 +163,13 @@ export default function AIPage() {
   };
 
   return (
-    <div className="min-h-screen bg-nacho-bg">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto px-6 py-10">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Sparkles className="w-7 h-7 text-white" />
-            </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              AI Chat
-            </h1>
-          </div>
-          <p className="text-nacho-text-secondary text-lg">
-            Access thousands of AI models for free
-          </p>
-        </div>
+        <header className="mb-8 border-b border-ocean-border pb-6">
+          <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">AI Chat</h1>
+          <p className="text-sm text-ocean-secondary mt-1">Access thousands of AI models for free</p>
+        </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
@@ -195,43 +184,37 @@ export default function AIPage() {
             <Card className="p-4">
               <Button
                 onClick={handleClear}
-                className="w-full nacho-btn flex items-center justify-center gap-2"
+                className="w-full ocean-btn flex items-center justify-center gap-2"
                 disabled={messages.length === 0}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
                 Clear Chat
               </Button>
             </Card>
 
-            <Card className="p-4 text-xs text-nacho-text-secondary space-y-2">
-              <p className="font-semibold text-nacho-text">Tips:</p>
-              <ul className="list-disc list-inside space-y-1">
+            <div className="p-4 text-xs text-ocean-muted space-y-1.5">
+              <p className="font-medium text-ocean-secondary text-[11px] uppercase tracking-wider">Tips</p>
+              <ul className="space-y-1">
                 <li>Try different providers for best results</li>
-                <li>Some providers may be slower than others</li>
                 <li>Press Enter to send, Shift+Enter for new line</li>
               </ul>
-            </Card>
+            </div>
           </div>
 
           {/* Chat Area */}
           <div className="lg:col-span-3">
-            <Card className="flex flex-col h-[calc(100vh-12rem)]">
+            <Card className="flex flex-col h-[calc(100vh-14rem)] p-0">
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                      <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                        <Sparkles className="w-10 h-10 text-purple-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-nacho-text mb-2">
-                          Start a conversation
-                        </h3>
-                        <p className="text-nacho-text-secondary">
-                          Ask me anything! I&apos;m powered by multiple AI providers.
-                        </p>
-                      </div>
+                    <div className="text-center space-y-3">
+                      <h3 className="text-base font-medium text-ocean-primary">
+                        Start a conversation
+                      </h3>
+                      <p className="text-sm text-ocean-muted">
+                        Ask me anything. Powered by multiple AI providers.
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -246,16 +229,16 @@ export default function AIPage() {
                     ))}
                     {loading && (
                       <div className="flex gap-3">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                          <Sparkles className="w-5 h-5 text-white animate-pulse" />
+                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-ocean-accent/15 flex items-center justify-center">
+                          <span className="w-2 h-2 rounded-full bg-ocean-accent animate-pulse" />
                         </div>
-                        <Card className="p-4 bg-nacho-card">
+                        <div className="p-3 rounded-md bg-ocean-card border border-ocean-border">
                           <div className="flex gap-1">
-                            <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-ocean-muted animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-ocean-muted animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-ocean-muted animate-bounce" style={{ animationDelay: '300ms' }} />
                           </div>
-                        </Card>
+                        </div>
                       </div>
                     )}
                   </>
@@ -263,24 +246,23 @@ export default function AIPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="border-t border-nacho-border p-4">
+              {/* Input */}
+              <div className="border-t border-ocean-border p-4">
                 <div className="flex gap-2">
                   <Input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
-                    className="flex-1 px-4 py-3 rounded-lg bg-nacho-bg border border-nacho-border text-nacho-text focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     disabled={loading}
                   />
                   <Button
                     onClick={handleSend}
                     disabled={!input.trim() || loading}
-                    className="nacho-btn px-6 flex items-center gap-2"
+                    variant="primary"
+                    className="px-4"
                   >
                     <Send className="w-4 h-4" />
-                    Send
                   </Button>
                 </div>
               </div>
@@ -288,10 +270,9 @@ export default function AIPage() {
           </div>
         </div>
 
-        {/* Copy Notification */}
         {copyNotification && (
-          <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in">
-            Copied to clipboard!
+          <div className="fixed bottom-4 right-4 bg-ocean-accent text-ocean-bg px-4 py-2 rounded-md text-sm animate-fade-in">
+            Copied to clipboard
           </div>
         )}
       </div>

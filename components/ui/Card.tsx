@@ -11,9 +11,9 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'nacho-card p-6 text-nacho-text relative overflow-hidden backdrop-blur-sm',
-          variant === 'hover' && 'hover:bg-nacho-card-hover hover:-translate-y-1 hover:shadow-xl transition-all duration-300',
-          variant === 'magic' && 'group hover:shadow-[0_0_30px_rgba(99,102,241,0.2)] transition-all duration-300',
+          'ocean-card p-6 text-ocean-text',
+          variant === 'hover' && 'hover:bg-ocean-card-hover transition-colors duration-150',
+          variant === 'magic' && 'hover:bg-ocean-card-hover transition-colors duration-150',
           className
         )}
         {...props}

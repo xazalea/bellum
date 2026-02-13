@@ -2,26 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  /* Intentionally minimal utilities for a clean, Vapor-like UI. */
-}
-
 :root {
-  /* Minimalist Matte Dark Palette */
-  --nacho-bg: #0a0e1a;
-  --nacho-surface: rgba(20, 25, 38, 0.5);
-  --nacho-card: rgba(18, 23, 36, 0.6);
-  --nacho-card-hover: rgba(25, 32, 48, 0.7);
-  --nacho-primary: #e5e7eb;
-  --nacho-text: #d1d5db;
-  --nacho-secondary: #9ca3af;
-  --nacho-muted: #6b7280;
-  --nacho-border: rgba(100, 116, 139, 0.12);
-  --nacho-border-hover: rgba(100, 116, 139, 0.25);
-  --nacho-accent: #6366f1;
-  --nacho-accent-hover: #818cf8;
-  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 0 rgba(99, 102, 241, 0);
+  /* Ocean Dark Theme */
+  --ocean-bg: #0a1118;
+  --ocean-surface: rgba(20, 35, 50, 0.3);
+  --ocean-card: rgba(25, 40, 55, 0.4);
+  --ocean-card-hover: rgba(30, 48, 65, 0.45);
+  --ocean-primary: #f0f4f8;
+  --ocean-text: #d0dae6;
+  --ocean-secondary: #8b9db0;
+  --ocean-muted: #5a6e82;
+  --ocean-border: rgba(100, 150, 180, 0.08);
+  --ocean-border-hover: rgba(100, 150, 180, 0.16);
+  --ocean-accent: #2dd4bf;
+  --ocean-accent-hover: #5eead4;
 }
 
 html {
@@ -29,65 +23,64 @@ html {
 }
 
 body {
-  color: var(--nacho-text);
-  background: var(--nacho-bg);
+  color: var(--ocean-text);
+  background: var(--ocean-bg);
   min-height: 100vh;
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Minimalist Matte Dark Components */
-.nacho-card {
-  background: var(--nacho-card);
-  border: 1px solid var(--nacho-border);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow-soft);
-  transition: all 0.2s ease;
-}
-
-.nacho-card:hover {
-  background: var(--nacho-card-hover);
-  border-color: var(--nacho-border-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-}
-
-.nacho-btn {
-  background: rgba(77, 124, 255, 0.1);
-  border: 1px solid rgba(77, 124, 255, 0.2);
-  color: var(--nacho-primary);
-  padding: 0.5rem 0.875rem;
+/* Clean flat components */
+.ocean-card {
+  background: var(--ocean-card);
+  border: 1px solid var(--ocean-border);
   border-radius: 0.5rem;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.nacho-btn:hover {
-  background: rgba(77, 124, 255, 0.15);
-  border-color: rgba(77, 124, 255, 0.3);
+.ocean-card:hover {
+  background: var(--ocean-card-hover);
+  border-color: var(--ocean-border-hover);
 }
 
-.nacho-btn:active {
-  background: rgba(77, 124, 255, 0.2);
+.ocean-btn {
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.15);
+  color: var(--ocean-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.bellum-input {
-  background: rgba(17, 28, 52, 0.3);
-  border: 1px solid var(--nacho-border);
-  border-radius: 0.5rem;
-  color: var(--nacho-primary);
+.ocean-btn:hover {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+.ocean-btn:active {
+  background: rgba(45, 212, 191, 0.16);
+}
+
+.ocean-input {
+  background: rgba(15, 25, 38, 0.4);
+  border: 1px solid var(--ocean-border);
+  border-radius: 0.375rem;
+  color: var(--ocean-primary);
   padding: 0.625rem 0.875rem;
   width: 100%;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease;
 }
 
-.bellum-input:focus {
+.ocean-input:focus {
   outline: none;
-  border-color: var(--nacho-accent);
-  background: rgba(17, 28, 52, 0.45);
+  border-color: var(--ocean-accent);
 }
 
-.bellum-input::placeholder {
-  color: var(--nacho-muted);
+.ocean-input::placeholder {
+  color: var(--ocean-muted);
 }
 
 /* Material Symbols override */
@@ -97,53 +90,53 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
+    --background: 210 40% 7%;
+    --foreground: 210 40% 96%;
+    --card: 210 35% 9%;
+    --card-foreground: 210 40% 96%;
+    --popover: 210 35% 9%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 168 76% 50%;
+    --primary-foreground: 210 40% 7%;
+    --secondary: 210 25% 18%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 210 25% 18%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 168 76% 50%;
+    --accent-foreground: 210 40% 7%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 210 25% 18%;
+    --input: 210 25% 18%;
+    --ring: 168 76% 50%;
+    --chart-1: 168 76% 50%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 0.375rem;
   }
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 243 75% 59%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 243 75% 59%;
-    --chart-1: 243 75% 59%;
+    --background: 210 40% 7%;
+    --foreground: 210 40% 96%;
+    --card: 210 35% 9%;
+    --card-foreground: 210 40% 96%;
+    --popover: 210 35% 9%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 168 76% 50%;
+    --primary-foreground: 210 40% 7%;
+    --secondary: 210 25% 18%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 210 25% 18%;
+    --muted-foreground: 210 15% 55%;
+    --accent: 168 76% 50%;
+    --accent-foreground: 210 40% 7%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 210 25% 18%;
+    --input: 210 25% 18%;
+    --ring: 168 76% 50%;
+    --chart-1: 168 76% 50%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;

@@ -68,10 +68,7 @@ export function Hero3D() {
   const currentModel = MODELS[currentModelIndex];
 
   return (
-    <div className="fixed inset-0 z-0 w-full h-screen pointer-events-none bg-nacho-bg">
-      {/* Subtle Lighting Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-nacho-bg/70 via-transparent to-nacho-bg/80 z-10 pointer-events-none" />
-      
+    <div className="fixed inset-0 z-0 w-full h-screen pointer-events-none bg-ocean-bg">
       <model-viewer
         ref={modelViewerRef}
         src={currentModel.src}
@@ -86,21 +83,20 @@ export function Hero3D() {
         shadow-softness="1"
         exposure="1.2"
         tone-mapping="commerce"
-        environment-image="neutral" 
+        environment-image="neutral"
         camera-orbit={currentModel.orbit}
         interpolation-decay="200"
         style={{ width: '100%', height: '100%' }}
         className="w-full h-full"
       />
 
-      {/* Model Switcher Control (Interactive Layer) */}
       <div className="absolute bottom-10 right-10 z-20 pointer-events-auto">
         <button
           onClick={nextModel}
-          className="bg-nacho-surface/80 backdrop-blur-md border border-nacho-border shadow-nacho rounded-full px-6 py-3 text-nacho-primary font-medium hover:bg-nacho-surface hover:border-nacho-accent transition-all flex items-center gap-2 group"
+          className="ocean-btn rounded-full px-5 py-2.5 flex items-center gap-2"
         >
-          <span className="material-symbols-outlined group-hover:rotate-180 transition-transform duration-500">3d_rotation</span>
-          <span>Switch Model: {currentModel.name}</span>
+          <span className="material-symbols-outlined text-[18px]">3d_rotation</span>
+          <span className="text-sm">{currentModel.name}</span>
         </button>
       </div>
     </div>

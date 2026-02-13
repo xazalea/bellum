@@ -3,8 +3,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AnimatedGradientText } from '@/components/ui/animated-gradient-text';
-import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 import { fetchGames, Game, getProxiedGameUrl } from '@/lib/games-parser';
 import { discordDB, InstalledApp } from '@/lib/persistence/discord-db';
 import { getDeviceFingerprintId } from '@/lib/auth/fingerprint';
@@ -86,9 +84,7 @@ export default function GamesPage() {
 
   useEffect(() => {
     loadGames(1, false);
-
     getDeviceFingerprintId().then(fp => discordDB.init(fp));
-
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/nacho-proxy-sw.js')
         .catch(err => console.error('Proxy SW failed', err));
@@ -101,10 +97,8 @@ export default function GamesPage() {
     }
   }, [page, loadGames]);
 
-  // Infinite scroll using Intersection Observer
   useEffect(() => {
     if (!loadMoreTriggerRef.current || selectedGame || loading) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
@@ -113,15 +107,9 @@ export default function GamesPage() {
           setPage((p) => p + 1);
         }
       },
-      {
-        root: null,
-        rootMargin: '200px',
-        threshold: 0.1,
-      }
+      { root: null, rootMargin: '200px', threshold: 0.1 }
     );
-
     observer.observe(loadMoreTriggerRef.current);
-
     return () => {
       if (loadMoreTriggerRef.current) {
         observer.unobserve(loadMoreTriggerRef.current);
@@ -129,17 +117,13 @@ export default function GamesPage() {
     };
   }, [games.length, totalGames, isLoadingMore, selectedGame, loading]);
 
-  // Reset loading more state when new games are loaded
   useEffect(() => {
-    if (games.length > 0) {
-      setIsLoadingMore(false);
-    }
+    if (games.length > 0) setIsLoadingMore(false);
   }, [games.length]);
 
   const handleInstall = async (e: React.MouseEvent, game: Game) => {
     e.stopPropagation();
     setInstalling(game.id);
-    
     try {
       const app: InstalledApp = {
         id: game.id,
@@ -148,7 +132,6 @@ export default function GamesPage() {
         type: 'game',
         installedAt: Date.now()
       };
-      
       await discordDB.addApp(app);
       alert(`Installed ${game.title} to your Library!`);
     } catch (err) {
@@ -160,143 +143,113 @@ export default function GamesPage() {
   };
 
   return (
-    <main className="relative mx-auto w-full max-w-7xl px-5 py-10">
-      {/* Subtle Background Pattern */}
-      <AnimatedGridPattern
-        numSquares={30}
-        maxOpacity={0.03}
-        duration={3}
-        repeatDelay={1}
-        className="fixed inset-0 -z-10 h-screen w-screen fill-nacho-accent/10 stroke-nacho-accent/10"
-      />
-      
+    <main className="mx-auto w-full max-w-7xl px-6 py-10">
       <div className="space-y-8">
-        <header className="flex justify-between items-end border-b border-nacho-border/50 pb-6">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight text-nacho-primary">
-              Games Arcade
-            </h1>
-            <p className="text-nacho-secondary text-base">
-              {totalGames > 0 ? `${totalGames.toLocaleString()} HTML5 games available` : 'Retro & HTML5 gaming library'}
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 border-b border-ocean-border pb-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Games</h1>
+            <p className="text-sm text-ocean-secondary">
+              {totalGames > 0 ? `${totalGames.toLocaleString()} HTML5 games` : 'Retro & HTML5 gaming library'}
             </p>
           </div>
-          <div className="flex gap-2 items-center">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search games..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2 pl-10 bg-nacho-surface/80 border border-nacho-border/50 rounded-lg text-nacho-primary placeholder-nacho-muted focus:outline-none focus:border-nacho-accent/70 transition-colors w-64"
-              />
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-nacho-muted text-[16px]">search</span>
-            </div>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search games..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="ocean-input pl-9 w-64"
+            />
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ocean-muted text-[16px]">search</span>
           </div>
         </header>
 
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3 text-red-400">
-            <span className="material-symbols-outlined text-[20px]">error</span>
-            <p className="flex-1 text-sm">{error}</p>
-            <Button
-              onClick={() => loadGames(1, false)}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30 text-sm px-4 py-2"
-            >
-              Retry
-            </Button>
+          <div className="p-4 border border-red-500/20 rounded-md flex items-center gap-3 text-sm text-red-400">
+            <span className="material-symbols-outlined text-[18px]">error</span>
+            <p className="flex-1">{error}</p>
+            <Button onClick={() => loadGames(1, false)} className="text-xs">Retry</Button>
           </div>
         )}
 
         {selectedGame ? (
+          /* Game Player */
           <div className="w-full h-[85vh] flex flex-col space-y-4">
             <div className="flex justify-between items-center">
-                <Button onClick={() => setSelectedGame(null)} variant="outline" className="text-sm">
-                  <span className="material-symbols-outlined mr-2 text-[18px]">arrow_back</span>
-                  Back to Library
-                </Button>
-                <Button 
-                    onClick={(e) => handleInstall(e, selectedGame)}
-                    disabled={!!installing}
-                    variant="shimmer"
-                    className="text-sm"
-                >
-                    {installing === selectedGame.id ? (
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                    ) : (
-                        <span className="material-symbols-outlined mr-2 text-[18px]">download</span>
-                    )}
-                    {installing === selectedGame.id ? 'Saving...' : 'Install to Library'}
-                </Button>
+              <Button onClick={() => setSelectedGame(null)} variant="ghost" className="text-sm">
+                <span className="material-symbols-outlined mr-1.5 text-[16px]">arrow_back</span>
+                Back
+              </Button>
+              <Button
+                onClick={(e) => handleInstall(e, selectedGame)}
+                disabled={!!installing}
+                className="text-sm"
+              >
+                <span className="material-symbols-outlined mr-1.5 text-[16px]">download</span>
+                {installing === selectedGame.id ? 'Saving...' : 'Install'}
+              </Button>
             </div>
-            
-            <div className="flex-grow bg-black rounded-lg overflow-hidden border border-nacho-border/50 relative">
-                    {gameLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-nacho-bg z-10">
-                        <div className="text-center space-y-4">
-                          <div className="w-12 h-12 border-4 border-nacho-accent border-t-transparent rounded-full animate-spin mx-auto"></div>
-                          <p className="text-nacho-secondary">Loading game...</p>
-                        </div>
-                      </div>
-                    )}
-                    <iframe 
-                        src={getProxiedGameUrl(selectedGame.file)} 
-                        className="w-full h-full border-0"
-                        title={selectedGame.title}
-                        sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
-                        allowFullScreen
-                        onLoad={() => setGameLoading(false)}
-                    />
+            <div className="flex-grow bg-black rounded-md overflow-hidden border border-ocean-border relative">
+              {gameLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-ocean-bg z-10">
+                  <p className="text-sm text-ocean-secondary">Loading game...</p>
                 </div>
-            
-            <div className="flex items-center justify-between bg-nacho-surface/80 p-4 rounded-lg border border-nacho-border/50">
+              )}
+              <iframe
+                src={getProxiedGameUrl(selectedGame.file)}
+                className="w-full h-full border-0"
+                title={selectedGame.title}
+                sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+                allowFullScreen
+                onLoad={() => setGameLoading(false)}
+              />
+            </div>
+            <div className="flex items-center justify-between py-3">
               <div>
-                  <h2 className="text-lg font-semibold text-nacho-primary">{selectedGame.title}</h2>
-                  <p className="text-sm text-nacho-muted mt-1">{selectedGame.description || 'No description available.'}</p>
+                <h2 className="text-base font-semibold text-ocean-primary">{selectedGame.title}</h2>
+                <p className="text-xs text-ocean-muted mt-0.5">{selectedGame.description || 'No description available.'}</p>
               </div>
-              <span className="text-xs font-mono text-nacho-accent px-3 py-1 bg-blue-500/10 rounded-md border border-blue-500/20">HTML5</span>
-                </div>
+              <span className="text-xs text-ocean-accent">HTML5</span>
             </div>
+          </div>
         ) : (
-            <>
-            {/* Featured Hero */}
+          <>
+            {/* Featured */}
             {games.length > 0 && (
-                <div className="relative h-64 rounded-lg overflow-hidden group cursor-pointer border border-nacho-border/50" onClick={() => setSelectedGame(games[0])}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-nacho-bg via-nacho-bg/40 to-transparent z-10"></div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={games[0].thumb}
-                      alt={games[0].title}
-                      width={1280}
-                      height={720}
-                      loading="lazy"
-                      className="w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity duration-300"
-                    />
-                    <div className="absolute bottom-0 left-0 p-6 z-20 space-y-2">
-                        <span className="px-2 py-1 bg-nacho-accent/90 text-white text-xs font-semibold rounded uppercase tracking-wider">Featured</span>
-                        <h2 className="text-2xl font-bold text-white">{games[0].title}</h2>
-                        <p className="text-gray-300 text-sm max-w-xl truncate">{games[0].description}</p>
-                    </div>
+              <div
+                className="relative h-56 rounded-md overflow-hidden cursor-pointer border border-ocean-border"
+                onClick={() => setSelectedGame(games[0])}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-ocean-bg via-ocean-bg/40 to-transparent z-10" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={games[0].thumb}
+                  alt={games[0].title}
+                  width={1280}
+                  height={720}
+                  loading="lazy"
+                  className="w-full h-full object-cover opacity-40"
+                />
+                <div className="absolute bottom-0 left-0 p-6 z-20 space-y-1">
+                  <span className="text-[10px] text-ocean-accent uppercase tracking-wider font-medium">Featured</span>
+                  <h2 className="text-xl font-semibold text-white">{games[0].title}</h2>
                 </div>
+              </div>
             )}
 
             {!loading && games.length === 0 && !error && (
-              <div className="text-center py-20 bg-nacho-surface/80 rounded-lg border border-nacho-border/50">
-                <span className="material-symbols-outlined text-5xl text-nacho-muted mb-4">sports_esports</span>
-                <h3 className="text-lg font-semibold text-nacho-primary">No Games Loaded</h3>
-                <p className="text-nacho-secondary text-sm mt-2">Try reloading the catalog.</p>
-                <Button
-                  onClick={() => loadGames(1, false)}
-                  variant="shimmer"
-                  className="mt-6 text-sm"
-                >
-                  Reload Games
-                </Button>
+              <div className="text-center py-20">
+                <h3 className="text-base font-semibold text-ocean-primary mb-1">No Games Loaded</h3>
+                <p className="text-sm text-ocean-secondary mb-4">Try reloading the catalog.</p>
+                <Button onClick={() => loadGames(1, false)}>Reload</Button>
               </div>
             )}
 
+            {/* Virtualized Grid */}
             <div ref={gridRef} className="relative w-full">
               {(() => {
-                const gap = 24;
+                const gap = 16;
                 const minCardWidth = 160;
                 const columns = Math.max(2, Math.floor((containerWidth + gap) / (minCardWidth + gap)) || 2);
                 const cardWidth = Math.max(1, Math.floor((containerWidth - gap * (columns - 1)) / columns));
@@ -319,10 +272,9 @@ export default function GamesPage() {
                     const top = row * rowHeight;
                     const left = col * (cardWidth + gap);
                     items.push(
-                      <Card
+                      <div
                         key={game.id}
-                        variant="default"
-                        className="group absolute p-0 overflow-hidden bg-nacho-surface/80 border-nacho-border/50 hover:border-nacho-accent/60 transition-all duration-200 hover:-translate-y-1 cursor-pointer"
+                        className="absolute rounded-md overflow-hidden border border-ocean-border bg-ocean-card hover:border-ocean-border-hover transition-colors duration-150 cursor-pointer"
                         style={{ width: cardWidth, height: cardHeight, transform: `translate(${left}px, ${top}px)`, willChange: 'transform' }}
                         onClick={() => {
                           setSelectedGame(game);
@@ -338,29 +290,19 @@ export default function GamesPage() {
                               width={600}
                               height={800}
                               loading="lazy"
-                              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-200"
+                              className="w-full h-full object-cover opacity-70"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-nacho-surface/80">
-                              <span className="material-symbols-outlined text-3xl text-nacho-muted">sports_esports</span>
+                            <div className="w-full h-full flex items-center justify-center bg-ocean-surface">
+                              <span className="material-symbols-outlined text-2xl text-ocean-muted">sports_esports</span>
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
-                          <div className="absolute bottom-0 left-0 w-full p-3">
-                            <h4 className="font-semibold text-sm text-white truncate mb-1">{game.title}</h4>
-                            <div className="flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <span className="text-[10px] text-gray-400">Arcade</span>
-                              <button
-                                onClick={(e) => handleInstall(e, game)}
-                                className="p-1.5 bg-nacho-accent/90 rounded-md text-white hover:bg-nacho-accent transition-colors"
-                                title="Install to Library"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">download</span>
-                              </button>
-                            </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                          <div className="absolute bottom-0 left-0 w-full p-2.5">
+                            <h4 className="font-medium text-xs text-white truncate">{game.title}</h4>
                           </div>
                         </div>
-                      </Card>
+                      </div>
                     );
                   }
                 }
@@ -372,21 +314,21 @@ export default function GamesPage() {
                 );
               })()}
             </div>
-                
+
             {games.length < totalGames && (
-              <div ref={loadMoreTriggerRef} className="flex flex-col items-center gap-4 pt-12 pb-20">
-                <p className="text-nacho-secondary text-sm">
-                  Showing {games.length.toLocaleString()} of {totalGames.toLocaleString()} games
+              <div ref={loadMoreTriggerRef} className="flex flex-col items-center gap-3 pt-8 pb-16">
+                <p className="text-ocean-muted text-xs">
+                  {games.length.toLocaleString()} of {totalGames.toLocaleString()}
                 </p>
                 {isLoadingMore && (
-                  <div className="flex items-center gap-3 text-nacho-secondary">
-                    <span className="w-5 h-5 border-2 border-nacho-accent border-t-transparent rounded-full animate-spin"></span>
-                    <span>Loading more games...</span>
+                  <div className="flex items-center gap-2 text-ocean-secondary text-xs">
+                    <span className="w-4 h-4 border-2 border-ocean-accent border-t-transparent rounded-full animate-spin" />
+                    Loading more...
                   </div>
                 )}
               </div>
             )}
-            </>
+          </>
         )}
       </div>
     </main>

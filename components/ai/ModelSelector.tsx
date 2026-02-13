@@ -40,13 +40,13 @@ export function ModelSelector({
   return (
     <Card className="p-4 space-y-3">
       <div>
-        <label className="block text-sm font-medium text-nacho-text mb-2">
+        <label className="block text-xs font-medium text-ocean-muted uppercase tracking-wider mb-2">
           Provider
         </label>
         <select
           value={selectedSite}
           onChange={(e) => onSiteChange(e.target.value)}
-          className="bellum-input w-full px-3 py-2 rounded-lg bg-nacho-bg border border-nacho-border text-nacho-text focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="ocean-input w-full"
           disabled={loading}
         >
           {loading ? (
@@ -62,13 +62,13 @@ export function ModelSelector({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-nacho-text mb-2">
+        <label className="block text-xs font-medium text-ocean-muted uppercase tracking-wider mb-2">
           Model
         </label>
         <select
           value={selectedModel}
           onChange={(e) => onModelChange(e.target.value)}
-          className="bellum-input w-full px-3 py-2 rounded-lg bg-nacho-bg border border-nacho-border text-nacho-text focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="ocean-input w-full"
           disabled={loading || currentSiteModels.length === 0}
         >
           {currentSiteModels.length === 0 ? (
@@ -83,13 +83,8 @@ export function ModelSelector({
         </select>
       </div>
 
-      <div className="text-xs text-nacho-text-secondary pt-2 border-t border-nacho-border">
-        <p className="mb-1">
-          <span className="font-semibold">Provider:</span> {selectedSite}
-        </p>
-        <p>
-          <span className="font-semibold">Model:</span> {selectedModel}
-        </p>
+      <div className="text-xs text-ocean-muted pt-2 border-t border-ocean-border">
+        <p>{selectedSite} · {selectedModel}</p>
       </div>
     </Card>
   );
