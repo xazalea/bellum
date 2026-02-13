@@ -538,5 +538,12 @@ export class HeapManager {
   }
 }
 
-// Export singleton
-export const heapManager = new HeapManager();
+// Lazy singleton — avoids 64MB allocation at import time
+let _heapManager: HeapManager | null = null;
+export function getHeapManager(): HeapManager {
+    if (!_heapManager) _heapManager = new HeapManager();
+    return _heapManager;
+}
+export const heapManager: HeapManager = new Proxy({} as HeapManager, {
+    get(_target, prop) { return (getHeapManager() as any)[prop]; },
+});

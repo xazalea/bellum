@@ -26,11 +26,12 @@ export function ModelSelector({
     fetch('/api/ai/supports')
       .then((res) => res.json())
       .then((data) => {
-        setSupports(data);
+        setSupports(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Failed to load supports:', err);
+        setSupports([]);
         setLoading(false);
       });
   }, []);

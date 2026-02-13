@@ -31,8 +31,8 @@ export interface PageTableEntry {
 }
 
 export class EnhancedMemoryManager {
-    private memory: ArrayBuffer;
-    private memoryView: Uint8Array;
+    private memory: ArrayBuffer | null = null;
+    private memoryView: Uint8Array | null = null;
     private regions: Map<number, MemoryRegion> = new Map();
     private pageTable: Map<number, PageTableEntry> = new Map();
     
@@ -46,16 +46,36 @@ export class EnhancedMemoryManager {
     
     private heapBrk: number;
     private stackPointer: number;
+    private _initialized = false;
     
-    constructor(totalSize: number = 2 * 1024 * 1024 * 1024) { // 2GB
+    constructor(totalSize: number = 64 * 1024 * 1024) { // 64MB default (lazy-allocated)
         this.TOTAL_SIZE = totalSize;
-        this.memory = new ArrayBuffer(totalSize);
-        this.memoryView = new Uint8Array(this.memory);
         this.heapBrk = this.HEAP_START;
         this.stackPointer = this.STACK_START;
-        
+    }
+
+    /** Lazily allocate memory on first real use */
+    private ensureInitialized(): void {
+        if (this._initialized) return;
+        try {
+            this.memory = new ArrayBuffer(this.TOTAL_SIZE);
+            this.memoryView = new Uint8Array(this.memory);
+        } catch {
+            // Fallback to 16 MB if allocation fails
+            const fallback = 16 * 1024 * 1024;
+            this.memory = new ArrayBuffer(fallback);
+            this.memoryView = new Uint8Array(this.memory);
+            (this as any).TOTAL_SIZE = fallback;
+        }
+        this._initialized = true;
         this.initializePageTable();
         this.setupDefaultRegions();
+    }
+
+    /** Get the backing memory view, initializing if needed */
+    private getView(): Uint8Array {
+        this.ensureInitialized();
+        return this.memoryView!;
     }
     
     /**
@@ -80,10 +100,11 @@ export class EnhancedMemoryManager {
      * Setup default memory regions
      */
     private setupDefaultRegions(): void {
+        // Virtual regions — sizes are virtual, not physical allocations
         // Code section
         this.regions.set(this.CODE_START, {
             start: this.CODE_START,
-            size: 16 * 1024 * 1024, // 16MB
+            size: 4 * 1024 * 1024, // 4MB
             protection: MemoryProtection.READ_EXECUTE,
             name: '.text',
             mapped: true,
@@ -92,16 +113,16 @@ export class EnhancedMemoryManager {
         // Heap
         this.regions.set(this.HEAP_START, {
             start: this.HEAP_START,
-            size: 512 * 1024 * 1024, // 512MB
+            size: 32 * 1024 * 1024, // 32MB
             protection: MemoryProtection.READ_WRITE,
             name: 'heap',
             mapped: true,
         });
         
         // Stack
-        this.regions.set(this.STACK_START - 8 * 1024 * 1024, {
-            start: this.STACK_START - 8 * 1024 * 1024,
-            size: 8 * 1024 * 1024, // 8MB
+        this.regions.set(this.STACK_START - 2 * 1024 * 1024, {
+            start: this.STACK_START - 2 * 1024 * 1024,
+            size: 2 * 1024 * 1024, // 2MB
             protection: MemoryProtection.READ_WRITE,
             name: 'stack',
             mapped: true,
@@ -187,18 +208,20 @@ export class EnhancedMemoryManager {
      * Read memory with permission check
      */
     read(address: number, size: number): Uint8Array {
+        this.ensureInitialized();
         this.checkPermission(address, size, MemoryProtection.READ);
         
-        return new Uint8Array(this.memory, address, size);
+        return new Uint8Array(this.memory!, address, size);
     }
     
     /**
      * Write memory with permission check
      */
     write(address: number, data: Uint8Array): void {
+        this.ensureInitialized();
         this.checkPermission(address, data.length, MemoryProtection.WRITE);
         
-        this.memoryView.set(data, address);
+        this.memoryView!.set(data, address);
         
         // Mark pages as dirty
         const startPage = Math.floor(address / this.PAGE_SIZE);
@@ -240,11 +263,12 @@ export class EnhancedMemoryManager {
      * Copy memory
      */
     copy(dest: number, src: number, size: number): void {
+        this.ensureInitialized();
         this.checkPermission(src, size, MemoryProtection.READ);
         this.checkPermission(dest, size, MemoryProtection.WRITE);
         
-        const srcData = new Uint8Array(this.memory, src, size);
-        const destData = new Uint8Array(this.memory, dest, size);
+        const srcData = new Uint8Array(this.memory!, src, size);
+        const destData = new Uint8Array(this.memory!, dest, size);
         destData.set(srcData);
     }
     
@@ -252,9 +276,10 @@ export class EnhancedMemoryManager {
      * Zero memory
      */
     zero(address: number, size: number): void {
+        this.ensureInitialized();
         this.checkPermission(address, size, MemoryProtection.WRITE);
         
-        const data = new Uint8Array(this.memory, address, size);
+        const data = new Uint8Array(this.memory!, address, size);
         data.fill(0);
     }
     
@@ -388,5 +413,17 @@ export class EnhancedMemoryManager {
     }
 }
 
-// Export singleton
-export const enhancedMemoryManager = new EnhancedMemoryManager();
+// Lazy singleton — memory is only allocated when first accessed
+let _enhancedMemoryManager: EnhancedMemoryManager | null = null;
+export function getEnhancedMemoryManager(): EnhancedMemoryManager {
+    if (!_enhancedMemoryManager) {
+        _enhancedMemoryManager = new EnhancedMemoryManager();
+    }
+    return _enhancedMemoryManager;
+}
+/** @deprecated Use getEnhancedMemoryManager() — kept for backward compat */
+export const enhancedMemoryManager: EnhancedMemoryManager = new Proxy({} as EnhancedMemoryManager, {
+    get(_target, prop) {
+        return (getEnhancedMemoryManager() as any)[prop];
+    },
+});

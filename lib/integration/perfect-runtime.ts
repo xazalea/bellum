@@ -379,5 +379,17 @@ export interface RuntimeStatistics {
     } | null;
 }
 
-// Export singleton
-export const perfectRuntime = new PerfectRuntime();
+// Lazy singleton — avoid heavy allocations at import time
+let _perfectRuntime: PerfectRuntime | null = null;
+export function getPerfectRuntime(): PerfectRuntime {
+    if (!_perfectRuntime) {
+        _perfectRuntime = new PerfectRuntime();
+    }
+    return _perfectRuntime;
+}
+/** Backward-compat proxy so `perfectRuntime.foo()` still works without eager allocation */
+export const perfectRuntime: PerfectRuntime = new Proxy({} as PerfectRuntime, {
+    get(_target, prop) {
+        return (getPerfectRuntime() as any)[prop];
+    },
+});

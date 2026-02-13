@@ -28,12 +28,10 @@ export default function AndroidPage() {
     setLogs((prev) => [...prev, { message, level }]);
   }, []);
 
-  // Auto-scroll logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  /* ─── Stop ─── */
   const stop = useCallback(async () => {
     try {
       await bootManagerRef.current?.shutdown?.();
@@ -46,24 +44,25 @@ export default function AndroidPage() {
     addLog('Runtime stopped', 'info');
   }, [addLog]);
 
-  /* ─── Run APK ─── */
   const runAPK = useCallback(async (file: File) => {
     try {
       setError(null);
       setLogs([]);
       setElapsed(null);
-      setState('loading');
       setFileName(file.name);
       setFileSize(file.size);
-
-      if (!displayRef.current) throw new Error('Display container missing');
-      displayRef.current.innerHTML = '';
+      setState('loading');
 
       const startTime = performance.now();
-
       addLog(`Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
 
-      // Dynamic import to avoid SSR issues
+      // Wait a tick for React to render the display surface
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const display = displayRef.current;
+      if (!display) throw new Error('Display container unavailable');
+      display.innerHTML = '';
+
       const { APKLoader } = await import('@/lib/engine/loaders/apk-loader');
       const loader = new APKLoader();
 
@@ -72,13 +71,12 @@ export default function AndroidPage() {
       };
 
       const url = URL.createObjectURL(file);
-
       addLog('Initializing Android framework…', 'info');
-      await loader.load(displayRef.current, url);
+      await loader.load(display, url);
 
-      const elapsed = performance.now() - startTime;
-      setElapsed(elapsed);
-      addLog(`APK launched in ${elapsed.toFixed(0)}ms`, 'success');
+      const ms = performance.now() - startTime;
+      setElapsed(ms);
+      addLog(`APK launched in ${ms.toFixed(0)}ms`, 'success');
       setState('running');
     } catch (e: any) {
       const msg = e?.message || 'Failed to run APK';
@@ -88,7 +86,6 @@ export default function AndroidPage() {
     }
   }, [addLog]);
 
-  /* ─── File handler ─── */
   const handleFile = useCallback((file: File) => {
     if (!file.name.toLowerCase().endsWith('.apk')) {
       setError('Only .apk files are supported');
@@ -101,7 +98,6 @@ export default function AndroidPage() {
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
-
     const prevent = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
     const onEnter = (e: DragEvent) => { prevent(e); setIsDragging(true); };
     const onLeave = (e: DragEvent) => { prevent(e); setIsDragging(false); };
@@ -111,7 +107,6 @@ export default function AndroidPage() {
       const file = e.dataTransfer?.files[0];
       if (file) handleFile(file);
     };
-
     el.addEventListener('dragenter', onEnter);
     el.addEventListener('dragover', prevent);
     el.addEventListener('dragleave', onLeave);
@@ -133,7 +128,7 @@ export default function AndroidPage() {
 
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-end justify-between gap-6 border-b border-ocean-border pb-6">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
@@ -146,7 +141,6 @@ export default function AndroidPage() {
             Drop an APK to decode and run it with the Android framework stack.
           </p>
         </div>
-
         <div className="flex items-center gap-2">
           {isActive && (
             <Button onClick={stop} className="border-rose-500/20 text-rose-300">
@@ -157,81 +151,55 @@ export default function AndroidPage() {
         </div>
       </div>
 
-      {/* ── Error ── */}
       {error && (
         <div className="mt-6 rounded-md border border-rose-500/20 px-4 py-3 text-sm text-rose-300 flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-300 ml-3">
-            <span className="material-symbols-outlined text-[16px]">close</span>
-          </button>
+          <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-300 ml-3">✕</button>
         </div>
       )}
 
-      {/* ── Metrics bar ── */}
       {isActive && (
         <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-ocean-muted">
-          {fileName && (
-            <span>
-              File: <span className="text-ocean-primary font-medium">{fileName}</span>
-            </span>
-          )}
-          {fileSize > 0 && (
-            <span>
-              Size: <span className="text-ocean-primary font-medium">{(fileSize / 1024 / 1024).toFixed(2)} MB</span>
-            </span>
-          )}
-          <span>
-            Runtime: <span className="text-teal-400 font-medium">ART + WebGPU</span>
-          </span>
-          {elapsed !== null && (
-            <span>
-              Load: <span className="text-ocean-primary font-medium">{elapsed.toFixed(0)}ms</span>
-            </span>
-          )}
-          <span>
-            Status:{' '}
-            <span className={state === 'running' ? 'text-emerald-400 font-medium' : 'text-amber-400 font-medium'}>
-              {state === 'loading' ? 'Initializing…' : 'Running'}
-            </span>
-          </span>
+          {fileName && <span>File: <span className="text-ocean-primary font-medium">{fileName}</span></span>}
+          {fileSize > 0 && <span>Size: <span className="text-ocean-primary font-medium">{(fileSize / 1024 / 1024).toFixed(2)} MB</span></span>}
+          <span>Runtime: <span className="text-teal-400 font-medium">ART + WebGPU</span></span>
+          {elapsed !== null && <span>Load: <span className="text-ocean-primary font-medium">{elapsed.toFixed(0)}ms</span></span>}
+          <span>Status: <span className={state === 'running' ? 'text-emerald-400 font-medium' : 'text-amber-400 font-medium'}>{state === 'loading' ? 'Initializing…' : 'Running'}</span></span>
         </div>
       )}
 
-      {/* ── Main content ── */}
+      {/* Main content */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.4fr] gap-4">
-        {/* Display / Drop Zone */}
-        <div className="overflow-hidden rounded-md border border-ocean-border bg-black" ref={dropRef}>
-          {!isActive ? (
-            /* Drop zone */
-            <div
-              className={`flex flex-col items-center justify-center h-[70vh] transition-colors ${
-                isDragging ? 'bg-teal-500/5 border-teal-500/20' : 'bg-ocean-bg'
-              }`}
-            >
+        {/* Display area (always mounted) */}
+        <div className="overflow-hidden rounded-md border border-ocean-border bg-black relative" ref={dropRef}>
+          {/* Status bar — visible when active */}
+          {isActive && (
+            <div className="flex items-center justify-between border-b border-ocean-border bg-ocean-bg px-4 py-2">
+              <div className="flex items-center gap-2 text-xs text-ocean-muted">
+                <span className={`h-1.5 w-1.5 rounded-full ${state === 'running' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+                <span>{state === 'loading' ? 'Loading…' : 'Running'}</span>
+                {fileName && <span className="text-ocean-secondary">· {fileName}</span>}
+              </div>
+              <div className="text-[11px] text-ocean-muted font-mono">ART Runtime</div>
+            </div>
+          )}
+
+          {/* Display surface — always in DOM so ref is available */}
+          <div ref={displayRef} className={`w-full bg-black ${isActive ? 'h-[70vh]' : 'h-0 overflow-hidden'}`} />
+
+          {/* Drop zone overlay — visible when idle */}
+          {!isActive && (
+            <div className={`flex flex-col items-center justify-center h-[70vh] transition-colors ${isDragging ? 'bg-teal-500/5' : 'bg-ocean-bg'}`}>
               <div className="text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/15 flex items-center justify-center mx-auto">
                   <span className="material-symbols-outlined text-3xl text-teal-400">android</span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-ocean-primary">
-                    {isDragging ? 'Drop APK here' : 'Drop an APK file to run'}
-                  </p>
-                  <p className="text-xs text-ocean-muted">
-                    The APK is decoded and executed through the Android framework stack
-                  </p>
+                  <p className="text-sm font-medium text-ocean-primary">{isDragging ? 'Drop APK here' : 'Drop an APK file to run'}</p>
+                  <p className="text-xs text-ocean-muted">The APK is decoded and executed through the Android framework stack</p>
                 </div>
                 <label className="inline-flex">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".apk"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFile(f);
-                      e.currentTarget.value = '';
-                    }}
-                  />
+                  <input ref={fileInputRef} type="file" accept=".apk" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
                   <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                     <span className="material-symbols-outlined mr-1.5 text-[16px]">upload_file</span>
                     Choose APK
@@ -239,23 +207,6 @@ export default function AndroidPage() {
                 </label>
               </div>
             </div>
-          ) : (
-            /* Running display */
-            <>
-              <div className="flex items-center justify-between border-b border-ocean-border bg-ocean-bg px-4 py-2">
-                <div className="flex items-center gap-2 text-xs text-ocean-muted">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      state === 'running' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'
-                    }`}
-                  />
-                  <span>{state === 'loading' ? 'Loading…' : 'Running'}</span>
-                  {fileName && <span className="text-ocean-secondary">· {fileName}</span>}
-                </div>
-                <div className="text-[11px] text-ocean-muted font-mono">ART Runtime</div>
-              </div>
-              <div ref={displayRef} className="h-[70vh] w-full bg-black" />
-            </>
           )}
         </div>
 
@@ -270,18 +221,7 @@ export default function AndroidPage() {
               <div className="text-ocean-muted">Drop an APK to begin…</div>
             ) : (
               logs.map((log, i) => (
-                <div
-                  key={i}
-                  className={
-                    log.level === 'error'
-                      ? 'text-rose-400'
-                      : log.level === 'warn'
-                        ? 'text-amber-400'
-                        : log.level === 'success'
-                          ? 'text-emerald-400'
-                          : 'text-ocean-secondary'
-                  }
-                >
+                <div key={i} className={log.level === 'error' ? 'text-rose-400' : log.level === 'warn' ? 'text-amber-400' : log.level === 'success' ? 'text-emerald-400' : 'text-ocean-secondary'}>
                   {log.message}
                 </div>
               ))
@@ -291,24 +231,11 @@ export default function AndroidPage() {
         </div>
       </div>
 
-      {/* ── How it works ── */}
       {!isActive && (
         <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InfoCard
-            icon="unarchive"
-            title="Decode"
-            description="APK is extracted and DEX bytecode is parsed through the ART runtime."
-          />
-          <InfoCard
-            icon="bolt"
-            title="Compile"
-            description="Dalvik opcodes are JIT-compiled to WASM for near-native execution speed."
-          />
-          <InfoCard
-            icon="display_settings"
-            title="Render"
-            description="Android framework + SurfaceFlinger composit UI through WebGPU."
-          />
+          <InfoCard icon="unarchive" title="Decode" description="APK is extracted and DEX bytecode is parsed through the ART runtime." />
+          <InfoCard icon="bolt" title="Compile" description="Dalvik opcodes are JIT-compiled to WASM for near-native execution speed." />
+          <InfoCard icon="display_settings" title="Render" description="Android framework + SurfaceFlinger composit UI through WebGPU." />
         </div>
       )}
     </main>
