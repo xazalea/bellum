@@ -1,14 +1,11 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useAuth } from '@/lib/auth/auth-context';
 import * as discordWebhookStorage from '@/lib/storage/discord-webhook-storage';
-import { formatBytes, formatPercentage, DISCORD_WEBHOOK_STORAGE_LIMIT_BYTES } from '@/lib/storage/quota';
+import { formatBytes } from '@/lib/storage/quota';
 
 interface StoredFile {
   id: string;
@@ -28,7 +25,6 @@ export default function StoragePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [quotaInfo, setQuotaInfo] = useState<discordWebhookStorage.QuotaInfo | null>(null);
-  const auth = useAuth?.() || { user: null };
 
   const loadQuota = async () => {
     try {

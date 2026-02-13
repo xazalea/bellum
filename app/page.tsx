@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { Gamepad2, Laptop, Smartphone, Database, Cpu, BrainCircuit, Zap } from 'lucide-react';
+import { Gamepad2, Laptop, Smartphone, Database, Cpu, BrainCircuit } from 'lucide-react';
 
 export default function LandingPage() {
   return (

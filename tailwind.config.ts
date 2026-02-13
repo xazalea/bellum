@@ -10,31 +10,20 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
-  			ocean: {
-  				bg: '#0a1118',
-  				surface: 'rgba(20, 35, 50, 0.3)',
-  				card: 'rgba(25, 40, 55, 0.4)',
-  				'card-hover': 'rgba(30, 48, 65, 0.45)',
-  				primary: '#f0f4f8',
-  				secondary: '#8b9db0',
-  				accent: '#2dd4bf',
-  				'accent-hover': '#5eead4',
-  				muted: '#5a6e82',
-  				border: 'rgba(100, 150, 180, 0.08)',
-  				'border-hover': 'rgba(100, 150, 180, 0.16)',
-  			},
-  			// Keep nacho as aliases for backward compatibility during migration
-  			nacho: {
-  				bg: '#0a1118',
-  				surface: 'rgba(20, 35, 50, 0.3)',
-  				primary: '#f0f4f8',
-  				secondary: '#8b9db0',
-  				accent: '#2dd4bf',
-  				'accent-hover': '#5eead4',
-  				muted: '#5a6e82',
-  				border: 'rgba(100, 150, 180, 0.08)',
-  				'card-hover': 'rgba(30, 48, 65, 0.45)',
-  			},
+			ocean: {
+				bg: '#0a1118',
+				surface: 'rgba(20, 35, 50, 0.3)',
+				card: 'rgba(25, 40, 55, 0.4)',
+				'card-hover': 'rgba(30, 48, 65, 0.45)',
+				primary: '#f0f4f8',
+				text: '#d0dae6',
+				secondary: '#8b9db0',
+				accent: '#2dd4bf',
+				'accent-hover': '#5eead4',
+				muted: '#5a6e82',
+				border: 'rgba(100, 150, 180, 0.08)',
+				'border-hover': 'rgba(100, 150, 180, 0.16)',
+			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))'
