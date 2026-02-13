@@ -13,8 +13,7 @@ export default function VirtualMachinesPage() {
           Virtual Machines
         </h1>
         <p className="text-sm text-ocean-secondary">
-          Run full operating systems in your browser with dedicated compilers — no
-          generic ISO emulators.
+          Drop an APK or EXE — each file is decoded and run through its own compiler stack.
         </p>
       </header>
 
@@ -24,7 +23,7 @@ export default function VirtualMachinesPage() {
           title="Windows"
           engine="NTR Engine"
           pipeline="EXE → PE Parse → x86 Decode → Win32 Shims → Execute"
-          description="Win32 emulation with a dedicated x86 interpreter, PE section loader, and WebGPU-accelerated GDI/DirectX rendering. Load and run native .exe files."
+          description="Drop an .exe file and it's decoded through the NTR engine — PE parsing, x86 interpretation, and WebGPU-accelerated Win32 rendering."
           features={['PE32/PE32+ loader', 'x86 SimpleInterpreter', 'Kernel32 · User32 · GDI32', 'DirectX → WebGPU']}
           href="/windows"
           status="Stable"
@@ -35,7 +34,7 @@ export default function VirtualMachinesPage() {
           title="Android"
           engine="ART Runtime"
           pipeline="APK → DEX Extract → Dalvik Decode → ART JIT → Execute"
-          description="Full Android 14 with Dalvik/ART JIT compilation on WebGPU. Boot the AOSP framework stack and run .apk files directly."
+          description="Drop an .apk file and it's decoded through the ART runtime — DEX extraction, Dalvik JIT, and WebGPU-accelerated Android rendering."
           features={['218 Dalvik opcodes', 'ART JIT → WASM', 'SurfaceFlinger compositing', 'Binder IPC']}
           href="/android"
           status="Experimental"

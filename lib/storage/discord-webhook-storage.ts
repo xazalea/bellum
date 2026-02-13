@@ -185,11 +185,9 @@ export async function uploadFile(
   }
 
   // Compress file using WASM-accelerated compression (with fallback)
-  console.log(`[Challenger Storage] Compressing ${file.name}...`);
   let compressed;
   
   try {
-    // Try WASM compression first (much faster)
     const pool = getCompressionPool();
     const result = await pool.compressFile(file, CompressionAlgorithm.Zstd, 9, (progress) => {
       onProgress?.({
@@ -206,12 +204,9 @@ export async function uploadFile(
       compressedBytes: result.compressedSize,
       algorithm: 'zstd' as const,
     };
-    console.log(`[Challenger Storage] WASM Zstd compressed ${compressed.originalBytes} → ${compressed.compressedBytes} bytes (${((1 - compressed.compressedBytes / compressed.originalBytes) * 100).toFixed(1)}% reduction)`);
-  } catch (error) {
-    console.warn('[Challenger Storage] WASM compression failed, using fallback:', error);
+  } catch {
     // Fallback to browser gzip
     compressed = await compressFileGzip(file);
-    console.log(`[Challenger Storage] Gzip compressed ${compressed.originalBytes} → ${compressed.compressedBytes} bytes (${((1 - compressed.compressedBytes / compressed.originalBytes) * 100).toFixed(1)}% reduction)`);
   }
 
   // Calculate chunks
@@ -221,7 +216,7 @@ export async function uploadFile(
   const attachmentUrls: string[] = [];
   let uploadedBytes = 0;
 
-  console.log(`[Challenger Storage] Uploading ${file.name} in ${totalChunks} chunk(s)...`);
+  // Upload chunks
 
   // Upload chunks sequentially (Discord webhooks have rate limits)
   for (let i = 0; i < totalChunks; i++) {
@@ -255,7 +250,6 @@ export async function uploadFile(
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (error) {
-      console.error(`[Challenger Storage] Failed to upload chunk ${i}:`, error);
       throw new Error(`Upload failed at chunk ${i + 1}/${totalChunks}: ${error}`);
     }
   }
@@ -279,7 +273,6 @@ export async function uploadFile(
   await saveFileMetadata(metadata);
   await updateQuota(file.size);
 
-  console.log(`[Challenger Storage] Upload complete: ${file.name}`);
   return metadata;
 }
 
@@ -301,7 +294,6 @@ export async function downloadFile(
   }
 
   const uid = await getDeviceFingerprintId();
-  console.log(`[Challenger Storage] Downloading ${metadata.fileName} (${metadata.chunkCount} chunks)...`);
 
   const chunks: Blob[] = [];
   let downloadedBytes = 0;
@@ -333,7 +325,6 @@ export async function downloadFile(
         totalBytes: metadata.originalSize,
       });
     } catch (error) {
-      console.error(`[Challenger Storage] Failed to download chunk ${i}:`, error);
       throw new Error(`Download failed at chunk ${i + 1}/${metadata.chunkCount}: ${error}`);
     }
   }
@@ -342,17 +333,12 @@ export async function downloadFile(
   const combinedBlob = new Blob(chunks);
 
   // Decompress using DecompressionStream
-  console.log(`[Challenger Storage] Decompressing ${metadata.fileName}...`);
   try {
     // @ts-ignore
     const ds = new DecompressionStream('gzip');
     const decompressedStream = combinedBlob.stream().pipeThrough(ds);
-    const decompressedBlob = await new Response(decompressedStream).blob();
-    
-    console.log(`[Challenger Storage] Download complete: ${metadata.fileName}`);
-    return decompressedBlob;
-  } catch (error) {
-    console.error('[Challenger Storage] Decompression failed:', error);
+    return await new Response(decompressedStream).blob();
+  } catch {
     // If decompression fails, return the raw blob
     return combinedBlob;
   }
@@ -383,6 +369,5 @@ export async function deleteFile(fileId: string): Promise<void> {
   // Update quota (subtract ORIGINAL file size)
   await updateQuota(-metadata.originalSize);
 
-  console.log(`[Challenger Storage] Deleted metadata for: ${metadata.fileName}`);
-  console.log('[Challenger Storage] Note: Deep sea archives remain in Discord, but metadata has been removed.');
+  // Metadata removed; Discord-stored blobs are not deleted as webhooks don't support message deletion.
 }

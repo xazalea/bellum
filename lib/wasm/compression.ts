@@ -30,13 +30,10 @@ export async function initCompression(): Promise<boolean> {
     wasmModule = await loadAndInstantiate('/wasm/compression.wasm');
     if (wasmModule) {
       useWasm = true;
-      console.log('✅ Compression WASM loaded');
       return true;
     }
-  } catch (error) {
-    // Silently fall back to JavaScript implementation
-    // This is expected when WASM is not available
-    console.log('[Compression] Using JavaScript fallback (WASM not available)');
+  } catch {
+    // Expected when WASM binaries are not deployed – fflate JS fallback used
   }
   
   useWasm = false;
@@ -59,8 +56,7 @@ export async function compress(
   if (useWasm && wasmModule) {
     try {
       return wasmModule.compress(data, algorithm, level);
-    } catch (error) {
-      console.log('[Compression] WASM compression failed, using JavaScript fallback');
+    } catch {
       useWasm = false;
     }
   }
@@ -99,8 +95,7 @@ export async function decompress(
   if (useWasm && wasmModule) {
     try {
       return wasmModule.decompress(data, algorithm);
-    } catch (error) {
-      console.log('[Compression] WASM decompression failed, using JavaScript fallback');
+    } catch {
       useWasm = false;
     }
   }

@@ -18,7 +18,8 @@ export const metadata: Metadata = {
   description: 'Run Android, Windows, games, and apps directly in your browser.',
   keywords: ['bellum', 'android in browser', 'windows in browser', 'html games', 'cloud storage'],
   icons: {
-    icon: [{ url: '/icon' }],
+    icon: [{ url: '/icon', type: 'image/png' }],
+    shortcut: [{ url: '/icon' }],
     apple: [{ url: '/apple-icon' }],
   },
 };

@@ -19,6 +19,7 @@ export function ClusterIndicator() {
   useEffect(() => {
     let mounted = true;
     let timer: number | null = null;
+    let failures = 0;
 
     const tick = async () => {
       try {
@@ -33,13 +34,17 @@ export function ClusterIndicator() {
         if (!mounted) return;
         setCount(Array.isArray(peers) ? peers.length : 0);
         setStatus(Array.isArray(peers) ? 'connected' : 'disconnected');
+        failures = 0;
       } catch {
         if (!mounted) return;
         setCount(0);
         setStatus('disconnected');
+        failures++;
       } finally {
         if (!mounted) return;
-        timer = window.setTimeout(tick, 10_000);
+        // Back off: 10s, 20s, 40s, 60s max
+        const delay = Math.min(10_000 * Math.pow(2, failures), 60_000);
+        timer = window.setTimeout(tick, delay);
       }
     };
 

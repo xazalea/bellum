@@ -6,11 +6,12 @@ export type NachoIdentity = {
 };
 
 let cached: NachoIdentity | null = null;
+let profileChecked = false;
 const STORAGE_KEY = 'nacho.uid';
 
 export async function getNachoIdentity(): Promise<NachoIdentity> {
   if (typeof window === 'undefined') return { uid: 'server' };
-  if (cached && cached.username) return cached;
+  if (cached) return cached;
 
   let uid: string | null = null;
   try {
@@ -28,20 +29,29 @@ export async function getNachoIdentity(): Promise<NachoIdentity> {
     }
   }
 
-  // Attempt to fetch profile to see if a username is linked
+  // Attempt to fetch profile once per session to see if a username is linked
   let username: string | null = null;
-  try {
-    const res = await fetch('/api/user/profile', { cache: 'no-store', headers: { 'X-Nacho-UserId': uid } });
-    if (res.ok) {
-      const j = await res.json();
-      username = j.handle || null;
+  if (!profileChecked) {
+    profileChecked = true;
+    try {
+      const res = await fetch('/api/user/profile', { cache: 'no-store', headers: { 'X-Nacho-UserId': uid } });
+      if (res.ok) {
+        const j = await res.json();
+        username = j.handle || null;
+      }
+    } catch {
+      // Server not configured — skip silently
     }
-  } catch (e) {
-    console.warn('[Identity] Failed to fetch linked username', e);
   }
 
   cached = { uid, username };
   return cached;
+}
+
+/** Bust the cached identity so the next call re-fetches the profile. */
+export function invalidateNachoIdentity(): void {
+  cached = null;
+  profileChecked = false;
 }
 
 export async function getNachoHeaders(): Promise<Record<string, string>> {

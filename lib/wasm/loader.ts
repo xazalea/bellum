@@ -71,11 +71,10 @@ export async function loadWasmModule(options: WasmLoaderOptions): Promise<WasmMo
 
       return wasmModule;
     } catch (error) {
-      console.warn(`WASM load failed (${wasmPath}):`, error);
+      // Silently fall back – WASM files may not be deployed
       
       // Try fallback
       if (fallback) {
-        console.log(`Using fallback for ${wasmPath}`);
         return fallback();
       }
       
@@ -124,11 +123,10 @@ export async function loadAndInstantiate(
 export async function preloadWasmModules(paths: string[]): Promise<void> {
   const promises = paths.map(path => 
     loadWasmModule({ wasmPath: path, cache: true })
-      .catch(err => console.warn(`Preload failed for ${path}:`, err))
+      .catch(() => { /* WASM not available, JS fallback used */ })
   );
   
   await Promise.all(promises);
-  console.log(`Preloaded ${paths.length} WASM modules`);
 }
 
 /**

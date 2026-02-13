@@ -56,20 +56,17 @@ export class DiscordDB {
 
     if (ref && ref.fingerprint === fingerprint) {
       try {
-        // 2. Try to fetch the profile from Discord
-        console.log(`[DiscordDB] Fetching profile for ${fingerprint} from message ${ref.messageId}`);
         const profile = await this.fetchProfileFromDiscord(ref.messageId);
         if (profile) {
           this.currentProfile = profile;
           return profile;
         }
-      } catch (e) {
-        console.warn('[DiscordDB] Failed to fetch profile, falling back to new profile', e);
+      } catch {
+        // Fetch failed — will create fresh local profile
       }
     }
 
-    // 3. If no reference or fetch failed, create a new profile
-    console.log(`[DiscordDB] Creating new profile for ${fingerprint}`);
+    // No reference or fetch failed — create new local profile
     const newProfile: UserProfile = {
       username: `User-${fingerprint.substring(0, 6)}`,
       fingerprint,
@@ -80,7 +77,12 @@ export class DiscordDB {
     };
 
     this.currentProfile = newProfile;
-    await this.saveProfile(newProfile);
+    // Best-effort save — fails silently if backend isn't configured
+    try {
+      await this.saveProfile(newProfile);
+    } catch {
+      // Storage backend not available, profile stays local-only
+    }
     return newProfile;
   }
 
@@ -94,21 +96,13 @@ export class DiscordDB {
     const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
     const file = new File([blob], `${PROFILE_FILENAME_PREFIX}${profile.fingerprint}.json`, { type: 'application/json' });
 
-    try {
-      console.log('[DiscordDB] Uploading profile to Discord...');
-      const metadata = await uploadFile(file);
-      
-      // Store the new message ID locally so we can find it later
-      this.setLocalReference({
-        messageId: metadata.fileId, // In our storage lib, fileId is often the messageId or a UUID mapping to it
-        fingerprint: profile.fingerprint
-      });
-      
-      console.log(`[DiscordDB] Profile saved. Ref: ${metadata.fileId}`);
-    } catch (e) {
-      console.error('[DiscordDB] Failed to save profile', e);
-      throw e;
-    }
+    const metadata = await uploadFile(file);
+    
+    // Store the new message ID locally so we can find it later
+    this.setLocalReference({
+      messageId: metadata.fileId,
+      fingerprint: profile.fingerprint
+    });
   }
 
   async getProfile(): Promise<UserProfile | null> {

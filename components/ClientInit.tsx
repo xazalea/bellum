@@ -18,7 +18,8 @@ export function ClientInit() {
 function Heartbeat() {
   useEffect(() => {
     let stopped = false;
-    let interval: number | null = null;
+    let timer: number | null = null;
+    let failures = 0;
 
     const getDeviceId = (): string => {
       const key = 'nacho.deviceId';
@@ -41,7 +42,7 @@ function Heartbeat() {
       try {
         const id = await getNachoIdentity();
         const deviceId = getDeviceId();
-        await fetch('/api/cluster/proxy/heartbeat', {
+        const res = await fetch('/api/cluster/proxy/heartbeat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -53,20 +54,23 @@ function Heartbeat() {
           }),
           cache: 'no-store',
         });
+        if (!res.ok) throw new Error('heartbeat_failed');
+        failures = 0;
       } catch {
-        // Ignore: indicator will show disconnected if unreachable
+        failures++;
+      } finally {
+        if (stopped) return;
+        // Back off: 30s, 60s, 120s, 120s max
+        const delay = Math.min(30_000 * Math.pow(2, failures), 120_000);
+        timer = window.setTimeout(send, delay);
       }
     };
 
     void send();
-    interval = window.setInterval(() => {
-      if (stopped) return;
-      void send();
-    }, 30_000);
 
     return () => {
       stopped = true;
-      if (interval) window.clearInterval(interval);
+      if (timer) window.clearTimeout(timer);
     };
   }, []);
 
