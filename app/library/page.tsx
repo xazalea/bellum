@@ -214,7 +214,7 @@ export default function LibraryPage() {
       <div className="flex items-end justify-between gap-6 border-b border-ocean-border pb-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Library</h1>
-          <p className="text-sm text-ocean-secondary">Upload APK/EXE and run directly.</p>
+          <p className="text-sm text-ocean-secondary">Upload APK/EXE — decoded and executed through dedicated compilers.</p>
         </div>
         <div className="flex items-center gap-2 text-xs text-ocean-muted">
           <span className={`h-1.5 w-1.5 rounded-full ${profile ? 'bg-emerald-400' : 'bg-slate-500'}`} />

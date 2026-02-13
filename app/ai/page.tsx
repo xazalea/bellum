@@ -155,7 +155,7 @@ export default function AIPage() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -252,7 +252,7 @@ export default function AIPage() {
                   <Input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyDown}
                     placeholder="Type your message..."
                     disabled={loading}
                   />
