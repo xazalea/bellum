@@ -27,7 +27,7 @@ export function AppHeader() {
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="h-7 w-7 rounded-md bg-ocean-accent/15 border border-ocean-accent/20" />
-            <span className="text-sm font-semibold tracking-tight text-ocean-primary">Bellum</span>
+            <span className="text-sm font-semibold tracking-tight text-ocean-primary">Challenger Deep</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">

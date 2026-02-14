@@ -1,7 +1,7 @@
 /**
  * Universal Runtime Features
  * 
- * The complete specification for the Bellum Universal Runtime.
+ * The complete specification for the Challenger Deep Universal Runtime.
  * Target: ZERO-LAG universal runtime capable of running any app, any OS, any game, locally.
  */
 

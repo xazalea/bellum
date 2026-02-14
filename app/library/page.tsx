@@ -211,14 +211,14 @@ export default function LibraryPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
       {/* Header */}
-      <div className="flex items-end justify-between gap-6 border-b border-ocean-border pb-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Library</h1>
-          <p className="text-sm text-ocean-secondary">Upload APK/EXE — decoded and executed through dedicated compilers.</p>
+      <div className="flex items-end justify-between gap-6 border-b-2 border-ocean-border pb-6">
+        <div className="space-y-2">
+          <h1 className="font-pixel text-lg text-ocean-accent retro-glow">📦 LIBRARY</h1>
+          <p className="font-mono text-sm text-ocean-secondary">Upload APK/EXE — decoded and executed through dedicated compilers.</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-ocean-muted">
+        <div className="flex items-center gap-2 font-pixel text-[8px] text-ocean-muted">
           <span className={`h-1.5 w-1.5 rounded-full ${profile ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-          <span>{profile ? 'Synced' : 'Offline'}</span>
+          <span>{profile ? 'SYNCED' : 'OFFLINE'}</span>
         </div>
       </div>
 

@@ -7,9 +7,9 @@ import { Globe, Zap, ShieldCheck } from 'lucide-react';
 export default function ClusterPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
-      <header className="space-y-1 border-b border-ocean-border pb-6 mb-10">
-        <h1 className="text-2xl font-semibold text-ocean-primary tracking-tight">Cluster Status</h1>
-        <p className="text-sm text-ocean-secondary">Distributed P2P compute network.</p>
+      <header className="space-y-2 border-b-2 border-ocean-border pb-6 mb-10">
+        <h1 className="font-pixel text-lg text-ocean-accent retro-glow">◎ CLUSTER STATUS</h1>
+        <p className="font-mono text-sm text-ocean-secondary">Distributed P2P compute network.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">

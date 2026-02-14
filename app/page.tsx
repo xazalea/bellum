@@ -1,94 +1,120 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Gamepad2, Laptop, Smartphone, Database, Cpu, BrainCircuit } from 'lucide-react';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen text-ocean-primary">
+    <div className="min-h-screen text-ocean-primary relative">
+      {/* Scanline overlay */}
+      <div className="crt-scanlines pointer-events-none fixed inset-0 z-10" />
+
       {/* Hero */}
-      <section className="px-6 pt-24 pb-20 md:pt-40 md:pb-32">
-        <div className="max-w-3xl mx-auto text-center space-y-6">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.15]">
-            Run Everything<br className="hidden md:block" /> in Your Browser
+      <section className="px-6 pt-32 pb-20 md:pt-44 md:pb-32 relative">
+        <div className="max-w-3xl mx-auto text-center space-y-8">
+          {/* ASCII art title decoration */}
+          <div className="font-pixel text-[10px] md:text-xs text-ocean-muted tracking-widest opacity-60">
+            ═══════════════════════════════
+          </div>
+          <h1 className="font-pixel text-2xl md:text-4xl tracking-tight leading-relaxed text-ocean-accent retro-glow">
+            CHALLENGER DEEP
           </h1>
-          <p className="text-lg text-ocean-secondary max-w-xl mx-auto leading-relaxed">
-            From retro games to Windows and Android. Dedicated compilers turn native
-            binaries into web-native code — no emulator images required.
+          <div className="font-pixel text-[10px] md:text-xs text-ocean-muted tracking-widest opacity-60">
+            ═══════════════════════════════
+          </div>
+          <p className="font-retro text-xl md:text-2xl text-ocean-text max-w-xl mx-auto leading-relaxed">
+            Explore the abyss. Run everything in your browser.
           </p>
-          <div className="flex flex-wrap justify-center gap-3 pt-4">
-            <Link href="/games">
-              <Button variant="primary" className="h-11 px-7">
-                Play Games
-              </Button>
+          <p className="font-mono text-sm text-ocean-secondary max-w-lg mx-auto leading-relaxed">
+            From retro games to Windows and Android. Dedicated compilers
+            turn native binaries into web-native code — no emulator images required.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4 pt-4">
+            <Link href="/games" className="retro-btn retro-btn-primary font-pixel text-xs px-8 py-3">
+              ▶ PLAY GAMES
             </Link>
-            <Link href="/virtual-machines">
-              <Button variant="outline" className="h-11 px-7">
-                Virtual Machines
-              </Button>
+            <Link href="/virtual-machines" className="retro-btn retro-btn-outline font-pixel text-xs px-8 py-3">
+              ◈ VIRTUAL MACHINES
             </Link>
           </div>
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] font-mono text-ocean-muted pt-2">
-            <span>ART Runtime</span>
-            <span className="text-ocean-border">·</span>
-            <span>NTR Engine</span>
-            <span className="text-ocean-border">·</span>
-            <span>WebGPU Accelerated</span>
-            <span className="text-ocean-border">·</span>
-            <span>DEX + PE Decoders</span>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 font-pixel text-[8px] md:text-[10px] text-ocean-muted pt-4">
+            <span className="text-ocean-accent/70">ART Runtime</span>
+            <span className="text-ocean-border">│</span>
+            <span className="text-ocean-biolum/70">NTR Engine</span>
+            <span className="text-ocean-border">│</span>
+            <span className="text-ocean-accent/70">WebGPU Accelerated</span>
+            <span className="text-ocean-border">│</span>
+            <span className="text-ocean-biolum/70">DEX + PE Decoders</span>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="px-6 py-20">
-        <div className="max-w-7xl mx-auto">
+      {/* Depth Zones - Feature Cards */}
+      <section className="px-6 py-20 relative">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="font-pixel text-lg md:text-xl text-ocean-accent retro-glow">
+              ── DEPTH ZONES ──
+            </h2>
+            <p className="font-retro text-lg text-ocean-secondary mt-3">
+              Navigate the features of the deep
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             <FeatureCard
-              icon={<Gamepad2 className="w-5 h-5 text-ocean-accent" />}
+              icon="🎮"
               title="20,000+ Games"
               description="HTML5 and retro games instantly playable — no downloads required."
               href="/games"
+              depth="200m"
             />
             <FeatureCard
-              icon={<Laptop className="w-5 h-5 text-ocean-accent" />}
+              icon="💻"
               title="Windows Runtime"
-              badge="NTR Engine"
+              badge="NTR"
               description="Dedicated PE decoder with x86 interpreter, Win32 API shims, and DirectX→WebGPU translation."
               href="/windows"
+              depth="2000m"
             />
             <FeatureCard
-              icon={<Smartphone className="w-5 h-5 text-ocean-accent" />}
+              icon="📱"
               title="Android Runtime"
               badge="ART"
               description="Full AOSP stack with Dalvik-to-WASM JIT compilation and WebGPU-accelerated SurfaceFlinger."
               href="/android"
+              depth="4000m"
             />
             <FeatureCard
-              icon={<BrainCircuit className="w-5 h-5 text-ocean-accent" />}
+              icon="🧠"
               title="AI Assistants"
               description="Chat with thousands of AI models for free — GPT, Claude, Gemini, and more."
               href="/ai"
+              depth="6000m"
             />
             <FeatureCard
-              icon={<Database className="w-5 h-5 text-ocean-accent" />}
+              icon="💾"
               title="Cloud Storage"
               description="Store files securely using distributed cloud infrastructure."
               href="/storage"
+              depth="8000m"
             />
             <FeatureCard
-              icon={<Cpu className="w-5 h-5 text-ocean-accent" />}
+              icon="📦"
               title="App Library"
               description="Upload APKs and EXEs — the platform decodes and runs them through dedicated compilers."
               href="/library"
+              depth="10994m"
             />
           </div>
         </div>
       </section>
 
-      {/* Architecture callout */}
-      <section className="px-6 py-16 border-y border-ocean-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Architecture Pipeline */}
+      <section className="px-6 py-16 border-y border-ocean-border relative">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="font-pixel text-lg text-ocean-biolum">
+              ── ARCHITECTURE ──
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <ArchCard
               label="Android Decoder"
               pipeline="APK → DEX → Dalvik → WASM"
@@ -109,8 +135,8 @@ export default function LandingPage() {
       </section>
 
       {/* Stats */}
-      <section className="px-6 py-16">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <section className="px-6 py-16 relative">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <StatItem value="20K+" label="Games" />
           <StatItem value="100%" label="In-Browser" />
           <StatItem value="2" label="Compilers" />
@@ -119,19 +145,27 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="px-6 py-24">
+      <section className="px-6 py-24 relative">
         <div className="max-w-2xl mx-auto text-center space-y-6">
-          <h2 className="text-3xl font-bold tracking-tight">Ready to dive in?</h2>
-          <p className="text-ocean-secondary">
+          <h2 className="font-pixel text-xl md:text-2xl text-ocean-accent retro-glow">
+            READY TO DIVE?
+          </h2>
+          <p className="font-retro text-lg text-ocean-secondary">
             Join thousands of users running native apps on the open web.
           </p>
-          <Link href="/account">
-            <Button variant="primary" className="h-11 px-8 mt-2">
-              Get Started Free
-            </Button>
+          <div className="font-pixel text-[10px] text-ocean-muted opacity-60 py-2">
+            ▼ DESCEND TO 10,994 METERS ▼
+          </div>
+          <Link href="/account" className="retro-btn retro-btn-primary font-pixel text-xs px-10 py-3 inline-block">
+            ▶ GET STARTED FREE
           </Link>
         </div>
       </section>
+
+      {/* Bottom ASCII decoration */}
+      <div className="text-center pb-8 font-pixel text-[8px] text-ocean-muted/40">
+        ～～～～～～～～～～～～～～～～～～～～～～～～
+      </div>
     </div>
   );
 }
@@ -142,30 +176,40 @@ function FeatureCard({
   badge,
   description,
   href,
+  depth,
 }: {
-  icon: React.ReactNode;
+  icon: string;
   title: string;
   badge?: string;
   description: string;
   href: string;
+  depth: string;
 }) {
   return (
     <Link href={href}>
-      <div className="group p-7 rounded-md bg-ocean-card border border-ocean-border hover:border-ocean-border-hover transition-colors duration-150 h-full flex flex-col space-y-3">
+      <div className="group retro-card h-full flex flex-col space-y-3 relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <div className="p-2.5 w-fit rounded-md bg-ocean-accent/8 border border-ocean-accent/10">
-            {icon}
-          </div>
-          {badge && (
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider text-ocean-accent border border-ocean-accent/15 font-medium">
-              {badge}
+          <div className="text-2xl">{icon}</div>
+          <div className="flex items-center gap-2">
+            {badge && (
+              <span className="font-pixel text-[8px] px-2 py-0.5 text-ocean-accent border border-ocean-accent/30 bg-ocean-accent/5">
+                {badge}
+              </span>
+            )}
+            <span className="font-pixel text-[8px] text-ocean-muted">
+              ↓{depth}
             </span>
-          )}
+          </div>
         </div>
-        <h3 className="text-base font-semibold text-ocean-primary">{title}</h3>
-        <p className="text-sm text-ocean-secondary leading-relaxed flex-grow">
+        <h3 className="font-pixel text-xs text-ocean-primary group-hover:text-ocean-accent transition-colors">
+          {title}
+        </h3>
+        <p className="font-mono text-xs text-ocean-secondary leading-relaxed flex-grow">
           {description}
         </p>
+        <div className="font-pixel text-[8px] text-ocean-muted group-hover:text-ocean-accent/60 transition-colors">
+          ▶ EXPLORE
+        </div>
       </div>
     </Link>
   );
@@ -181,21 +225,23 @@ function ArchCard({
   detail: string;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-ocean-muted uppercase tracking-wider">
+    <div className="retro-card space-y-3">
+      <p className="font-pixel text-[10px] text-ocean-accent tracking-wider">
         {label}
       </p>
-      <p className="text-sm font-mono text-ocean-primary">{pipeline}</p>
-      <p className="text-xs text-ocean-secondary leading-relaxed">{detail}</p>
+      <p className="font-mono text-sm text-ocean-biolum">
+        {pipeline}
+      </p>
+      <p className="font-mono text-xs text-ocean-secondary leading-relaxed">{detail}</p>
     </div>
   );
 }
 
 function StatItem({ value, label }: { value: string; label: string }) {
   return (
-    <div className="space-y-1">
-      <div className="text-3xl font-bold text-ocean-primary">{value}</div>
-      <div className="text-ocean-muted uppercase tracking-widest text-xs">{label}</div>
+    <div className="space-y-2">
+      <div className="font-pixel text-2xl md:text-3xl text-ocean-accent retro-glow">{value}</div>
+      <div className="font-pixel text-[10px] text-ocean-muted uppercase tracking-widest">{label}</div>
     </div>
   );
 }

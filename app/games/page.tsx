@@ -146,11 +146,11 @@ export default function GamesPage() {
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
       <div className="space-y-8">
         {/* Header */}
-        <header className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 border-b border-ocean-border pb-6">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Games</h1>
-            <p className="text-sm text-ocean-secondary">
-              {totalGames > 0 ? `${totalGames.toLocaleString()} HTML5 games` : 'Retro & HTML5 gaming library'}
+        <header className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 border-b-2 border-ocean-border pb-6">
+          <div className="space-y-2">
+            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">🎮 GAMES</h1>
+            <p className="font-mono text-sm text-ocean-secondary">
+              {totalGames > 0 ? `${totalGames.toLocaleString()} HTML5 games available` : 'Retro & HTML5 gaming library'}
             </p>
           </div>
           <div className="relative">

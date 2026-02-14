@@ -11,7 +11,7 @@ export function buildSelfExtractingHtml(assets: EmbeddedAssetMap): string {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Bellum MicroVM Export</title>
+  <title>Challenger Deep MicroVM Export</title>
   <style>
     html, body { margin: 0; width: 100%; height: 100%; background: #000; }
     #screen { width: 100%; height: 100%; display: block; }

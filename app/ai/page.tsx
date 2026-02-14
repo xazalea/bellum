@@ -166,9 +166,9 @@ export default function AIPage() {
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-6 py-10">
         {/* Header */}
-        <header className="mb-8 border-b border-ocean-border pb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">AI Chat</h1>
-          <p className="text-sm text-ocean-secondary mt-1">Access thousands of AI models for free</p>
+        <header className="mb-8 border-b-2 border-ocean-border pb-6">
+          <h1 className="font-pixel text-lg text-ocean-accent retro-glow">🧠 AI CHAT</h1>
+          <p className="font-mono text-sm text-ocean-secondary mt-2">Access thousands of AI models for free</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

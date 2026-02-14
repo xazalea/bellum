@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     // Fetch the Widgetbot script from the CDN
     const response = await fetch('https://cdn.jsdelivr.net/npm/@widgetbot/html-embed', {
       headers: {
-        'User-Agent': 'Bellum/1.0',
+        'User-Agent': 'ChallengerDeep/1.0',
       },
     });
 

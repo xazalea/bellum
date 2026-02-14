@@ -48,7 +48,7 @@ async function handleProxy(
 
     // Prepare headers
     const headers: HeadersInit = {
-      'User-Agent': 'Bellum/1.0',
+      'User-Agent': 'ChallengerDeep/1.0',
     };
 
     // Copy relevant headers from the original request

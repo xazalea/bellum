@@ -54,9 +54,9 @@ export default function AccountPage() {
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10">
       <div className="space-y-8">
-        <header className="space-y-1 border-b border-ocean-border pb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Account</h1>
-          <p className="text-sm text-ocean-secondary">View account details.</p>
+        <header className="space-y-2 border-b-2 border-ocean-border pb-6">
+          <h1 className="font-pixel text-lg text-ocean-accent retro-glow">▲ ACCOUNT</h1>
+          <p className="font-mono text-sm text-ocean-secondary">View account details.</p>
         </header>
 
         {error && (
@@ -84,7 +84,7 @@ export default function AccountPage() {
             </div>
 
             <div className="space-y-3 mb-8">
-              <ServiceItem icon="cloud" label="Bellum Storage" detail="4GB free per device" />
+              <ServiceItem icon="cloud" label="Challenger Deep Storage" detail="4GB free per device" />
               <ServiceItem icon="hub" label="Cluster Network" detail="P2P file sharing" />
               <ServiceItem icon="fingerprint" label="Device Fingerprint" detail="Secure identification" />
             </div>

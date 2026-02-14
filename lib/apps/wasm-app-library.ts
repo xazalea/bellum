@@ -496,10 +496,10 @@ export class WASMAppLibrary {
     private async launchTerminal(container: HTMLElement): Promise<void> {
         container.innerHTML = `
             <div style="width: 100%; height: 100%; background: #0c0c0c; color: #00ff00; font-family: 'Courier New', monospace; padding: 16px; overflow-y: auto;">
-                <div>Bellum Terminal v1.0</div>
+                <div>Challenger Deep Terminal v1.0</div>
                 <div>Type 'help' for available commands</div>
                 <div style="margin-top: 16px;">
-                    <span style="color: #00ff00;">user@bellum:~$</span>
+                    <span style="color: #00ff00;">user@challenger-deep:~$</span>
                     <input type="text" style="background: transparent; border: none; outline: none; color: #00ff00; font-family: 'Courier New', monospace; width: 80%;" autofocus>
                 </div>
             </div>

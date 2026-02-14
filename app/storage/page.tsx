@@ -130,9 +130,9 @@ export default function StoragePage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
       <div className="space-y-8">
-        <header className="space-y-1 border-b border-ocean-border pb-6">
-          <h1 className="text-2xl font-semibold text-ocean-primary tracking-tight">Cloud Storage</h1>
-          <p className="text-sm text-ocean-secondary">Secure, distributed file storage.</p>
+        <header className="space-y-2 border-b-2 border-ocean-border pb-6">
+          <h1 className="font-pixel text-lg text-ocean-accent retro-glow">💾 CLOUD STORAGE</h1>
+          <p className="font-mono text-sm text-ocean-secondary">Secure, distributed file storage.</p>
         </header>
 
         {error && (

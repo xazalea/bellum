@@ -3,21 +3,32 @@
 @tailwind utilities;
 
 :root {
-  /* Ocean Dark Theme */
-  --ocean-bg: #0a1118;
-  --ocean-surface: rgba(20, 35, 50, 0.3);
-  --ocean-card: rgba(25, 40, 55, 0.4);
-  --ocean-card-hover: rgba(30, 48, 65, 0.45);
-  --ocean-primary: #f0f4f8;
-  --ocean-text: #d0dae6;
-  --ocean-secondary: #8b9db0;
-  --ocean-muted: #5a6e82;
-  --ocean-border: rgba(100, 150, 180, 0.08);
-  --ocean-border-hover: rgba(100, 150, 180, 0.16);
-  --ocean-accent: #2dd4bf;
-  --ocean-accent-hover: #5eead4;
+  /* Challenger Deep — Retro Ocean Dark Theme */
+  --ocean-bg: #020b18;
+  --ocean-deep: #030d1a;
+  --ocean-surface: rgba(8, 25, 50, 0.6);
+  --ocean-card: rgba(10, 30, 60, 0.5);
+  --ocean-card-hover: rgba(15, 40, 75, 0.55);
+  --ocean-primary: #c0e8ff;
+  --ocean-text: #7bb8d8;
+  --ocean-secondary: #4a8aad;
+  --ocean-muted: #2a5a7a;
+  --ocean-border: rgba(40, 120, 180, 0.15);
+  --ocean-border-hover: rgba(60, 160, 220, 0.25);
+  --ocean-accent: #00ffcc;
+  --ocean-accent-hover: #33ffd6;
+  --ocean-glow: rgba(0, 255, 204, 0.15);
+  --ocean-biolum: #00ccff;
+  --ocean-jellyfish: #ff66cc;
+  --ocean-coral: #ff8844;
+
+  /* Retro CRT phosphor colors */
+  --crt-green: #00ff88;
+  --crt-amber: #ffaa00;
+  --crt-scan: rgba(0, 0, 0, 0.08);
 }
 
+/* ─── Base retro styling ─── */
 html {
   scroll-behavior: smooth;
 }
@@ -26,73 +37,152 @@ body {
   color: var(--ocean-text);
   background: var(--ocean-bg);
   min-height: 100vh;
-  font-family: 'Inter', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: auto;
+  image-rendering: pixelated;
+  position: relative;
 }
 
-/* ─── Custom scrollbar ─── */
+/* ─── CRT Scanline overlay ─── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    var(--crt-scan) 2px,
+    var(--crt-scan) 4px
+  );
+  opacity: 0.4;
+}
+
+/* ─── Pixel grid overlay ─── */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+  background-image:
+    linear-gradient(rgba(0, 40, 80, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 40, 80, 0.03) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* ─── Retro headings with pixel font ─── */
+h1, h2, h3 {
+  font-family: 'Press Start 2P', 'VT323', monospace;
+  text-shadow: 0 0 10px var(--ocean-glow), 0 0 20px rgba(0, 255, 204, 0.08);
+  letter-spacing: 0.05em;
+}
+
+h1 { font-size: 1.5rem; line-height: 2; }
+h2 { font-size: 1.1rem; line-height: 1.8; }
+h3 { font-size: 0.85rem; line-height: 1.6; }
+
+/* ─── Links with retro glow ─── */
+a {
+  color: var(--ocean-accent);
+  text-decoration: none;
+  transition: text-shadow 0.2s ease;
+}
+
+a:hover {
+  text-shadow: 0 0 8px var(--ocean-glow);
+}
+
+/* ─── Custom scrollbar — retro ─── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--ocean-deep);
+  border-left: 1px solid var(--ocean-border);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 150, 180, 0.12);
-  border-radius: 3px;
+  background: var(--ocean-muted);
+  border: 1px solid var(--ocean-border);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 150, 180, 0.22);
+  background: var(--ocean-secondary);
 }
 
-/* ─── Clean flat components ─── */
+/* ─── Ocean card with retro pixel border ─── */
 .ocean-card {
   background: var(--ocean-card);
-  border: 1px solid var(--ocean-border);
-  border-radius: 0.5rem;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  border: 2px solid var(--ocean-border);
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 30px rgba(0, 40, 80, 0.3),
+    0 0 15px rgba(0, 100, 180, 0.05);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
 }
 
 .ocean-card:hover {
   background: var(--ocean-card-hover);
   border-color: var(--ocean-border-hover);
+  box-shadow:
+    inset 0 0 30px rgba(0, 60, 120, 0.3),
+    0 0 20px rgba(0, 255, 204, 0.05);
 }
 
+/* ─── Retro button ─── */
 .ocean-btn {
-  background: rgba(45, 212, 191, 0.08);
-  border: 1px solid rgba(45, 212, 191, 0.15);
-  color: var(--ocean-primary);
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  background: rgba(0, 255, 204, 0.08);
+  border: 2px solid rgba(0, 255, 204, 0.3);
+  color: var(--ocean-accent);
+  padding: 0.5rem 1.25rem;
+  border-radius: 0;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-shadow: 0 0 6px var(--ocean-glow);
 }
 
 .ocean-btn:hover {
-  background: rgba(45, 212, 191, 0.12);
-  border-color: rgba(45, 212, 191, 0.25);
+  background: rgba(0, 255, 204, 0.15);
+  border-color: rgba(0, 255, 204, 0.5);
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.1), inset 0 0 15px rgba(0, 255, 204, 0.05);
 }
 
 .ocean-btn:active {
-  background: rgba(45, 212, 191, 0.16);
+  background: rgba(0, 255, 204, 0.2);
+  transform: scale(0.98);
 }
 
+/* ─── Retro input ─── */
 .ocean-input {
-  background: rgba(15, 25, 38, 0.4);
-  border: 1px solid var(--ocean-border);
-  border-radius: 0.375rem;
+  background: rgba(2, 11, 24, 0.8);
+  border: 2px solid var(--ocean-border);
+  border-radius: 0;
   color: var(--ocean-primary);
   padding: 0.625rem 0.875rem;
   width: 100%;
+  font-family: 'Share Tech Mono', monospace;
   font-size: 0.875rem;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .ocean-input:focus {
   outline: none;
   border-color: var(--ocean-accent);
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.1), inset 0 0 10px rgba(0, 255, 204, 0.03);
 }
 
 .ocean-input::placeholder {
@@ -105,54 +195,67 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.6875rem;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: 'Share Tech Mono', monospace;
   color: var(--ocean-muted);
   padding: 0.375rem 0.625rem;
-  border-radius: 0.25rem;
-  background: rgba(15, 25, 38, 0.3);
+  border-radius: 0;
+  background: rgba(2, 11, 24, 0.5);
   border: 1px solid transparent;
   transition: all 0.2s ease;
 }
 
 .pipeline-stage.active {
   color: var(--ocean-accent);
-  border-color: rgba(45, 212, 191, 0.15);
-  background: rgba(45, 212, 191, 0.06);
+  border-color: rgba(0, 255, 204, 0.25);
+  background: rgba(0, 255, 204, 0.06);
 }
 
 .pipeline-stage.complete {
-  color: #34d399;
-  border-color: rgba(52, 211, 153, 0.12);
-  background: rgba(52, 211, 153, 0.04);
+  color: var(--crt-green);
+  border-color: rgba(0, 255, 136, 0.2);
+  background: rgba(0, 255, 136, 0.04);
 }
 
 .pipeline-stage.error {
-  color: #fb7185;
-  border-color: rgba(251, 113, 133, 0.12);
-  background: rgba(251, 113, 133, 0.04);
+  color: #ff4466;
+  border-color: rgba(255, 68, 102, 0.2);
+  background: rgba(255, 68, 102, 0.04);
 }
 
 .pipeline-connector {
   width: 1.25rem;
-  height: 1px;
+  height: 2px;
   background: var(--ocean-border);
   flex-shrink: 0;
 }
 
 .pipeline-connector.active {
-  background: rgba(45, 212, 191, 0.3);
+  background: rgba(0, 255, 204, 0.4);
+  box-shadow: 0 0 4px rgba(0, 255, 204, 0.2);
 }
 
-/* ─── Log panel styling ─── */
+/* ─── Log panel ─── */
 .log-panel {
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 0.6875rem;
+  font-family: 'Share Tech Mono', 'VT323', monospace;
+  font-size: 0.75rem;
   line-height: 1.6;
 }
 
 .log-panel .log-line {
   padding: 1px 0;
   word-break: break-all;
+}
+
+/* ─── Retro blink cursor ─── */
+@keyframes retroBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.retro-cursor::after {
+  content: '█';
+  animation: retroBlink 0.8s step-end infinite;
+  color: var(--ocean-accent);
 }
 
 /* ─── Dot pulse animation ─── */
@@ -165,64 +268,235 @@ body {
   animation: dotPulse 1.5s ease-in-out infinite;
 }
 
+/* ─── Bioluminescence glow pulse ─── */
+@keyframes bioGlow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(0, 255, 204, 0.1), 0 0 10px rgba(0, 200, 255, 0.05);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.2), 0 0 30px rgba(0, 200, 255, 0.1);
+  }
+}
+
+.bio-glow {
+  animation: bioGlow 3s ease-in-out infinite;
+}
+
+/* ─── Underwater shimmer ─── */
+@keyframes underwaterShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.shimmer-bg {
+  background: linear-gradient(
+    135deg,
+    var(--ocean-bg) 0%,
+    rgba(0, 40, 80, 0.3) 25%,
+    var(--ocean-bg) 50%,
+    rgba(0, 60, 100, 0.2) 75%,
+    var(--ocean-bg) 100%
+  );
+  background-size: 400% 400%;
+  animation: underwaterShimmer 15s ease-in-out infinite;
+}
+
+/* ─── Retro text effects ─── */
+.retro-title {
+  font-family: 'Press Start 2P', monospace;
+  color: var(--ocean-accent);
+  text-shadow:
+    0 0 7px var(--ocean-glow),
+    0 0 20px rgba(0, 255, 204, 0.15),
+    2px 2px 0 rgba(0, 40, 80, 0.8);
+}
+
+.retro-subtitle {
+  font-family: 'VT323', monospace;
+  color: var(--ocean-biolum);
+  font-size: 1.25rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* ─── Depth layers for parallax ─── */
+.depth-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.depth-layer-1 {
+  background: radial-gradient(ellipse at 30% 80%, rgba(0, 60, 120, 0.08) 0%, transparent 60%);
+}
+
+.depth-layer-2 {
+  background: radial-gradient(ellipse at 70% 20%, rgba(0, 40, 100, 0.06) 0%, transparent 50%);
+}
+
 /* Material Symbols override */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined', sans-serif !important;
 }
 
+/* ─── Retro card ─── */
+.retro-card {
+  background: var(--ocean-card);
+  border: 2px solid var(--ocean-border);
+  border-radius: 0;
+  padding: 1.5rem;
+  box-shadow:
+    inset 0 0 30px rgba(0, 40, 80, 0.3),
+    0 0 15px rgba(0, 100, 180, 0.05);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.retro-card:hover {
+  background: var(--ocean-card-hover);
+  border-color: var(--ocean-border-hover);
+  box-shadow:
+    inset 0 0 30px rgba(0, 60, 120, 0.3),
+    0 0 20px rgba(0, 255, 204, 0.05);
+}
+
+/* ─── Retro glow text ─── */
+.retro-glow {
+  text-shadow:
+    0 0 7px var(--ocean-glow),
+    0 0 20px rgba(0, 255, 204, 0.15),
+    0 0 40px rgba(0, 255, 204, 0.05);
+}
+
+/* ─── Retro CRT scanlines ─── */
+.crt-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+}
+
+/* ─── Retro button variants ─── */
+.retro-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ocean-border);
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  color: var(--ocean-primary);
+}
+
+.retro-btn:hover {
+  text-decoration: none;
+}
+
+.retro-btn-primary {
+  background: rgba(0, 255, 204, 0.1);
+  border-color: rgba(0, 255, 204, 0.4);
+  color: var(--ocean-accent);
+  text-shadow: 0 0 6px var(--ocean-glow);
+}
+
+.retro-btn-primary:hover {
+  background: rgba(0, 255, 204, 0.2);
+  border-color: rgba(0, 255, 204, 0.6);
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.15), inset 0 0 15px rgba(0, 255, 204, 0.05);
+}
+
+.retro-btn-outline {
+  background: transparent;
+  border-color: var(--ocean-border-hover);
+  color: var(--ocean-text);
+}
+
+.retro-btn-outline:hover {
+  background: rgba(0, 100, 180, 0.1);
+  border-color: var(--ocean-biolum);
+  color: var(--ocean-biolum);
+  box-shadow: 0 0 10px rgba(0, 200, 255, 0.1);
+}
+
+/* ─── Retro border style utility ─── */
+.retro-border {
+  border: 2px solid var(--ocean-border);
+  box-shadow: 
+    inset 1px 1px 0 rgba(100, 180, 255, 0.05),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Deep ocean gradient background ─── */
+.deep-ocean-bg {
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(0, 40, 100, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 30%, rgba(0, 60, 120, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(0, 30, 80, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, #020b18 0%, #041428 30%, #030d1a 60%, #020818 100%);
+}
+
 @layer base {
   :root {
-    --background: 210 40% 7%;
-    --foreground: 210 40% 96%;
-    --card: 210 35% 9%;
-    --card-foreground: 210 40% 96%;
-    --popover: 210 35% 9%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 168 76% 50%;
-    --primary-foreground: 210 40% 7%;
-    --secondary: 210 25% 18%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 210 25% 18%;
-    --muted-foreground: 210 15% 55%;
-    --accent: 168 76% 50%;
-    --accent-foreground: 210 40% 7%;
+    --background: 215 80% 5%;
+    --foreground: 200 60% 85%;
+    --card: 215 60% 8%;
+    --card-foreground: 200 60% 85%;
+    --popover: 215 60% 8%;
+    --popover-foreground: 200 60% 85%;
+    --primary: 166 100% 50%;
+    --primary-foreground: 215 80% 5%;
+    --secondary: 210 40% 15%;
+    --secondary-foreground: 200 60% 85%;
+    --muted: 210 40% 15%;
+    --muted-foreground: 200 20% 45%;
+    --accent: 166 100% 50%;
+    --accent-foreground: 215 80% 5%;
     --destructive: 0 62.8% 50%;
-    --destructive-foreground: 210 40% 96%;
-    --border: 210 25% 18%;
-    --input: 210 25% 18%;
-    --ring: 168 76% 50%;
-    --chart-1: 168 76% 50%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.375rem;
+    --destructive-foreground: 200 60% 85%;
+    --border: 210 40% 15%;
+    --input: 210 40% 15%;
+    --ring: 166 100% 50%;
+    --chart-1: 166 100% 50%;
+    --chart-2: 190 80% 45%;
+    --chart-3: 215 50% 30%;
+    --chart-4: 30 80% 55%;
+    --chart-5: 330 70% 60%;
+    --radius: 0px;
   }
   .dark {
-    --background: 210 40% 7%;
-    --foreground: 210 40% 96%;
-    --card: 210 35% 9%;
-    --card-foreground: 210 40% 96%;
-    --popover: 210 35% 9%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 168 76% 50%;
-    --primary-foreground: 210 40% 7%;
-    --secondary: 210 25% 18%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 210 25% 18%;
-    --muted-foreground: 210 15% 55%;
-    --accent: 168 76% 50%;
-    --accent-foreground: 210 40% 7%;
+    --background: 215 80% 5%;
+    --foreground: 200 60% 85%;
+    --card: 215 60% 8%;
+    --card-foreground: 200 60% 85%;
+    --popover: 215 60% 8%;
+    --popover-foreground: 200 60% 85%;
+    --primary: 166 100% 50%;
+    --primary-foreground: 215 80% 5%;
+    --secondary: 210 40% 15%;
+    --secondary-foreground: 200 60% 85%;
+    --muted: 210 40% 15%;
+    --muted-foreground: 200 20% 45%;
+    --accent: 166 100% 50%;
+    --accent-foreground: 215 80% 5%;
     --destructive: 0 62.8% 50%;
-    --destructive-foreground: 210 40% 96%;
-    --border: 210 25% 18%;
-    --input: 210 25% 18%;
-    --ring: 168 76% 50%;
-    --chart-1: 168 76% 50%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --destructive-foreground: 200 60% 85%;
+    --border: 210 40% 15%;
+    --input: 210 40% 15%;
+    --ring: 166 100% 50%;
+    --chart-1: 166 100% 50%;
+    --chart-2: 190 80% 45%;
+    --chart-3: 215 50% 30%;
+    --chart-4: 30 80% 55%;
+    --chart-5: 330 70% 60%;
   }
 }
 

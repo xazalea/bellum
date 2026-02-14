@@ -23,7 +23,7 @@ export interface PrefetchTarget {
 }
 
 /**
- * ForesightJS Manager for Bellum
+ * ForesightJS Manager for Challenger Deep
  * Handles intelligent prefetching across the entire site
  */
 class ForesightManager {

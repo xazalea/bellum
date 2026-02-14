@@ -11,7 +11,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'ocean-card p-6 text-ocean-text',
+          'retro-card text-ocean-text',
           variant === 'hover' && 'hover:bg-ocean-card-hover transition-colors duration-150',
           variant === 'magic' && 'hover:bg-ocean-card-hover transition-colors duration-150',
           className

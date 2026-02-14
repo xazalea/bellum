@@ -8,11 +8,11 @@ import { Laptop, Smartphone, Cpu } from 'lucide-react';
 export default function VirtualMachinesPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
-      <header className="space-y-1 border-b border-ocean-border pb-6 mb-10">
-        <h1 className="text-2xl font-semibold text-ocean-primary tracking-tight">
-          Virtual Machines
+      <header className="space-y-2 border-b-2 border-ocean-border pb-6 mb-10">
+        <h1 className="font-pixel text-lg text-ocean-accent retro-glow">
+          ◈ VIRTUAL MACHINES
         </h1>
-        <p className="text-sm text-ocean-secondary">
+        <p className="font-mono text-sm text-ocean-secondary">
           Drop an APK or EXE — each file is decoded and run through its own compiler stack.
         </p>
       </header>

@@ -143,15 +143,15 @@ export default function WindowsPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
       {/* Header */}
-      <div className="flex items-end justify-between gap-6 border-b border-ocean-border pb-6">
-        <div className="space-y-1">
+      <div className="flex items-end justify-between gap-6 border-b-2 border-ocean-border pb-6">
+        <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-ocean-primary">Windows</h1>
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider text-blue-400 border border-blue-500/15">
-              NTR Engine
+            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">💻 WINDOWS</h1>
+            <span className="font-pixel text-[8px] px-2 py-1 text-blue-400 border-2 border-blue-500/25 bg-blue-500/5">
+              NTR ENGINE
             </span>
           </div>
-          <p className="text-sm text-ocean-secondary">
+          <p className="font-mono text-sm text-ocean-secondary">
             Drop an EXE to decode and run it with the Win32 emulation layer.
           </p>
         </div>

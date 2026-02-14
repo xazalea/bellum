@@ -13,14 +13,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       console.warn("Button: asChild prop is not supported without @radix-ui/react-slot");
     }
     
-    const baseStyles = 'inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-40 transition-colors duration-150';
+    const baseStyles = 'inline-flex items-center justify-center whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-40 transition-all duration-150 font-mono';
     
     const variantStyles = {
       default: 'ocean-btn',
-      primary: 'rounded-md bg-ocean-accent/90 hover:bg-ocean-accent text-ocean-bg px-5 py-2.5 font-medium',
-      shimmer: 'rounded-md bg-ocean-accent/90 hover:bg-ocean-accent text-ocean-bg px-5 py-2.5 font-medium',
-      outline: 'border border-ocean-border hover:border-ocean-border-hover bg-transparent text-ocean-primary rounded-md px-5 py-2.5',
-      ghost: 'text-ocean-secondary hover:text-ocean-primary rounded-md px-4 py-2',
+      primary: 'bg-ocean-accent/10 border-2 border-ocean-accent/40 text-ocean-accent px-5 py-2.5 font-pixel text-[10px] uppercase tracking-wider hover:bg-ocean-accent/20 hover:border-ocean-accent/60 hover:shadow-[0_0_15px_rgba(0,255,204,0.15)]',
+      shimmer: 'bg-ocean-accent/10 border-2 border-ocean-accent/40 text-ocean-accent px-5 py-2.5 font-pixel text-[10px] uppercase tracking-wider hover:bg-ocean-accent/20 hover:border-ocean-accent/60',
+      outline: 'border-2 border-ocean-border-hover bg-transparent text-ocean-text px-5 py-2.5 hover:border-ocean-biolum hover:text-ocean-biolum hover:bg-ocean-biolum/5',
+      ghost: 'text-ocean-secondary hover:text-ocean-primary px-4 py-2 hover:bg-ocean-surface',
     };
     
     return (

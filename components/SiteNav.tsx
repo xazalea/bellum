@@ -20,7 +20,7 @@ export function SiteNav() {
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md bg-ocean-accent/15 border border-ocean-accent/20" />
-          <span className="text-sm font-semibold text-ocean-primary tracking-tight">Bellum</span>
+          <span className="text-sm font-semibold text-ocean-primary tracking-tight">Challenger Deep</span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-1">

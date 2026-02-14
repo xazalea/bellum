@@ -1,22 +1,14 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { ClientInit } from '@/components/ClientInit';
-import { AppHeader } from '@/components/shell/AppHeader';
 import { SiteFooter } from '@/components/SiteFooter';
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-  adjustFontFallback: true,
-});
+import DynamicIsland from '@/components/DynamicIsland';
+import OceanCreatures from '@/components/OceanCreatures';
 
 export const metadata: Metadata = {
-  title: 'Bellum',
-  description: 'Run Android, Windows, games, and apps directly in your browser.',
-  keywords: ['bellum', 'android in browser', 'windows in browser', 'html games', 'cloud storage'],
+  title: 'Challenger Deep',
+  description: 'Explore the abyss. Run Android, Windows, games, and apps directly in your browser.',
+  keywords: ['challenger deep', 'android in browser', 'windows in browser', 'html games', 'cloud storage', 'retro'],
   icons: {
     icon: [{ url: '/icon', type: 'image/png' }],
     shortcut: [{ url: '/icon' }],
@@ -28,7 +20,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#0a1118',
+  themeColor: '#020b18',
 };
 
 export default function RootLayout({
@@ -37,21 +29,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`dark ${inter.variable}`}>
+    <html lang="en" className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap"
+        />
+        <link
+          rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
       </head>
-      <body className="min-h-screen w-full bg-ocean-bg text-ocean-primary font-sans antialiased">
-        <div className="flex flex-col min-h-screen w-full">
-          <AppHeader />
-          <main className="flex-grow pt-16">{children}</main>
+      <body className="min-h-screen w-full deep-ocean-bg text-ocean-primary font-mono">
+        {/* Deep ocean background layers */}
+        <div className="depth-layer depth-layer-1" />
+        <div className="depth-layer depth-layer-2" />
+        
+        {/* Animated sea creatures */}
+        <OceanCreatures />
+        
+        {/* Dynamic Island Navigation */}
+        <DynamicIsland />
+        
+        {/* Main content */}
+        <div className="relative flex flex-col min-h-screen w-full" style={{ zIndex: 2 }}>
+          <main className="flex-grow pt-20">{children}</main>
           <SiteFooter />
         </div>
+        
         <ClientInit />
       </body>
     </html>

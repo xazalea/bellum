@@ -41,7 +41,7 @@ export function ModelSelector({
   return (
     <Card className="p-4 space-y-3">
       <div>
-        <label className="block text-xs font-medium text-ocean-muted uppercase tracking-wider mb-2">
+        <label className="block font-pixel text-[8px] text-ocean-muted uppercase tracking-wider mb-2">
           Provider
         </label>
         <select
@@ -63,7 +63,7 @@ export function ModelSelector({
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-ocean-muted uppercase tracking-wider mb-2">
+        <label className="block font-pixel text-[8px] text-ocean-muted uppercase tracking-wider mb-2">
           Model
         </label>
         <select
@@ -84,7 +84,7 @@ export function ModelSelector({
         </select>
       </div>
 
-      <div className="text-xs text-ocean-muted pt-2 border-t border-ocean-border">
+      <div className="font-mono text-xs text-ocean-muted pt-2 border-t-2 border-ocean-border">
         <p>{selectedSite} · {selectedModel}</p>
       </div>
     </Card>

@@ -1,123 +1,173 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { name: 'Home', href: '/' },
-  { name: 'Virtual Machines', href: '/virtual-machines' },
-  { name: 'Cluster', href: '/cluster' },
-  { name: 'Library', href: '/library' },
-  { name: 'Storage', href: '/storage' },
-  { name: 'Games', href: '/games' },
-  { name: 'Account', href: '/account' },
+  { href: '/', label: 'Home', icon: '⌂' },
+  { href: '/virtual-machines', label: 'VMs', icon: '◈' },
+  { href: '/games', label: 'Games', icon: '◆' },
+  { href: '/library', label: 'Library', icon: '▤' },
+  { href: '/storage', label: 'Storage', icon: '▣' },
+  { href: '/cluster', label: 'Cluster', icon: '◎' },
+  { href: '/ai', label: 'AI', icon: '◇' },
+  { href: '/account', label: 'Account', icon: '▲' },
 ];
 
-export function DynamicIsland() {
+export default function DynamicIsland() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [hasMoved, setHasMoved] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const islandRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
-  const resetTimer = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      setIsExpanded(false);
-    }, 3000);
-  };
+  // Center the island on mount
+  useEffect(() => {
+    const centerX = (window.innerWidth / 2) - (isExpanded ? 200 : 24);
+    setPosition({ x: centerX, y: 8 });
+  }, []);
 
-  const handleInteraction = () => {
-    setIsExpanded(true);
-    resetTimer();
-  };
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    setIsDragging(true);
+    setHasMoved(false);
+    dragStart.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [position]);
 
-  // Keep expanded if current page is not home, or initially?
-  // User asked for "dynamic island that moves and shrinks if not in use"
-  // So standard behavior is collapsed -> expand on interaction -> collapse after delay
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging) return;
+    
+    const newX = e.clientX - dragStart.current.x;
+    const newY = e.clientY - dragStart.current.y;
+    
+    // Constrain to top bar area
+    const maxX = window.innerWidth - (isExpanded ? 400 : 48);
+    const maxY = 60;
+    
+    setPosition({
+      x: Math.max(0, Math.min(newX, maxX)),
+      y: Math.max(0, Math.min(newY, maxY)),
+    });
+    setHasMoved(true);
+  }, [isDragging, isExpanded]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    setIsDragging(false);
+    if (!hasMoved) {
+      setIsExpanded(prev => !prev);
+    }
+  }, [hasMoved]);
+
+  // Close on navigation
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [pathname]);
+
+  // Close on escape
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsExpanded(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   return (
-    <div className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
-      <motion.div
-        className={cn(
-          "pointer-events-auto backdrop-blur-xl overflow-hidden",
-          "transition-all duration-300"
-        )}
-        initial={false}
-        animate={{
-          width: isExpanded ? 600 : 200,
-          height: isExpanded ? 'auto' : 44,
-          borderRadius: 22,
-        }}
-        onMouseEnter={handleInteraction}
-        onMouseMove={resetTimer}
-        onMouseLeave={() => {
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          timeoutRef.current = setTimeout(() => setIsExpanded(false), 800);
-        }}
-        style={{
-          background: 'rgba(8, 12, 18, 0.85)',
-          border: '1.5px solid rgba(26, 36, 50, 0.6)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(100, 116, 139, 0.1)',
-        }}
-      >
-        <div className="flex flex-col w-full">
-          {/* Header / Collapsed State */}
-          <div 
-            className="flex items-center justify-between px-5 h-11 w-full cursor-pointer group"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            <span className="font-sans font-bold text-xs text-[#A0B3CC] tracking-wider whitespace-nowrap transition-colors group-hover:text-[#94A3B8]">
-              challenger deep.
-            </span>
-            <div className="flex space-x-1.5">
-              <div className={cn(
-                "w-1 h-1 rounded-full bg-[#2A3648] animate-pulse transition-all duration-300",
-                isExpanded && "bg-[#64748B] shadow-[0_0_4px_rgba(100,116,139,0.6)]"
-              )} />
-              <div className={cn(
-                "w-1 h-1 rounded-full bg-[#2A3648] animate-pulse delay-75 transition-all duration-300",
-                isExpanded && "bg-[#64748B] shadow-[0_0_4px_rgba(100,116,139,0.6)]"
-              )} />
-              <div className={cn(
-                "w-1 h-1 rounded-full bg-[#2A3648] animate-pulse delay-150 transition-all duration-300",
-                isExpanded && "bg-[#64748B] shadow-[0_0_4px_rgba(100,116,139,0.6)]"
-              )} />
+    <div
+      ref={islandRef}
+      className="fixed z-50 select-none"
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        cursor: isDragging ? 'grabbing' : 'grab',
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
+      {/* Collapsed: Circle */}
+      {!isExpanded && (
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center
+            bg-[#0a1a2e] border-2 border-ocean-accent/30
+            shadow-[0_0_15px_rgba(0,255,204,0.15),inset_0_0_10px_rgba(0,255,204,0.05)]
+            hover:border-ocean-accent/50 hover:shadow-[0_0_20px_rgba(0,255,204,0.25)]
+            transition-all duration-300"
+          title="Click to expand · Drag to move"
+        >
+          <span className="text-ocean-accent text-lg font-pixel leading-none select-none">
+            ◈
+          </span>
+        </div>
+      )}
+
+      {/* Expanded: Navigation Island */}
+      {isExpanded && (
+        <div
+          className="rounded-2xl overflow-hidden
+            bg-[#060e1c]/95 border-2 border-ocean-accent/25 backdrop-blur-md
+            shadow-[0_0_30px_rgba(0,255,204,0.12),0_4px_20px_rgba(0,0,0,0.5)]"
+          style={{ minWidth: '380px' }}
+        >
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-ocean-accent/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-ocean-accent text-xs">◈</span>
+              <span className="font-pixel text-[8px] text-ocean-accent tracking-widest uppercase">
+                Challenger Deep
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-ocean-accent/40 animate-pulse" />
+              <span className="text-[9px] text-ocean-muted font-mono">ONLINE</span>
             </div>
           </div>
 
-          {/* Expanded Content */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="grid grid-cols-3 gap-2 p-4 pt-2"
-              >
-                {NAV_ITEMS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center justify-center p-2.5 text-sm font-sans rounded-lg transition-all duration-200",
-                      "border border-transparent",
-                      pathname === item.href 
-                        ? "text-[#A0B3CC] bg-[#1E2A3A] border-[#2A3648] shadow-inner" 
-                        : "text-[#64748B] hover:text-[#8B9DB8] hover:bg-[#0C1016] hover:border-[#1E2A3A]"
-                    )}
-                    onClick={() => setIsExpanded(false)}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Navigation Grid */}
+          <div className="p-3 grid grid-cols-4 gap-1.5">
+            {NAV_ITEMS.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg transition-all duration-200
+                    ${active
+                      ? 'bg-ocean-accent/15 border border-ocean-accent/30 shadow-[0_0_10px_rgba(0,255,204,0.08)]'
+                      : 'hover:bg-ocean-accent/8 border border-transparent hover:border-ocean-accent/15'
+                    }`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className={`text-lg leading-none ${active ? 'text-ocean-accent' : 'text-ocean-muted'}`}>
+                    {item.icon}
+                  </span>
+                  <span className={`font-pixel text-[7px] tracking-wider uppercase
+                    ${active ? 'text-ocean-accent' : 'text-ocean-secondary'}`}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Status Bar */}
+          <div className="px-4 py-2 border-t border-ocean-accent/10 flex items-center justify-between">
+            <span className="text-[9px] text-ocean-muted font-mono">
+              DEPTH: 10,994m
+            </span>
+            <span className="text-[9px] text-ocean-muted font-mono">
+              {new Date().toLocaleTimeString('en-US', { hour12: false })}
+            </span>
+          </div>
         </div>
-      </motion.div>
+      )}
     </div>
   );
 }
