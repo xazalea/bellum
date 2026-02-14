@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: '⌂' },
-  { href: '/virtual-machines', label: 'VMs', icon: '◈' },
+  { href: '/virtual-machines', label: 'OS', icon: '◈' },
   { href: '/games', label: 'Games', icon: '◆' },
   { href: '/library', label: 'Library', icon: '▤' },
   { href: '/storage', label: 'Storage', icon: '▣' },
@@ -24,10 +24,16 @@ export default function DynamicIsland() {
   const islandRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
-  // Center the island on mount
+  // Center the island on mount + handle resize
   useEffect(() => {
-    const centerX = (window.innerWidth / 2) - (isExpanded ? 200 : 24);
-    setPosition({ x: centerX, y: 8 });
+    const update = () => {
+      const centerX = (window.innerWidth / 2) - (isExpanded ? 190 : 24);
+      setPosition({ x: Math.max(4, centerX), y: 8 });
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -47,7 +53,8 @@ export default function DynamicIsland() {
     const newY = e.clientY - dragStart.current.y;
     
     // Constrain to top bar area
-    const maxX = window.innerWidth - (isExpanded ? 400 : 48);
+    const islandWidth = isExpanded ? Math.min(380, window.innerWidth - 16) : 48;
+    const maxX = window.innerWidth - islandWidth;
     const maxY = 60;
     
     setPosition({
@@ -78,12 +85,17 @@ export default function DynamicIsland() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
+  // On small screens, center the expanded island
+  const effectiveX = isExpanded && typeof window !== 'undefined' && window.innerWidth < 640
+    ? Math.max(4, (window.innerWidth - Math.min(380, window.innerWidth - 16)) / 2)
+    : position.x;
+
   return (
     <div
       ref={islandRef}
       className="fixed z-50 select-none"
       style={{
-        left: `${position.x}px`,
+        left: `${effectiveX}px`,
         top: `${position.y}px`,
         transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         cursor: isDragging ? 'grabbing' : 'grab',
@@ -112,9 +124,10 @@ export default function DynamicIsland() {
       {isExpanded && (
         <div
           className="rounded-2xl overflow-hidden
-            bg-[#060e1c]/95 border-2 border-ocean-accent/25 backdrop-blur-md
-            shadow-[0_0_30px_rgba(0,255,204,0.12),0_4px_20px_rgba(0,0,0,0.5)]"
-          style={{ minWidth: '380px' }}
+            bg-[#060e1c]/95 border border-ocean-accent/20 backdrop-blur-md
+            shadow-[0_0_20px_rgba(0,255,204,0.08),0_4px_16px_rgba(0,0,0,0.4)]
+            w-[calc(100vw-16px)] sm:w-auto"
+          style={{ minWidth: 'min(380px, calc(100vw - 16px))' }}
         >
           {/* Header */}
           <div className="px-4 py-3 border-b border-ocean-accent/10 flex items-center justify-between">

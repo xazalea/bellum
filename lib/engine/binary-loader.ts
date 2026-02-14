@@ -16,7 +16,7 @@ import { DEXParser, DEXFile, DalvikClass } from '../transpiler/dex_parser';
 // Types
 // ============================================================================
 
-export type FileType = 'PE' | 'DEX' | 'ELF' | 'UNKNOWN';
+export type FileType = 'PE' | 'DEX' | 'ELF' | 'APK' | 'UNKNOWN';
 
 export interface LoadedBinary {
   type: FileType;
@@ -88,11 +88,13 @@ export class BinaryLoader {
       parser.resolveImports(loaded, parsed as PEFile);
       
       console.log(`[BinaryLoader] PE loaded at 0x${baseAddress.toString(16)}, entry: 0x${loaded.entryPoint.toString(16)}`);
-    } else if (type === 'DEX') {
-      const parser = new DEXParser(data);
+    } else if (type === 'DEX' || type === 'APK') {
+      // APK files are ZIP containers; extract classes.dex or parse directly
+      const dexData = type === 'APK' ? await this.extractDexFromApk(data) : data;
+      const parser = new DEXParser(dexData);
       parsed = parser.parse();
       
-      console.log(`[BinaryLoader] DEX parsed: ${(parsed as DEXFile).classes.size} classes`);
+      console.log(`[BinaryLoader] ${type} → DEX parsed: ${(parsed as DEXFile).classes.size} classes`);
     } else {
       throw new Error(`Unsupported file type: ${type}`);
     }
@@ -147,6 +149,88 @@ export class BinaryLoader {
   }
 
   /**
+   * Extract classes.dex from an APK (ZIP) archive.
+   * Uses a lightweight ZIP central-directory scan.
+   */
+  private async extractDexFromApk(apkBuffer: ArrayBuffer): Promise<ArrayBuffer> {
+    const data = new Uint8Array(apkBuffer);
+
+    // Search for the local file header of classes.dex inside the ZIP.
+    // ZIP local file header signature: PK\x03\x04
+    // We look for a file named "classes.dex".
+    const targetName = 'classes.dex';
+    const targetBytes = new TextEncoder().encode(targetName);
+
+    for (let i = 0; i < data.length - 30; i++) {
+      // Local file header signature
+      if (data[i] === 0x50 && data[i + 1] === 0x4B &&
+          data[i + 2] === 0x03 && data[i + 3] === 0x04) {
+        const nameLen = data[i + 26] | (data[i + 27] << 8);
+        const extraLen = data[i + 28] | (data[i + 29] << 8);
+
+        if (nameLen === targetBytes.length) {
+          const nameStart = i + 30;
+          let match = true;
+          for (let j = 0; j < targetBytes.length; j++) {
+            if (data[nameStart + j] !== targetBytes[j]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            // Compression method: 0 = stored, 8 = deflate
+            const compressionMethod = data[i + 8] | (data[i + 9] << 8);
+            const compressedSize = data[i + 18] | (data[i + 19] << 8) |
+                                   (data[i + 20] << 16) | (data[i + 21] << 24);
+            const uncompressedSize = data[i + 22] | (data[i + 23] << 8) |
+                                     (data[i + 24] << 16) | (data[i + 25] << 24);
+
+            const fileDataStart = nameStart + nameLen + extraLen;
+
+            if (compressionMethod === 0) {
+              // Stored – return raw slice
+              return apkBuffer.slice(fileDataStart, fileDataStart + uncompressedSize);
+            } else {
+              // Deflate – use DecompressionStream if available
+              const compressed = data.slice(fileDataStart, fileDataStart + compressedSize);
+              try {
+                const ds = new DecompressionStream('deflate-raw');
+                const writer = ds.writable.getWriter();
+                writer.write(compressed);
+                writer.close();
+                const reader = ds.readable.getReader();
+                const chunks: Uint8Array[] = [];
+                let totalLen = 0;
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  chunks.push(value);
+                  totalLen += value.byteLength;
+                }
+                const result = new Uint8Array(totalLen);
+                let offset = 0;
+                for (const chunk of chunks) {
+                  result.set(chunk, offset);
+                  offset += chunk.byteLength;
+                }
+                return result.buffer;
+              } catch {
+                console.warn('[BinaryLoader] Deflate decompression failed, returning raw data');
+                return apkBuffer.slice(fileDataStart, fileDataStart + compressedSize);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // If no classes.dex found, return the raw buffer and let the DEX parser handle the error
+    console.warn('[BinaryLoader] classes.dex not found in APK, passing raw buffer');
+    return apkBuffer;
+  }
+
+  /**
    * Detect file type from magic bytes
    */
   detectFileType(buffer: ArrayBuffer): FileType {
@@ -162,6 +246,14 @@ export class BinaryLoader {
         data[0] === 0x64 && data[1] === 0x65 && 
         data[2] === 0x78 && data[3] === 0x0A) {
       return 'DEX';
+    }
+
+    // Check ZIP/APK (PK\x03\x04)
+    // APK files are ZIP archives containing classes.dex
+    if (data.length >= 4 &&
+        data[0] === 0x50 && data[1] === 0x4B &&
+        data[2] === 0x03 && data[3] === 0x04) {
+      return 'APK';
     }
 
     // Check ELF (0x7F, 'E', 'L', 'F')

@@ -146,13 +146,13 @@ export default function WindowsPage() {
       <div className="flex items-end justify-between gap-6 border-b-2 border-ocean-border pb-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">💻 WINDOWS</h1>
+            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">💻 WINDOWS DECODER</h1>
             <span className="font-pixel text-[8px] px-2 py-1 text-blue-400 border-2 border-blue-500/25 bg-blue-500/5">
               NTR ENGINE
             </span>
           </div>
           <p className="font-mono text-sm text-ocean-secondary">
-            Drop an EXE to decode and run it with the Win32 emulation layer.
+            Drop an EXE to decode and run it — the NTR engine handles the rest.
           </p>
         </div>
         <div className="flex items-center gap-2">

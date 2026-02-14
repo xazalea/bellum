@@ -212,10 +212,10 @@ export class ExecutionPipeline {
     console.log(`[ExecutionPipeline] Executing Android application: ${apkPath}`);
 
     try {
-      // Stage 1: Load binary (DEX)
+      // Stage 1: Load binary (DEX or APK → DEX)
       const binary = await this.loadBinary(apkPath);
 
-      if (binary.type !== 'DEX') {
+      if (binary.type !== 'DEX' && binary.type !== 'APK') {
         throw new Error(`Invalid binary type for Android execution: ${binary.type}`);
       }
 

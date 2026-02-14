@@ -3,9 +3,6 @@ import Link from 'next/link';
 export default function LandingPage() {
   return (
     <div className="min-h-screen text-ocean-primary relative">
-      {/* Scanline overlay */}
-      <div className="crt-scanlines pointer-events-none fixed inset-0 z-10" />
-
       {/* Hero */}
       <section className="px-6 pt-32 pb-20 md:pt-44 md:pb-32 relative">
         <div className="max-w-3xl mx-auto text-center space-y-8">
@@ -66,18 +63,18 @@ export default function LandingPage() {
               depth="200m"
             />
             <FeatureCard
-              icon="💻"
-              title="Windows Runtime"
-              badge="NTR"
-              description="Dedicated PE decoder with x86 interpreter, Win32 API shims, and DirectX→WebGPU translation."
-              href="/windows"
+              icon="🖥️"
+              title="Virtual Machines"
+              badge="OS"
+              description="Boot full Android or Windows operating systems directly in the browser with WebGPU acceleration."
+              href="/virtual-machines"
               depth="2000m"
             />
             <FeatureCard
               icon="📱"
-              title="Android Runtime"
-              badge="ART"
-              description="Full AOSP stack with Dalvik-to-WASM JIT compilation and WebGPU-accelerated SurfaceFlinger."
+              title="App Decoders"
+              badge="APK/EXE"
+              description="Drop an APK or EXE and it's decoded through dedicated compiler stacks — no full OS needed."
               href="/android"
               depth="4000m"
             />
@@ -116,19 +113,19 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <ArchCard
-              label="Android Decoder"
+              label="Android Stack"
               pipeline="APK → DEX → Dalvik → WASM"
-              detail="218 Dalvik opcodes, ART JIT, WebGPU rendering"
+              detail="218 Dalvik opcodes, ART JIT, SurfaceFlinger, SystemUI"
             />
             <ArchCard
-              label="Windows Decoder"
+              label="Windows Stack"
               pipeline="EXE → PE → x86 → Win32"
-              detail="PE32/PE32+ loader, SimpleInterpreter, GDI/DirectX shims"
+              detail="PE32/PE32+ loader, Kernel32, User32, GDI/DirectX shims"
             />
             <ArchCard
               label="GPU Acceleration"
               pipeline="WebGPU Compute + Render"
-              detail="Persistent kernels, SurfaceFlinger, DirectX translation"
+              detail="Persistent kernels, parallel compilation, DirectX translation"
             />
           </div>
         </div>

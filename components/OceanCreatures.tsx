@@ -12,41 +12,40 @@ interface Creature {
   frame: number;
   frameTimer: number;
   frameInterval: number;
-  color: string;
-  flipX: boolean;
   opacity: number;
   bobPhase: number;
   bobAmplitude: number;
 }
 
-const FISH_COLORS = ['#00ffcc', '#00ccff', '#33ffd6', '#66ddff', '#00aa88', '#44bbdd'];
-const JELLY_COLORS = ['#ff66cc', '#cc44ff', '#ff88dd', '#aa33ff', '#ff44aa', '#dd66ff'];
+// All creatures are white / soft-white
+const CREATURE_COLORS = ['rgba(255,255,255,0.9)', 'rgba(220,235,255,0.85)', 'rgba(200,225,255,0.8)'];
+
+function pickColor() {
+  return CREATURE_COLORS[Math.floor(Math.random() * CREATURE_COLORS.length)];
+}
 
 function createCreature(canvasWidth: number, canvasHeight: number, type: 'fish' | 'jellyfish'): Creature {
-  const scale = 1.5 + Math.random() * 2;
-  const colors = type === 'fish' ? FISH_COLORS : JELLY_COLORS;
-  const flipX = type === 'fish' ? Math.random() > 0.5 : false;
-  
+  const scale = 1.5 + Math.random() * 1.5;
+
   return {
     type,
-    x: type === 'fish' 
-      ? (flipX ? canvasWidth + SPRITE_SIZE * scale : -SPRITE_SIZE * scale)
+    // Fish always start off the left edge and swim right
+    x: type === 'fish'
+      ? -SPRITE_SIZE * scale - Math.random() * canvasWidth * 0.5
       : Math.random() * canvasWidth,
-    y: type === 'fish' 
+    y: type === 'fish'
       ? 100 + Math.random() * (canvasHeight - 200)
       : canvasHeight + SPRITE_SIZE * scale,
-    speed: type === 'fish' 
-      ? 0.3 + Math.random() * 0.8
-      : 0.15 + Math.random() * 0.3,
+    speed: type === 'fish'
+      ? 0.25 + Math.random() * 0.6
+      : 0.12 + Math.random() * 0.25,
     scale,
     frame: Math.floor(Math.random() * FRAME_COUNT),
     frameTimer: 0,
-    frameInterval: 150 + Math.random() * 100,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    flipX,
-    opacity: 0.15 + Math.random() * 0.35,
+    frameInterval: 160 + Math.random() * 120,
+    opacity: 0.12 + Math.random() * 0.2,
     bobPhase: Math.random() * Math.PI * 2,
-    bobAmplitude: type === 'fish' ? 2 + Math.random() * 4 : 1 + Math.random() * 2,
+    bobAmplitude: type === 'fish' ? 2 + Math.random() * 3 : 1 + Math.random() * 2,
   };
 }
 
@@ -54,70 +53,71 @@ function drawSprite(
   ctx: CanvasRenderingContext2D,
   frames: string[][],
   creature: Creature,
-  time: number
+  time: number,
+  color: string,
 ) {
   const frame = frames[creature.frame];
   if (!frame) return;
-  
+
   const bobOffset = Math.sin(time * 0.001 + creature.bobPhase) * creature.bobAmplitude;
-  
+
   ctx.save();
   ctx.globalAlpha = creature.opacity;
   ctx.translate(creature.x, creature.y + bobOffset);
-  
-  if (creature.flipX) {
-    ctx.scale(-1, 1);
-  }
-  
-  ctx.fillStyle = creature.color;
-  ctx.shadowColor = creature.color;
-  ctx.shadowBlur = 4 * creature.scale;
-  
-  const pixelSize = creature.scale;
-  
+  ctx.fillStyle = color;
+
+  const px = creature.scale;
+
   for (let row = 0; row < SPRITE_SIZE; row++) {
     const rowData = frame[row];
     if (!rowData) continue;
     for (let col = 0; col < SPRITE_SIZE; col++) {
       if (rowData[col] === '1') {
-        ctx.fillRect(col * pixelSize, row * pixelSize, pixelSize, pixelSize);
+        ctx.fillRect(col * px, row * px, px, px);
       }
     }
   }
-  
   ctx.restore();
 }
 
 export default function OceanCreatures() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const creaturesRef = useRef<Creature[]>([]);
+  const colorsRef = useRef<string[]>([]);
   const animFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
 
   const initCreatures = useCallback((width: number, height: number) => {
     const creatures: Creature[] = [];
-    // Start with a few fish and jellyfish
-    for (let i = 0; i < 4; i++) {
-      creatures.push(createCreature(width, height, 'fish'));
-    }
+    const colors: string[] = [];
+
+    // 3 fish, 2 jellyfish — lighter load for smooth performance
     for (let i = 0; i < 3; i++) {
-      creatures.push(createCreature(width, height, 'jellyfish'));
+      creatures.push(createCreature(width, height, 'fish'));
+      colors.push(pickColor());
     }
-    // Spread initial positions
-    creatures.forEach(c => {
+    for (let i = 0; i < 2; i++) {
+      creatures.push(createCreature(width, height, 'jellyfish'));
+      colors.push(pickColor());
+    }
+
+    // Spread initial positions so they're visible immediately
+    creatures.forEach((c) => {
       if (c.type === 'fish') {
-        c.x = Math.random() * width;
+        c.x = Math.random() * width * 0.6;
       } else {
         c.y = Math.random() * height;
       }
     });
+
     creaturesRef.current = creatures;
+    colorsRef.current = colors;
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -128,60 +128,58 @@ export default function OceanCreatures() {
         initCreatures(canvas.width, canvas.height);
       }
     };
-    
+
     resize();
     window.addEventListener('resize', resize);
 
     const animate = (time: number) => {
-      const dt = time - lastTimeRef.current;
+      const dt = Math.min(time - lastTimeRef.current, 50); // Cap delta to avoid jumps
       lastTimeRef.current = time;
-      
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       const creatures = creaturesRef.current;
-      
-      for (const c of creatures) {
+      const colors = colorsRef.current;
+
+      for (let i = 0; i < creatures.length; i++) {
+        const c = creatures[i];
+
         // Update frame animation
         c.frameTimer += dt;
         if (c.frameTimer >= c.frameInterval) {
           c.frameTimer = 0;
           c.frame = (c.frame + 1) % FRAME_COUNT;
         }
-        
+
         // Move creature
         if (c.type === 'fish') {
-          c.x += c.flipX ? -c.speed : c.speed;
-          // Reset when off screen
+          // Fish always swim left to right
+          c.x += c.speed * (dt / 16);
           const spriteWidth = SPRITE_SIZE * c.scale;
-          if (!c.flipX && c.x > canvas.width + spriteWidth) {
+          if (c.x > canvas.width + spriteWidth) {
             Object.assign(c, createCreature(canvas.width, canvas.height, 'fish'));
-            c.flipX = false;
-            c.x = -spriteWidth;
-          } else if (c.flipX && c.x < -spriteWidth) {
-            Object.assign(c, createCreature(canvas.width, canvas.height, 'fish'));
-            c.flipX = true;
-            c.x = canvas.width + spriteWidth;
+            colors[i] = pickColor();
           }
         } else {
-          c.y -= c.speed;
-          c.x += Math.sin(time * 0.0005 + c.bobPhase) * 0.3;
-          // Reset when off screen
+          // Jellyfish float upward with gentle sway
+          c.y -= c.speed * (dt / 16);
+          c.x += Math.sin(time * 0.0004 + c.bobPhase) * 0.2;
           if (c.y < -SPRITE_SIZE * c.scale) {
             Object.assign(c, createCreature(canvas.width, canvas.height, 'jellyfish'));
-            c.y = canvas.height + SPRITE_SIZE * c.scale;
+            colors[i] = pickColor();
           }
         }
-        
+
         // Draw
         const frames = c.type === 'fish' ? FISH_FRAMES : JELLYFISH_FRAMES;
-        drawSprite(ctx, frames, c, time);
+        drawSprite(ctx, frames, c, time, colors[i]);
       }
-      
+
       animFrameRef.current = requestAnimationFrame(animate);
     };
-    
+
     animFrameRef.current = requestAnimationFrame(animate);
-    
+
     return () => {
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(animFrameRef.current);

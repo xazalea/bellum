@@ -132,13 +132,13 @@ export default function AndroidPage() {
       <div className="flex items-end justify-between gap-6 border-b-2 border-ocean-border pb-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">📱 ANDROID</h1>
+            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">📱 ANDROID DECODER</h1>
             <span className="font-pixel text-[8px] px-2 py-1 text-teal-400 border-2 border-teal-500/25 bg-teal-500/5">
               ART RUNTIME
             </span>
           </div>
           <p className="font-mono text-sm text-ocean-secondary">
-            Drop an APK to decode and run it with the Android framework stack.
+            Drop an APK to decode and run it — the ART runtime handles the rest.
           </p>
         </div>
         <div className="flex items-center gap-2">
