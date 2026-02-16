@@ -54,7 +54,15 @@ export default function AndroidPage() {
       setState('loading');
 
       const startTime = performance.now();
-      addLog(`Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
+      addLog(`📦 Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'info');
+
+      // Validate file
+      if (file.size < 1024) {
+        throw new Error('File too small - may be corrupted');
+      }
+      if (file.size > 500 * 1024 * 1024) {
+        throw new Error('File too large - max 500MB supported');
+      }
 
       // Wait a tick for React to render the display surface
       await new Promise((r) => requestAnimationFrame(r));
@@ -63,7 +71,18 @@ export default function AndroidPage() {
       if (!display) throw new Error('Display container unavailable');
       display.innerHTML = '';
 
-      const { APKLoader } = await import('@/lib/engine/loaders/apk-loader');
+      addLog('🔧 Initializing ART runtime…', 'info');
+      
+      // Dynamic import with error handling
+      let APKLoader;
+      try {
+        const module = await import('@/lib/engine/loaders/apk-loader');
+        APKLoader = module.APKLoader;
+      } catch (importErr: any) {
+        console.error('Failed to load APK loader:', importErr);
+        throw new Error('Failed to load Android runtime. Please refresh and try again.');
+      }
+      
       const loader = new APKLoader();
 
       loader.onStatusUpdate = (status, detail) => {
@@ -71,20 +90,36 @@ export default function AndroidPage() {
       };
 
       const url = URL.createObjectURL(file);
-      addLog('Initializing Android framework…', 'info');
+      addLog('🚀 Booting Android framework…', 'info');
+      
+      // Set a timeout for the loading process
+      const loadTimeout = setTimeout(() => {
+        addLog('⏳ Still loading… This may take a moment for large apps', 'warn');
+      }, 10000);
+      
       await loader.load(display, url);
+      clearTimeout(loadTimeout);
 
       const ms = performance.now() - startTime;
       setElapsed(ms);
-      addLog(`APK launched in ${ms.toFixed(0)}ms`, 'success');
+      addLog(`✅ APK launched successfully in ${ms.toFixed(0)}ms`, 'success');
       setState('running');
     } catch (e: any) {
       const msg = e?.message || 'Failed to run APK';
+      console.error('APK load error:', e);
       setError(msg);
       setState('error');
-      addLog(`Error: ${msg}`, 'error');
+      addLog(`❌ Error: ${msg}`, 'error');
+      
+      // Auto-reset after error
+      setTimeout(() => {
+        if (state === 'error') {
+          setState('idle');
+          setError(null);
+        }
+      }, 5000);
     }
-  }, [addLog]);
+  }, [addLog, state]);
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.toLowerCase().endsWith('.apk')) {

@@ -54,7 +54,15 @@ export default function WindowsPage() {
       setState('loading');
 
       const startTime = performance.now();
-      addLog(`Loading ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
+      addLog(`📦 Loading ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
+
+      // Validate file
+      if (file.size < 1024) {
+        throw new Error('File too small - may be corrupted');
+      }
+      if (file.size > 100 * 1024 * 1024) {
+        throw new Error('File too large - max 100MB supported');
+      }
 
       // Wait a tick for React to render the canvas
       await new Promise((r) => requestAnimationFrame(r));
@@ -64,41 +72,67 @@ export default function WindowsPage() {
       canvas.width = canvas.clientWidth || 800;
       canvas.height = canvas.clientHeight || 600;
 
-      addLog('Initializing Win32 runtime…', 'info');
-      const { WebGPUContext } = await import('@/lib/nacho/gpu/webgpu');
-      const { WindowsRuntime } = await import('@/lib/nacho/windows/runtime');
+      addLog('🔧 Initializing NTR runtime…', 'info');
+      
+      // Dynamic import with error handling
+      let WebGPUContext, WindowsRuntime;
+      try {
+        const gpuModule = await import('@/lib/nacho/gpu/webgpu');
+        const winModule = await import('@/lib/nacho/windows/runtime');
+        WebGPUContext = gpuModule.WebGPUContext;
+        WindowsRuntime = winModule.WindowsRuntime;
+      } catch (importErr: any) {
+        console.error('Failed to load Windows runtime:', importErr);
+        throw new Error('Failed to load Windows runtime. Please refresh and try again.');
+      }
 
       const gpu = new WebGPUContext(canvas);
       try {
         await gpu.initialize();
-        addLog('WebGPU initialized', 'success');
+        addLog('✅ WebGPU initialized', 'success');
       } catch {
-        addLog('WebGPU not available, using Canvas 2D fallback', 'warn');
+        addLog('⚠️ WebGPU not available, using Canvas 2D fallback', 'warn');
       }
 
       const runtime = new WindowsRuntime(gpu);
       runtime.setCanvas(canvas);
       runtimeRef.current = runtime;
 
-      addLog('Booting Win32 subsystem…', 'info');
+      addLog('🚀 Booting Win32 subsystem…', 'info');
       await runtime.boot();
-      addLog('Kernel32 + User32 + GDI loaded', 'success');
+      addLog('✅ Kernel32 + User32 + GDI loaded', 'success');
 
-      addLog('Parsing PE headers…', 'info');
+      addLog('📋 Parsing PE headers…', 'info');
       const buffer = await file.arrayBuffer();
+      
+      // Set a timeout for the loading process
+      const loadTimeout = setTimeout(() => {
+        addLog('⏳ Still loading… This may take a moment for large executables', 'warn');
+      }, 10000);
+      
       await runtime.loadPE(buffer);
+      clearTimeout(loadTimeout);
 
       const ms = performance.now() - startTime;
       setElapsed(ms);
-      addLog(`Executable loaded in ${ms.toFixed(0)}ms`, 'success');
+      addLog(`✅ Executable loaded successfully in ${ms.toFixed(0)}ms`, 'success');
       setState('running');
     } catch (e: any) {
       const msg = e?.message || 'Failed to run EXE';
+      console.error('EXE load error:', e);
       setError(msg);
       setState('error');
-      addLog(`Error: ${msg}`, 'error');
+      addLog(`❌ Error: ${msg}`, 'error');
+      
+      // Auto-reset after error
+      setTimeout(() => {
+        if (state === 'error') {
+          setState('idle');
+          setError(null);
+        }
+      }, 5000);
     }
-  }, [addLog]);
+  }, [addLog, state]);
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.toLowerCase().endsWith('.exe')) {

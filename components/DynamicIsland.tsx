@@ -17,23 +17,52 @@ const NAV_ITEMS = [
 
 export default function DynamicIsland() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isVisible, setIsVisible] = useState(true);
+  const [position, setPosition] = useState({ x: 0, y: 12 });
   const [isDragging, setIsDragging] = useState(false);
   const [hasMoved, setHasMoved] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const islandRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const lastScrollY = useRef(0);
 
   // Center the island on mount + handle resize
   useEffect(() => {
     const update = () => {
-      const centerX = (window.innerWidth / 2) - (isExpanded ? 190 : 24);
-      setPosition({ x: Math.max(4, centerX), y: 8 });
+      const centerX = (window.innerWidth / 2) - (isExpanded ? 190 : 28);
+      setPosition({ x: Math.max(12, centerX), y: 12 });
     };
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExpanded]);
+
+  // Auto-hide on scroll down, show on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Always show at top
+      if (currentScrollY < 50) {
+        setIsVisible(true);
+        lastScrollY.current = currentScrollY;
+        return;
+      }
+
+      // Hide when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY.current && currentScrollY > 150) {
+        setIsVisible(false);
+        setIsExpanded(false);
+      } else if (currentScrollY < lastScrollY.current) {
+        setIsVisible(true);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -97,26 +126,33 @@ export default function DynamicIsland() {
       style={{
         left: `${effectiveX}px`,
         top: `${position.y}px`,
+        transform: `translateY(${isVisible ? 0 : -80}px)`,
+        opacity: isVisible ? 1 : 0,
         transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         cursor: isDragging ? 'grabbing' : 'grab',
+        pointerEvents: isVisible ? 'auto' : 'none',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
-      {/* Collapsed: Circle */}
+      {/* Collapsed: Pill */}
       {!isExpanded && (
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center
-            bg-[#0a1a2e] border-2 border-ocean-accent/30
-            shadow-[0_0_15px_rgba(0,255,204,0.15),inset_0_0_10px_rgba(0,255,204,0.05)]
-            hover:border-ocean-accent/50 hover:shadow-[0_0_20px_rgba(0,255,204,0.25)]
+          className="h-12 px-4 rounded-full flex items-center gap-3
+            bg-[#0a1a2e]/90 border border-ocean-accent/30 backdrop-blur-md
+            shadow-[0_4px_20px_rgba(0,0,0,0.4),0_0_15px_rgba(0,255,204,0.1)]
+            hover:border-ocean-accent/50 hover:shadow-[0_4px_24px_rgba(0,0,0,0.5),0_0_20px_rgba(0,255,204,0.15)]
             transition-all duration-300"
           title="Click to expand · Drag to move"
         >
           <span className="text-ocean-accent text-lg font-pixel leading-none select-none">
             ◈
           </span>
+          <div className="flex flex-col items-start">
+            <span className="text-[9px] font-pixel text-ocean-accent/80 tracking-wider">MENU</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
         </div>
       )}
 

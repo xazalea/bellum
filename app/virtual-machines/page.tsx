@@ -182,23 +182,52 @@ export default function VirtualMachinesPage() {
 
       {/* ─── OS Selection (idle state) ─── */}
       {!isActive && (
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <OSCard
-            title="Android 14"
-            engine="ART Runtime + WebGPU"
-            description="Full AOSP framework with SystemUI, SurfaceFlinger compositing, Binder IPC, and Dalvik JIT. Boots to a home screen."
-            features={['Android Framework', 'ART JIT → WASM', 'SurfaceFlinger', 'Binder IPC', 'SystemUI']}
-            accentColor="teal"
-            onBoot={bootAndroid}
-          />
-          <OSCard
-            title="Windows NT"
-            engine="NTR Engine + WebGPU"
-            description="Win32 subsystem with Kernel32, User32, GDI32, and DirectX→WebGPU translation. Boots to a desktop environment."
-            features={['Win32 Subsystem', 'Kernel32 + GDI', 'DirectX → WebGPU', 'PE Loader', 'Virtual Memory']}
-            accentColor="blue"
-            onBoot={bootWindows}
-          />
+        <div className="mt-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <OSCard
+              title="Android 14"
+              engine="ART Runtime + WebGPU"
+              description="Full AOSP framework with SystemUI, SurfaceFlinger compositing, Binder IPC, and Dalvik JIT."
+              features={['Android Framework', 'ART JIT → WASM', 'SurfaceFlinger', 'Binder IPC', 'SystemUI']}
+              accentColor="teal"
+              onBoot={bootAndroid}
+              icon="android"
+            />
+            <OSCard
+              title="Windows NT"
+              engine="NTR Engine + WebGPU"
+              description="Win32 subsystem with Kernel32, User32, GDI32, and DirectX→WebGPU translation."
+              features={['Win32 Subsystem', 'Kernel32 + GDI', 'DirectX → WebGPU', 'PE Loader', 'Virtual Memory']}
+              accentColor="blue"
+              onBoot={bootWindows}
+              icon="laptop_windows"
+            />
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <QuickActionCard 
+              title="Run APK Directly" 
+              description="Skip the full OS - drop an APK file to run it immediately"
+              href="/android"
+              icon="android"
+              color="teal"
+            />
+            <QuickActionCard 
+              title="Run EXE Directly" 
+              description="Skip the full OS - drop an EXE file to run it immediately"
+              href="/windows"
+              icon="laptop_windows"
+              color="blue"
+            />
+            <QuickActionCard 
+              title="Browse Games" 
+              description="20,000+ HTML5 games ready to play instantly"
+              href="/games"
+              icon="sports_esports"
+              color="purple"
+            />
+          </div>
         </div>
       )}
 
@@ -302,6 +331,7 @@ function OSCard({
   features,
   accentColor,
   onBoot,
+  icon,
 }: {
   title: string;
   engine: string;
@@ -309,20 +339,21 @@ function OSCard({
   features: string[];
   accentColor: 'teal' | 'blue';
   onBoot: () => void;
+  icon: string;
 }) {
   const accent = accentColor === 'teal'
-    ? { text: 'text-teal-400', border: 'border-teal-500/15', bg: 'bg-teal-500/8' }
-    : { text: 'text-blue-400', border: 'border-blue-500/15', bg: 'bg-blue-500/8' };
+    ? { text: 'text-teal-400', border: 'border-teal-500/15', bg: 'bg-teal-500/8', hover: 'hover:shadow-[0_0_30px_rgba(20,184,166,0.15)]' }
+    : { text: 'text-blue-400', border: 'border-blue-500/15', bg: 'bg-blue-500/8', hover: 'hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]' };
 
   return (
-    <Card className="flex flex-col p-7 h-full">
+    <Card className={`flex flex-col p-6 h-full transition-all duration-300 ${accent.hover}`}>
       <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 rounded-md ${accent.bg} border ${accent.border}`}>
+        <div className={`p-3 rounded-xl ${accent.bg} border ${accent.border}`}>
           <span className={`material-symbols-outlined text-2xl ${accent.text}`}>
-            {accentColor === 'teal' ? 'android' : 'laptop_windows'}
+            {icon}
           </span>
         </div>
-        <span className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wider border font-medium ${accent.text} ${accent.border}`}>
+        <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase tracking-wider border font-medium ${accent.text} ${accent.border} ${accent.bg}`}>
           {engine}
         </span>
       </div>
@@ -332,7 +363,7 @@ function OSCard({
 
       <div className="flex flex-wrap gap-1.5 mb-6">
         {features.map((f) => (
-          <span key={f} className="px-2 py-0.5 rounded text-[10px] font-mono text-ocean-muted border border-ocean-border">
+          <span key={f} className="px-2 py-0.5 rounded-md text-[10px] font-mono text-ocean-muted border border-ocean-border bg-ocean-surface/30">
             {f}
           </span>
         ))}
@@ -345,5 +376,50 @@ function OSCard({
         </Button>
       </div>
     </Card>
+  );
+}
+
+function QuickActionCard({
+  title,
+  description,
+  href,
+  icon,
+  color,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  icon: string;
+  color: 'teal' | 'blue' | 'purple';
+}) {
+  const colorStyles = {
+    teal: { text: 'text-teal-400', border: 'border-teal-500/20', bg: 'bg-teal-500/10', hover: 'hover:border-teal-500/40 hover:bg-teal-500/15' },
+    blue: { text: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/10', hover: 'hover:border-blue-500/40 hover:bg-blue-500/15' },
+    purple: { text: 'text-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/10', hover: 'hover:border-purple-500/40 hover:bg-purple-500/15' },
+  };
+  
+  const c = colorStyles[color];
+  
+  return (
+    <Link href={href} className="group block">
+      <div className={`rounded-xl border ${c.border} ${c.bg} p-5 transition-all duration-300 ${c.hover}`}>
+        <div className="flex items-start gap-4">
+          <div className={`p-2.5 rounded-lg ${c.bg} border ${c.border}`}>
+            <span className={`material-symbols-outlined text-xl ${c.text}`}>{icon}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-ocean-primary mb-1 group-hover:text-ocean-accent transition-colors">
+              {title}
+            </h4>
+            <p className="text-xs text-ocean-secondary leading-relaxed">
+              {description}
+            </p>
+          </div>
+          <span className="material-symbols-outlined text-ocean-muted group-hover:text-ocean-accent transition-colors">
+            arrow_forward
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 }

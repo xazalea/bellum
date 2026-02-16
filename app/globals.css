@@ -411,6 +411,83 @@ a:hover {
     radial-gradient(ellipse at 80% 30%, rgba(0, 60, 120, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 100%, rgba(0, 30, 80, 0.2) 0%, transparent 50%),
     linear-gradient(180deg, #020b18 0%, #041428 30%, #030d1a 60%, #020818 100%);
+  min-height: 100vh;
+}
+
+/* ─── Smooth transitions ─── */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Glass effect ─── */
+.glass {
+  background: rgba(10, 30, 60, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(40, 120, 180, 0.2);
+}
+
+/* ─── Glow effects ─── */
+.glow-accent {
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.15);
+}
+
+.glow-biolum {
+  box-shadow: 0 0 20px rgba(0, 204, 255, 0.15);
+}
+
+/* ─── Loading spinner ─── */
+.spinner {
+  border: 2px solid rgba(0, 255, 204, 0.2);
+  border-top-color: #00ffcc;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Improved scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(2, 11, 24, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(40, 120, 180, 0.4);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(60, 160, 220, 0.5);
+}
+
+/* ─── Selection color ─── */
+::selection {
+  background: rgba(0, 255, 204, 0.2);
+  color: #c0e8ff;
+}
+
+/* ─── Focus styles ─── */
+:focus-visible {
+  outline: 2px solid rgba(0, 255, 204, 0.5);
+  outline-offset: 2px;
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @layer base {

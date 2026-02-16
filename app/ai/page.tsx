@@ -163,12 +163,18 @@ export default function AIPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 py-10">
+    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+      <div className="space-y-8">
         {/* Header */}
-        <header className="mb-8 border-b-2 border-ocean-border pb-6">
-          <h1 className="font-pixel text-lg text-ocean-accent retro-glow">🧠 AI CHAT</h1>
-          <p className="font-mono text-sm text-ocean-secondary mt-2">Access thousands of AI models for free</p>
+        <header className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 border-b-2 border-ocean-border pb-6">
+          <div className="space-y-2">
+            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">🧠 AI CHAT</h1>
+            <p className="font-mono text-sm text-ocean-secondary">Access thousands of AI models for free</p>
+          </div>
+          <div className="flex items-center gap-2 font-pixel text-[8px] text-ocean-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>MULTI-PROVIDER</span>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -276,6 +282,6 @@ export default function AIPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

@@ -175,42 +175,81 @@ export default function GamesPage() {
 
         {selectedGame ? (
           /* Game Player */
-          <div className="w-full h-[85vh] flex flex-col space-y-4">
-            <div className="flex justify-between items-center">
-              <Button onClick={() => setSelectedGame(null)} variant="ghost" className="text-sm">
-                <span className="material-symbols-outlined mr-1.5 text-[16px]">arrow_back</span>
-                Back
-              </Button>
-              <Button
-                onClick={(e) => handleInstall(e, selectedGame)}
-                disabled={!!installing}
-                className="text-sm"
-              >
-                <span className="material-symbols-outlined mr-1.5 text-[16px]">download</span>
-                {installing === selectedGame.id ? 'Saving...' : 'Install'}
-              </Button>
+          <div className="fixed inset-0 z-40 bg-ocean-bg flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-ocean-border bg-ocean-bg/95 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <Button onClick={() => {
+                  setSelectedGame(null);
+                  setGameLoading(true);
+                }} variant="ghost" className="text-sm">
+                  <span className="material-symbols-outlined mr-1.5 text-[16px]">arrow_back</span>
+                  Back
+                </Button>
+                <div className="hidden sm:block">
+                  <h2 className="text-sm font-semibold text-ocean-primary truncate max-w-[200px] md:max-w-md">{selectedGame.title}</h2>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={(e) => handleInstall(e, selectedGame)}
+                  disabled={!!installing}
+                  variant="outline"
+                  className="text-xs"
+                >
+                  <span className="material-symbols-outlined mr-1 text-[14px]">download</span>
+                  {installing === selectedGame.id ? 'Saving...' : 'Install'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    const iframe = document.querySelector('iframe[title="' + selectedGame.title + '"]') as HTMLIFrameElement;
+                    if (iframe) {
+                      if (iframe.requestFullscreen) {
+                        iframe.requestFullscreen();
+                      } else if ((iframe as any).webkitRequestFullscreen) {
+                        (iframe as any).webkitRequestFullscreen();
+                      }
+                    }
+                  }}
+                  variant="primary"
+                  className="text-xs"
+                >
+                  <span className="material-symbols-outlined mr-1 text-[14px]">fullscreen</span>
+                  Fullscreen
+                </Button>
+              </div>
             </div>
-            <div className="flex-grow bg-black rounded-md overflow-hidden border border-ocean-border relative">
+            
+            {/* Game Container */}
+            <div className="flex-grow relative bg-black">
               {gameLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-ocean-bg z-10">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-ocean-bg z-10 gap-4">
+                  <div className="w-12 h-12 border-2 border-ocean-accent border-t-transparent rounded-full animate-spin" />
                   <p className="text-sm text-ocean-secondary">Loading game...</p>
+                  <p className="text-xs text-ocean-muted max-w-xs text-center">
+                    If the game doesn't load, it may have iframe restrictions. Try another game.
+                  </p>
                 </div>
               )}
               <iframe
                 src={getProxiedGameUrl(selectedGame.file)}
                 className="w-full h-full border-0"
                 title={selectedGame.title}
-                sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms"
+                sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-forms allow-popups"
+                allow="fullscreen; autoplay; clipboard-write"
                 allowFullScreen
                 onLoad={() => setGameLoading(false)}
+                onError={() => {
+                  setGameLoading(false);
+                  setError('Failed to load game. The game may have iframe restrictions.');
+                }}
               />
             </div>
-            <div className="flex items-center justify-between py-3">
-              <div>
-                <h2 className="text-base font-semibold text-ocean-primary">{selectedGame.title}</h2>
-                <p className="text-xs text-ocean-muted mt-0.5">{selectedGame.description || 'No description available.'}</p>
-              </div>
-              <span className="text-xs text-ocean-accent">HTML5</span>
+            
+            {/* Footer Info */}
+            <div className="px-4 py-2 border-t border-ocean-border bg-ocean-bg/50 flex items-center justify-between text-xs">
+              <span className="text-ocean-muted">HTML5 Game</span>
+              <span className="text-ocean-accent font-mono">{selectedGame.id.substring(0, 8)}</span>
             </div>
           </div>
         ) : (

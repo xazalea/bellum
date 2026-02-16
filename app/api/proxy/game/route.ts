@@ -4,12 +4,50 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
+// Allowed game domains - security whitelist
+const ALLOWED_DOMAINS = [
+  'html5.gamedistribution.com',
+  'gamedistribution.com',
+  'img.gamedistribution.com',
+  'poki.com',
+  'crazygames.com',
+  'gamepix.com',
+  'y8.com',
+  'kongregate.com',
+  'itch.io',
+  'github.io',
+  'gitlab.io',
+  'netlify.app',
+  'vercel.app',
+  'pages.dev',
+  'surge.sh',
+  'firebaseapp.com',
+  'web.app',
+];
+
+/**
+ * Validate if a URL is from an allowed domain
+ */
+function isAllowedDomain(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_DOMAINS.some(domain => 
+      parsed.hostname === domain || 
+      parsed.hostname.endsWith('.' + domain)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Game Proxy Endpoint
  * Bypasses iframe detection by proxying game content server-side
  * and modifying headers/scripts that prevent embedding
  */
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const { searchParams } = new URL(request.url);
     const gameUrl = searchParams.get('url');
@@ -21,32 +59,63 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Validate URL
+    // Validate URL format
+    let parsedUrl: URL;
     try {
-      new URL(gameUrl);
+      parsedUrl = new URL(gameUrl);
     } catch (e) {
       return NextResponse.json(
-        { error: 'Invalid URL' },
+        { error: 'Invalid URL format' },
         { status: 400 }
       );
     }
 
-    console.log('[GameProxy] Fetching game:', gameUrl);
+    // Security check - only allow http/https
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return NextResponse.json(
+        { error: 'Only HTTP/HTTPS URLs allowed' },
+        { status: 400 }
+      );
+    }
 
-    // Fetch the game content
-    const response = await fetch(gameUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Referer': new URL(gameUrl).origin,
-      },
-    });
+    console.log('[GameProxy] Fetching:', parsedUrl.hostname);
+
+    // Fetch with timeout and retry logic
+    const fetchWithRetry = async (retries = 2): Promise<Response> => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      
+      try {
+        const response = await fetch(gameUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.0.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.0.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': parsedUrl.origin,
+            'Origin': parsedUrl.origin,
+          },
+        });
+        clearTimeout(timeout);
+        return response;
+      } catch (error) {
+        clearTimeout(timeout);
+        if (retries > 0) {
+          console.log(`[GameProxy] Retry ${3 - retries} for ${parsedUrl.hostname}`);
+          await new Promise(r => setTimeout(r, 1000));
+          return fetchWithRetry(retries - 1);
+        }
+        throw error;
+      }
+    };
+
+    const response = await fetchWithRetry();
 
     if (!response.ok) {
-      console.error('[GameProxy] Failed to fetch game:', response.status);
+      console.error('[GameProxy] HTTP error:', response.status, parsedUrl.hostname);
       return NextResponse.json(
-        { error: 'Failed to fetch game', status: response.status },
+        { error: 'Failed to fetch game', status: response.status, url: parsedUrl.hostname },
         { status: response.status }
       );
     }
@@ -57,49 +126,95 @@ export async function GET(request: NextRequest) {
     if (contentType.includes('text/html')) {
       let html = await response.text();
       
-      // Remove/modify iframe detection scripts
-      html = html.replace(/if\s*\(\s*(?:window\.)?(?:self|top)\s*!==?\s*(?:window\.)?(?:top|self)\s*\)/gi, 'if(false)');
-      html = html.replace(/if\s*\(\s*(?:window\.)?(?:top|self)\s*===?\s*(?:window\.)?(?:self|top)\s*\)/gi, 'if(true)');
-      html = html.replace(/window\.top\s*!==?\s*window\.self/gi, 'false');
-      html = html.replace(/window\.self\s*!==?\s*window\.top/gi, 'false');
-      html = html.replace(/top\s*!==?\s*self/gi, 'false');
-      html = html.replace(/self\s*!==?\s*top/gi, 'false');
-      html = html.replace(/parent\s*!==?\s*window/gi, 'false');
-      html = html.replace(/window\s*!==?\s*parent/gi, 'false');
+      // Limit HTML size to prevent memory issues
+      if (html.length > 10 * 1024 * 1024) { // 10MB limit
+        return NextResponse.json(
+          { error: 'Game content too large' },
+          { status: 413 }
+        );
+      }
       
-      // Inject script to override iframe detection at runtime
-      const antiDetectionScript = `
-<script>
+      // Remove/modify iframe detection scripts - comprehensive patterns
+      const antiFramePatterns = [
+        { pattern: /if\s*\(\s*(?:window\.)?(?:self|top)\s*!==?\s*(?:window\.)?(?:top|self)\s*\)/gi, replacement: 'if(false)' },
+        { pattern: /if\s*\(\s*(?:window\.)?(?:top|self)\s*===?\s*(?:window\.)?(?:self|top)\s*\)/gi, replacement: 'if(true)' },
+        { pattern: /window\.top\s*!==?\s*window\.self/gi, replacement: 'false' },
+        { pattern: /window\.self\s*!==?\s*window\.top/gi, replacement: 'false' },
+        { pattern: /top\s*!==?\s*self/gi, replacement: 'false' },
+        { pattern: /self\s*!==?\s*top/gi, replacement: 'false' },
+        { pattern: /parent\s*!==?\s*window/gi, replacement: 'false' },
+        { pattern: /window\s*!==?\s*parent/gi, replacement: 'false' },
+        { pattern: /window\.location\s*!==?\s*window\.parent\.location/gi, replacement: 'false' },
+        { pattern: /window\.parent\s*!==?\s*window/gi, replacement: 'false' },
+      ];
+      
+      antiFramePatterns.forEach(({ pattern, replacement }) => {
+        html = html.replace(pattern, replacement);
+      });
+      
+      // Inject comprehensive anti-detection script
+      const antiDetectionScript = `<script>
 (function() {
-  // Override frame detection
+  'use strict';
   try {
+    // Override frame detection
+    const selfRef = window.self;
     Object.defineProperty(window, 'top', {
-      get: function() { return window.self; },
-      set: function() {}
+      get: function() { return selfRef; },
+      set: function() {},
+      configurable: false
     });
     Object.defineProperty(window, 'parent', {
-      get: function() { return window.self; },
-      set: function() {}
+      get: function() { return selfRef; },
+      set: function() {},
+      configurable: false
     });
-  } catch(e) {}
-  
-  // Prevent frame-busting
-  window.addEventListener('beforeunload', function(e) {
-    e.preventDefault();
-    e.stopImmediatePropagation();
-  }, true);
+    
+    // Prevent location hijacking
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      get: function() { return originalLocation; },
+      set: function() {},
+      configurable: false
+    });
+    
+    // Block frame-busting attempts
+    window.addEventListener('beforeunload', function(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return false;
+    }, true);
+    
+    // Override open() to prevent popups
+    const originalOpen = window.open;
+    window.open = function() { return null; };
+    
+    console.log('[ChallengerDeep] Anti-frame protection active');
+  } catch(e) {
+    console.warn('[ChallengerDeep] Frame protection error:', e);
+  }
 })();
-</script>
-`;
+</script>`;
       
-      // Inject the script right after <head> or at the beginning of <body>
-      if (html.includes('<head>')) {
+      // Inject the script as early as possible
+      if (html.includes('<!DOCTYPE')) {
+        html = html.replace(/(<!DOCTYPE[^>]*>)/i, '$1' + antiDetectionScript);
+      } else if (html.includes('<html')) {
+        html = html.replace(/(<html[^>]*>)/i, '$1' + antiDetectionScript);
+      } else if (html.includes('<head>')) {
         html = html.replace('<head>', '<head>' + antiDetectionScript);
-      } else if (html.includes('<body>')) {
-        html = html.replace('<body>', '<body>' + antiDetectionScript);
       } else {
         html = antiDetectionScript + html;
       }
+      
+      // Add base tag to handle relative URLs
+      const baseTag = `<base href="${parsedUrl.origin}/" target="_self">`;
+      if (html.includes('<head>')) {
+        html = html.replace('<head>', '<head>' + baseTag);
+      }
+      
+      const duration = Date.now() - startTime;
+      console.log(`[GameProxy] Proxied ${parsedUrl.hostname} in ${duration}ms (${html.length} bytes)`);
       
       // Return modified HTML with proper headers
       return new NextResponse(html, {
@@ -111,31 +226,49 @@ export async function GET(request: NextRequest) {
           'Access-Control-Allow-Headers': '*',
           'Cross-Origin-Resource-Policy': 'cross-origin',
           'Cross-Origin-Embedder-Policy': 'unsafe-none',
-          'Cache-Control': 'public, max-age=3600',
-          // DO NOT set X-Frame-Options or CSP that would block iframe embedding
+          'Cache-Control': 'public, max-age=1800, s-maxage=3600',
+          'X-Content-Type-Options': 'nosniff',
         },
       });
     }
     
-    // For non-HTML content (images, scripts, etc.), proxy as-is
+    // For non-HTML content (images, scripts, etc.), proxy as-is with size limit
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 50 * 1024 * 1024) { // 50MB limit
+      return NextResponse.json(
+        { error: 'Resource too large' },
+        { status: 413 }
+      );
+    }
+    
     const arrayBuffer = await response.arrayBuffer();
+    
     return new NextResponse(arrayBuffer, {
       status: response.status,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': contentType || 'application/octet-stream',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': '*',
         'Cross-Origin-Resource-Policy': 'cross-origin',
         'Cross-Origin-Embedder-Policy': 'unsafe-none',
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': 'public, max-age=86400, immutable',
       },
     });
   } catch (error: any) {
-    console.error('[GameProxy] Error:', error);
+    console.error('[GameProxy] Error:', error.message || error);
+    
+    // Return user-friendly error
+    if (error.name === 'AbortError') {
+      return NextResponse.json(
+        { error: 'Request timeout', details: 'The game server took too long to respond' },
+        { status: 504 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: 'Proxy failed', details: error.message },
-      { status: 500 }
+      { error: 'Proxy failed', details: error.message || 'Unknown error' },
+      { status: 502 }
     );
   }
 }

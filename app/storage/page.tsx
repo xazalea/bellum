@@ -130,9 +130,15 @@ export default function StoragePage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10">
       <div className="space-y-8">
-        <header className="space-y-2 border-b-2 border-ocean-border pb-6">
-          <h1 className="font-pixel text-lg text-ocean-accent retro-glow">💾 CLOUD STORAGE</h1>
-          <p className="font-mono text-sm text-ocean-secondary">Secure, distributed file storage.</p>
+        <header className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 border-b-2 border-ocean-border pb-6">
+          <div className="space-y-2">
+            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">💾 CLOUD STORAGE</h1>
+            <p className="font-mono text-sm text-ocean-secondary">Secure, distributed file storage</p>
+          </div>
+          <div className="flex items-center gap-2 font-pixel text-[8px] text-ocean-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>DISTRIBUTED</span>
+          </div>
         </header>
 
         {error && (
