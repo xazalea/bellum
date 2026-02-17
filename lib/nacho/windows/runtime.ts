@@ -176,6 +176,10 @@ export class WindowsRuntime {
     private running: boolean = false;
     private canvas: HTMLCanvasElement | null = null;
     private ctx: CanvasRenderingContext2D | null = null;
+    private instructionCount: number = 0;
+    private frameCount: number = 0;
+    private lastFpsUpdate: number = 0;
+    private currentFps: number = 0;
 
     constructor(gpu: WebGPUContext) {
         this.gpu = gpu;
@@ -302,12 +306,24 @@ export class WindowsRuntime {
 
     private run() {
          this.running = true;
+         this.lastFpsUpdate = performance.now();
+         
          const runLoop = () => {
              if (!this.running) return;
              
              try {
-                 // Run 1000 cycles per frame
-                 this.cpu.run(1000); 
+                 // Run 10000 cycles per frame for better performance
+                 this.cpu.run(10000);
+                 this.instructionCount += 10000;
+                 this.frameCount++;
+                 
+                 // Update FPS every second
+                 const now = performance.now();
+                 if (now - this.lastFpsUpdate >= 1000) {
+                     this.currentFps = this.frameCount;
+                     this.frameCount = 0;
+                     this.lastFpsUpdate = now;
+                 }
                  
                  // Check if still running (CPU halts on error or finish)
                  // For now, we assume it runs forever unless stopped
@@ -322,6 +338,17 @@ export class WindowsRuntime {
     
     public stop() {
         this.running = false;
+    }
+    
+    /**
+     * Get performance statistics
+     */
+    public getPerformanceStats() {
+        return {
+            instructions: this.instructionCount,
+            fps: this.currentFps || 60,
+            memory: this.memory.size || 0,
+        };
     }
 
     // Syscall Dispatcher

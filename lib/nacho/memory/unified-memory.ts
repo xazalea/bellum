@@ -59,6 +59,10 @@ export class UnifiedMemory {
     getBuffer(): SharedArrayBuffer {
         return this.heap;
     }
+    
+    get size(): number {
+        return this.heap.byteLength;
+    }
 
     // Memory Accessors (Aliased)
     

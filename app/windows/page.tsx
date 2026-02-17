@@ -10,6 +10,37 @@ interface LogEntry {
   level: 'info' | 'warn' | 'error' | 'success';
 }
 
+// Challenger Deep - Matte Dark Blue Theme
+type ThemeColors = {
+  bg: string;
+  surface: string;
+  elevated: string;
+  accent: string;
+  accentBright: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+  success: string;
+  warning: string;
+  error: string;
+};
+
+const theme: ThemeColors = {
+  bg: '#0a0f1a',
+  surface: '#0d1929',
+  elevated: '#112240',
+  accent: '#1e4976',
+  accentBright: '#2d5a8a',
+  text: '#e2e8f0',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
+  border: '#1e3a5f',
+  success: '#22c55e',
+  warning: '#eab308',
+  error: '#ef4444',
+};
+
 export default function WindowsPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const runtimeRef = useRef<any>(null);
@@ -19,6 +50,7 @@ export default function WindowsPage() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number>(0);
   const [elapsed, setElapsed] = useState<number | null>(null);
+  const [perfStats, setPerfStats] = useState<{ instructions: number; fps: number; memory: number } | null>(null);
   const logsEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dropRef = useRef<HTMLDivElement | null>(null);
@@ -41,6 +73,7 @@ export default function WindowsPage() {
     setFileName(null);
     setFileSize(0);
     setElapsed(null);
+    setPerfStats(null);
     addLog('Runtime stopped', 'info');
   }, [addLog]);
 
@@ -49,12 +82,13 @@ export default function WindowsPage() {
       setError(null);
       setLogs([]);
       setElapsed(null);
+      setPerfStats(null);
       setFileName(file.name);
       setFileSize(file.size);
       setState('loading');
 
       const startTime = performance.now();
-      addLog(`📦 Loading ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
+      addLog(`Loading ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
 
       // Validate file
       if (file.size < 1024) {
@@ -72,7 +106,7 @@ export default function WindowsPage() {
       canvas.width = canvas.clientWidth || 800;
       canvas.height = canvas.clientHeight || 600;
 
-      addLog('🔧 Initializing NTR runtime…', 'info');
+      addLog('Initializing NTR runtime...', 'info');
       
       // Dynamic import with error handling
       let WebGPUContext, WindowsRuntime;
@@ -89,25 +123,25 @@ export default function WindowsPage() {
       const gpu = new WebGPUContext(canvas);
       try {
         await gpu.initialize();
-        addLog('✅ WebGPU initialized', 'success');
+        addLog('WebGPU initialized', 'success');
       } catch {
-        addLog('⚠️ WebGPU not available, using Canvas 2D fallback', 'warn');
+        addLog('WebGPU not available, using Canvas 2D fallback', 'warn');
       }
 
       const runtime = new WindowsRuntime(gpu);
       runtime.setCanvas(canvas);
       runtimeRef.current = runtime;
 
-      addLog('🚀 Booting Win32 subsystem…', 'info');
+      addLog('Booting Win32 subsystem...', 'info');
       await runtime.boot();
-      addLog('✅ Kernel32 + User32 + GDI loaded', 'success');
+      addLog('Kernel32 + User32 + GDI loaded', 'success');
 
-      addLog('📋 Parsing PE headers…', 'info');
+      addLog('Parsing PE headers...', 'info');
       const buffer = await file.arrayBuffer();
       
       // Set a timeout for the loading process
       const loadTimeout = setTimeout(() => {
-        addLog('⏳ Still loading… This may take a moment for large executables', 'warn');
+        addLog('Still loading... Large executables may take a moment', 'warn');
       }, 10000);
       
       await runtime.loadPE(buffer);
@@ -115,14 +149,17 @@ export default function WindowsPage() {
 
       const ms = performance.now() - startTime;
       setElapsed(ms);
-      addLog(`✅ Executable loaded successfully in ${ms.toFixed(0)}ms`, 'success');
+      addLog(`Executable loaded in ${ms.toFixed(0)}ms`, 'success');
       setState('running');
+      
+      // Start performance monitoring
+      startPerfMonitoring(runtime);
     } catch (e: any) {
       const msg = e?.message || 'Failed to run EXE';
       console.error('EXE load error:', e);
       setError(msg);
       setState('error');
-      addLog(`❌ Error: ${msg}`, 'error');
+      addLog(`Error: ${msg}`, 'error');
       
       // Auto-reset after error
       setTimeout(() => {
@@ -133,6 +170,19 @@ export default function WindowsPage() {
       }, 5000);
     }
   }, [addLog, state]);
+
+  const startPerfMonitoring = (runtime: any) => {
+    const interval = setInterval(() => {
+      try {
+        const stats = runtime.getPerformanceStats?.();
+        if (stats) {
+          setPerfStats(stats);
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 1000);
+  };
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.toLowerCase().endsWith('.exe')) {
@@ -175,23 +225,23 @@ export default function WindowsPage() {
   const isActive = state === 'loading' || state === 'running';
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+    <main className="mx-auto w-full max-w-7xl px-6 py-10" style={{ background: theme.bg }}>
       {/* Header */}
-      <div className="flex items-end justify-between gap-6 border-b-2 border-ocean-border pb-6">
+      <div className="flex items-end justify-between gap-6 border-b-2 pb-6" style={{ borderColor: theme.border }}>
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <h1 className="font-pixel text-lg text-ocean-accent retro-glow">💻 WINDOWS DECODER</h1>
-            <span className="font-pixel text-[8px] px-2 py-1 text-blue-400 border-2 border-blue-500/25 bg-blue-500/5">
-              NTR ENGINE
+            <h1 className="font-pixel text-lg" style={{ color: theme.text }}>CHALLENGER DEEP</h1>
+            <span className="font-pixel text-[8px] px-2 py-1" style={{ color: theme.accentBright, border: `2px solid ${theme.accent}`, background: theme.surface }}>
+              WINDOWS RUNTIME
             </span>
           </div>
-          <p className="font-mono text-sm text-ocean-secondary">
-            Drop an EXE to decode and run it — the NTR engine handles the rest.
+          <p className="font-mono text-sm" style={{ color: theme.textSecondary }}>
+            Deepest execution layer on the web — drop an EXE to run at unmatched speeds
           </p>
         </div>
         <div className="flex items-center gap-2">
           {isActive && (
-            <Button onClick={stop} className="border-rose-500/20 text-rose-300">
+            <Button onClick={stop} style={{ borderColor: `${theme.error}33`, color: theme.error }}>
               <span className="material-symbols-outlined mr-1.5 text-[16px]">stop</span>
               Stop
             </Button>
@@ -200,35 +250,44 @@ export default function WindowsPage() {
       </div>
 
       {error && (
-        <div className="mt-6 rounded-md border border-rose-500/20 px-4 py-3 text-sm text-rose-300 flex items-center justify-between">
+        <div className="mt-6 rounded-md border px-4 py-3 text-sm flex items-center justify-between" style={{ borderColor: `${theme.error}33`, color: theme.error, background: `${theme.error}11` }}>
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-300 ml-3">✕</button>
+          <button onClick={() => setError(null)} style={{ color: theme.error }} className="hover:opacity-80 ml-3">✕</button>
         </div>
       )}
 
       {isActive && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-ocean-muted">
-          {fileName && <span>File: <span className="text-ocean-primary font-medium">{fileName}</span></span>}
-          {fileSize > 0 && <span>Size: <span className="text-ocean-primary font-medium">{(fileSize / 1024).toFixed(1)} KB</span></span>}
-          <span>Runtime: <span className="text-blue-400 font-medium">NTR (x86 → WASM)</span></span>
-          {elapsed !== null && <span>Load: <span className="text-ocean-primary font-medium">{elapsed.toFixed(0)}ms</span></span>}
-          <span>Status: <span className={state === 'running' ? 'text-emerald-400 font-medium' : 'text-amber-400 font-medium'}>{state === 'loading' ? 'Initializing…' : 'Running'}</span></span>
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs" style={{ color: theme.textMuted }}>
+          {fileName && <span>File: <span style={{ color: theme.text }} className="font-medium">{fileName}</span></span>}
+          {fileSize > 0 && <span>Size: <span style={{ color: theme.text }} className="font-medium">{(fileSize / 1024).toFixed(1)} KB</span></span>}
+          <span>Runtime: <span style={{ color: theme.accentBright }} className="font-medium">NTR (x86 → WASM)</span></span>
+          {elapsed !== null && <span>Load: <span style={{ color: theme.text }} className="font-medium">{elapsed.toFixed(0)}ms</span></span>}
+          <span>Status: <span className="font-medium" style={{ color: state === 'running' ? theme.success : theme.warning }}>{state === 'loading' ? 'Initializing...' : 'Running'}</span></span>
+        </div>
+      )}
+
+      {/* Performance Stats */}
+      {perfStats && isActive && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: theme.textMuted }}>
+          <span>Instructions: <span style={{ color: theme.success }} className="font-medium">{perfStats.instructions.toLocaleString()}</span></span>
+          <span>FPS: <span style={{ color: theme.accentBright }} className="font-medium">{perfStats.fps}</span></span>
+          <span>Memory: <span style={{ color: theme.accentBright }} className="font-medium">{(perfStats.memory / 1024).toFixed(1)} KB</span></span>
         </div>
       )}
 
       {/* Main content */}
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.4fr] gap-4">
         {/* Canvas area (always mounted) */}
-        <div className="overflow-hidden rounded-md border border-ocean-border bg-black relative" ref={dropRef}>
+        <div className="overflow-hidden rounded-md border relative" style={{ borderColor: theme.border, background: '#000' }} ref={dropRef}>
           {/* Status bar */}
           {isActive && (
-            <div className="flex items-center justify-between border-b border-ocean-border bg-ocean-bg px-4 py-2">
-              <div className="flex items-center gap-2 text-xs text-ocean-muted">
-                <span className={`h-1.5 w-1.5 rounded-full ${state === 'running' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
-                <span>{state === 'loading' ? 'Loading…' : 'Running'}</span>
-                {fileName && <span className="text-ocean-secondary">· {fileName}</span>}
+            <div className="flex items-center justify-between border-b px-4 py-2" style={{ borderColor: theme.border, background: theme.surface }}>
+              <div className="flex items-center gap-2 text-xs" style={{ color: theme.textMuted }}>
+                <span className={`h-1.5 w-1.5 rounded-full ${state === 'running' ? 'animate-pulse' : ''}`} style={{ background: state === 'running' ? theme.success : theme.warning }} />
+                <span>{state === 'loading' ? 'Loading...' : 'Running'}</span>
+                {fileName && <span style={{ color: theme.textSecondary }}>· {fileName}</span>}
               </div>
-              <div className="text-[11px] text-ocean-muted font-mono">NTR Engine</div>
+              <div className="text-[11px] font-mono" style={{ color: theme.textMuted }}>NTR Engine</div>
             </div>
           )}
 
@@ -237,18 +296,18 @@ export default function WindowsPage() {
 
           {/* Drop zone overlay */}
           {!isActive && (
-            <div className={`flex flex-col items-center justify-center h-[70vh] transition-colors ${isDragging ? 'bg-blue-500/5' : 'bg-ocean-bg'}`}>
+            <div className="flex flex-col items-center justify-center h-[70vh] transition-colors" style={{ background: isDragging ? `${theme.accent}11` : theme.surface }}>
               <div className="text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/15 flex items-center justify-center mx-auto">
-                  <span className="material-symbols-outlined text-3xl text-blue-400">laptop_windows</span>
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ background: `${theme.accent}22`, border: `1px solid ${theme.accent}44` }}>
+                  <span className="material-symbols-outlined text-3xl" style={{ color: theme.accentBright }}>laptop_windows</span>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-ocean-primary">{isDragging ? 'Drop EXE here' : 'Drop an EXE file to run'}</p>
-                  <p className="text-xs text-ocean-muted">The PE binary is decoded and executed through the Win32 emulation layer</p>
+                  <p className="text-sm font-medium" style={{ color: theme.text }}>{isDragging ? 'Drop EXE here' : 'Drop an EXE file to run'}</p>
+                  <p className="text-xs" style={{ color: theme.textMuted }}>The PE binary is decoded and executed through the Win32 emulation layer</p>
                 </div>
                 <label className="inline-flex">
                   <input ref={fileInputRef} type="file" accept=".exe" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} style={{ borderColor: theme.accent, color: theme.accentBright }}>
                     <span className="material-symbols-outlined mr-1.5 text-[16px]">upload_file</span>
                     Choose EXE
                   </Button>
@@ -259,17 +318,17 @@ export default function WindowsPage() {
         </div>
 
         {/* Log panel */}
-        <div className="overflow-hidden rounded-md border border-ocean-border bg-ocean-bg flex flex-col">
-          <div className="flex items-center justify-between border-b border-ocean-border px-4 py-2">
-            <span className="text-xs text-ocean-muted font-medium">Log</span>
-            <span className="text-[10px] text-ocean-muted font-mono">{logs.length}</span>
+        <div className="overflow-hidden rounded-md border flex flex-col" style={{ borderColor: theme.border, background: theme.surface }}>
+          <div className="flex items-center justify-between border-b px-4 py-2" style={{ borderColor: theme.border }}>
+            <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Log</span>
+            <span className="text-[10px] font-mono" style={{ color: theme.textMuted }}>{logs.length}</span>
           </div>
           <div className="flex-1 h-[70vh] overflow-y-auto p-3 font-mono text-[11px] leading-relaxed space-y-0.5">
             {logs.length === 0 ? (
-              <div className="text-ocean-muted">Drop an EXE to begin…</div>
+              <div style={{ color: theme.textMuted }}>Drop an EXE to begin...</div>
             ) : (
               logs.map((log, i) => (
-                <div key={i} className={log.level === 'error' ? 'text-rose-400' : log.level === 'warn' ? 'text-amber-400' : log.level === 'success' ? 'text-emerald-400' : 'text-ocean-secondary'}>
+                <div key={i} style={{ color: log.level === 'error' ? theme.error : log.level === 'warn' ? theme.warning : log.level === 'success' ? theme.success : theme.textSecondary }}>
                   {log.message}
                 </div>
               ))
@@ -281,23 +340,23 @@ export default function WindowsPage() {
 
       {!isActive && (
         <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InfoCard icon="code" title="Parse PE" description="PE headers and sections are extracted, imports resolved against Win32 API shims." />
-          <InfoCard icon="memory" title="Decode x86" description="x86 instructions are decoded and interpreted through the NTR engine cycle." />
-          <InfoCard icon="display_settings" title="Render" description="GDI/DirectX calls are translated to WebGPU for hardware-accelerated display." />
+          <InfoCard icon="code" title="Parse PE" description="PE headers and sections are extracted, imports resolved against Win32 API shims." theme={theme} />
+          <InfoCard icon="memory" title="Decode x86" description="x86 instructions are decoded and interpreted through the NTR engine cycle." theme={theme} />
+          <InfoCard icon="display_settings" title="Render" description="GDI/DirectX calls are translated to WebGPU for hardware-accelerated display." theme={theme} />
         </div>
       )}
     </main>
   );
 }
 
-function InfoCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+function InfoCard({ icon, title, description, theme }: { icon: string; title: string; description: string; theme: ThemeColors }) {
   return (
-    <div className="rounded-md border border-ocean-border p-5 space-y-2">
+    <div className="rounded-md border p-5 space-y-2" style={{ borderColor: theme.border, background: theme.surface }}>
       <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-[18px] text-blue-400">{icon}</span>
-        <h3 className="text-sm font-medium text-ocean-primary">{title}</h3>
+        <span className="material-symbols-outlined text-[18px]" style={{ color: theme.accentBright }}>{icon}</span>
+        <h3 className="text-sm font-medium" style={{ color: theme.text }}>{title}</h3>
       </div>
-      <p className="text-xs text-ocean-secondary leading-relaxed">{description}</p>
+      <p className="text-xs leading-relaxed" style={{ color: theme.textSecondary }}>{description}</p>
     </div>
   );
 }
