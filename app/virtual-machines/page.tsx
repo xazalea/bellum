@@ -1,9 +1,64 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+
+// Icons
+function VMIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+function AndroidIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 20.5l2-2m-2 2l-2-2m2 2v-6m-6 6h12a2 2 0 002-2v-9a2 2 0 00-2-2h-3.5a2 2 0 00-1.5.7l-1.5 1.8a2 2 0 01-1.5.7H6a2 2 0 00-2 2v4a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+function WindowsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+  );
+}
+
+function PowerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  );
+}
+
+function PowerOffIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+    </svg>
+  );
+}
+
+function TerminalIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+    </svg>
+  );
+}
 
 type OSType = 'android' | 'windows' | null;
 type BootState = 'idle' | 'booting' | 'running' | 'error';
@@ -141,142 +196,259 @@ export default function VirtualMachinesPage() {
   const isActive = bootState === 'booting' || bootState === 'running';
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-10">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-end justify-between gap-6 border-b border-ocean-border pb-6">
-        <div className="space-y-2">
-          <h1 className="font-pixel text-lg text-ocean-accent retro-glow">
-            VIRTUAL MACHINES
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-cyan-500/10">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <VMIcon className="w-7 h-7 text-cyan-400" />
+            Virtual Machines
           </h1>
-          <p className="font-mono text-sm text-ocean-secondary">
-            Boot a full operating system directly in your browser.
+          <p className="text-slate-400 mt-1">
+            Boot full operating systems directly in your browser
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {isActive && (
-            <Button onClick={shutdown} className="border-rose-500/20 text-rose-300">
-              <span className="material-symbols-outlined mr-1.5 text-[16px]">power_settings_new</span>
-              Shut Down
-            </Button>
-          )}
-        </div>
+        
+        {isActive && (
+          <button
+            onClick={shutdown}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-all"
+          >
+            <PowerOffIcon className="w-4 h-4" />
+            Shut Down
+          </button>
+        )}
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="mt-6 rounded-md border border-rose-500/20 px-4 py-3 text-sm text-rose-300 flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-300 ml-3">✕</button>
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+          <PowerOffIcon className="w-5 h-5 flex-shrink-0" />
+          <p className="flex-1 text-sm">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Status bar when active */}
+      {/* Status Bar */}
       {isActive && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-ocean-muted">
-          <span>OS: <span className="text-ocean-primary font-medium">{selectedOS === 'android' ? 'Android 14' : 'Windows NT'}</span></span>
-          {elapsed !== null && <span>Boot: <span className="text-ocean-primary font-medium">{elapsed.toFixed(0)}ms</span></span>}
-          <span>Status: <span className={bootState === 'running' ? 'text-emerald-400 font-medium' : 'text-amber-400 font-medium'}>
-            {bootState === 'booting' ? 'Booting…' : 'Running'}
-          </span></span>
+        <div className="flex flex-wrap items-center gap-4 p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/10">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">OS:</span>
+            <span className="text-sm font-medium text-white">
+              {selectedOS === 'android' ? 'Android 14' : 'Windows NT'}
+            </span>
+          </div>
+          {elapsed !== null && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-400">Boot:</span>
+              <span className="text-sm font-medium text-white">{elapsed.toFixed(0)}ms</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">Status:</span>
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
+              bootState === 'running' 
+                ? 'bg-emerald-500/20 text-emerald-400' 
+                : 'bg-amber-500/20 text-amber-400'
+            }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${bootState === 'running' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+              {bootState === 'booting' ? 'Booting...' : 'Running'}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ─── OS Selection (idle state) ─── */}
+      {/* OS Selection */}
       {!isActive && (
-        <div className="mt-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <OSCard
-              title="Android 14"
-              engine="ART Runtime + WebGPU"
-              description="Full AOSP framework with SystemUI, SurfaceFlinger compositing, Binder IPC, and Dalvik JIT."
-              features={['Android Framework', 'ART JIT → WASM', 'SurfaceFlinger', 'Binder IPC', 'SystemUI']}
-              accentColor="teal"
-              onBoot={bootAndroid}
-              icon="android"
-            />
-            <OSCard
-              title="Windows NT"
-              engine="NTR Engine + WebGPU"
-              description="Win32 subsystem with Kernel32, User32, GDI32, and DirectX→WebGPU translation."
-              features={['Win32 Subsystem', 'Kernel32 + GDI', 'DirectX → WebGPU', 'PE Loader', 'Virtual Memory']}
-              accentColor="blue"
-              onBoot={bootWindows}
-              icon="laptop_windows"
-            />
+        <div className="space-y-8">
+          {/* Main OS Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Android Card */}
+            <div className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-transparent p-6 hover:border-emerald-500/40 transition-all duration-300">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
+              
+              <div className="relative">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30">
+                    <AndroidIcon className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+                    ART Runtime
+                  </span>
+                </div>
+
+                <h3 className="text-xl font-bold text-white mb-2">Android 14</h3>
+                <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+                  Full AOSP framework with SystemUI, SurfaceFlinger compositing, 
+                  Binder IPC, and Dalvik JIT compilation.
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {['Android Framework', 'ART JIT → WASM', 'SurfaceFlinger', 'Binder IPC', 'SystemUI'].map((tag) => (
+                    <span key={tag} className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-slate-400">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <button
+                  onClick={bootAndroid}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-emerald-400 hover:to-emerald-500 transition-all"
+                >
+                  <PowerIcon className="w-5 h-5" />
+                  Boot Android
+                </button>
+              </div>
+            </div>
+
+            {/* Windows Card */}
+            <div className="group relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-transparent p-6 hover:border-cyan-500/40 transition-all duration-300">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl" />
+              
+              <div className="relative">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-cyan-500/20 border border-cyan-500/30">
+                    <WindowsIcon className="w-8 h-8 text-cyan-400" />
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-medium">
+                    NTR Engine
+                  </span>
+                </div>
+
+                <h3 className="text-xl font-bold text-white mb-2">Windows NT</h3>
+                <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+                  Win32 subsystem with Kernel32, User32, GDI32, and DirectX→WebGPU 
+                  translation layer.
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {['Win32 Subsystem', 'Kernel32 + GDI', 'DirectX → WebGPU', 'PE Loader', 'Virtual Memory'].map((tag) => (
+                    <span key={tag} className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-slate-400">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <button
+                  onClick={bootWindows}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-cyan-400 hover:to-cyan-500 transition-all"
+                >
+                  <PowerIcon className="w-5 h-5" />
+                  Boot Windows
+                </button>
+              </div>
+            </div>
           </div>
-          
+
           {/* Quick Actions */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <QuickActionCard 
-              title="Run APK Directly" 
-              description="Skip the full OS - drop an APK file to run it immediately"
-              href="/android"
-              icon="android"
-              color="teal"
-            />
-            <QuickActionCard 
-              title="Run EXE Directly" 
-              description="Skip the full OS - drop an EXE file to run it immediately"
-              href="/windows"
-              icon="laptop_windows"
-              color="blue"
-            />
-            <QuickActionCard 
-              title="Browse Games" 
-              description="20,000+ HTML5 games ready to play instantly"
-              href="/games"
-              icon="sports_esports"
-              color="purple"
-            />
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Link
+                href="/android"
+                className="group flex items-center gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all"
+              >
+                <div className="p-2 rounded-lg bg-emerald-500/20">
+                  <AndroidIcon className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-white text-sm">Run APK Directly</h4>
+                  <p className="text-xs text-slate-400">Skip the full OS</p>
+                </div>
+                <ArrowRightIcon className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+              </Link>
+
+              <Link
+                href="/windows"
+                className="group flex items-center gap-4 p-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 hover:bg-cyan-500/10 hover:border-cyan-500/30 transition-all"
+              >
+                <div className="p-2 rounded-lg bg-cyan-500/20">
+                  <WindowsIcon className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-white text-sm">Run EXE Directly</h4>
+                  <p className="text-xs text-slate-400">Skip the full OS</p>
+                </div>
+                <ArrowRightIcon className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" />
+              </Link>
+
+              <Link
+                href="/games"
+                className="group flex items-center gap-4 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all"
+              >
+                <div className="p-2 rounded-lg bg-purple-500/20">
+                  <VMIcon className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-white text-sm">Browse Games</h4>
+                  <p className="text-xs text-slate-400">20,000+ games ready</p>
+                </div>
+                <ArrowRightIcon className="w-4 h-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ─── Boot display (active state) ─── */}
+      {/* Active VM Display */}
       {isActive && (
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.35fr] gap-4">
-          {/* Display surface */}
-          <div className="overflow-hidden rounded-md border border-ocean-border bg-black relative">
-            {/* OS status bar */}
-            <div className="flex items-center justify-between border-b border-ocean-border bg-ocean-bg px-4 py-2">
-              <div className="flex items-center gap-2 text-xs text-ocean-muted">
-                <span className={`h-1.5 w-1.5 rounded-full ${bootState === 'running' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
-                <span>{bootState === 'booting' ? 'Booting…' : 'Running'}</span>
-                <span className="text-ocean-secondary">·</span>
-                <span className="text-ocean-secondary">{selectedOS === 'android' ? 'Android 14' : 'Windows NT'}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-4">
+          {/* Display */}
+          <div className="rounded-2xl overflow-hidden border border-cyan-500/20 bg-[#0a1628]">
+            {/* Status Bar */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-cyan-500/10 bg-[#0a1628]/80">
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${bootState === 'running' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
+                <span className="text-sm text-slate-400">
+                  {bootState === 'booting' ? 'Booting...' : 'Running'}
+                </span>
+                <span className="text-slate-600">|</span>
+                <span className="text-sm text-slate-400">
+                  {selectedOS === 'android' ? 'Android 14' : 'Windows NT'}
+                </span>
               </div>
-              <div className="text-[11px] text-ocean-muted font-mono">
+              <span className="text-xs text-slate-500 font-mono">
                 {selectedOS === 'android' ? 'ART Runtime' : 'NTR Engine'}
-              </div>
+              </span>
             </div>
 
-            {/* Android display div */}
-            {selectedOS === 'android' && (
-              <div ref={displayRef} className="w-full h-[70vh] bg-black" />
-            )}
-
-            {/* Windows canvas */}
-            {selectedOS === 'windows' && (
-              <canvas ref={canvasRef} className="w-full h-[70vh] bg-black" />
-            )}
+            {/* Display Area */}
+            <div className="relative bg-black">
+              {selectedOS === 'android' && (
+                <div ref={displayRef} className="w-full h-[60vh] min-h-[400px]" />
+              )}
+              {selectedOS === 'windows' && (
+                <canvas ref={canvasRef} className="w-full h-[60vh] min-h-[400px]" />
+              )}
+            </div>
           </div>
 
-          {/* Log panel */}
-          <div className="overflow-hidden rounded-md border border-ocean-border bg-ocean-bg flex flex-col">
-            <div className="flex items-center justify-between border-b border-ocean-border px-4 py-2">
-              <span className="text-xs text-ocean-muted font-medium">Boot Log</span>
-              <span className="text-[10px] text-ocean-muted font-mono">{logs.length}</span>
+          {/* Log Panel */}
+          <div className="rounded-2xl overflow-hidden border border-cyan-500/20 bg-[#0a1628] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-cyan-500/10">
+              <div className="flex items-center gap-2">
+                <TerminalIcon className="w-4 h-4 text-cyan-400" />
+                <span className="text-sm font-medium text-white">Boot Log</span>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">{logs.length} entries</span>
             </div>
-            <div className="flex-1 h-[70vh] overflow-y-auto p-3 font-mono text-[11px] leading-relaxed space-y-0.5">
+            <div className="flex-1 h-[60vh] min-h-[400px] overflow-y-auto p-4 font-mono text-xs space-y-1">
               {logs.length === 0 ? (
-                <div className="text-ocean-muted">Select an OS to boot…</div>
+                <div className="text-slate-500 italic">Waiting for boot sequence...</div>
               ) : (
                 logs.map((log, i) => (
-                  <div key={i} className={
-                    log.level === 'error' ? 'text-rose-400' :
-                    log.level === 'warn' ? 'text-amber-400' :
-                    log.level === 'success' ? 'text-emerald-400' :
-                    'text-ocean-secondary'
-                  }>
+                  <div
+                    key={i}
+                    className={`${
+                      log.level === 'error' ? 'text-red-400' :
+                      log.level === 'warn' ? 'text-amber-400' :
+                      log.level === 'success' ? 'text-emerald-400' :
+                      'text-slate-400'
+                    }`}
+                  >
+                    <span className="text-slate-600">[{new Date().toLocaleTimeString()}]</span>{' '}
                     {log.message}
                   </div>
                 ))
@@ -286,140 +458,6 @@ export default function VirtualMachinesPage() {
           </div>
         </div>
       )}
-
-      {/* ─── App Decoder links ─── */}
-      {!isActive && (
-        <section className="mt-14">
-          <h2 className="font-pixel text-sm text-ocean-accent mb-4">APP DECODERS</h2>
-          <p className="text-sm text-ocean-secondary mb-6">
-            Don&apos;t need a full OS? Drop individual APK or EXE files to decode and run them directly.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link href="/android" className="block">
-              <Card className="p-5 flex items-center gap-4 hover:border-ocean-border-hover transition-colors">
-                <div className="p-2.5 rounded-md bg-teal-500/8 border border-teal-500/10 flex-shrink-0">
-                  <span className="material-symbols-outlined text-xl text-teal-400">android</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-ocean-primary">Android APK Decoder</h3>
-                  <p className="text-xs text-ocean-secondary mt-0.5">Drop an .apk → decoded via ART runtime</p>
-                </div>
-              </Card>
-            </Link>
-            <Link href="/windows" className="block">
-              <Card className="p-5 flex items-center gap-4 hover:border-ocean-border-hover transition-colors">
-                <div className="p-2.5 rounded-md bg-blue-500/8 border border-blue-500/10 flex-shrink-0">
-                  <span className="material-symbols-outlined text-xl text-blue-400">laptop_windows</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-ocean-primary">Windows EXE Decoder</h3>
-                  <p className="text-xs text-ocean-secondary mt-0.5">Drop an .exe → decoded via NTR engine</p>
-                </div>
-              </Card>
-            </Link>
-          </div>
-        </section>
-      )}
-    </main>
-  );
-}
-
-function OSCard({
-  title,
-  engine,
-  description,
-  features,
-  accentColor,
-  onBoot,
-  icon,
-}: {
-  title: string;
-  engine: string;
-  description: string;
-  features: string[];
-  accentColor: 'teal' | 'blue';
-  onBoot: () => void;
-  icon: string;
-}) {
-  const accent = accentColor === 'teal'
-    ? { text: 'text-teal-400', border: 'border-teal-500/15', bg: 'bg-teal-500/8', hover: 'hover:shadow-[0_0_30px_rgba(20,184,166,0.15)]' }
-    : { text: 'text-blue-400', border: 'border-blue-500/15', bg: 'bg-blue-500/8', hover: 'hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]' };
-
-  return (
-    <Card className={`flex flex-col p-6 h-full transition-all duration-300 ${accent.hover}`}>
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 rounded-xl ${accent.bg} border ${accent.border}`}>
-          <span className={`material-symbols-outlined text-2xl ${accent.text}`}>
-            {icon}
-          </span>
-        </div>
-        <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase tracking-wider border font-medium ${accent.text} ${accent.border} ${accent.bg}`}>
-          {engine}
-        </span>
-      </div>
-
-      <h3 className="text-lg font-semibold text-ocean-primary mb-2">{title}</h3>
-      <p className="text-sm text-ocean-secondary leading-relaxed mb-4">{description}</p>
-
-      <div className="flex flex-wrap gap-1.5 mb-6">
-        {features.map((f) => (
-          <span key={f} className="px-2 py-0.5 rounded-md text-[10px] font-mono text-ocean-muted border border-ocean-border bg-ocean-surface/30">
-            {f}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-auto">
-        <Button variant="primary" className="w-full" onClick={onBoot}>
-          <span className="material-symbols-outlined mr-1.5 text-[16px]">power_settings_new</span>
-          Boot {title}
-        </Button>
-      </div>
-    </Card>
-  );
-}
-
-function QuickActionCard({
-  title,
-  description,
-  href,
-  icon,
-  color,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  icon: string;
-  color: 'teal' | 'blue' | 'purple';
-}) {
-  const colorStyles = {
-    teal: { text: 'text-teal-400', border: 'border-teal-500/20', bg: 'bg-teal-500/10', hover: 'hover:border-teal-500/40 hover:bg-teal-500/15' },
-    blue: { text: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/10', hover: 'hover:border-blue-500/40 hover:bg-blue-500/15' },
-    purple: { text: 'text-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/10', hover: 'hover:border-purple-500/40 hover:bg-purple-500/15' },
-  };
-  
-  const c = colorStyles[color];
-  
-  return (
-    <Link href={href} className="group block">
-      <div className={`rounded-xl border ${c.border} ${c.bg} p-5 transition-all duration-300 ${c.hover}`}>
-        <div className="flex items-start gap-4">
-          <div className={`p-2.5 rounded-lg ${c.bg} border ${c.border}`}>
-            <span className={`material-symbols-outlined text-xl ${c.text}`}>{icon}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium text-ocean-primary mb-1 group-hover:text-ocean-accent transition-colors">
-              {title}
-            </h4>
-            <p className="text-xs text-ocean-secondary leading-relaxed">
-              {description}
-            </p>
-          </div>
-          <span className="material-symbols-outlined text-ocean-muted group-hover:text-ocean-accent transition-colors">
-            arrow_forward
-          </span>
-        </div>
-      </div>
-    </Link>
+    </div>
   );
 }
