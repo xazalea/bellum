@@ -1,362 +1,672 @@
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/Button';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-type RunState = 'idle' | 'loading' | 'running' | 'error';
+// ═══════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════
+
+type RunState = "idle" | "loading" | "running" | "error";
 
 interface LogEntry {
+  timestamp: number;
   message: string;
-  level: 'info' | 'warn' | 'error' | 'success';
+  level: "info" | "warn" | "error" | "success";
 }
 
-// Challenger Deep - Matte Dark Blue Theme
-type ThemeColors = {
-  bg: string;
-  surface: string;
-  elevated: string;
-  accent: string;
-  accentBright: string;
-  text: string;
-  textSecondary: string;
-  textMuted: string;
-  border: string;
-  success: string;
-  warning: string;
-  error: string;
-};
+// ═══════════════════════════════════════════════════════════
+// ICONS
+// ═══════════════════════════════════════════════════════════
 
-const theme: ThemeColors = {
-  bg: '#0a0f1a',
-  surface: '#0d1929',
-  elevated: '#112240',
-  accent: '#1e4976',
-  accentBright: '#2d5a8a',
-  text: '#e2e8f0',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  border: '#1e3a5f',
-  success: '#22c55e',
-  warning: '#eab308',
-  error: '#ef4444',
-};
+function WindowsIcon({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />
+    </svg>
+  );
+}
+
+function UploadIcon({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg className={className} style={style}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+      />
+    </svg>
+  );
+}
+
+function StopIcon({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg className={className} style={style}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+      />
+    </svg>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════
 
 export default function WindowsPage() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const runtimeRef = useRef<any>(null);
-  const [state, setState] = useState<RunState>('idle');
+  const [state, setState] = useState<RunState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number>(0);
-  const [elapsed, setElapsed] = useState<number | null>(null);
-  const [perfStats, setPerfStats] = useState<{ instructions: number; fps: number; memory: number } | null>(null);
-  const logsEndRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const dropRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [perfStats, setPerfStats] = useState<{
+    instructions: number;
+    fps: number;
+    memory: number;
+  } | null>(null);
 
-  const addLog = useCallback((message: string, level: LogEntry['level'] = 'info') => {
-    setLogs((prev) => [...prev, { message, level }]);
-  }, []);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+  const runtimeRef = useRef<any>(null);
 
+  // Add log entry
+  const addLog = useCallback(
+    (message: string, level: LogEntry["level"] = "info") => {
+      setLogs((prev) => [
+        ...prev,
+        {
+          timestamp: Date.now(),
+          message,
+          level,
+        },
+      ]);
+    },
+    [],
+  );
+
+  // Auto-scroll logs
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
+  // Stop execution
   const stop = useCallback(() => {
     try {
-      runtimeRef.current?.stop?.();
-    } catch { /* ignore */ }
+      if (runtimeRef.current?.stop) {
+        runtimeRef.current.stop();
+      }
+    } catch (err) {
+      console.error("Shutdown error:", err);
+    }
     runtimeRef.current = null;
-    setState('idle');
+    setState("idle");
     setFileName(null);
     setFileSize(0);
-    setElapsed(null);
     setPerfStats(null);
-    addLog('Runtime stopped', 'info');
+    addLog("Runtime stopped", "info");
   }, [addLog]);
 
-  const runEXE = useCallback(async (file: File) => {
-    try {
-      setError(null);
-      setLogs([]);
-      setElapsed(null);
-      setPerfStats(null);
-      setFileName(file.name);
-      setFileSize(file.size);
-      setState('loading');
-
-      const startTime = performance.now();
-      addLog(`Loading ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info');
-
-      // Validate file
-      if (file.size < 1024) {
-        throw new Error('File too small - may be corrupted');
-      }
-      if (file.size > 100 * 1024 * 1024) {
-        throw new Error('File too large - max 100MB supported');
-      }
-
-      // Wait a tick for React to render the canvas
-      await new Promise((r) => requestAnimationFrame(r));
-
-      const canvas = canvasRef.current;
-      if (!canvas) throw new Error('Canvas unavailable');
-      canvas.width = canvas.clientWidth || 800;
-      canvas.height = canvas.clientHeight || 600;
-
-      addLog('Initializing NTR runtime...', 'info');
-      
-      // Dynamic import with error handling
-      let WebGPUContext, WindowsRuntime;
+  // Run EXE
+  const runEXE = useCallback(
+    async (file: File) => {
       try {
-        const gpuModule = await import('@/lib/nacho/gpu/webgpu');
-        const winModule = await import('@/lib/nacho/windows/runtime');
-        WebGPUContext = gpuModule.WebGPUContext;
-        WindowsRuntime = winModule.WindowsRuntime;
-      } catch (importErr: any) {
-        console.error('Failed to load Windows runtime:', importErr);
-        throw new Error('Failed to load Windows runtime. Please refresh and try again.');
-      }
+        setError(null);
+        setLogs([]);
+        setPerfStats(null);
+        setFileName(file.name);
+        setFileSize(file.size);
+        setState("loading");
 
-      const gpu = new WebGPUContext(canvas);
-      try {
-        await gpu.initialize();
-        addLog('WebGPU initialized', 'success');
-      } catch {
-        addLog('WebGPU not available, using Canvas 2D fallback', 'warn');
-      }
+        addLog(
+          `Loading ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+          "info",
+        );
 
-      const runtime = new WindowsRuntime(gpu);
-      runtime.setCanvas(canvas);
-      runtimeRef.current = runtime;
+        // Validate file
+        if (file.size < 1024) {
+          throw new Error("File too small - may be corrupted");
+        }
+        if (file.size > 100 * 1024 * 1024) {
+          throw new Error("File too large - max 100MB supported");
+        }
 
-      addLog('Booting Win32 subsystem...', 'info');
-      await runtime.boot();
-      addLog('Kernel32 + User32 + GDI loaded', 'success');
+        // Wait for canvas to be ready
+        await new Promise((resolve) => requestAnimationFrame(resolve));
 
-      addLog('Parsing PE headers...', 'info');
-      const buffer = await file.arrayBuffer();
-      
-      // Set a timeout for the loading process
-      const loadTimeout = setTimeout(() => {
-        addLog('Still loading... Large executables may take a moment', 'warn');
-      }, 10000);
-      
-      await runtime.loadPE(buffer);
-      clearTimeout(loadTimeout);
+        const canvas = canvasRef.current;
+        if (!canvas) {
+          throw new Error("Canvas not available");
+        }
 
-      const ms = performance.now() - startTime;
-      setElapsed(ms);
-      addLog(`Executable loaded in ${ms.toFixed(0)}ms`, 'success');
-      setState('running');
-      
-      // Start performance monitoring
-      startPerfMonitoring(runtime);
-    } catch (e: any) {
-      const msg = e?.message || 'Failed to run EXE';
-      console.error('EXE load error:', e);
-      setError(msg);
-      setState('error');
-      addLog(`Error: ${msg}`, 'error');
-      
-      // Auto-reset after error
-      setTimeout(() => {
-        if (state === 'error') {
-          setState('idle');
+        // Set canvas size
+        canvas.width = canvas.clientWidth || 800;
+        canvas.height = canvas.clientHeight || 600;
+
+        addLog("Initializing Windows Runtime (NTR)...", "info");
+
+        // Try to load Windows runtime
+        let WebGPUContext, WindowsRuntime;
+        try {
+          const gpuModule = await import("@/lib/nacho/gpu/webgpu");
+          const winModule = await import("@/lib/nacho/windows/runtime");
+          WebGPUContext = gpuModule.WebGPUContext;
+          WindowsRuntime = winModule.WindowsRuntime;
+          addLog("Windows runtime module loaded", "success");
+        } catch (importErr: any) {
+          console.error("Failed to load Windows runtime:", importErr);
+          addLog("Windows runtime not available", "error");
+          throw new Error(
+            "Windows runtime not available. This feature is still in development.",
+          );
+        }
+
+        // Initialize WebGPU
+        addLog("Initializing WebGPU...", "info");
+        const gpu = new WebGPUContext(canvas);
+        try {
+          await gpu.initialize();
+          addLog("WebGPU initialized successfully", "success");
+        } catch (gpuErr) {
+          addLog("WebGPU not available, using Canvas 2D fallback", "warn");
+        }
+
+        // Create runtime
+        const runtime = new WindowsRuntime(gpu);
+        runtime.setCanvas(canvas);
+        runtimeRef.current = runtime;
+
+        addLog("Booting Win32 subsystem...", "info");
+        try {
+          await runtime.boot();
+          addLog("Kernel32 + User32 + GDI32 loaded", "success");
+        } catch (bootErr: any) {
+          addLog(`Boot failed: ${bootErr.message}`, "error");
+          throw bootErr;
+        }
+
+        // Read file as ArrayBuffer
+        addLog("Reading PE executable...", "info");
+        const buffer = await file.arrayBuffer();
+
+        addLog("Parsing PE headers...", "info");
+        try {
+          await runtime.loadPE(buffer);
+          addLog("PE executable loaded successfully", "success");
+          setState("running");
+
+          // Start performance monitoring
+          const interval = setInterval(() => {
+            try {
+              const stats = runtime.getPerformanceStats?.();
+              if (stats) {
+                setPerfStats(stats);
+              }
+            } catch {
+              clearInterval(interval);
+            }
+          }, 1000);
+        } catch (loadErr: any) {
+          console.error("PE load error:", loadErr);
+          addLog(`Load failed: ${loadErr.message}`, "error");
+          throw loadErr;
+        }
+      } catch (err: any) {
+        const msg = err?.message || "Failed to run EXE";
+        console.error("EXE execution error:", err);
+        setError(msg);
+        setState("error");
+        addLog(`Error: ${msg}`, "error");
+
+        // Auto-reset after error
+        setTimeout(() => {
+          setState("idle");
           setError(null);
-        }
-      }, 5000);
-    }
-  }, [addLog, state]);
-
-  const startPerfMonitoring = (runtime: any) => {
-    const interval = setInterval(() => {
-      try {
-        const stats = runtime.getPerformanceStats?.();
-        if (stats) {
-          setPerfStats(stats);
-        }
-      } catch {
-        clearInterval(interval);
+        }, 5000);
       }
-    }, 1000);
-  };
+    },
+    [addLog],
+  );
 
-  const handleFile = useCallback((file: File) => {
-    if (!file.name.toLowerCase().endsWith('.exe')) {
-      setError('Only .exe files are supported');
-      return;
-    }
-    void runEXE(file);
-  }, [runEXE]);
+  // Handle file selection
+  const handleFile = useCallback(
+    (file: File) => {
+      if (!file.name.toLowerCase().endsWith(".exe")) {
+        setError("Only .exe files are supported");
+        addLog("Invalid file type - expected .exe", "error");
+        return;
+      }
+      void runEXE(file);
+    },
+    [runEXE, addLog],
+  );
 
-  /* Drag and drop */
+  // Drag and drop handlers
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
-    const prevent = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
-    const onEnter = (e: DragEvent) => { prevent(e); setIsDragging(true); };
-    const onLeave = (e: DragEvent) => { prevent(e); setIsDragging(false); };
+
+    const prevent = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onEnter = (e: DragEvent) => {
+      prevent(e);
+      setIsDragging(true);
+    };
+
+    const onLeave = (e: DragEvent) => {
+      prevent(e);
+      setIsDragging(false);
+    };
+
     const onDrop = (e: DragEvent) => {
       prevent(e);
       setIsDragging(false);
       const file = e.dataTransfer?.files[0];
       if (file) handleFile(file);
     };
-    el.addEventListener('dragenter', onEnter);
-    el.addEventListener('dragover', prevent);
-    el.addEventListener('dragleave', onLeave);
-    el.addEventListener('drop', onDrop);
+
+    el.addEventListener("dragenter", onEnter);
+    el.addEventListener("dragover", prevent);
+    el.addEventListener("dragleave", onLeave);
+    el.addEventListener("drop", onDrop);
+
     return () => {
-      el.removeEventListener('dragenter', onEnter);
-      el.removeEventListener('dragover', prevent);
-      el.removeEventListener('dragleave', onLeave);
-      el.removeEventListener('drop', onDrop);
+      el.removeEventListener("dragenter", onEnter);
+      el.removeEventListener("dragover", prevent);
+      el.removeEventListener("dragleave", onLeave);
+      el.removeEventListener("drop", onDrop);
     };
   }, [handleFile]);
 
+  // Cleanup on unmount
   useEffect(() => {
-    return () => { stop(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      stop();
+    };
   }, []);
 
-  const isActive = state === 'loading' || state === 'running';
+  const isActive = state === "loading" || state === "running";
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-6 py-10" style={{ background: theme.bg }}>
+    <div className="min-h-screen" style={{ background: "var(--cd-abyss)" }}>
       {/* Header */}
-      <div className="flex items-end justify-between gap-6 border-b-2 pb-6" style={{ borderColor: theme.border }}>
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h1 className="font-pixel text-lg" style={{ color: theme.text }}>CHALLENGER DEEP</h1>
-            <span className="font-pixel text-[8px] px-2 py-1" style={{ color: theme.accentBright, border: `2px solid ${theme.accent}`, background: theme.surface }}>
-              WINDOWS RUNTIME
-            </span>
-          </div>
-          <p className="font-mono text-sm" style={{ color: theme.textSecondary }}>
-            Deepest execution layer on the web — drop an EXE to run at unmatched speeds
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isActive && (
-            <Button onClick={stop} style={{ borderColor: `${theme.error}33`, color: theme.error }}>
-              <span className="material-symbols-outlined mr-1.5 text-[16px]">stop</span>
-              Stop
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="mt-6 rounded-md border px-4 py-3 text-sm flex items-center justify-between" style={{ borderColor: `${theme.error}33`, color: theme.error, background: `${theme.error}11` }}>
-          <span>{error}</span>
-          <button onClick={() => setError(null)} style={{ color: theme.error }} className="hover:opacity-80 ml-3">✕</button>
-        </div>
-      )}
-
-      {isActive && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs" style={{ color: theme.textMuted }}>
-          {fileName && <span>File: <span style={{ color: theme.text }} className="font-medium">{fileName}</span></span>}
-          {fileSize > 0 && <span>Size: <span style={{ color: theme.text }} className="font-medium">{(fileSize / 1024).toFixed(1)} KB</span></span>}
-          <span>Runtime: <span style={{ color: theme.accentBright }} className="font-medium">NTR (x86 → WASM)</span></span>
-          {elapsed !== null && <span>Load: <span style={{ color: theme.text }} className="font-medium">{elapsed.toFixed(0)}ms</span></span>}
-          <span>Status: <span className="font-medium" style={{ color: state === 'running' ? theme.success : theme.warning }}>{state === 'loading' ? 'Initializing...' : 'Running'}</span></span>
-        </div>
-      )}
-
-      {/* Performance Stats */}
-      {perfStats && isActive && (
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: theme.textMuted }}>
-          <span>Instructions: <span style={{ color: theme.success }} className="font-medium">{perfStats.instructions.toLocaleString()}</span></span>
-          <span>FPS: <span style={{ color: theme.accentBright }} className="font-medium">{perfStats.fps}</span></span>
-          <span>Memory: <span style={{ color: theme.accentBright }} className="font-medium">{(perfStats.memory / 1024).toFixed(1)} KB</span></span>
-        </div>
-      )}
-
-      {/* Main content */}
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.4fr] gap-4">
-        {/* Canvas area (always mounted) */}
-        <div className="overflow-hidden rounded-md border relative" style={{ borderColor: theme.border, background: '#000' }} ref={dropRef}>
-          {/* Status bar */}
-          {isActive && (
-            <div className="flex items-center justify-between border-b px-4 py-2" style={{ borderColor: theme.border, background: theme.surface }}>
-              <div className="flex items-center gap-2 text-xs" style={{ color: theme.textMuted }}>
-                <span className={`h-1.5 w-1.5 rounded-full ${state === 'running' ? 'animate-pulse' : ''}`} style={{ background: state === 'running' ? theme.success : theme.warning }} />
-                <span>{state === 'loading' ? 'Loading...' : 'Running'}</span>
-                {fileName && <span style={{ color: theme.textSecondary }}>· {fileName}</span>}
+      <div
+        className="border-b"
+        style={{ borderColor: "var(--cd-border-default)" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            {/* Title */}
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center"
+                style={{
+                  background: "var(--cd-cyan-muted)",
+                  border: "1px solid var(--cd-cyan-border)",
+                }}
+              >
+                <WindowsIcon
+                  className="w-6 h-6"
+                  style={{ color: "var(--cd-cyan)" }}
+                />
               </div>
-              <div className="text-[11px] font-mono" style={{ color: theme.textMuted }}>NTR Engine</div>
-            </div>
-          )}
-
-          {/* Canvas — always in DOM so ref is available */}
-          <canvas ref={canvasRef} className={`w-full bg-black ${isActive ? 'h-[70vh]' : 'h-0 overflow-hidden'}`} />
-
-          {/* Drop zone overlay */}
-          {!isActive && (
-            <div className="flex flex-col items-center justify-center h-[70vh] transition-colors" style={{ background: isDragging ? `${theme.accent}11` : theme.surface }}>
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ background: `${theme.accent}22`, border: `1px solid ${theme.accent}44` }}>
-                  <span className="material-symbols-outlined text-3xl" style={{ color: theme.accentBright }}>laptop_windows</span>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium" style={{ color: theme.text }}>{isDragging ? 'Drop EXE here' : 'Drop an EXE file to run'}</p>
-                  <p className="text-xs" style={{ color: theme.textMuted }}>The PE binary is decoded and executed through the Win32 emulation layer</p>
-                </div>
-                <label className="inline-flex">
-                  <input ref={fileInputRef} type="file" accept=".exe" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.currentTarget.value = ''; }} />
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()} style={{ borderColor: theme.accent, color: theme.accentBright }}>
-                    <span className="material-symbols-outlined mr-1.5 text-[16px]">upload_file</span>
-                    Choose EXE
-                  </Button>
-                </label>
+              <div>
+                <h1
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--cd-text-primary)" }}
+                >
+                  Windows EXE Runner
+                </h1>
+                <p
+                  className="text-sm mt-1"
+                  style={{ color: "var(--cd-text-muted)" }}
+                >
+                  Run Windows programs in your browser via NTR engine
+                </p>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Log panel */}
-        <div className="overflow-hidden rounded-md border flex flex-col" style={{ borderColor: theme.border, background: theme.surface }}>
-          <div className="flex items-center justify-between border-b px-4 py-2" style={{ borderColor: theme.border }}>
-            <span className="text-xs font-medium" style={{ color: theme.textMuted }}>Log</span>
-            <span className="text-[10px] font-mono" style={{ color: theme.textMuted }}>{logs.length}</span>
-          </div>
-          <div className="flex-1 h-[70vh] overflow-y-auto p-3 font-mono text-[11px] leading-relaxed space-y-0.5">
-            {logs.length === 0 ? (
-              <div style={{ color: theme.textMuted }}>Drop an EXE to begin...</div>
-            ) : (
-              logs.map((log, i) => (
-                <div key={i} style={{ color: log.level === 'error' ? theme.error : log.level === 'warn' ? theme.warning : log.level === 'success' ? theme.success : theme.textSecondary }}>
-                  {log.message}
-                </div>
-              ))
+            {/* Controls */}
+            {isActive && (
+              <button onClick={stop} className="cd-btn cd-btn-danger">
+                <StopIcon className="w-4 h-4" />
+                Stop
+              </button>
             )}
-            <div ref={logsEndRef} />
           </div>
+
+          {/* Status Bar */}
+          {isActive && (
+            <div
+              className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs"
+              style={{ color: "var(--cd-text-muted)" }}
+            >
+              {fileName && (
+                <div className="cd-badge cd-badge-cyan">
+                  <span className="font-semibold">File:</span> {fileName}
+                </div>
+              )}
+              {fileSize > 0 && (
+                <div className="cd-badge">
+                  <span className="font-semibold">Size:</span>{" "}
+                  {(fileSize / 1024).toFixed(1)} KB
+                </div>
+              )}
+              <div className="cd-badge">
+                <span className="font-semibold">Runtime:</span> NTR (x86 → WASM)
+              </div>
+              <div
+                className="cd-badge"
+                style={{
+                  background:
+                    state === "running"
+                      ? "var(--cd-success)"
+                      : "var(--cd-warning)",
+                  color: "white",
+                  borderColor: "transparent",
+                }}
+              >
+                {state === "loading" ? "Loading..." : "Running"}
+              </div>
+              {perfStats && (
+                <>
+                  <div className="cd-badge cd-badge-success">
+                    <span className="font-semibold">Instructions:</span>{" "}
+                    {perfStats.instructions.toLocaleString()}
+                  </div>
+                  <div className="cd-badge">
+                    <span className="font-semibold">FPS:</span> {perfStats.fps}
+                  </div>
+                  <div className="cd-badge">
+                    <span className="font-semibold">Memory:</span>{" "}
+                    {(perfStats.memory / 1024).toFixed(1)} KB
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {!isActive && (
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InfoCard icon="code" title="Parse PE" description="PE headers and sections are extracted, imports resolved against Win32 API shims." theme={theme} />
-          <InfoCard icon="memory" title="Decode x86" description="x86 instructions are decoded and interpreted through the NTR engine cycle." theme={theme} />
-          <InfoCard icon="display_settings" title="Render" description="GDI/DirectX calls are translated to WebGPU for hardware-accelerated display." theme={theme} />
+      {/* Error Alert */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          <div className="cd-alert cd-alert-error">
+            <svg
+              className="w-5 h-5 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="font-medium">Execution Error</p>
+              <p className="text-sm mt-1 opacity-80">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="cd-btn cd-btn-ghost text-xs"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
-    </main>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
+          {/* Display Area */}
+          <div>
+            <div
+              ref={dropRef}
+              className="cd-card overflow-hidden relative"
+              style={{
+                background: isActive
+                  ? "var(--cd-void)"
+                  : isDragging
+                    ? "var(--cd-elevated)"
+                    : "var(--cd-surface)",
+                borderColor: isDragging
+                  ? "var(--cd-cyan-border)"
+                  : "var(--cd-border-default)",
+                borderWidth: isDragging ? "2px" : "1px",
+                borderStyle: isDragging ? "dashed" : "solid",
+                minHeight: "600px",
+                padding: 0,
+              }}
+            >
+              {/* Canvas (always mounted) */}
+              <canvas
+                ref={canvasRef}
+                className={`w-full ${isActive ? "h-full min-h-[600px]" : "hidden"}`}
+                style={{
+                  background: "var(--cd-void)",
+                  imageRendering: "pixelated",
+                }}
+              />
+
+              {/* Upload Zone (visible when idle) */}
+              {!isActive && (
+                <div className="flex flex-col items-center justify-center p-12 min-h-[600px]">
+                  <div
+                    className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+                    style={{
+                      background: isDragging
+                        ? "var(--cd-cyan-muted)"
+                        : "var(--cd-elevated)",
+                      border: `2px ${isDragging ? "solid" : "dashed"} var(--cd-border-default)`,
+                    }}
+                  >
+                    {isDragging ? (
+                      <UploadIcon
+                        className="w-10 h-10"
+                        style={{ color: "var(--cd-cyan)" }}
+                      />
+                    ) : (
+                      <WindowsIcon
+                        className="w-10 h-10"
+                        style={{ color: "var(--cd-cyan)" }}
+                      />
+                    )}
+                  </div>
+
+                  <h3
+                    className="text-lg font-semibold mb-2"
+                    style={{ color: "var(--cd-text-primary)" }}
+                  >
+                    {isDragging ? "Drop EXE here" : "Upload Windows Executable"}
+                  </h3>
+
+                  <p
+                    className="text-sm text-center mb-6 max-w-md"
+                    style={{ color: "var(--cd-text-secondary)" }}
+                  >
+                    Drag and drop an EXE file, or click to browse. The
+                    executable will be parsed and run through the NTR engine
+                    with x86 to WebAssembly translation.
+                  </p>
+
+                  <label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".exe"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFile(file);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="cd-btn cd-btn-primary"
+                    >
+                      <UploadIcon className="w-4 h-4" />
+                      Choose EXE File
+                    </button>
+                  </label>
+
+                  <div
+                    className="mt-8 text-xs"
+                    style={{ color: "var(--cd-text-muted)" }}
+                  >
+                    Maximum file size: 100 MB
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Info Cards (when idle) */}
+            {!isActive && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <InfoCard
+                  icon="📄"
+                  title="Parse PE"
+                  description="Extract PE headers, sections, and resolve Win32 imports"
+                />
+                <InfoCard
+                  icon="⚙️"
+                  title="Decode x86"
+                  description="Interpret x86 instructions through NTR engine cycle"
+                />
+                <InfoCard
+                  icon="🎨"
+                  title="Render GDI"
+                  description="Translate GDI/DirectX calls to WebGPU for display"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Log Panel */}
+          <div
+            className="cd-card flex flex-col"
+            style={{ padding: 0, maxHeight: "600px" }}
+          >
+            <div
+              className="flex items-center justify-between px-4 py-3 border-b"
+              style={{ borderColor: "var(--cd-border-default)" }}
+            >
+              <h3
+                className="text-sm font-semibold"
+                style={{ color: "var(--cd-text-primary)" }}
+              >
+                Execution Log
+              </h3>
+              <span
+                className="text-xs font-mono px-2 py-1 rounded"
+                style={{
+                  background: "var(--cd-elevated)",
+                  color: "var(--cd-text-muted)",
+                }}
+              >
+                {logs.length}
+              </span>
+            </div>
+
+            <div
+              className="flex-1 overflow-y-auto p-4 space-y-1"
+              style={{ background: "var(--cd-deep)" }}
+            >
+              {logs.length === 0 ? (
+                <div
+                  className="text-center py-12"
+                  style={{ color: "var(--cd-text-muted)" }}
+                >
+                  <p className="text-sm">No logs yet</p>
+                  <p className="text-xs mt-1">Upload an EXE to begin</p>
+                </div>
+              ) : (
+                logs.map((log, i) => (
+                  <div
+                    key={i}
+                    className="font-mono text-xs leading-relaxed"
+                    style={{
+                      color:
+                        log.level === "error"
+                          ? "var(--cd-error)"
+                          : log.level === "warn"
+                            ? "var(--cd-warning)"
+                            : log.level === "success"
+                              ? "var(--cd-success)"
+                              : "var(--cd-text-secondary)",
+                    }}
+                  >
+                    <span style={{ color: "var(--cd-text-muted)" }}>
+                      [{new Date(log.timestamp).toLocaleTimeString()}]
+                    </span>{" "}
+                    {log.message}
+                  </div>
+                ))
+              )}
+              <div ref={logsEndRef} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function InfoCard({ icon, title, description, theme }: { icon: string; title: string; description: string; theme: ThemeColors }) {
+// ═══════════════════════════════════════════════════════════
+// INFO CARD
+// ═══════════════════════════════════════════════════════════
+
+function InfoCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+}) {
   return (
-    <div className="rounded-md border p-5 space-y-2" style={{ borderColor: theme.border, background: theme.surface }}>
-      <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-[18px]" style={{ color: theme.accentBright }}>{icon}</span>
-        <h3 className="text-sm font-medium" style={{ color: theme.text }}>{title}</h3>
+    <div className="cd-card">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-2xl">{icon}</span>
+        <h4
+          className="font-semibold text-sm"
+          style={{ color: "var(--cd-text-primary)" }}
+        >
+          {title}
+        </h4>
       </div>
-      <p className="text-xs leading-relaxed" style={{ color: theme.textSecondary }}>{description}</p>
+      <p
+        className="text-xs leading-relaxed"
+        style={{ color: "var(--cd-text-secondary)" }}
+      >
+        {description}
+      </p>
     </div>
   );
 }

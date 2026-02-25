@@ -80,6 +80,31 @@ try {
   log('NEXT_BUILD_SUCCESS', 'Next.js build completed successfully');
   // #endregion
 
+  // Remove not-found function since we have static HTML
+  const notFoundFuncDir = path.join(process.cwd(), '.vercel/output/functions/_not-found.func');
+  const notFoundRscFuncDir = path.join(process.cwd(), '.vercel/output/functions/_not-found.rsc.func');
+  const notFoundPrerender = path.join(process.cwd(), '.vercel/output/functions/_not-found.prerender-config.json');
+  const notFoundPrerenderFallback = path.join(process.cwd(), '.vercel/output/functions/_not-found.prerender-fallback.html');
+  
+  try {
+    if (fs.existsSync(notFoundFuncDir)) {
+      fs.rmSync(notFoundFuncDir, { recursive: true });
+      log('REMOVE_NOTFOUND', 'Removed _not-found.func directory');
+    }
+    if (fs.existsSync(notFoundRscFuncDir)) {
+      fs.rmSync(notFoundRscFuncDir, { recursive: true });
+      log('REMOVE_NOTFOUND_RSC', 'Removed _not-found.rsc.func symlink');
+    }
+    if (fs.existsSync(notFoundPrerender)) {
+      fs.unlinkSync(notFoundPrerender);
+    }
+    if (fs.existsSync(notFoundPrerenderFallback)) {
+      fs.unlinkSync(notFoundPrerenderFallback);
+    }
+  } catch (err) {
+    log('REMOVE_NOTFOUND_ERROR', 'Failed to remove _not-found', { error: err.message });
+  }
+
   // Step 3: Create output directory and config
   // #region agent log
   log('OUTPUT_DIR_START', 'Creating output directory');

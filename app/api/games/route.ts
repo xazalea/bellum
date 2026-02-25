@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 
-// Force this route to be dynamic (not pre-rendered at build time)
-export const runtime = 'edge';
-
-export const dynamic = 'force-dynamic';
-// Use edge runtime for Cloudflare compatibility (falls back to nodejs on Vercel)
+// Use Node.js runtime for file system access
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 // Cache the parsed games in memory
-let cachedGames: any = null;
+let cachedGames: Game[] | null = null;
 let lastParsed = 0;
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
@@ -17,140 +17,169 @@ interface Game {
   description: string;
   thumb: string;
   file: string;
-  platform: string;
+  platform?: string;
+  width?: string;
+  height?: string;
 }
 
 // Fisher-Yates shuffle algorithm with seed for consistency
 function shuffleArray<T>(array: T[], seed?: string): T[] {
   const shuffled = [...array];
-  let random = seed ? seededRandom(seed) : Math.random;
-  
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  
-  return shuffled;
-}
 
-// Simple seeded random number generator
-function seededRandom(seed: string) {
+  if (!seed) {
+    // Simple random shuffle
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  // Seeded random shuffle
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
     hash = hash & hash;
   }
-  
-  return function() {
+
+  const seededRandom = () => {
     hash = (hash * 9301 + 49297) % 233280;
     return hash / 233280;
   };
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(seededRandom() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
 }
 
-async function parseGamesXml(): Promise<Game[]> {
+function loadGamesFromDisk(): Game[] {
   const now = Date.now();
-  
+
   // Return cached if available and fresh
-  if (cachedGames && (now - lastParsed) < CACHE_DURATION) {
-    console.log('[API/games] Returning cached games');
+  if (cachedGames && now - lastParsed < CACHE_DURATION) {
     return cachedGames;
   }
-  
-  console.log('[API/games] Parsing games.xml...');
-  const startTime = Date.now();
-  
+
+  const publicDir = join(process.cwd(), "public");
+
+  // Try loading JSON first (much faster)
   try {
-    // Fetch games.xml from the public URL (works on both Vercel and Cloudflare)
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.CF_PAGES_URL || 'http://localhost:3000';
-    
-    const response = await fetch(`${baseUrl}/games.xml`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch games.xml: ${response.status}`);
-    }
-    const xmlContent = await response.text();
-    
+    const jsonPath = join(publicDir, "games.json");
+    const jsonContent = readFileSync(jsonPath, "utf8");
+    const data = JSON.parse(jsonContent);
+
+    const games: Game[] = data.games || [];
+    cachedGames = games;
+    lastParsed = now;
+
+    console.log(`[API/games] Loaded ${games.length} games from JSON`);
+    return games;
+  } catch (jsonError) {
+    console.warn(
+      "[API/games] Failed to load games.json, trying XML:",
+      jsonError,
+    );
+  }
+
+  // Fallback to XML
+  try {
+    const xmlPath = join(publicDir, "games.xml");
+    const xmlContent = readFileSync(xmlPath, "utf8");
+
     const games: Game[] = [];
-    
-    // Fast regex parsing (much faster than XML parser)
     const urlRegex = /<url>([\s\S]*?)<\/url>/g;
     let match;
-    
+
     while ((match = urlRegex.exec(xmlContent)) !== null) {
       const urlBlock = match[1];
-      
+
       // Extract game URL and ID
-      const locMatch = /<loc>(https:\/\/html5\.gamedistribution\.com\/([a-f0-9]{32})\/)<\/loc>/.exec(urlBlock);
+      const locMatch =
+        /<loc>(https:\/\/html5\.gamedistribution\.com\/([a-f0-9]{32})\/)<\/loc>/.exec(
+          urlBlock,
+        );
       if (!locMatch) continue;
-      
+
       const gameUrl = locMatch[1];
       const gameId = locMatch[2];
-      
+
       // Extract image URL
       const imageMatch = /<image:loc>(.*?)<\/image:loc>/.exec(urlBlock);
-      const imageUrl = imageMatch ? imageMatch[1] : '';
-      
+      const imageUrl = imageMatch ? imageMatch[1] : "";
+
       games.push({
         id: gameId,
         title: `HTML5 Game ${gameId.substring(0, 8)}`,
-        description: 'Play this HTML5 game instantly in your browser',
+        description: "Play this HTML5 game instantly in your browser",
         thumb: imageUrl,
         file: gameUrl,
-        platform: 'html5'
+        platform: "html5",
+        width: "800",
+        height: "600",
       });
     }
-    
+
     cachedGames = games;
     lastParsed = now;
-    
-    const parseTime = Date.now() - startTime;
-    console.log(`[API/games] Parsed ${games.length} games in ${parseTime}ms`);
-    
+
+    console.log(`[API/games] Loaded ${games.length} games from XML`);
     return games;
-  } catch (error) {
-    console.error('[API/games] Error parsing XML:', error);
-    throw error;
+  } catch (xmlError) {
+    console.error("[API/games] Failed to load games.xml:", xmlError);
+    throw new Error("Could not load games catalog");
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const randomize = searchParams.get('randomize') === 'true';
-    const seed = searchParams.get('seed') || 'default-seed';
-    
-    // Parse games (uses cache if available)
-    let allGames = await parseGamesXml();
-    
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const randomize = searchParams.get("randomize") === "true";
+    const seed = searchParams.get("seed") || undefined;
+
+    // Load games from disk
+    let allGames = loadGamesFromDisk();
+
+    if (allGames.length === 0) {
+      return NextResponse.json(
+        { error: "No games available", games: [], total: 0 },
+        { status: 404 },
+      );
+    }
+
     // Randomize if requested (with seed for consistency within session)
     if (randomize) {
       allGames = shuffleArray(allGames, seed);
     }
-    
+
     // Paginate
     const start = (page - 1) * limit;
     const end = start + limit;
     const games = allGames.slice(start, end);
-    
-    return NextResponse.json({
-      games,
-      total: allGames.length,
-      page,
-      limit,
-      totalPages: Math.ceil(allGames.length / limit)
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
-      }
-    });
-  } catch (error: any) {
-    console.error('[API/games] Request failed:', error);
+
     return NextResponse.json(
-      { error: 'Failed to load games', details: error.message },
-      { status: 500 }
+      {
+        games,
+        total: allGames.length,
+        page,
+        limit,
+        totalPages: Math.ceil(allGames.length / limit),
+      },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+        },
+      },
+    );
+  } catch (error: any) {
+    console.error("[API/games] Request failed:", error);
+    return NextResponse.json(
+      { error: "Failed to load games", details: error.message },
+      { status: 500 },
     );
   }
 }
