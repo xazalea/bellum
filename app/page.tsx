@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { BackgroundPaths } from '@/components/ui/background-paths';
 
 const FEATURES = [
   {
@@ -208,75 +210,179 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[0]; index: n
   );
 }
 
+// Hero Section with Background Paths
+function HeroSection() {
+  return (
+    <div className="relative min-h-[90vh] w-full flex items-center justify-center overflow-hidden bg-neutral-950">
+      {/* Animated Background Paths */}
+      <div className="absolute inset-0">
+        <FloatingPaths position={1} />
+        <FloatingPaths position={-1} />
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10 container mx-auto px-4 md:px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 2 }}
+          className="max-w-4xl mx-auto"
+        >
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-8"
+          >
+            <SparklesIcon className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm font-medium text-cyan-400">WebGPU Accelerated • 20,000+ Games</span>
+          </motion.div>
+
+          {/* Title */}
+          <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-tighter">
+            {['Challenger', 'Deep'].map((word, wordIndex) => (
+              <span
+                key={wordIndex}
+                className="inline-block mr-4 last:mr-0"
+              >
+                {word.split('').map((letter, letterIndex) => (
+                  <motion.span
+                    key={`${wordIndex}-${letterIndex}`}
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{
+                      delay: wordIndex * 0.1 + letterIndex * 0.03 + 0.3,
+                      type: 'spring',
+                      stiffness: 150,
+                      damping: 25,
+                    }}
+                    className="inline-block text-transparent bg-clip-text 
+                    bg-gradient-to-r from-neutral-900 to-neutral-700/80 
+                    dark:from-white dark:to-white/80"
+                  >
+                    {letter}
+                  </motion.span>
+                ))}
+              </span>
+            ))}
+          </h1>
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto"
+          >
+            Run Android, Windows, and 20,000+ games directly in your browser.
+            No downloads. No installs. Just pure web-native power.
+          </motion.p>
+
+          {/* CTA Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="flex flex-wrap justify-center gap-4"
+          >
+            <Link
+              href="/virtual-machines"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-cyan-400 hover:to-cyan-500 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/25"
+            >
+              <VMIcon className="w-5 h-5" />
+              Launch VM
+            </Link>
+            <Link
+              href="/games"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white/5 border border-white/10 text-white font-semibold rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-200"
+            >
+              <GamesIcon className="w-5 h-5" />
+              Play Games
+            </Link>
+          </motion.div>
+
+          {/* Tech Stack Pills */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2, duration: 0.8 }}
+            className="flex flex-wrap justify-center gap-2 mt-10"
+          >
+            {TECH_STACK.map((tech) => (
+              <div
+                key={tech.name}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-medium"
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${tech.color === 'emerald' ? 'bg-emerald-400' : 'bg-cyan-400'}`} />
+                <span className="text-slate-300">{tech.name}</span>
+                <span className={tech.color === 'emerald' ? 'text-emerald-400' : 'text-cyan-400'}>{tech.status}</span>
+              </div>
+            ))}
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// Floating Paths Component (for hero background)
+function FloatingPaths({ position }: { position: number }) {
+  const paths = Array.from({ length: 36 }, (_, i) => ({
+    id: i,
+    d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
+      380 - i * 5 * position
+    } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
+      152 - i * 5 * position
+    } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
+      684 - i * 5 * position
+    } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
+    color: `rgba(15,23,42,${0.1 + i * 0.03})`,
+    width: 0.5 + i * 0.03,
+  }));
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <svg
+        className="w-full h-full text-slate-950 dark:text-white"
+        viewBox="0 0 696 316"
+        fill="none"
+      >
+        <title>Background Paths</title>
+        {paths.map((path) => (
+          <motion.path
+            key={path.id}
+            d={path.d}
+            stroke="currentColor"
+            strokeWidth={path.width}
+            strokeOpacity={0.1 + path.id * 0.03}
+            initial={{ pathLength: 0.3, opacity: 0.6 }}
+            animate={{
+              pathLength: 1,
+              opacity: [0.3, 0.6, 0.3],
+              pathOffset: [0, 1, 0],
+            }}
+            transition={{
+              duration: 20 + Math.random() * 10,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: 'linear',
+            }}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 // Main Page Component
 export default function LandingPage() {
   return (
     <div className="space-y-16 pb-16">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-2xl">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-purple-500/10 to-emerald-500/10" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%2300f0ff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-30" />
-
-        <div className="relative px-6 py-16 sm:px-12 sm:py-24 lg:px-16 lg:py-32">
-          <div className="max-w-4xl">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-6 animate-fade-in">
-              <SparklesIcon className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm font-medium text-cyan-400">Now with WebGPU Acceleration</span>
-            </div>
-
-            {/* Title */}
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight animate-fade-in" style={{ animationDelay: '100ms' }}>
-              Run Any App in Your{' '}
-              <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400 bg-clip-text text-transparent">
-                Browser
-              </span>
-            </h1>
-
-            {/* Description */}
-            <p className="text-lg sm:text-xl text-slate-400 mb-8 max-w-2xl leading-relaxed animate-fade-in" style={{ animationDelay: '200ms' }}>
-              Experience the future of computing. Run Android, Windows, and 20,000+ games 
-              directly in your browser. No downloads. No installs. Just pure web-native power.
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-wrap gap-4 animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <Link
-                href="/virtual-machines"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-cyan-400 hover:to-cyan-500 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/25"
-              >
-                <VMIcon className="w-5 h-5" />
-                Launch Virtual Machine
-              </Link>
-              <Link
-                href="/games"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-semibold rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-200"
-              >
-                <GamesIcon className="w-5 h-5" />
-                Browse Games
-              </Link>
-            </div>
-
-            {/* Tech Stack Pills */}
-            <div className="flex flex-wrap gap-2 mt-10 animate-fade-in" style={{ animationDelay: '400ms' }}>
-              {TECH_STACK.map((tech) => (
-                <div
-                  key={tech.name}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-medium"
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${tech.color === 'emerald' ? 'bg-emerald-400' : 'bg-cyan-400'} ${tech.color === 'emerald' ? '' : 'animate-pulse'}`} />
-                  <span className="text-slate-300">{tech.name}</span>
-                  <span className={`text-${tech.color}-400`}>{tech.status}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section with Animated Background */}
+      <HeroSection />
 
       {/* Stats Section */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
         {[
           { value: 20000, suffix: '+', label: 'Games Available', color: 'cyan' },
           { value: 100, suffix: '%', label: 'In-Browser', color: 'purple' },
@@ -297,7 +403,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section>
+      <section className="px-4">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">Platform Features</h2>
@@ -320,7 +426,7 @@ export default function LandingPage() {
       </section>
 
       {/* Architecture Section */}
-      <section className="rounded-2xl border border-cyan-500/10 bg-gradient-to-br from-cyan-500/5 via-purple-500/5 to-emerald-500/5 p-8">
+      <section className="rounded-2xl border border-cyan-500/10 bg-gradient-to-br from-cyan-500/5 via-purple-500/5 to-emerald-500/5 p-8 mx-4">
         <h2 className="text-2xl font-bold text-white mb-8 text-center">System Architecture</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -343,7 +449,7 @@ export default function LandingPage() {
               details: ['Persistent kernels', 'Parallel compilation', 'DirectX translation', 'Compute shaders'],
               color: 'purple',
             },
-          ].map((stack, index) => (
+          ].map((stack) => (
             <div
               key={stack.title}
               className="rounded-xl border border-white/10 bg-white/5 p-6 hover:border-cyan-500/30 transition-all duration-300"
@@ -366,7 +472,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative overflow-hidden rounded-2xl">
+      <section className="relative overflow-hidden rounded-2xl mx-4">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-purple-600" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')]" />
         
