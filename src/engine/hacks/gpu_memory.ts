@@ -7,7 +7,7 @@
  * 183. Infer shader output layouts through GPU introspection.
  */
 
-import { webgpu } from '../../nacho/engine/webgpu-context';
+import { webgpu } from '../../challenger/engine/webgpu-context';
 
 export class GpuMemoryManager {
     

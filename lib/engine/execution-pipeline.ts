@@ -28,8 +28,8 @@ import { perfController } from './perf-controller';
 import { metricsBus } from './metrics-bus';
 import { remoteExecution } from '../fabric/remote-execution';
 import { lifter } from '../transpiler/lifter/lifter';
-import { SimpleInterpreter } from '../nacho/core/interpreter';
-import { memoryManager } from '../nacho/memory/unified-memory';
+import { SimpleInterpreter } from '../challenger/core/interpreter';
+import { memoryManager } from '../challenger/memory/unified-memory';
 
 // ============================================================================
 // Types

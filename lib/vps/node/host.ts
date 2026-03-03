@@ -1,4 +1,4 @@
-import { getNachoIdentity } from '@/lib/auth/nacho-identity';
+import { getChallengerIdentity } from '@/lib/auth/challenger-identity';
 import { VirtualVpsRuntime } from '@/lib/vps/runtime/runtime';
 import { generateChat } from '@/lib/vps/llm/local-llm';
 import { assertUrlAllowed, getGlobalAllowlist } from '@/lib/security/allowlist';
@@ -39,13 +39,13 @@ export function startVpsHost(cfg: VpsHostConfig): () => void {
   let heartbeatTimer: number | null = null;
 
   const loop = async () => {
-    const id = await getNachoIdentity();
+    const id = await getChallengerIdentity();
     runtime = await VirtualVpsRuntime.boot(cfg.vpsId);
     runtime.upsertProcess('web', { siteId: cfg.siteId || null });
     // Heartbeat for rendezvous (keeps node eligible + enables failover).
     const heartbeat = async () => {
       try {
-        const hId = await getNachoIdentity();
+        const hId = await getChallengerIdentity();
         await fetch('/api/vps/rendezvous/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

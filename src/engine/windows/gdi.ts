@@ -6,7 +6,7 @@
  * 401. Emulate DPI scaling.
  */
 
-import { webgpu } from '../../nacho/engine/webgpu-context';
+import { webgpu } from '../../challenger/engine/webgpu-context';
 
 export interface Hwnd {
     id: number;

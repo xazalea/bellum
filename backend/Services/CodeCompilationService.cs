@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
-namespace Bellum.Backend.Services;
+namespace Challenger.Backend.Services;
 
 public class CodeCompilationService
 {

@@ -22,7 +22,7 @@ export abstract class BaseVM implements VMInstance {
       config,
       isRunning: false,
       isPaused: false,
-      storagePath: `bellum/vms/${config.id}`,
+      storagePath: `challenger/vms/${config.id}`,
     };
   }
 

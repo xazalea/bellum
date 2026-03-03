@@ -10,7 +10,7 @@ export class GenericVM extends BaseVM {
     async start(): Promise<void> {
         this.state.isRunning = true;
         this.emit('start');
-        console.log(`[GenericVM] Starting ${this.config.name} (${this.config.type}) via Nacho Engine...`);
+        console.log(`[GenericVM] Starting ${this.config.name} (${this.config.type}) via Challenger Engine...`);
     }
 
     async stop(): Promise<void> {

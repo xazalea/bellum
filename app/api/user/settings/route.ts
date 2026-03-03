@@ -4,11 +4,11 @@ import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export const runtime = 'edge';
 
-type NachoUserSettings = {
+type ChallengerUserSettings = {
   clusterParticipation: boolean;
 };
 
-const DEFAULTS: NachoUserSettings = { clusterParticipation: true };
+const DEFAULTS: ChallengerUserSettings = { clusterParticipation: true };
 
 export async function GET(req: Request) {
   try {
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const ref = db.collection('users').doc(uid).collection('settings').doc('main');
     const snap = await ref.get();
     const data = (snap.exists ? (snap.data() as any) : {}) || {};
-    const out: NachoUserSettings = {
+    const out: ChallengerUserSettings = {
       clusterParticipation: typeof data.clusterParticipation === 'boolean' ? data.clusterParticipation : true,
     };
     if (!snap.exists) await ref.set(DEFAULTS, { merge: true });
@@ -32,8 +32,8 @@ export async function POST(req: Request) {
     requireSameOrigin(req);
     const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: 'user_settings', limit: 120, windowMs: 60_000, key: uid });
-    const body = (await req.json().catch(() => ({}))) as Partial<NachoUserSettings>;
-    const patch: Partial<NachoUserSettings> = {};
+    const body = (await req.json().catch(() => ({}))) as Partial<ChallengerUserSettings>;
+    const patch: Partial<ChallengerUserSettings> = {};
     if (typeof body.clusterParticipation === 'boolean') patch.clusterParticipation = body.clusterParticipation;
     const db = await adminDb();
     await db.collection('users').doc(uid).collection('settings').doc('main').set(patch, { merge: true });

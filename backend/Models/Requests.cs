@@ -1,4 +1,4 @@
-namespace Bellum.Backend.Models;
+namespace Challenger.Backend.Models;
 
 public class DiskImageRequest
 {

@@ -54,8 +54,8 @@ export async function POST(req: Request) {
 
     const bytes = new TextEncoder().encode(JSON.stringify(manifest));
     const safeName = String(manifest.fileName).replace(/[^\w.\-()+ ]+/g, "_").slice(0, 80) || "file";
-    const caption = `bellum:${uid}:manifest:${safeName}:${manifest.totalChunks}chunks:${manifest.storedBytes}bytes`;
-    const filename = `nacho_manifest_${crypto.randomUUID()}_${safeName}.json`;
+    const caption = `challenger:${uid}:manifest:${safeName}:${manifest.totalChunks}chunks:${manifest.storedBytes}bytes`;
+    const filename = `challenger_manifest_${crypto.randomUUID()}_${safeName}.json`;
 
     const { fileId, messageId } = await telegramSendDocument({ token, chatId, caption, filename, bytes, mimeType: "application/json" });
 

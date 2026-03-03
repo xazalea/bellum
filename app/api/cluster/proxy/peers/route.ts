@@ -10,7 +10,7 @@ function corsHeaders(req: Request): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'content-type, x-nacho-userid',
+    'Access-Control-Allow-Headers': 'content-type, x-challenger-userid',
     Vary: 'Origin',
   };
 }
@@ -23,7 +23,7 @@ async function resolveUid(req: Request): Promise<string> {
   try {
     return (await verifySessionCookieFromRequest(req)).uid;
   } catch {
-    const headerUid = String(req.headers.get('x-nacho-userid') || '').trim();
+    const headerUid = String(req.headers.get('x-challenger-userid') || '').trim();
     if (!headerUid) throw new Error('unauthenticated');
     return headerUid;
   }
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       const url = `${base}/api/cluster/peers`;
       const res = await fetch(url, {
         method: 'GET',
-        headers: { 'X-Nacho-UserId': uid },
+        headers: { 'X-Challenger-UserId': uid },
         cache: 'no-store',
       });
       if (res.ok) {

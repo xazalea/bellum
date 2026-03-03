@@ -2,7 +2,7 @@ import 'server-only';
 
 import { getAdminAuth } from '@/lib/server/firebase-admin';
 
-export const SESSION_COOKIE_NAME = 'bellum_session';
+export const SESSION_COOKIE_NAME = 'challenger_session';
 
 type CookieOptions = {
   maxAgeSeconds: number;
@@ -45,7 +45,7 @@ export type SessionUser = {
 };
 
 export async function verifySessionCookieFromRequest(req: Request): Promise<SessionUser> {
-  const headerUid = req.headers.get('x-nacho-userid');
+  const headerUid = req.headers.get('x-challenger-userid');
   if (headerUid) {
     return { uid: headerUid };
   }

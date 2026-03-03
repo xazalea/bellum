@@ -20,7 +20,7 @@ export interface DiscordManifest {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = authService.getCurrentUser();
   if (!user) return {};
-  return { "X-Nacho-UserId": user.uid };
+  return { "X-Challenger-UserId": user.uid };
 }
 
 async function sha256Hex(data: ArrayBuffer | Uint8Array): Promise<string> {

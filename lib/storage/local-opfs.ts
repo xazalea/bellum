@@ -16,8 +16,8 @@ async function ensureDir(root: FileSystemDirectoryHandle, name: string) {
 
 export async function opfsWriteBytes(key: string, bytes: Uint8Array): Promise<void> {
   const root = await getRootDir();
-  const nacho = await ensureDir(root, "nacho");
-  const apps = await ensureDir(nacho, "apps");
+  const challenger = await ensureDir(root, "challenger");
+  const apps = await ensureDir(challenger, "apps");
   const fileHandle = await apps.getFileHandle(`${key}.bin`, { create: true });
   const writable = await fileHandle.createWritable();
 
@@ -31,8 +31,8 @@ export async function opfsWriteBytes(key: string, bytes: Uint8Array): Promise<vo
 export async function opfsReadBytes(key: string): Promise<Uint8Array | null> {
   try {
     const root = await getRootDir();
-    const nacho = await ensureDir(root, "nacho");
-    const apps = await ensureDir(nacho, "apps");
+    const challenger = await ensureDir(root, "challenger");
+    const apps = await ensureDir(challenger, "apps");
     const fileHandle = await apps.getFileHandle(`${key}.bin`, { create: false });
     const file = await fileHandle.getFile();
     return new Uint8Array(await file.arrayBuffer());
@@ -44,8 +44,8 @@ export async function opfsReadBytes(key: string): Promise<Uint8Array | null> {
 export async function opfsHas(key: string): Promise<boolean> {
   try {
     const root = await getRootDir();
-    const nacho = await ensureDir(root, "nacho");
-    const apps = await ensureDir(nacho, "apps");
+    const challenger = await ensureDir(root, "challenger");
+    const apps = await ensureDir(challenger, "apps");
     await apps.getFileHandle(`${key}.bin`, { create: false });
     return true;
   } catch {
@@ -56,8 +56,8 @@ export async function opfsHas(key: string): Promise<boolean> {
 export async function opfsDelete(key: string): Promise<void> {
   try {
     const root = await getRootDir();
-    const nacho = await ensureDir(root, "nacho");
-    const apps = await ensureDir(nacho, "apps");
+    const challenger = await ensureDir(root, "challenger");
+    const apps = await ensureDir(challenger, "apps");
     await apps.removeEntry(`${key}.bin`);
   } catch {
     // ignore

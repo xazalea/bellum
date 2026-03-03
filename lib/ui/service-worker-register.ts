@@ -18,7 +18,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     if (registration && (registration as any).periodicSync) {
       try {
         // @ts-ignore
-        await (registration as any).periodicSync.register('nacho-cluster-heartbeat', {
+        await (registration as any).periodicSync.register('challenger-cluster-heartbeat', {
           minInterval: 6 * 60 * 60 * 1000, // 6h
         });
       } catch (e) {

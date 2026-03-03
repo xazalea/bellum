@@ -14,7 +14,7 @@ export interface CachedShader {
 class ShaderPrecompiler {
   private cache: Map<ShaderKey, CachedShader> = new Map();
   private maxEntries = 2000;
-  private opfsDirName = 'bellum-shader-cache';
+  private opfsDirName = 'challenger-shader-cache';
   private cacheFileName = 'cache.json';
   private persistTimer: number | null = null;
   private initialized = false;

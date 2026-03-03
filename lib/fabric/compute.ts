@@ -1,6 +1,6 @@
 import { fabricMesh } from './mesh';
-import { p2pNode } from '../../src/nacho/net/p2p_node';
-import { DBT } from '../../src/nacho/jit/dbt';
+import { p2pNode } from '../../src/challenger/net/p2p_node';
+import { DBT } from '../../src/challenger/jit/dbt';
 
 export interface ComputeJob {
     id: string;

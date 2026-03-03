@@ -1,4 +1,4 @@
-namespace Bellum.Backend.Services;
+namespace Challenger.Backend.Services;
 
 public class VMStateService
 {

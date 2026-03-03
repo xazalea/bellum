@@ -12,8 +12,8 @@ export type AllowlistPolicy = {
   updatedAt: number;
 };
 
-const GLOBAL_KEY = 'bellum.allowlist.v1';
-const ROOM_KEY_PREFIX = 'bellum.lan.allowlist.v1:';
+const GLOBAL_KEY = 'challenger.allowlist.v1';
+const ROOM_KEY_PREFIX = 'challenger.lan.allowlist.v1:';
 
 function now() {
   return Date.now();

@@ -166,8 +166,8 @@ export default function WindowsPage() {
         // Try to load Windows runtime
         let WebGPUContext, WindowsRuntime;
         try {
-          const gpuModule = await import("@/lib/nacho/gpu/webgpu");
-          const winModule = await import("@/lib/nacho/windows/runtime");
+          const gpuModule = await import("@/lib/challenger/gpu/webgpu");
+          const winModule = await import("@/lib/challenger/windows/runtime");
           WebGPUContext = gpuModule.WebGPUContext;
           WindowsRuntime = winModule.WindowsRuntime;
           addLog("Windows runtime module loaded", "success");

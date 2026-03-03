@@ -17,11 +17,11 @@ type Store = {
 };
 
 function getStore(): Store {
-  const g = globalThis as unknown as { __bellumClusterStore?: Store };
-  if (!g.__bellumClusterStore) {
-    g.__bellumClusterStore = { peers: new Map() };
+  const g = globalThis as unknown as { __challengerClusterStore?: Store };
+  if (!g.__challengerClusterStore) {
+    g.__challengerClusterStore = { peers: new Map() };
   }
-  return g.__bellumClusterStore;
+  return g.__challengerClusterStore;
 }
 
 export function upsertPeer(peer: Omit<ClusterPeer, 'lastSeenUnixMs'> & { lastSeenUnixMs?: number }) {

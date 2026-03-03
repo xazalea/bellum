@@ -82,7 +82,7 @@ export async function buildStandaloneHtmlFile(input: StandaloneHtmlBuildInput): 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
-    <meta name="description" content="Standalone HTML5 game exported from Nacho" />
+    <meta name="description" content="Standalone HTML5 game exported from Challenger" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
     <style>
       :root{color-scheme:dark}
@@ -120,7 +120,7 @@ export async function buildStandaloneHtmlFile(input: StandaloneHtmlBuildInput): 
         <div class="meta">
           <span class="pill">mode: <code>standalone</code></span>
           <span class="pill">encoding: <code>${encoding}</code></span>
-          <span class="pill">powered by <code>nacho</code></span>
+          <span class="pill">powered by <code>challenger</code></span>
         </div>
         <button class="btn" id="reloadBtn" type="button" title="Reload the game">⟳ Reload</button>
         <button class="btn" id="fullscreenBtn" type="button" title="Toggle fullscreen">⛶ Fullscreen</button>

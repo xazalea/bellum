@@ -10,7 +10,7 @@ type SnapshotRecord = {
   updatedAt: number;
 };
 
-const DB_NAME = 'bellum_microvm_snapshots';
+const DB_NAME = 'challenger_microvm_snapshots';
 const STORE = 'snapshots';
 
 function openDb(): Promise<IDBDatabase> {

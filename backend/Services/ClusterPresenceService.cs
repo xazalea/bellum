@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using Bellum.Backend.Models;
+using Challenger.Backend.Models;
 
-namespace Bellum.Backend.Services;
+namespace Challenger.Backend.Services;
 
 public class ClusterPresenceService
 {

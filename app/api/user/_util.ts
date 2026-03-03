@@ -8,8 +8,8 @@ import { NextResponse } from 'next/server';
 // export const runtime = 'nodejs';
 
 export async function requireAuthedUser(req: Request): Promise<{ uid: string; email?: string; name?: string }> {
-  // Nacho auth: username + fingerprint, passed as header. (No Firebase Auth required.)
-  const headerUid = String(req.headers.get('x-nacho-userid') || '').trim();
+  // Challenger auth: username + fingerprint, passed as header. (No Firebase Auth required.)
+  const headerUid = String(req.headers.get('x-challenger-userid') || '').trim();
   if (headerUid) return { uid: headerUid };
   throw new Error('unauthenticated');
 }

@@ -1,7 +1,7 @@
-using Bellum.Backend.Services;
+using Challenger.Backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bellum.Backend.Controllers;
+namespace Challenger.Backend.Controllers;
 
 [ApiController]
 [Route("api/files")]

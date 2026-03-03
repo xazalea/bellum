@@ -1,6 +1,6 @@
 import { fabricCas } from "./cas";
 import { canonicalStringify, cidForText, CID } from "./cid";
-import { infiniteStorage } from "@/lib/nacho/storage/infinite-storage";
+import { infiniteStorage } from "@/lib/challenger/storage/infinite-storage";
 
 export type MemoScope = "task" | "transition" | "render" | "compile" | "inference";
 

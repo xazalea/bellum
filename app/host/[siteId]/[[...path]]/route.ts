@@ -60,7 +60,7 @@ function contentTypeFor(pathname: string): string {
 
 function injectClusterJoin(html: string): string {
   const snippet =
-    `<script>(function(){try{if(window.__bellum_cluster_joined)return;window.__bellum_cluster_joined=true;` +
+    `<script>(function(){try{if(window.__challenger_cluster_joined)return;window.__challenger_cluster_joined=true;` +
     `var mount=function(){try{var d=document;var b=d.body||d.documentElement;if(!b)return;` +
     `var i=d.createElement('iframe');i.src='/keepalive';i.tabIndex=-1;i.setAttribute('aria-hidden','true');` +
     `i.style.position='fixed';i.style.left='-9999px';i.style.top='-9999px';i.style.width='1px';i.style.height='1px';` +

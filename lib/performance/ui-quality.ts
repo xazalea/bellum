@@ -30,13 +30,13 @@ export function applyUiQualityToDom(level: UiQualityLevel) {
   document.documentElement.dataset.perf = level;
 
   // Fog can be auto-managed unless the user explicitly set it.
-  const fogUser = readLocalStorage('bellum.fog'); // 'on' | 'off' | null
+  const fogUser = readLocalStorage('challenger.fog'); // 'on' | 'off' | null
   if (fogUser === null) {
     document.documentElement.dataset.fog = level === 'low' ? 'off' : 'on';
   }
 
   // Motion can be auto-managed unless the user explicitly set it.
-  const motionUser = readLocalStorage('bellum.motion'); // 'auto' | 'reduced' | 'full' | null
+  const motionUser = readLocalStorage('challenger.motion'); // 'auto' | 'reduced' | 'full' | null
   if (motionUser === null || motionUser === 'auto') {
     document.documentElement.dataset.motion = level === 'low' ? 'reduced' : 'auto';
   }
@@ -50,7 +50,7 @@ export function startUiQualityBrain(): () => void {
   if (!document.documentElement.dataset.motion) document.documentElement.dataset.motion = 'auto';
   if (!document.documentElement.dataset.perf) document.documentElement.dataset.perf = 'high';
 
-  const qualityMode = readLocalStorage('bellum.quality'); // 'auto' | 'pinned' | null
+  const qualityMode = readLocalStorage('challenger.quality'); // 'auto' | 'pinned' | null
   const isPinned = qualityMode === 'pinned';
 
   if (adaptivePerformance && !isPinned) {
@@ -65,8 +65,8 @@ export function startUiQualityBrain(): () => void {
   }
 
   // Pinned: keep current attributes and ensure explicit user settings exist.
-  if (readLocalStorage('bellum.fog') === null) writeLocalStorage('bellum.fog', 'on');
-  if (readLocalStorage('bellum.motion') === null) writeLocalStorage('bellum.motion', 'auto');
+  if (readLocalStorage('challenger.fog') === null) writeLocalStorage('challenger.fog', 'on');
+  if (readLocalStorage('challenger.motion') === null) writeLocalStorage('challenger.motion', 'auto');
   return () => {};
 }
 

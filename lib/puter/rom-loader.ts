@@ -41,7 +41,7 @@ export class RomLoader {
             {
                 id: 'windows_img',
                 name: 'Windows Disk Image',
-                path: 'bellum/vms/images/windows98.img',
+                path: 'challenger/vms/images/windows98.img',
                 description: 'Windows 98 SE Disk Image (IMG/ISO)',
                 required: true,
             }
@@ -53,7 +53,7 @@ export class RomLoader {
             {
                 id: 'linux_iso',
                 name: 'Linux ISO',
-                path: 'bellum/vms/images/linux.iso',
+                path: 'challenger/vms/images/linux.iso',
                 description: 'Linux Live CD ISO (e.g., DSL, TinyCore)',
                 required: true,
             }

@@ -3,8 +3,8 @@
  * Connects the megakernel GPU physics/compute to actual game execution
  */
 
-import { megakernel } from '../../src/nacho/engine/megakernel';
-import { webgpu } from '../../src/nacho/engine/webgpu-context';
+import { megakernel } from '../../src/challenger/engine/megakernel';
+import { webgpu } from '../../src/challenger/engine/webgpu-context';
 
 export interface GameEntity {
     x: number;

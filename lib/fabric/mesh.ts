@@ -1,4 +1,4 @@
-import { p2pNode, PeerMessage } from "../../src/nacho/net/p2p_node";
+import { p2pNode, PeerMessage } from "../../src/challenger/net/p2p_node";
 
 export type FabricWireMessage =
   | { type: "FABRIC_HELLO"; payload: { nodeId: string } }

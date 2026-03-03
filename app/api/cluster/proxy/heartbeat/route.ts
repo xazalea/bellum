@@ -21,7 +21,7 @@ async function forwardHeartbeat(base: string, uid: string, body: Body) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Nacho-UserId': uid,
+      'X-Challenger-UserId': uid,
     },
     body: JSON.stringify({
       deviceId: body.deviceId,

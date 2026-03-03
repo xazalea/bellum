@@ -26,7 +26,7 @@ export async function OPTIONS() {
         headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'PUT, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, X-Chunk-Sha256, X-Nacho-UserId'
+            'Access-Control-Allow-Headers': 'Content-Type, X-Chunk-Sha256, X-Challenger-UserId'
         }
     });
 }

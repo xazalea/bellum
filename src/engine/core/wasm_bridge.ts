@@ -1,6 +1,6 @@
 /**
  * WASM Bridge - Interface between JavaScript and Rust WASM core
- * Simulates high-performance Rust WASM module (bellum_core.wasm)
+ * Simulates high-performance Rust WASM module (challenger_core.wasm)
  */
 
 export interface WASMInstance {
@@ -21,7 +21,7 @@ class WASMBridge {
    */
   async initialize(): Promise<void> {
     try {
-      // In production, this would load bellum_core.wasm
+      // In production, this would load challenger_core.wasm
       // For now, we simulate the WASM interface
       this.memory = new WebAssembly.Memory({ initial: 256, maximum: 2048 });
       

@@ -15,7 +15,7 @@ import { CompatibilityChecker } from './compatibility';
 import { backendClient } from '../backend/client';
 
 export class AppManager implements AppLauncher {
-  private appsPath = 'bellum/apps';
+  private appsPath = 'challenger/apps';
   private installations: Map<string, AppInstallation> = new Map();
 
   async initialize(): Promise<void> {

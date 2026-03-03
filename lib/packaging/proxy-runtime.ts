@@ -8,8 +8,8 @@
  */
 export function generateProxyServiceWorker(): string {
   return `
-// Nacho Proxy Service Worker
-const CACHE_NAME = 'nacho-proxy-v1';
+// Challenger Proxy Service Worker
+const CACHE_NAME = 'challenger-proxy-v1';
 const ALLOWED_ORIGINS = new Set();
 const RESOURCE_CACHE = new Map();
 
@@ -162,7 +162,7 @@ function guessContentType(url) {
  */
 export function generateFetchInterceptor(): string {
   return `
-// Nacho Fetch Interceptor (Inline)
+// Challenger Fetch Interceptor (Inline)
 (function() {
   const originalFetch = window.fetch;
   const resourceCache = new Map();
@@ -259,28 +259,28 @@ if ('serviceWorker' in navigator) {
   
   navigator.serviceWorker.register(swUrl)
     .then(registration => {
-      console.log('[Nacho] Service Worker registered for proxying');
+      console.log('[Challenger] Service Worker registered for proxying');
       
       // Wait for SW to be active
       if (registration.active) {
-        console.log('[Nacho] Service Worker already active');
+        console.log('[Challenger] Service Worker already active');
       } else {
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'activated') {
-              console.log('[Nacho] Service Worker activated');
+              console.log('[Challenger] Service Worker activated');
             }
           });
         });
       }
     })
     .catch(error => {
-      console.warn('[Nacho] Service Worker registration failed:', error);
-      console.log('[Nacho] Falling back to fetch interceptor only');
+      console.warn('[Challenger] Service Worker registration failed:', error);
+      console.log('[Challenger] Falling back to fetch interceptor only');
     });
 } else {
-  console.warn('[Nacho] Service Worker not supported, using fetch interceptor only');
+  console.warn('[Challenger] Service Worker not supported, using fetch interceptor only');
 }
 
 // Install fetch interceptor as backup

@@ -2,8 +2,8 @@
  * Storage Integration (Local + Cluster only)
  *
  * IMPORTANT:
- * - Nacho does NOT use 3rd-party "free storage" hosting providers.
- * - All storage is either local (OPFS/IndexedDB) or the Nacho cluster server.
+ * - Challenger does NOT use 3rd-party "free storage" hosting providers.
+ * - All storage is either local (OPFS/IndexedDB) or the Challenger cluster server.
  *
  * This module is kept as a thin abstraction layer.
  */

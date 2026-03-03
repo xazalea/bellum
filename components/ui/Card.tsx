@@ -2,7 +2,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'hover' | 'magic';
+  variant?: 'default' | 'hover' | 'elevated';
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -11,9 +11,9 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          'retro-card text-ocean-text',
-          variant === 'hover' && 'hover:bg-ocean-card-hover transition-colors duration-150',
-          variant === 'magic' && 'hover:bg-ocean-card-hover transition-colors duration-150',
+          'bg-[var(--cd-surface)] border border-[var(--cd-border-default)] rounded-lg p-4 transition-all duration-200',
+          variant === 'hover' && 'hover:bg-[var(--cd-elevated)] hover:border-[var(--cd-border-muted)]',
+          variant === 'elevated' && 'bg-[var(--cd-elevated)] border-[var(--cd-border-muted)]',
           className
         )}
         {...props}

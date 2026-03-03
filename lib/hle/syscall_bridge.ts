@@ -12,20 +12,20 @@ export class SyscallBridge {
   // Debug / Core
   
   print(value: number): void {
-    console.log(`[Nacho Syscall] print: ${value}`);
+    console.log(`[Challenger Syscall] print: ${value}`);
   }
 
   // Windows API Simulations
   
   CreateFile(fileNamePtr: number): number {
     const fileName = this.readString(fileNamePtr);
-    console.log(`[Nacho Syscall] CreateFile(${fileName})`);
+    console.log(`[Challenger Syscall] CreateFile(${fileName})`);
     // Map to HiberFile or JS FileSystem
     return 1; // Mock Handle
   }
 
   WriteFile(handle: number, bufferPtr: number, length: number): boolean {
-    console.log(`[Nacho Syscall] WriteFile(handle=${handle}, len=${length})`);
+    console.log(`[Challenger Syscall] WriteFile(handle=${handle}, len=${length})`);
     return true;
   }
 
@@ -34,7 +34,7 @@ export class SyscallBridge {
   glDrawArrays(mode: number, first: number, count: number): void {
     // Call actual WebGL context
     // gl.drawArrays(mode, first, count);
-    console.log(`[Nacho Syscall] glDrawArrays(${mode}, ${first}, ${count})`);
+    console.log(`[Challenger Syscall] glDrawArrays(${mode}, ${first}, ${count})`);
   }
 
   private readString(ptr: number): string {

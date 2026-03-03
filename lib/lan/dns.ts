@@ -21,7 +21,7 @@ function normalizeName(name: string): string {
 
 function readTable(roomId: string): VirtualDnsTable {
   try {
-    const raw = window.localStorage.getItem(`bellum.lan.dns.v1:${roomId}`);
+    const raw = window.localStorage.getItem(`challenger.lan.dns.v1:${roomId}`);
     if (!raw) return { roomId, records: [], updatedAt: Date.now() };
     const j = JSON.parse(raw) as any;
     const recs = Array.isArray(j?.records) ? j.records : [];
@@ -43,7 +43,7 @@ function readTable(roomId: string): VirtualDnsTable {
 
 function writeTable(table: VirtualDnsTable) {
   try {
-    window.localStorage.setItem(`bellum.lan.dns.v1:${table.roomId}`, JSON.stringify(table));
+    window.localStorage.setItem(`challenger.lan.dns.v1:${table.roomId}`, JSON.stringify(table));
   } catch {
     // ignore
   }

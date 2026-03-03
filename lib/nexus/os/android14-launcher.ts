@@ -1,6 +1,6 @@
 /**
  * Android 14 Launcher with Material Design 3
- * Part of Nacho Runtime
+ * Part of Challenger Runtime
  * 
  * Full Android 14 UI with:
  * - Material You dynamic colors

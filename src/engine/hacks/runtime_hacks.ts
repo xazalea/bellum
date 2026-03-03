@@ -84,8 +84,8 @@ SwapFree:              0 kB
     getSystemProperty(key: string): string {
         const props: Record<string, string> = {
             'ro.build.version.sdk': '30',
-            'ro.product.model': 'Nacho Browser Device',
-            'ro.product.manufacturer': 'Nacho Corp',
+            'ro.product.model': 'Challenger Browser Device',
+            'ro.product.manufacturer': 'Challenger Corp',
             'ro.debuggable': '1'
         };
         return props[key] || '';

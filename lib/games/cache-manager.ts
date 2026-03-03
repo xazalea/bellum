@@ -18,7 +18,7 @@ export interface GameRecord {
   platform?: string;
 }
 
-const DB_NAME = 'bellum-games';
+const DB_NAME = 'challenger-games';
 const DB_VERSION = 1;
 const STORE_NAME = 'catalog';
 const CATALOG_KEY = 'games';

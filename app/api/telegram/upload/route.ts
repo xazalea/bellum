@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * Request:
  * - Body: application/octet-stream
  * - Headers (optional):
- *   - X-Nacho-UserId
+ *   - X-Challenger-UserId
  *   - X-File-Name
  *   - X-Upload-Id
  *   - X-Chunk-Index
@@ -47,12 +47,12 @@ export async function POST(req: Request) {
 
     const caption =
       chunkIndex !== null
-        ? `bellum:${uid}:${uploadId}:chunk:${chunkIndex}/${chunkTotal ?? "?"}:${fileName}`
-        : `bellum:${uid}:${uploadId}:file:${fileName}`;
+        ? `challenger:${uid}:${uploadId}:chunk:${chunkIndex}/${chunkTotal ?? "?"}:${fileName}`
+        : `challenger:${uid}:${uploadId}:file:${fileName}`;
 
     const safeBase = fileName.replace(/[^\w.\-()+ ]+/g, "_").slice(0, 80) || "file";
     const outName =
-      chunkIndex !== null ? `nacho_${uploadId}_chunk_${String(chunkIndex).padStart(6, "0")}_${safeBase}.bin` : `nacho_${uploadId}_${safeBase}.bin`;
+      chunkIndex !== null ? `challenger_${uploadId}_chunk_${String(chunkIndex).padStart(6, "0")}_${safeBase}.bin` : `challenger_${uploadId}_${safeBase}.bin`;
 
     const { fileId, messageId, sha256 } = await telegramSendDocumentWithRetry({
       token,

@@ -1,5 +1,5 @@
-using Bellum.Backend.Services;
-using Bellum.Backend.Middleware;
+using Challenger.Backend.Services;
+using Challenger.Backend.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 

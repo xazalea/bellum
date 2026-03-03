@@ -8,7 +8,7 @@ export type WasmCasPutResult = {
 
 function readIndex(): Record<string, string> {
   try {
-    const raw = window.localStorage.getItem('bellum.wasm.cas.v1');
+    const raw = window.localStorage.getItem('challenger.wasm.cas.v1');
     if (!raw) return {};
     const j = JSON.parse(raw);
     if (!j || typeof j !== 'object') return {};
@@ -20,7 +20,7 @@ function readIndex(): Record<string, string> {
 
 function writeIndex(index: Record<string, string>) {
   try {
-    window.localStorage.setItem('bellum.wasm.cas.v1', JSON.stringify(index));
+    window.localStorage.setItem('challenger.wasm.cas.v1', JSON.stringify(index));
   } catch {
     // ignore
   }

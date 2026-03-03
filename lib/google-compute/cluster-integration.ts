@@ -3,7 +3,7 @@
  * Integrates Google compute as a virtual peer in the cluster
  */
 
-import type { Device, Task } from '../nacho/distributed/execution-fabric';
+import type { Device, Task } from '../challenger/distributed/execution-fabric';
 import type { ComputeTask, TaskResult } from './types';
 import { getGoogleComputeService } from './google-compute-service';
 import { getRoutingStrategy, type ClusterMetrics } from './routing-strategy';

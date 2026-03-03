@@ -268,7 +268,7 @@ export class ProfileGuidedOptimizer {
         }
         
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('BellumProfiles', 1);
+            const request = indexedDB.open('ChallengerProfiles', 1);
             
             request.onerror = () => reject(request.error);
             
@@ -306,7 +306,7 @@ export class ProfileGuidedOptimizer {
         }
         
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('BellumProfiles', 1);
+            const request = indexedDB.open('ChallengerProfiles', 1);
             
             request.onerror = () => reject(request.error);
             

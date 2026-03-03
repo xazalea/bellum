@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 
-namespace Bellum.Backend.Services;
+namespace Challenger.Backend.Services;
 
 public class EmulatorService
 {

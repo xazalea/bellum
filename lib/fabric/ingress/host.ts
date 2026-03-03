@@ -1,5 +1,5 @@
-import { getNachoIdentity } from '@/lib/auth/nacho-identity';
-import { deriveStableUlaFromString, virtualIpv6Overlay } from '@/lib/nacho/networking/virtual-ipv6';
+import { getChallengerIdentity } from '@/lib/auth/challenger-identity';
+import { deriveStableUlaFromString, virtualIpv6Overlay } from '@/lib/challenger/networking/virtual-ipv6';
 import { assertUrlAllowed, getGlobalAllowlist } from '@/lib/security/allowlist';
 
 type PendingRequest = {
@@ -50,7 +50,7 @@ export function startFabrikIngressHost(cfg: FabrikIngressHostConfig): () => void
   };
 
   const loop = async () => {
-    const id = await getNachoIdentity();
+    const id = await getChallengerIdentity();
 
     // Register overlay identity for the site (datacenter map).
     try {

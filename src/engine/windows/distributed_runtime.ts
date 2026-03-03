@@ -8,8 +8,8 @@
  * 464. Share compiled WASM of native Windows DLLs.
  */
 
-import { p2pNode } from '../../nacho/net/p2p_node';
-import { wasmCache } from '../../nacho/core/wasm_cache';
+import { p2pNode } from '../../challenger/net/p2p_node';
+import { wasmCache } from '../../challenger/core/wasm_cache';
 import { WindowManager } from './gdi';
 
 export class DistributedWindows {

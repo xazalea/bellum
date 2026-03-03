@@ -1,6 +1,6 @@
 /**
  * Windows 11 Desktop Experience
- * Part of Nacho Runtime
+ * Part of Challenger Runtime
  * 
  * Full Windows 11 UI with:
  * - GPU-accelerated rendering

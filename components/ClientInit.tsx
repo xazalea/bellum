@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getNachoIdentity } from '@/lib/auth/nacho-identity';
+import { getChallengerIdentity } from '@/lib/auth/challenger-identity';
 
 export function ClientInit() {
   const [mounted, setMounted] = useState(false);
@@ -22,7 +22,7 @@ function Heartbeat() {
     let failures = 0;
 
     const getDeviceId = (): string => {
-      const key = 'nacho.deviceId';
+      const key = 'challenger.deviceId';
       try {
         const existing = window.localStorage.getItem(key);
         if (existing) return existing;
@@ -40,7 +40,7 @@ function Heartbeat() {
 
     const send = async () => {
       try {
-        const id = await getNachoIdentity();
+        const id = await getChallengerIdentity();
         const deviceId = getDeviceId();
         const res = await fetch('/api/cluster/proxy/heartbeat', {
           method: 'POST',

@@ -1,5 +1,5 @@
 import { FileType } from '../analyzers/binary-analyzer';
-import { NachoLoader } from './nacho-loader';
+import { ChallengerLoader } from './challenger-loader';
 import { APKLoader } from './apk-loader';
 import { X86Loader } from './x86-loader';
 
@@ -17,7 +17,7 @@ export class BaremetalRunner {
     this.update('Baremetal Boot', 'Starting lightweight runtime...');
     switch (type) {
       case FileType.PE_EXE:
-        this.loader = new NachoLoader();
+        this.loader = new ChallengerLoader();
         this.loader.onStatusUpdate = (status: string, detail?: string) => this.update(status, detail);
         await this.loader.load(container, filePath, type);
         break;

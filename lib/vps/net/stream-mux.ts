@@ -1,4 +1,4 @@
-import type { P2PNode } from '@/src/nacho/net/p2p_node';
+import type { P2PNode } from '@/src/challenger/net/p2p_node';
 
 export type StreamMode = 'tcp' | 'udp';
 

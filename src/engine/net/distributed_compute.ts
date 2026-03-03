@@ -6,7 +6,7 @@
  * 173. Offload chunk generation to other nodes.
  */
 
-import { p2pNode } from '../../nacho/net/p2p_node';
+import { p2pNode } from '../../challenger/net/p2p_node';
 
 export class DistributedCompute {
     

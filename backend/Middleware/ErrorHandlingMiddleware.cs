@@ -1,4 +1,4 @@
-namespace Bellum.Backend.Middleware;
+namespace Challenger.Backend.Middleware;
 
 public class ErrorHandlingMiddleware
 {

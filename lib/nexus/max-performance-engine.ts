@@ -1,6 +1,6 @@
 /**
  * Maximum Performance Engine
- * Part of Nacho Runtime
+ * Part of Challenger Runtime
  * 
  * Combines ALL performance techniques to achieve maximum browser performance:
  * - Persistent GPU kernels (10,000+ concurrent)

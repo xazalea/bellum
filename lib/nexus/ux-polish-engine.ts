@@ -1,6 +1,6 @@
 /**
  * UX Polish Engine
- * Part of Nacho Runtime
+ * Part of Challenger Runtime
  * 
  * Advanced UX features:
  * - 120Hz rendering support

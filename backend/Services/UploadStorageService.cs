@@ -3,9 +3,9 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Bellum.Backend.Models;
+using Challenger.Backend.Models;
 
-namespace Bellum.Backend.Services;
+namespace Challenger.Backend.Services;
 
 public class UploadStorageService
 {

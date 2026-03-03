@@ -3,7 +3,7 @@
  * Maps OpenGL ES 2.0/3.0 commands to WebGPU Render Passes
  */
 
-import { webgpu } from '../../nacho/engine/webgpu-context';
+import { webgpu } from '../../challenger/engine/webgpu-context';
 
 export interface GLESCommand {
   type: string;

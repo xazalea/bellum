@@ -1,6 +1,6 @@
 /**
  * WASM App Library
- * Part of Nacho Runtime
+ * Part of Challenger Runtime
  * 
  * Pre-compiled WASM applications for instant loading:
  * - Calculator
@@ -212,7 +212,7 @@ export class WASMAppLibrary {
             launch: this.launchChess.bind(this)
         });
 
-        console.log(`[NachoApps] Registered ${this.apps.size} apps`);
+        console.log(`[ChallengerApps] Registered ${this.apps.size} apps`);
     }
 
     /**

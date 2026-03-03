@@ -17,7 +17,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = authService.getCurrentUser();
   if (!user) return {};
   // Legacy header name kept for compatibility with external cluster server.
-  return { "X-Nacho-UserId": user.uid };
+  return { "X-Challenger-UserId": user.uid };
 }
 
 async function gzipDecompressBytes(bytes: Uint8Array): Promise<Uint8Array> {

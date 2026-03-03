@@ -24,7 +24,7 @@ export class VirtualFS {
 
     private initIndexedDB(): Promise<void> {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open("NachoDataPartition", 1);
+            const request = indexedDB.open("ChallengerDataPartition", 1);
             
             request.onerror = () => reject("Failed to open DB");
             

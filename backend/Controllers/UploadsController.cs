@@ -1,8 +1,8 @@
-using Bellum.Backend.Models;
-using Bellum.Backend.Services;
+using Challenger.Backend.Models;
+using Challenger.Backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bellum.Backend.Controllers;
+namespace Challenger.Backend.Controllers;
 
 [ApiController]
 [Route("api/uploads")]

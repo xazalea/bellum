@@ -1,6 +1,6 @@
 /**
  * Perfect Runtime - Complete Integration
- * Ties together all components for real binary execution with NachoBinaryExecutor
+ * Ties together all components for real binary execution with ChallengerBinaryExecutor
  */
 
 import { syscallDispatcher, SyscallContext, ProcessExitException } from '../syscalls/syscall-dispatcher';
@@ -13,10 +13,10 @@ import { directXWebGPU } from '../directx/directx-webgpu-impl';
 import { PEParser } from '../transpiler/pe_parser';
 import { DEXParser } from '../transpiler/dex_parser';
 import { PersistentKernelEngineV2, WorkType } from '../nexus/gpu/persistent-kernels-v2';
-import { Megakernel } from '../../src/nacho/engine/megakernel';
-import { NachoBinaryExecutor, type ExecutionContext } from '../execution/nacho-binary-executor';
-import { NachoJITCompiler } from '../jit/nacho-jit-compiler';
-import { NachoGPURuntime } from '../gpu/nacho-gpu-runtime';
+import { Megakernel } from '../../src/challenger/engine/megakernel';
+import { ChallengerBinaryExecutor, type ExecutionContext } from '../execution/challenger-binary-executor';
+import { ChallengerJITCompiler } from '../jit/challenger-jit-compiler';
+import { ChallengerGPURuntime } from '../gpu/challenger-gpu-runtime';
 import { hotPathProfiler } from '../execution/profiler';
 import { ntKernelGPU } from '../nexus/os/nt-kernel-gpu';
 
@@ -28,9 +28,9 @@ export class PerfectRuntime {
     private megakernel: Megakernel | null = null;
     private canvas: HTMLCanvasElement | null = null;
     private initialized: boolean = false;
-    private binaryExecutor: NachoBinaryExecutor | null = null;
-    private jitCompiler: NachoJITCompiler | null = null;
-    private gpuRuntime: NachoGPURuntime | null = null;
+    private binaryExecutor: ChallengerBinaryExecutor | null = null;
+    private jitCompiler: ChallengerJITCompiler | null = null;
+    private gpuRuntime: ChallengerGPURuntime | null = null;
     
     /**
      * Initialize runtime
@@ -87,11 +87,11 @@ export class PerfectRuntime {
             }
             
             // Initialize JIT compiler and GPU runtime
-            this.jitCompiler = new NachoJITCompiler();
-            this.gpuRuntime = new NachoGPURuntime();
+            this.jitCompiler = new ChallengerJITCompiler();
+            this.gpuRuntime = new ChallengerGPURuntime();
             
             // Initialize binary executor
-            this.binaryExecutor = new NachoBinaryExecutor(this.jitCompiler, this.gpuRuntime);
+            this.binaryExecutor = new ChallengerBinaryExecutor(this.jitCompiler, this.gpuRuntime);
             
             // Initialize megakernel for physics
             try {
@@ -129,7 +129,7 @@ export class PerfectRuntime {
         const binaryExecutor = this.binaryExecutor;
         
         return exceptionHandler.wrapAsync(async () => {
-            console.log('[Runtime] 🪟 Executing Windows EXE with NachoBinaryExecutor...');
+            console.log('[Runtime] 🪟 Executing Windows EXE with ChallengerBinaryExecutor...');
             
             const startTime = performance.now();
             
@@ -182,7 +182,7 @@ export class PerfectRuntime {
         const binaryExecutor = this.binaryExecutor;
         
         return exceptionHandler.wrapAsync(async () => {
-            console.log('[Runtime] 🤖 Executing Android APK with NachoBinaryExecutor...');
+            console.log('[Runtime] 🤖 Executing Android APK with ChallengerBinaryExecutor...');
             
             const startTime = performance.now();
             

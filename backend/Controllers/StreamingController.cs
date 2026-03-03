@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using Bellum.Backend.Services;
+using Challenger.Backend.Services;
 using System.Net.WebSockets;
 
-namespace Bellum.Backend.Controllers;
+namespace Challenger.Backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

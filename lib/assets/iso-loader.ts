@@ -6,7 +6,7 @@
 import { ISO_CONFIGS } from './iso-config';
 
 export class ISOLoader {
-  private static dbName = 'bellum-assets';
+  private static dbName = 'challenger-assets';
   private static dbVersion = 1;
   private static storeName = 'isos';
   private static db: IDBDatabase | null = null;

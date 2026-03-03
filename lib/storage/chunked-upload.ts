@@ -30,7 +30,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   const user = authService.getCurrentUser();
   if (!user) return {};
   // Legacy header name kept for compatibility with external cluster server.
-  return { "X-Nacho-UserId": user.uid };
+  return { "X-Challenger-UserId": user.uid };
 }
 
 async function sha256Hex(data: ArrayBuffer | Uint8Array): Promise<string> {

@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text.Json;
 
-namespace Bellum.Backend.Services;
+namespace Challenger.Backend.Services;
 
 public class FileProcessingService
 {

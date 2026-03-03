@@ -1,5 +1,5 @@
-import { p2pNode, type P2PSignal } from '@/src/nacho/net/p2p_node';
-import { getNachoHeaders } from '@/lib/auth/nacho-identity';
+import { p2pNode, type P2PSignal } from '@/src/challenger/net/p2p_node';
+import { getChallengerHeaders } from '@/lib/auth/challenger-identity';
 import { computeVirtualDhcpTable, type VirtualDhcpTable } from '@/lib/lan/dhcp';
 
 export type LanPeer = { peerId: string; lastSeenAt: number };
@@ -66,7 +66,7 @@ export class AetherLanRoom {
     const poll = async () => {
       if (this.stopped) return;
       try {
-        const headers = await getNachoHeaders();
+        const headers = await getChallengerHeaders();
         const res = await fetch(
           `/api/lan/signal?roomId=${encodeURIComponent(this.roomId)}&peerId=${encodeURIComponent(peerId)}`,
           { cache: 'no-store', headers },
@@ -115,7 +115,7 @@ export class AetherLanRoom {
 
   private async postSignal(signal: P2PSignal): Promise<void> {
     try {
-      const headers = await getNachoHeaders();
+      const headers = await getChallengerHeaders();
       await fetch('/api/lan/signal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },

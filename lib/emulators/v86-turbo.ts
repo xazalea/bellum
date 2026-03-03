@@ -113,7 +113,7 @@ export class V86Turbo {
 
   private getWindowsCommand(): string {
     const safePath = this.options.appPath.replace(/\\/g, '/');
-    return `C:\\\\bellum\\\\run.exe ${safePath}\n`;
+    return `C:\\\\challenger\\\\run.exe ${safePath}\n`;
   }
 
   private getAndroidCommand(): string {

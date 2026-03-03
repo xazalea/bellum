@@ -10,8 +10,8 @@ declare global {
   interface Window {
     // Kursor exposes a global `kursor` constructor in the browser build.
     kursor?: new (opts: Record<string, unknown>) => unknown;
-    __nachoKursorInstance?: unknown;
-    __nachoKursorObserver?: MutationObserver;
+    __challengerKursorInstance?: unknown;
+    __challengerKursorObserver?: MutationObserver;
   }
 }
 
@@ -22,7 +22,7 @@ function shouldEnableCustomCursor(): boolean {
   // Keep cursor fast by default on low-end devices / accessibility prefs.
   if (typeof window === "undefined") return false;
   try {
-    const pref = window.localStorage?.getItem("nacho.cursor");
+    const pref = window.localStorage?.getItem("challenger.cursor");
     if (pref === "native") return false;
     if (pref === "custom") {
       // Allow override, but still respect coarse pointer and reduced motion.
@@ -81,16 +81,16 @@ function markInteractive(root: ParentNode) {
 
 export async function ensureKursor(): Promise<void> {
   if (typeof window === "undefined") return;
-  if (window.__nachoKursorInstance) return;
+  if (window.__challengerKursorInstance) return;
   if (!shouldEnableCustomCursor()) return;
 
-  ensureStylesheet(KURSOR_CSS, "nacho-kursor-css");
-  await loadScript(KURSOR_JS, "nacho-kursor-js");
+  ensureStylesheet(KURSOR_CSS, "challenger-kursor-css");
+  await loadScript(KURSOR_JS, "challenger-kursor-js");
 
   if (!window.kursor) return;
 
   // Create cursor instance (type 1 is the default demo style).
-  window.__nachoKursorInstance = new window.kursor({
+  window.__challengerKursorInstance = new window.kursor({
     type: 1,
   });
 
@@ -99,7 +99,7 @@ export async function ensureKursor(): Promise<void> {
 
   // Make interactive elements trigger hover visuals.
   markInteractive(document);
-  if (!window.__nachoKursorObserver) {
+  if (!window.__challengerKursorObserver) {
     const obs = new MutationObserver((mutations) => {
       for (const m of mutations) {
         m.addedNodes.forEach((n) => {
@@ -110,7 +110,7 @@ export async function ensureKursor(): Promise<void> {
       }
     });
     obs.observe(document.documentElement, { childList: true, subtree: true });
-    window.__nachoKursorObserver = obs;
+    window.__challengerKursorObserver = obs;
   }
 }
 

@@ -2,7 +2,7 @@
 // HiberFile - Local Persistent Storage using IndexedDB
 // Replaces Puter.js for file hosting
 
-import { CompressionService } from '../nacho/storage/compression-service';
+import { CompressionService } from '../challenger/storage/compression-service';
 
 interface FileManifest {
     path: string;

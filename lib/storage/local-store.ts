@@ -14,7 +14,7 @@ interface LocalFile {
 }
 
 export class LocalStore {
-    private dbName = 'NachoLocalStore';
+    private dbName = 'ChallengerLocalStore';
     private storeName = 'files';
     private version = 1;
     private db: IDBDatabase | null = null;

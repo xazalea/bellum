@@ -4,7 +4,7 @@
  */
 
 import { VMType } from './vm/types';
-import { getNachoEngine } from './nacho/engine';
+import { getChallengerEngine } from './challenger/engine';
 import JSZip from 'jszip';
 import { PEParser } from './transpiler/pe_parser';
 import { lifter } from './transpiler/lifter/lifter';
@@ -144,8 +144,8 @@ export class GameTransformer {
 
   private async extractGameAssets(file: File, gameType: VMType): Promise<GameAsset[]> {
     const assets: GameAsset[] = [];
-    const engine = getNachoEngine();
-    if (!engine) throw new Error('Nacho engine is only available in the browser');
+    const engine = getChallengerEngine();
+    if (!engine) throw new Error('Challenger engine is only available in the browser');
     const storageEngine = engine.storageCapacity;
 
     if (gameType === VMType.ANDROID) {
@@ -317,8 +317,8 @@ export class GameTransformer {
   }
 
   private async optimizeAssets(assets: GameAsset[], options: GameTransformationOptions): Promise<GameAsset[]> {
-    const engine = getNachoEngine();
-    if (!engine) throw new Error('Nacho engine is only available in the browser');
+    const engine = getChallengerEngine();
+    if (!engine) throw new Error('Challenger engine is only available in the browser');
     const storageEngine = engine.storageCapacity;
     const optimizedAssets: GameAsset[] = [];
 
@@ -437,8 +437,8 @@ export class GameTransformer {
   }
 
   private async finalOptimization(bundle: WebAppBundle, options: GameTransformationOptions): Promise<WebAppBundle> {
-    const engine = getNachoEngine();
-    if (!engine) throw new Error('Nacho engine is only available in the browser');
+    const engine = getChallengerEngine();
+    if (!engine) throw new Error('Challenger engine is only available in the browser');
     const storageEngine = engine.storageCapacity;
     if (options.compressionLevel === 'ultra') {
       storageEngine.stackedBinaryReduction.stack(new Uint8Array(await bundle.blob.arrayBuffer()));
@@ -458,14 +458,14 @@ export class GameTransformer {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${gameType.toUpperCase()} Game - Nacho</title>
+    <title>${gameType.toUpperCase()} Game - Challenger</title>
     <style>${this.generateCSS(gameType)}</style>
     ${scripts}
 </head>
 <body>
     <div id="game-container">
         <div id="loading-screen">
-            <div class="nacho-spinner"></div>
+            <div class="challenger-spinner"></div>
             <p>Loading ${gameType} game...</p>
         </div>
         <canvas id="game-canvas" width="1280" height="720"></canvas>
@@ -497,7 +497,7 @@ export class GameTransformer {
     };
 
     return `
-// Nacho Game Runtime v3.0 [Ultimate Edition]
+// Challenger Game Runtime v3.0 [Ultimate Edition]
 // Includes 500+ Features for Real Execution
 
 // --- Section A: WebGPU HAL ---
@@ -558,7 +558,7 @@ class AndroidRuntime {
     }
 
     async boot() {
-        console.log("🤖 Booting Nacho Android Runtime [AOSP 14 Compatible]...");
+        console.log("🤖 Booting Challenger Android Runtime [AOSP 14 Compatible]...");
         console.log("   - [Checklist #1] Initializing ART Userspace in WASM");
         console.log("   - [Checklist #2] Configuring WebGPU-accelerated JIT");
         
@@ -603,7 +603,7 @@ class WindowsRuntime {
     }
 
     async boot() {
-        console.log("🪟 Booting Nacho Windows Runtime (NTR) [Win11 Compatible]...");
+        console.log("🪟 Booting Challenger Windows Runtime (NTR) [Win11 Compatible]...");
         
         // [Checklist #341] JIT x86 -> WASM
         this.initJIT();
@@ -648,7 +648,7 @@ class ClusterManager {
 }
 
 // --- Core Orchestrator ---
-class NachoGameRuntime {
+class ChallengerGameRuntime {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
         this.loadingScreen = document.getElementById('loading-screen');
@@ -721,7 +721,7 @@ class NachoGameRuntime {
 
     async init() {
         try {
-            console.log("🔥 Initializing Nacho Engine v3.0 [Ultimate]...");
+            console.log("🔥 Initializing Challenger Engine v3.0 [Ultimate]...");
             
             // 1. Initialize Hardware
             if (this.options.enableGPUAcceleration) {
@@ -891,7 +891,7 @@ class NachoGameRuntime {
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 24px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('NachoOS', x + phoneW/2, y + phoneH/2);
+                ctx.fillText('ChallengerOS', x + phoneW/2, y + phoneH/2);
                 ctx.font = '12px monospace';
                 ctx.fillStyle = '#888';
                 ctx.fillText('Powered by WASM', x + phoneW/2, y + phoneH/2 + 30);
@@ -901,9 +901,9 @@ class NachoGameRuntime {
                 ctx.textAlign = 'left';
                 
                 const logLines = [
-                    '[    0.000000] Linux version 6.1.0-nacho (root@build) #1 SMP PREEMPT',
+                    '[    0.000000] Linux version 6.1.0-challenger (root@build) #1 SMP PREEMPT',
                     '[    0.012345] CPU: ARM64 Processor [411fd070] revision 0',
-                    '[    0.024000] Machine model: Nacho Virtual Device',
+                    '[    0.024000] Machine model: Challenger Virtual Device',
                     '[    0.150000] Memory: 4096MB = 2048MB + 2048MB',
                     '[    0.420000] Init: systemd-udevd starting...',
                     '[    1.200000] Mounting /system read-only...',
@@ -1033,7 +1033,7 @@ class NachoGameRuntime {
         ctx.fillStyle = '#000';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('Nacho Compiler Output', x + 10, y + 20);
+        ctx.fillText('Challenger Compiler Output', x + 10, y + 20);
 
         ctx.fillStyle = '#000';
         ctx.fillRect(x+2, y+30, 796, 468);
@@ -1076,7 +1076,7 @@ class NachoGameRuntime {
     }
 }
 
-new NachoGameRuntime();
+new ChallengerGameRuntime();
 `;
   }
 
@@ -1108,7 +1108,7 @@ new NachoGameRuntime();
 body { background: #0f1419; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
 #game-container { width: 100vw; height: 100vh; position: relative; }
 #loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0f1419; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-.nacho-spinner { width: 50px; height: 50px; border: 4px solid #1e293b; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+.challenger-spinner { width: 50px; height: 50px; border: 4px solid #1e293b; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 #game-canvas { width: 100%; height: 100%; display: block; background: #0f1419; }
 `;

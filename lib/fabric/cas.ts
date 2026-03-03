@@ -1,4 +1,4 @@
-import { infiniteStorage } from "@/lib/nacho/storage/infinite-storage";
+import { infiniteStorage } from "@/lib/challenger/storage/infinite-storage";
 import { canonicalStringify, cidForBytes, cidForJSON, CID } from "./cid";
 
 export interface CasPutResult {

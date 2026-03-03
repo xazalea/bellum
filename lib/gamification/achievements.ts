@@ -14,7 +14,7 @@ export type Achievement = {
 };
 
 export const ACHIEVEMENTS: Achievement[] = [
-  { id: 'booted', title: 'Boot Sequence', description: 'Open Nacho and initialize your device identity.', points: 10 },
+  { id: 'booted', title: 'Boot Sequence', description: 'Open Challenger and initialize your device identity.', points: 10 },
   { id: 'installed_app', title: 'Collector', description: 'Install your first app.', points: 25 },
   { id: 'ran_app', title: 'First Launch', description: 'Run an app in the runner.', points: 25 },
   { id: 'joined_cluster', title: 'Node Online', description: 'Connect to the cluster and see active peers.', points: 40 },
@@ -22,8 +22,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'deployed_site', title: 'Shipped', description: 'Deploy your first site with Fabrik.', points: 75 },
 ];
 
-const KEY_PREFIX = 'bellum.achievement.';
-const XP_KEY = 'bellum.xp';
+const KEY_PREFIX = 'challenger.achievement.';
+const XP_KEY = 'challenger.xp';
 
 function readBool(key: string): boolean {
   try {
@@ -77,7 +77,7 @@ export function unlockAchievement(id: AchievementId): boolean {
   if (meta) writeNumber(XP_KEY, getXp() + meta.points);
 
   try {
-    window.dispatchEvent(new CustomEvent('bellum:achievement', { detail: { id } }));
+    window.dispatchEvent(new CustomEvent('challenger:achievement', { detail: { id } }));
   } catch {
     // ignore
   }
@@ -89,10 +89,10 @@ export function subscribeAchievements(cb: () => void): () => void {
   if (typeof window === 'undefined') return () => {};
   const handler = () => cb();
   window.addEventListener('storage', handler);
-  window.addEventListener('bellum:achievement' as any, handler);
+  window.addEventListener('challenger:achievement' as any, handler);
   return () => {
     window.removeEventListener('storage', handler);
-    window.removeEventListener('bellum:achievement' as any, handler);
+    window.removeEventListener('challenger:achievement' as any, handler);
   };
 }
 

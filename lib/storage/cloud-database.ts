@@ -4,7 +4,7 @@
  * Implements real Chunking and Compression.
  */
 import { HiberFile } from './hiberfile';
-import { CompressionService } from '../nacho/storage/compression-service';
+import { CompressionService } from '../challenger/storage/compression-service';
 
 interface ArchiveManifest {
   id: string;
@@ -22,7 +22,7 @@ export class CloudDatabase {
   constructor() {
     // We use a separate HiberFile instance pointing to a different DB
     // This isolates "Cloud" storage from "Local" storage
-    this.coldStore = new HiberFile('bellum-cloud-storage');
+    this.coldStore = new HiberFile('challenger-cloud-storage');
   }
 
   /**

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputType>Exe</OutputType>
+    
+    <!-- WASM settings via Uno.Wasm.Bootstrap -->
+    <WasmShellEnableAOT>true</WasmShellEnableAOT>
+    <WasmShellMonoRuntimeExecutionMode>InterpreterAndAOT</WasmShellMonoRuntimeExecutionMode>
+    <WasmShellILLinkerEnabled>true</WasmShellILLinkerEnabled>
+    <WasmShellEnableLogging>false</WasmShellEnableLogging>
+    
+    <!-- Size optimization -->
+    <WasmShellStripDebugSymbols>true</WasmShellStripDebugSymbols>
+    <WasmShellCompressOutput>true</WasmShellCompressOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Uno.Wasm.Bootstrap" Version="8.0.0" />
+    <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

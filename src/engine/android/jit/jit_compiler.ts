@@ -8,7 +8,7 @@
  * 33. JIT native code to WebAssembly via LLVM-WASM backend.
  */
 
-import { webgpu } from '../../../nacho/engine/webgpu-context';
+import { webgpu } from '../../../challenger/engine/webgpu-context';
 
 export class JitCompiler {
     private methodCache: Map<string, GPUComputePipeline> = new Map();

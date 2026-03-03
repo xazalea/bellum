@@ -1,5 +1,5 @@
 /**
- * almostnode Integration for Bellum
+ * almostnode Integration for Challenger Deep
  * 
  * Provides Node.js runtime in the browser for:
  * - Running x86/ARM binary translation on client
@@ -9,21 +9,21 @@
 
 import { createContainer, VirtualFS, Runtime } from 'almostnode';
 
-export interface BellumRuntime {
+export interface ChallengerRuntime {
   container: ReturnType<typeof createContainer>;
   vfs: VirtualFS;
   runtime: Runtime;
 }
 
-let runtimeInstance: BellumRuntime | null = null;
+let runtimeInstance: ChallengerRuntime | null = null;
 
-export async function initBellumRuntime(): Promise<BellumRuntime> {
+export async function initChallengerRuntime(): Promise<ChallengerRuntime> {
   if (runtimeInstance) {
     return runtimeInstance;
   }
 
   const container = createContainer({
-    cwd: '/bellum',
+    cwd: '/challenger',
     env: {
       NODE_ENV: 'production',
       PLATFORM: 'browser',
@@ -31,7 +31,7 @@ export async function initBellumRuntime(): Promise<BellumRuntime> {
     onConsole: (method: string, args: any[]) => {
       const fn = (console as any)[method];
       if (typeof fn === 'function') {
-        fn('[Bellum]', ...args);
+        fn('[Challenger]', ...args);
       }
     },
   });
@@ -40,11 +40,11 @@ export async function initBellumRuntime(): Promise<BellumRuntime> {
   const runtime = container.runtime;
 
   // Initialize virtual filesystem structure
-  vfs.mkdirSync('/bellum/games', { recursive: true });
-  vfs.mkdirSync('/bellum/roms', { recursive: true });
-  vfs.mkdirSync('/bellum/saves', { recursive: true });
-  vfs.mkdirSync('/bellum/cache', { recursive: true });
-  vfs.mkdirSync('/bellum/tmp', { recursive: true });
+  vfs.mkdirSync('/challenger/games', { recursive: true });
+  vfs.mkdirSync('/challenger/roms', { recursive: true });
+  vfs.mkdirSync('/challenger/saves', { recursive: true });
+  vfs.mkdirSync('/challenger/cache', { recursive: true });
+  vfs.mkdirSync('/challenger/tmp', { recursive: true });
 
   runtimeInstance = { container, vfs, runtime };
 
@@ -52,19 +52,19 @@ export async function initBellumRuntime(): Promise<BellumRuntime> {
 }
 
 export async function loadGame(buffer: ArrayBuffer, name: string): Promise<void> {
-  const runtime = await initBellumRuntime();
+  const runtime = await initChallengerRuntime();
   
   // Write game binary to virtual filesystem
-  runtime.vfs.writeFileSync(`/bellum/games/${name}`, new Uint8Array(buffer));
+  runtime.vfs.writeFileSync(`/challenger/games/${name}`, new Uint8Array(buffer));
   
-  console.log(`[Bellum] Loaded game: ${name}`);
+  console.log(`[Challenger] Loaded game: ${name}`);
 }
 
 export async function runBinary(
   code: string,
-  filename: string = '/bellum/tmp/script.js'
+  filename: string = '/challenger/tmp/script.js'
 ): Promise<{ exports: any; stdout: string }> {
-  const runtime = await initBellumRuntime();
+  const runtime = await initChallengerRuntime();
   
   runtime.vfs.writeFileSync(filename, code);
   
@@ -77,15 +77,15 @@ export async function runBinary(
 }
 
 export async function installPackage(packageName: string): Promise<void> {
-  const runtime = await initBellumRuntime();
+  const runtime = await initChallengerRuntime();
   
   await runtime.container.npm.install(packageName);
   
-  console.log(`[Bellum] Installed package: ${packageName}`);
+  console.log(`[Challenger] Installed package: ${packageName}`);
 }
 
 export async function runShellCommand(command: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const runtime = await initBellumRuntime();
+  const runtime = await initChallengerRuntime();
   
   const result = await runtime.container.run(command);
   
@@ -123,3 +123,7 @@ export function listVirtualFiles(dir: string): string[] {
 
 // Re-export types
 export type { VirtualFS, Runtime };
+
+// Backward compatibility aliases
+export type { ChallengerRuntime as ChallengerRuntime };
+export { initChallengerRuntime as initChallengerRuntime };

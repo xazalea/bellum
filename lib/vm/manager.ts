@@ -6,7 +6,7 @@ import { VMConfig, VMInstance, VMManager, VMType } from './types';
 import { puterClient } from '../puter/client';
 import { BaseVM } from './base';
 // Legacy VM implementations are temporarily unavailable in this build.
-// Once the Nacho Transpiler replaces legacy VMs, reintroduce the modules below.
+// Once the Challenger Transpiler replaces legacy VMs, reintroduce the modules below.
 // import { LinuxVM } from './implementations/linux';
 // import { WindowsVM } from './implementations/windows';
 // import { AndroidVM } from './implementations/android';
@@ -32,7 +32,7 @@ async function getCodeExecutionVM() {
 
 export class VMManagerImpl implements VMManager {
   private vms: Map<string, VMInstance> = new Map();
-  private storagePath = 'bellum/vms';
+  private storagePath = 'challenger/vms';
 
   async createVM(config: VMConfig): Promise<VMInstance> {
     // Ensure storage directory exists
@@ -60,7 +60,7 @@ export class VMManagerImpl implements VMManager {
       const CodeExecutionVM = await getCodeExecutionVM();
       vm = new CodeExecutionVM(config);
     } else {
-      // Use GenericVM for all other types (Windows, Android, etc.) powered by Nacho Engine
+      // Use GenericVM for all other types (Windows, Android, etc.) powered by Challenger Engine
       vm = new GenericVM(config);
     }
 

@@ -23,7 +23,7 @@ function corsHeaders(req: Request): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'content-type, x-nacho-userid, x-nacho-deviceid',
+    'Access-Control-Allow-Headers': 'content-type, x-challenger-userid, x-challenger-deviceid',
     Vary: 'Origin',
   };
 }
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   try {
     uid = (await verifySessionCookieFromRequest(req)).uid;
   } catch {
-    uid = String(req.headers.get('x-nacho-userid') || '').trim();
+    uid = String(req.headers.get('x-challenger-userid') || '').trim();
     if (!uid) return NextResponse.json({ error: 'unauthenticated' }, { status: 401, headers: corsHeaders(req) });
   }
   rateLimit(req, { scope: 'cluster_heartbeat', limit: 600, windowMs: 60_000, key: uid });

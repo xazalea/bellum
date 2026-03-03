@@ -46,10 +46,10 @@ export const getFingerprint = async (): Promise<string> => {
     } catch (e) {
         console.error('Fingerprint generation failed', e);
         // Fallback to basic local storage UUID if FP fails
-        let fallback = localStorage.getItem('nacho_device_id');
+        let fallback = localStorage.getItem('challenger_device_id');
         if (!fallback) {
             fallback = crypto.randomUUID();
-            localStorage.setItem('nacho_device_id', fallback);
+            localStorage.setItem('challenger_device_id', fallback);
         }
         return fallback;
     }

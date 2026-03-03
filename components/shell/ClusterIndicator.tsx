@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { getNachoIdentity } from '@/lib/auth/nacho-identity';
+import { getChallengerIdentity } from '@/lib/auth/challenger-identity';
 
 type Status = 'unknown' | 'connected' | 'disconnected';
 
@@ -23,10 +23,10 @@ export function ClusterIndicator() {
 
     const tick = async () => {
       try {
-        const id = await getNachoIdentity();
+        const id = await getChallengerIdentity();
         const res = await fetch('/api/cluster/proxy/peers', {
           cache: 'no-store',
-          headers: { 'X-Nacho-UserId': id.uid },
+          headers: { 'X-Challenger-UserId': id.uid },
         });
         if (!res.ok) throw new Error(`peers_status_${res.status}`);
         const peers = (await res.json()) as unknown[];

@@ -1,4 +1,4 @@
-import { getNachoIdentity } from '@/lib/auth/nacho-identity';
+import { getChallengerIdentity } from '@/lib/auth/challenger-identity';
 
 export type User = { uid: string; username?: string | null };
 export type AuthDiagnostics = { unavailable: boolean; code?: string; message?: string };
@@ -38,10 +38,10 @@ class AuthService {
     const usernameNorm = username.trim().toLowerCase();
     
     // Pass current fingerprint so server can authorize/link
-    const id = await getNachoIdentity();
+    const id = await getChallengerIdentity();
     const headers = { 
       'Content-Type': 'application/json',
-      'X-Nacho-UserId': id.uid
+      'X-Challenger-UserId': id.uid
     };
 
     const res = await fetch('/api/user/account', {
@@ -56,7 +56,7 @@ class AuthService {
     }
 
     // Update local state
-    const currentId = await getNachoIdentity();
+    const currentId = await getChallengerIdentity();
     currentId.username = usernameNorm;
     const user: User = { uid: currentId.uid, username: usernameNorm };
     this.currentUser = user;
@@ -84,7 +84,7 @@ class AuthService {
     const existing = this.currentUser;
     if (existing) return existing;
     try {
-      const id = await getNachoIdentity();
+      const id = await getChallengerIdentity();
       const user: User = { uid: id.uid, username: id.username };
       this.currentUser = user;
       this.listeners.forEach((l) => l(user));

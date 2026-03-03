@@ -38,7 +38,7 @@ const MAX_CHUNK_SIZE = 24 * 1024 * 1024; // 24MB (safe margin below Discord's 25
 const QUOTA_PER_FINGERPRINT = 4 * 1024 * 1024 * 1024; // 4GB per user
 
 // LocalStorage keys
-const STORAGE_PREFIX = 'bellum_discord_storage_';
+const STORAGE_PREFIX = 'challenger_discord_storage_';
 const QUOTA_KEY = (fp: string) => `${STORAGE_PREFIX}quota_${fp}`;
 const METADATA_KEY = (fp: string) => `${STORAGE_PREFIX}metadata_${fp}`;
 const FILES_INDEX_KEY = (fp: string) => `${STORAGE_PREFIX}files_${fp}`;
@@ -145,7 +145,7 @@ async function uploadChunkToDiscord(
   const response = await fetch('/api/discord/upload', {
     method: 'POST',
     headers: {
-      'x-nacho-userid': uid,
+      'x-challenger-userid': uid,
       'X-File-Name': fileName,
       'X-Upload-Id': fileId,
       'X-Chunk-Index': chunkIndex.toString(),
@@ -306,7 +306,7 @@ export async function downloadFile(
       // Use our secure backend to download the file (handles auth and ownership)
       const response = await fetch(`/api/discord/file?messageId=${messageId}`, {
         headers: {
-          'x-nacho-userid': uid,
+          'x-challenger-userid': uid,
         }
       });
 
