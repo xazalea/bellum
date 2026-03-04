@@ -169,7 +169,7 @@ export {
     type ChallengerStatus,
     type OSType,
     ChallengerJITCompiler,
-    ChallengerGPURuntime,
+    type ChallengerGPURuntime,
     ChallengerBinaryExecutor
 };
 

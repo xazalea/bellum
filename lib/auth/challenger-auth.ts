@@ -82,5 +82,4 @@ export async function isCurrentDeviceTrusted(usernameInput: string): Promise<boo
   return !!res.trusted;
 }
 
-// Backward compatibility aliases
-export type { ChallengerAuthResult as ChallengerAuthResult };
+// Backward compatibility - type is already exported above

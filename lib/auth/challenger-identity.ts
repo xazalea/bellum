@@ -59,6 +59,4 @@ export async function getChallengerHeaders(): Promise<Record<string, string>> {
   return { 'X-Challenger-UserId': id.uid };
 }
 
-// Backward compatibility aliases
-export type { ChallengerIdentity as ChallengerIdentity };
-export { getChallengerIdentity as getChallengerIdentity, invalidateChallengerIdentity as invalidateChallengerIdentity, getChallengerHeaders as getChallengerHeaders };
+// Backward compatibility - already exported above

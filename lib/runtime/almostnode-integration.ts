@@ -124,6 +124,5 @@ export function listVirtualFiles(dir: string): string[] {
 // Re-export types
 export type { VirtualFS, Runtime };
 
-// Backward compatibility aliases
-export type { ChallengerRuntime as ChallengerRuntime };
-export { initChallengerRuntime as initChallengerRuntime };
+// Default export
+export default ChallengerRuntime;

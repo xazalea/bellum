@@ -242,7 +242,5 @@ export function getChallengerEngine(): ChallengerEngine | null {
 // Export a stable handle for client code; null during SSR/prerender.
 export const challengerEngine: ChallengerEngine | null = getChallengerEngine();
 
-// Backward compatibility aliases
-export const challengerEngine = challengerEngine;
-export type { ChallengerEngine as ChallengerEngine };
-export const getChallengerEngine = getChallengerEngine;
+// Default export
+export default ChallengerEngine;

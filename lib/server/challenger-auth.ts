@@ -139,5 +139,4 @@ export async function isCurrentDeviceTrusted(usernameInput: string, fingerprint:
   return Array.isArray(acc?.trustedFingerprints) && acc.trustedFingerprints.includes(fingerprint);
 }
 
-// Backward compatibility aliases
-export type { ChallengerAuthOk as ChallengerAuthOk, ChallengerAuthChallenge as ChallengerAuthChallenge, ChallengerAuthResult as ChallengerAuthResult };
+// Types are already exported above

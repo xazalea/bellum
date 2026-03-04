@@ -452,6 +452,5 @@ export const challengerGPU = new ChallengerGPURuntime({
     queueCount: 4
 });
 
-// Backward compatibility alias
-export const challengerGPU = challengerGPU;
-export type { ChallengerGPURuntime as ChallengerGPURuntime };
+// Default export
+export default ChallengerGPURuntime;

@@ -171,6 +171,5 @@ export class ChallengerProxyServer {
 // Singleton instance
 export const challengerProxy = new ChallengerProxyServer();
 
-// Backward compatibility alias
-export const challengerProxy = challengerProxy;
-export type { ChallengerProxyServer as ChallengerProxyServer };
+// Default export
+export default ChallengerProxyServer;

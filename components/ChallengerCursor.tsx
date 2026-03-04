@@ -104,5 +104,5 @@ export function ChallengerCursor() {
   );
 }
 
-// Backward compatibility alias
-export const ChallengerCursor = ChallengerCursor;
+// Default export for backward compatibility
+export default ChallengerCursor;
