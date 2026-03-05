@@ -1,6 +1,24 @@
-import 'server-only';
+// Edge runtime compatible - server-only is handled by webpack alias for Cloudflare
 
-import { getAdminAuth } from '@/lib/server/firebase-admin';
+// Check if we're in edge runtime (Cloudflare Workers)
+const isEdgeRuntime = typeof process === 'undefined' || 
+  process.env.NEXT_RUNTIME === 'edge' || 
+  typeof (globalThis as any).WebSocketPair !== 'undefined';
+
+// Dynamic import holder
+let _getAdminAuth: (() => any) | null = null;
+
+// Lazy load firebase-admin only when needed and available
+function getFirebaseAdmin() {
+  if (_getAdminAuth === null && !isEdgeRuntime) {
+    try {
+      _getAdminAuth = require('@/lib/server/firebase-admin').getAdminAuth;
+    } catch {
+      _getAdminAuth = null;
+    }
+  }
+  return _getAdminAuth;
+}
 
 export const SESSION_COOKIE_NAME = 'challenger_session';
 
@@ -49,12 +67,20 @@ export async function verifySessionCookieFromRequest(req: Request): Promise<Sess
   if (headerUid) {
     return { uid: headerUid };
   }
+  
+  // In edge runtime (Cloudflare), firebase-admin is not available
+  // Fall back to header-based auth only
+  const adminAuth = getFirebaseAdmin();
+  if (!adminAuth) {
+    throw new Error('unauthenticated: edge runtime requires x-challenger-userid header');
+  }
+  
   const cookieHeader = req.headers.get('cookie');
   const cookies = parseCookieHeader(cookieHeader);
   const session = cookies[SESSION_COOKIE_NAME];
   if (!session) throw new Error('unauthenticated');
 
-  const decoded = await getAdminAuth().verifySessionCookie(session, true);
+  const decoded = await adminAuth().verifySessionCookie(session, true);
   return {
     uid: decoded.uid,
     email: typeof decoded.email === 'string' ? decoded.email : undefined,
@@ -65,6 +91,10 @@ export async function verifySessionCookieFromRequest(req: Request): Promise<Sess
 
 export async function createSessionCookieFromIdToken(idToken: string, maxAgeSeconds: number): Promise<string> {
   if (!idToken) throw new Error('missing_id_token');
-  return await getAdminAuth().createSessionCookie(idToken, { expiresIn: maxAgeSeconds * 1000 });
+  const adminAuth = getFirebaseAdmin();
+  if (!adminAuth) {
+    throw new Error('session cookies not available in edge runtime');
+  }
+  return await adminAuth().createSessionCookie(idToken, { expiresIn: maxAgeSeconds * 1000 });
 }
 

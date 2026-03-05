@@ -155,6 +155,17 @@ try {
   log('UPDATE_ROUTES_SUCCESS', 'Routes updated');
   // #endregion
 
+  // Step 7: Patch async_hooks imports
+  // #region agent log
+  log('PATCH_ASYNC_HOOKS_START', 'Patching async_hooks imports');
+  // #endregion
+  
+  execSync('node scripts/patch-async-hooks.js', { stdio: 'inherit' });
+  
+  // #region agent log
+  log('PATCH_ASYNC_HOOKS_SUCCESS', 'async_hooks patched');
+  // #endregion
+
   // #region agent log
   log('BUILD_SUCCESS', 'Build completed successfully');
   // #endregion

@@ -226,8 +226,9 @@ const nextConfig = {
     // Fix for Edge Runtime / Cloudflare / Client
     if (nextRuntime === 'edge' || isCloudflare || !isServer) {
       const emptyModulePath = require.resolve('./lib/webpack/empty-module.js');
+      const asyncHooksPolyfill = require.resolve('./lib/webpack/async-hooks-polyfill.js');
 
-      // Replace node: modules with empty module
+      // Replace node: modules with empty module (except async_hooks which needs a polyfill)
       const nodeModules = ['child_process', 'net', 'tls', 'fs', 'path', 'crypto', 'stream', 'util', 'events', 'buffer', 'process', 'os', 'http', 'https', 'url', 'zlib', 'assert', 'querystring', 'dns', 'dgram', 'cluster', 'module', 'readline', 'repl', 'string_decoder', 'timers', 'tty', 'vm', 'worker_threads'];
       nodeModules.forEach(moduleName => {
         config.plugins.push(
@@ -236,7 +237,28 @@ const nextConfig = {
             emptyModulePath
           )
         );
+        // Also handle non-prefixed imports
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            new RegExp(`^${moduleName}$`),
+            emptyModulePath
+          )
+        );
       });
+      
+      // Use async_hooks polyfill
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /^async_hooks$/,
+          asyncHooksPolyfill
+        )
+      );
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /^node:async_hooks$/,
+          asyncHooksPolyfill
+        )
+      );
 
       // Also handle non-prefixed modules in resolve.alias
       config.resolve.alias = {
@@ -255,6 +277,7 @@ const nextConfig = {
         'tunnel': false,
         'winston': false,
         'winston-transport': false,
+        'server-only': emptyModulePath,
         'fs': false,
         'path': false,
         'crypto': false,
