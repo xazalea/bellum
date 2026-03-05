@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { Button } from "@/components/ui/button";
+import { RunnerDisplay } from "@/components/runner/RunnerDisplay";
+import { PerformanceOverlay } from "@/components/runner/PerformanceOverlay";
+import { FrameMetrics } from "@/lib/engine/frame-scheduler";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -82,6 +87,8 @@ export default function AndroidPage() {
     jitCompiles?: number;
     gpuKernels?: number;
   } | null>(null);
+  const [frameMetrics, setFrameMetrics] = useState<FrameMetrics | null>(null);
+  const [showPerfOverlay, setShowPerfOverlay] = useState(true);
 
   const displayRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

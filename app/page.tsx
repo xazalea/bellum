@@ -2,14 +2,23 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { BackgroundPaths } from '@/components/ui/background-paths';
+import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
+import { TextHoverEffect } from '@/components/ui/text-hover-effect';
+import { GlowingEffect } from '@/components/ui/glowing-effect';
+import { Box, Lock, Search, Settings, Sparkles, ArrowRight, Cpu, Gamepad2, Bot, Cloud, Server } from 'lucide-react';
+
+// Dynamically import CanvasRevealEffect with SSR disabled
+const CanvasRevealEffect = dynamic(
+  () => import('@/components/ui/canvas-reveal-effect').then((mod) => mod.CanvasRevealEffect),
+  { ssr: false }
+);
 
 const FEATURES = [
   {
     title: 'Virtual Machines',
     description: 'Boot full Android or Windows operating systems directly in your browser with native performance.',
-    icon: VMIcon,
+    icon: Cpu,
     href: '/virtual-machines',
     color: 'cyan',
     stats: '2 OS Types',
@@ -17,7 +26,7 @@ const FEATURES = [
   {
     title: 'Game Library',
     description: 'Access 20,000+ HTML5 and retro games instantly. No downloads, no installs, just play.',
-    icon: GamesIcon,
+    icon: Gamepad2,
     href: '/games',
     color: 'purple',
     stats: '20K+ Games',
@@ -25,7 +34,7 @@ const FEATURES = [
   {
     title: 'App Decoders',
     description: 'Drop APK or EXE files and watch them decode through dedicated compiler stacks in real-time.',
-    icon: DecoderIcon,
+    icon: Box,
     href: '/library',
     color: 'emerald',
     stats: '2 Compilers',
@@ -33,7 +42,7 @@ const FEATURES = [
   {
     title: 'AI Assistants',
     description: 'Chat with thousands of AI models including GPT, Claude, Gemini, and more — all for free.',
-    icon: AIIcon,
+    icon: Bot,
     href: '/ai',
     color: 'pink',
     stats: '1000+ Models',
@@ -41,7 +50,7 @@ const FEATURES = [
   {
     title: 'Cloud Storage',
     description: 'Store files securely using distributed cloud infrastructure with global replication.',
-    icon: StorageIcon,
+    icon: Cloud,
     href: '/storage',
     color: 'blue',
     stats: 'Distributed',
@@ -49,7 +58,7 @@ const FEATURES = [
   {
     title: 'GPU Cluster',
     description: 'Access high-performance GPU computing for rendering, ML, and compute-intensive tasks.',
-    icon: ClusterIcon,
+    icon: Server,
     href: '/cluster',
     color: 'orange',
     stats: 'WebGPU Ready',
@@ -64,71 +73,6 @@ const TECH_STACK = [
   { name: 'PE Loader', status: 'Active', color: 'emerald' },
   { name: 'WASM JIT', status: 'Ready', color: 'cyan' },
 ];
-
-// Icon Components
-function VMIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-    </svg>
-  );
-}
-
-function GamesIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-    </svg>
-  );
-}
-
-function DecoderIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-    </svg>
-  );
-}
-
-function AIIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-    </svg>
-  );
-}
-
-function StorageIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-    </svg>
-  );
-}
-
-function ClusterIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-    </svg>
-  );
-}
-
-function ArrowRightIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-    </svg>
-  );
-}
-
-function SparklesIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-    </svg>
-  );
-}
 
 // Animated Counter Component
 function AnimatedCounter({ end, duration = 2000, suffix = '' }: { end: number; duration?: number; suffix?: string }) {
@@ -154,177 +98,134 @@ function AnimatedCounter({ end, duration = 2000, suffix = '' }: { end: number; d
   return <span>{count.toLocaleString()}{suffix}</span>;
 }
 
-// Feature Card Component
-function FeatureCard({ feature, index }: { feature: typeof FEATURES[0]; index: number }) {
+// Glowing Feature Card Component
+function GlowingFeatureCard({ feature, index }: { feature: typeof FEATURES[0]; index: number }) {
   const Icon = feature.icon;
-  const colorClasses = {
-    cyan: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/30 text-cyan-400 hover:border-cyan-500/50',
-    purple: 'from-purple-500/20 to-purple-500/5 border-purple-500/30 text-purple-400 hover:border-purple-500/50',
-    emerald: 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/30 text-emerald-400 hover:border-emerald-500/50',
-    pink: 'from-pink-500/20 to-pink-500/5 border-pink-500/30 text-pink-400 hover:border-pink-500/50',
-    blue: 'from-blue-500/20 to-blue-500/5 border-blue-500/30 text-blue-400 hover:border-blue-500/50',
-    orange: 'from-orange-500/20 to-orange-500/5 border-orange-500/30 text-orange-400 hover:border-orange-500/50',
-  };
-
+  
   return (
     <Link
       href={feature.href}
-      className={`
-        group relative overflow-hidden rounded-xl border bg-gradient-to-br ${colorClasses[feature.color as keyof typeof colorClasses]}
-        p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl
-        animate-fade-in
-      `}
+      className="relative h-full rounded-2xl border border-white/10 p-2 group"
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      {/* Glow Effect */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-      </div>
-
-      <div className="relative">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className={`p-3 rounded-xl bg-gradient-to-br ${colorClasses[feature.color as keyof typeof colorClasses]} bg-opacity-20`}>
-            <Icon className="w-6 h-6" />
+      <GlowingEffect
+        spread={40}
+        glow={true}
+        disabled={false}
+        proximity={64}
+        inactiveZone={0.01}
+        borderWidth={3}
+      />
+      <div className="relative flex h-full flex-col justify-between gap-6 overflow-hidden rounded-xl border border-white/10 bg-neutral-950 p-6 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+        <div className="relative flex flex-1 flex-col justify-between gap-3">
+          <div className="w-fit rounded-lg border border-white/10 bg-white/5 p-2">
+            <Icon className="h-5 w-5 text-cyan-400" />
           </div>
-          <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 border border-white/10">
-            {feature.stats}
-          </span>
-        </div>
-
-        {/* Content */}
-        <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors">
-          {feature.title}
-        </h3>
-        <p className="text-sm text-slate-400 leading-relaxed mb-4">
-          {feature.description}
-        </p>
-
-        {/* Action */}
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-500 group-hover:text-cyan-400 transition-colors">
-          <span>Explore</span>
-          <ArrowRightIcon className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="pt-0.5 text-xl leading-[1.375rem] font-semibold font-sans tracking-[-0.04em] md:text-2xl md:leading-[1.875rem] text-balance text-white">
+                {feature.title}
+              </h3>
+              <span className="text-xs font-medium px-2 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                {feature.stats}
+              </span>
+            </div>
+            <p className="font-sans text-sm leading-[1.125rem] md:text-base md:leading-[1.375rem] text-slate-400">
+              {feature.description}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-500 group-hover:text-cyan-400 transition-colors">
+            <span>Explore</span>
+            <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+          </div>
         </div>
       </div>
     </Link>
   );
 }
 
-// Hero Section with Background Paths
-function HeroSection() {
+// Canvas Reveal Card Component
+function CanvasCard({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [hovered, setHovered] = useState(false);
+
   return (
-    <div className="relative min-h-[90vh] w-full flex items-center justify-center overflow-hidden bg-neutral-950">
-      {/* Animated Background Paths */}
-      <div className="absolute inset-0">
-        <FloatingPaths position={1} />
-        <FloatingPaths position={-1} />
-      </div>
-      
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 md:px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 2 }}
-          className="max-w-4xl mx-auto"
-        >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-8"
-          >
-            <SparklesIcon className="w-4 h-4 text-cyan-400" />
-            <span className="text-sm font-medium text-cyan-400">WebGPU Accelerated • 20,000+ Games</span>
-          </motion.div>
-
-          {/* Title */}
-          <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-tighter">
-            {['Challenger', 'Deep'].map((word, wordIndex) => (
-              <span
-                key={wordIndex}
-                className="inline-block mr-4 last:mr-0"
-              >
-                {word.split('').map((letter, letterIndex) => (
-                  <motion.span
-                    key={`${wordIndex}-${letterIndex}`}
-                    initial={{ y: 100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{
-                      delay: wordIndex * 0.1 + letterIndex * 0.03 + 0.3,
-                      type: 'spring',
-                      stiffness: 150,
-                      damping: 25,
-                    }}
-                    className="inline-block text-transparent bg-clip-text 
-                    bg-gradient-to-r from-neutral-900 to-neutral-700/80 
-                    dark:from-white dark:to-white/80"
-                  >
-                    {letter}
-                  </motion.span>
-                ))}
-              </span>
-            ))}
-          </h1>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.8 }}
-            className="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto"
-          >
-            Run Android, Windows, and 20,000+ games directly in your browser.
-            No downloads. No installs. Just pure web-native power.
-          </motion.p>
-
-          {/* CTA Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.8 }}
-            className="flex flex-wrap justify-center gap-4"
-          >
-            <Link
-              href="/virtual-machines"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-cyan-400 hover:to-cyan-500 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/25"
-            >
-              <VMIcon className="w-5 h-5" />
-              Launch VM
-            </Link>
-            <Link
-              href="/games"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white/5 border border-white/10 text-white font-semibold rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-200"
-            >
-              <GamesIcon className="w-5 h-5" />
-              Play Games
-            </Link>
-          </motion.div>
-
-          {/* Tech Stack Pills */}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="border border-white/[0.2] group/canvas-card flex items-center justify-center max-w-sm w-full mx-auto p-4 relative h-[30rem] rounded-xl bg-neutral-950"
+    >
+      <Icon className="absolute h-6 w-6 -top-3 -left-3 text-cyan-400" />
+      <Icon className="absolute h-6 w-6 -bottom-3 -left-3 text-cyan-400" />
+      <Icon className="absolute h-6 w-6 -top-3 -right-3 text-cyan-400" />
+      <Icon className="absolute h-6 w-6 -bottom-3 -right-3 text-cyan-400" />
+      <AnimatePresence>
+        {hovered && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 0.8 }}
-            className="flex flex-wrap justify-center gap-2 mt-10"
+            className="h-full w-full absolute inset-0 rounded-xl overflow-hidden"
           >
-            {TECH_STACK.map((tech) => (
-              <div
-                key={tech.name}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-medium"
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${tech.color === 'emerald' ? 'bg-emerald-400' : 'bg-cyan-400'}`} />
-                <span className="text-slate-300">{tech.name}</span>
-                <span className={tech.color === 'emerald' ? 'text-emerald-400' : 'text-cyan-400'}>{tech.status}</span>
-              </div>
-            ))}
+            {children}
           </motion.div>
-        </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="relative z-20">
+        <div className="text-center group-hover/canvas-card:-translate-y-4 group-hover/canvas-card:opacity-0 transition duration-200 w-full mx-auto flex items-center justify-center">
+          {icon}
+        </div>
+        <h2 className="dark:text-white text-xl opacity-0 group-hover/canvas-card:opacity-100 relative z-10 text-black mt-4 font-bold group-hover/canvas-card:text-white group-hover/canvas-card:-translate-y-2 transition duration-200 text-center">
+          {title}
+        </h2>
       </div>
     </div>
   );
 }
+
+const AceternityIcon = () => {
+  return (
+    <svg
+      width="66"
+      height="65"
+      viewBox="0 0 66 65"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-10 w-10 text-cyan-400 group-hover/canvas-card:text-white"
+    >
+      <path
+        d="M8 8.05571C8 8.05571 54.9009 18.1782 57.8687 30.062C60.8365 41.9458 9.05432 57.4696 9.05432 57.4696"
+        stroke="currentColor"
+        strokeWidth="15"
+        strokeMiterlimit="3.86874"
+        strokeLinecap="round"
+        style={{ mixBlendMode: "darken" }}
+      />
+    </svg>
+  );
+};
+
+const Icon = ({ className, ...rest }: { className?: string }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth="1.5"
+      stroke="currentColor"
+      className={className}
+      {...rest}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
+    </svg>
+  );
+};
 
 // Floating Paths Component (for hero background)
 function FloatingPaths({ position }: { position: number }) {
@@ -374,6 +275,135 @@ function FloatingPaths({ position }: { position: number }) {
   );
 }
 
+// Hero Section with Text Hover Effect
+function HeroSection() {
+  return (
+    <div className="relative min-h-[90vh] w-full flex items-center justify-center overflow-hidden bg-neutral-950">
+      {/* Animated Background Paths */}
+      <div className="absolute inset-0">
+        <FloatingPaths position={1} />
+        <FloatingPaths position={-1} />
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10 container mx-auto px-4 md:px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 2 }}
+          className="max-w-4xl mx-auto"
+        >
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-8"
+          >
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm font-medium text-cyan-400">WebGPU Accelerated • 20,000+ Games</span>
+          </motion.div>
+
+          {/* Large Text Hover Effect */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 1 }}
+            className="h-[12rem] mb-4"
+          >
+            <TextHoverEffect text="CHALLENGER" className="text-6xl md:text-8xl" />
+          </motion.div>
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto"
+          >
+            Run Android, Windows, and 20,000+ games directly in your browser.
+            No downloads. No installs. Just pure web-native power.
+          </motion.p>
+
+          {/* CTA Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="flex flex-wrap justify-center gap-4"
+          >
+            <Link
+              href="/virtual-machines"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-cyan-400 hover:to-cyan-500 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/25"
+            >
+              <Cpu className="w-5 h-5" />
+              Launch VM
+            </Link>
+            <Link
+              href="/games"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white/5 border border-white/10 text-white font-semibold rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-200"
+            >
+              <Gamepad2 className="w-5 h-5" />
+              Play Games
+            </Link>
+          </motion.div>
+
+          {/* Tech Stack Pills */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2, duration: 0.8 }}
+            className="flex flex-wrap justify-center gap-2 mt-10"
+          >
+            {TECH_STACK.map((tech) => (
+              <div
+                key={tech.name}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-medium"
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${tech.color === 'emerald' ? 'bg-emerald-400' : 'bg-cyan-400'}`} />
+                <span className="text-slate-300">{tech.name}</span>
+                <span className={tech.color === 'emerald' ? 'text-emerald-400' : 'text-cyan-400'}>{tech.status}</span>
+              </div>
+            ))}
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// Canvas Reveal Section
+function CanvasRevealSection() {
+  return (
+    <section className="py-20 flex flex-col lg:flex-row items-center justify-center bg-neutral-950 w-full gap-4 mx-auto px-8">
+      <CanvasCard title="Android Runtime" icon={<AceternityIcon />}>
+        <CanvasRevealEffect
+          animationSpeed={5.1}
+          containerClassName="bg-emerald-900"
+        />
+      </CanvasCard>
+      <CanvasCard title="Windows Engine" icon={<AceternityIcon />}>
+        <CanvasRevealEffect
+          animationSpeed={3}
+          containerClassName="bg-black"
+          colors={[
+            [236, 72, 153],
+            [232, 121, 249],
+          ]}
+          dotSize={2}
+        />
+      </CanvasCard>
+      <CanvasCard title="GPU Cluster" icon={<AceternityIcon />}>
+        <CanvasRevealEffect
+          animationSpeed={3}
+          containerClassName="bg-sky-600"
+          colors={[[125, 211, 252]]}
+        />
+      </CanvasCard>
+    </section>
+  );
+}
+
 // Main Page Component
 export default function LandingPage() {
   return (
@@ -402,7 +432,10 @@ export default function LandingPage() {
         ))}
       </section>
 
-      {/* Features Grid */}
+      {/* Canvas Reveal Section */}
+      <CanvasRevealSection />
+
+      {/* Features Grid with Glowing Effect */}
       <section className="px-4">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -414,13 +447,13 @@ export default function LandingPage() {
             className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
           >
             Get Started
-            <ArrowRightIcon className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((feature, index) => (
-            <FeatureCard key={feature.title} feature={feature} index={index} />
+            <GlowingFeatureCard key={feature.title} feature={feature} index={index} />
           ))}
         </div>
       </section>
@@ -489,7 +522,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 px-8 py-4 bg-white text-cyan-600 font-bold rounded-xl hover:bg-cyan-50 transition-all duration-200 hover:shadow-xl"
           >
             Get Started Free
-            <ArrowRightIcon className="w-5 h-5" />
+            <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
       </section>

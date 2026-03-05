@@ -660,3 +660,134 @@ button:focus-visible {
         font-size: 0.8125rem;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   GLOW EFFECTS
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+    /* Glow Colors */
+    --glow-cyan: #00d9ff;
+    --glow-purple: #9d79ff;
+    --glow-emerald: #00e6b8;
+    --glow-pink: #dd7bbb;
+    --glow-gold: #d79f1e;
+    --glow-green: #5a922c;
+    --glow-blue: #4c7894;
+    
+    /* Glow Intensities */
+    --glow-intensity-low: 0.15;
+    --glow-intensity-medium: 0.3;
+    --glow-intensity-high: 0.5;
+}
+
+/* Glow utility classes */
+.glow-cyan {
+    box-shadow: 0 0 20px rgba(0, 217, 255, var(--glow-intensity-medium)),
+                0 0 40px rgba(0, 217, 255, var(--glow-intensity-low));
+}
+
+.glow-purple {
+    box-shadow: 0 0 20px rgba(157, 121, 255, var(--glow-intensity-medium)),
+                0 0 40px rgba(157, 121, 255, var(--glow-intensity-low));
+}
+
+.glow-emerald {
+    box-shadow: 0 0 20px rgba(0, 230, 184, var(--glow-intensity-medium)),
+                0 0 40px rgba(0, 230, 184, var(--glow-intensity-low));
+}
+
+.glow-border {
+    position: relative;
+}
+
+.glow-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(45deg, var(--glow-cyan), var(--glow-purple), var(--glow-emerald));
+    z-index: -1;
+    opacity: 0;
+    transition: opacity var(--cd-transition-normal);
+}
+
+.glow-border:hover::before {
+    opacity: 1;
+}
+
+/* Animated glow effect */
+.glow-animate {
+    animation: glowPulse 3s ease-in-out infinite;
+}
+
+@keyframes glowSpin {
+    from {
+        --start: 0deg;
+    }
+    to {
+        --start: 360deg;
+    }
+}
+
+@keyframes beamPulse {
+    0%, 100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Card glow effect */
+.card-glow {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-glow::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent,
+        var(--glow-cyan),
+        transparent,
+        var(--glow-purple),
+        transparent
+    );
+    animation: glowSpin 4s linear infinite;
+    opacity: 0;
+    transition: opacity var(--cd-transition-normal);
+}
+
+.card-glow:hover::after {
+    opacity: 0.1;
+}
+
+/* Button glow effect */
+.btn-glow {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(0, 217, 255, 0.3),
+        transparent 50%
+    );
+    opacity: 0;
+    transition: opacity var(--cd-transition-fast);
+}
+
+.btn-glow:hover::before {
+    opacity: 1;
+}

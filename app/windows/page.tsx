@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+import { Button } from "@/components/ui/button";
+import { RunnerDisplay } from "@/components/runner/RunnerDisplay";
+import { PerformanceOverlay } from "@/components/runner/PerformanceOverlay";
+import { FrameMetrics } from "@/lib/engine/frame-scheduler";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -81,6 +86,8 @@ export default function WindowsPage() {
     fps: number;
     memory: number;
   } | null>(null);
+  const [frameMetrics, setFrameMetrics] = useState<FrameMetrics | null>(null);
+  const [showPerfOverlay, setShowPerfOverlay] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -91,6 +91,8 @@ const config: Config = {
   			'bob': 'bob 4s ease-in-out infinite',
   			'glow-pulse': 'glowPulse 3s ease-in-out infinite',
   			'bubble-rise': 'bubbleRise 8s linear infinite',
+  			'glow-spin': 'glowSpin 3s linear infinite',
+  			'beam-pulse': 'beamPulse 2s ease-in-out infinite',
   		},
   		keyframes: {
   			fadeIn: {
