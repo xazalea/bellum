@@ -1,128 +1,93 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-function FloatingPaths({ position }: { position: number }) {
-    const paths = Array.from({ length: 36 }, (_, i) => ({
-        id: i,
-        d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
-            380 - i * 5 * position
-        } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
-            152 - i * 5 * position
-        } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
-            684 - i * 5 * position
-        } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
-        color: `rgba(15,23,42,${0.1 + i * 0.03})`,
-        width: 0.5 + i * 0.03,
-    }));
-    return (
-        <div className="absolute inset-0 pointer-events-none">
-            <svg
-                className="w-full h-full text-slate-950 dark:text-white"
-                viewBox="0 0 696 316"
-                fill="none"
-            >
-                <title>Background Paths</title>
-                {paths.map((path) => (
-                    <motion.path
-                        key={path.id}
-                        d={path.d}
-                        stroke="currentColor"
-                        strokeWidth={path.width}
-                        strokeOpacity={0.1 + path.id * 0.03}
-                        initial={{ pathLength: 0.3, opacity: 0.6 }}
-                        animate={{
-                            pathLength: 1,
-                            opacity: [0.3, 0.6, 0.3],
-                            pathOffset: [0, 1, 0],
-                        }}
-                        transition={{
-                            duration: 20 + Math.random() * 10,
-                            repeat: Number.POSITIVE_INFINITY,
-                            ease: "linear",
-                        }}
-                    />
-                ))}
-            </svg>
-        </div>
-    );
+export function FloatingPaths({ position }: { position: number }) {
+  const paths = [
+    "M-380 -189C-380 -189 -312 216 152 343C616 470 684 875 684 875",
+    "M-373 -197C-373 -197 -305 208 159 335C623 462 691 867 691 867",
+    "M-366 -205C-366 -205 -298 200 166 327C630 454 698 859 698 859",
+    "M-359 -213C-359 -213 -291 192 173 319C637 446 705 851 705 851",
+    "M-352 -221C-352 -221 -284 184 180 311C644 438 712 843 712 843",
+    "M-345 -229C-345 -229 -277 176 187 303C651 430 719 835 719 835",
+    "M-338 -237C-338 -237 -270 168 194 295C658 422 726 827 726 827",
+    "M-331 -245C-331 -245 -263 160 201 287C665 414 733 819 733 819",
+    "M-324 -253C-324 -253 -256 152 208 279C672 406 740 811 740 811",
+    "M-317 -261C-317 -261 -249 144 215 271C679 398 747 803 747 803",
+    "M-310 -269C-310 -269 -242 136 222 263C686 390 754 795 754 795",
+    "M-303 -277C-303 -277 -235 128 229 255C693 382 761 787 761 787",
+    "M-296 -285C-296 -285 -228 120 236 247C700 374 768 779 768 779",
+    "M-289 -293C-289 -293 -221 112 243 239C707 366 775 771 775 771",
+    "M-282 -301C-282 -301 -214 104 250 231C714 358 782 763 782 763",
+    "M-275 -309C-275 -309 -207 96 257 223C721 350 789 755 789 755",
+    "M-268 -317C-268 -317 -200 88 264 215C728 342 796 747 796 747",
+    "M-261 -325C-261 -325 -193 80 271 207C735 334 803 739 803 739",
+    "M-254 -333C-254 -333 -186 72 278 199C742 326 810 731 810 731",
+    "M-247 -341C-247 -341 -179 64 285 191C749 318 817 723 817 723",
+  ];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <svg
+        className="w-full h-full"
+        viewBox="0 0 640 640"
+        preserveAspectRatio="xMidYMid slice"
+      >
+        {paths.map((path, index) => (
+          <motion.path
+            key={`path-${position}-${index}`}
+            d={path}
+            stroke={`rgba(255, 255, 255, ${0.05 + index * 0.01})`}
+            strokeWidth={1}
+            fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{
+              pathLength: 1,
+              opacity: [0.1, 0.3, 0.1],
+            }}
+            transition={{
+              pathLength: {
+                duration: 8 + index * 0.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              },
+              opacity: {
+                duration: 3 + index * 0.2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              },
+            }}
+          />
+        ))}
+      </svg>
+    </div>
+  );
 }
 
 export function BackgroundPaths({
-    title = "Background Paths",
+  title,
+  className,
+  children,
 }: {
-    title?: string;
+  title?: string;
+  className?: string;
+  children?: React.ReactNode;
 }) {
-    const words = title.split(" ");
-    return (
-        <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-white dark:bg-neutral-950">
-            <div className="absolute inset-0">
-                <FloatingPaths position={1} />
-                <FloatingPaths position={-1} />
-            </div>
-            <div className="relative z-10 container mx-auto px-4 md:px-6 text-center">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 2 }}
-                    className="max-w-4xl mx-auto"
-                >
-                    <h1 className="text-5xl sm:text-7xl md:text-8xl font-bold mb-8 tracking-tighter">
-                        {words.map((word, wordIndex) => (
-                            <span
-                                key={wordIndex}
-                                className="inline-block mr-4 last:mr-0"
-                            >
-                                {word.split("").map((letter, letterIndex) => (
-                                    <motion.span
-                                        key={`${wordIndex}-${letterIndex}`}
-                                        initial={{ y: 100, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        transition={{
-                                            delay:
-                                                wordIndex * 0.1 +
-                                                letterIndex * 0.03,
-                                            type: "spring",
-                                            stiffness: 150,
-                                            damping: 25,
-                                        }}
-                                        className="inline-block text-transparent bg-clip-text 
-                                        bg-gradient-to-r from-neutral-900 to-neutral-700/80 
-                                        dark:from-white dark:to-white/80"
-                                    >
-                                        {letter}
-                                    </motion.span>
-                                ))}
-                            </span>
-                        ))}
-                    </h1>
-                    <div
-                        className="inline-block group relative bg-gradient-to-b from-black/10 to-white/10 
-                        dark:from-white/10 dark:to-black/10 p-px rounded-2xl backdrop-blur-lg 
-                        overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
-                    >
-                        <Button
-                            variant="ghost"
-                            className="rounded-[1.15rem] px-8 py-6 text-lg font-semibold backdrop-blur-md 
-                            bg-white/95 hover:bg-white/100 dark:bg-black/95 dark:hover:bg-black/100 
-                            text-black dark:text-white transition-all duration-300 
-                            group-hover:-translate-y-0.5 border border-black/10 dark:border-white/10 
-                            hover:shadow-md dark:hover:shadow-neutral-800/50"
-                        >
-                            <span className="opacity-90 group-hover:opacity-100 transition-opacity">
-                                Discover Excellence
-                            </span>
-                            <span
-                                className="ml-3 opacity-70 group-hover:opacity-100 group-hover:translate-x-1.5 
-                                transition-all duration-300"
-                            >
-                                →
-                            </span>
-                        </Button>
-                    </div>
-                </motion.div>
-            </div>
+  return (
+    <div className={cn("relative min-h-screen w-full overflow-hidden bg-black", className)}>
+      <FloatingPaths position={1} />
+      <FloatingPaths position={2} />
+      
+      {title && (
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white/90">
+            {title}
+          </h1>
         </div>
-    );
+      )}
+      
+      {children}
+    </div>
+  );
 }

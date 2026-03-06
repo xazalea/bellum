@@ -1,440 +1,208 @@
 # Implementation Plan
 
-## Overview
+[Overview]
+Complete UI rebuild for Challenger Deep - delete all existing UI files and create a new dark, minimal, clean interface with animated backgrounds, dynamic island navigation, and modern visual effects.
 
-Complete the APK and EXE runner emulation layers to enable full Android and Windows application execution in the browser, enhance the UI with Magic UI components, and achieve 40+ FPS performance through WebGPU acceleration.
+This implementation will transform the entire frontend while preserving all backend functionality including API routes, storage systems (Telegram/Discord), and core libraries. The new UI will feature animated background paths, glowing effects, text hover animations, a dynamic island for navigation, parallax scrolling for games, and gradient hover buttons throughout.
 
-This implementation builds upon the existing solid foundation of interpreters, loaders, and runtime components. The current codebase has partial implementations that need to be completed and connected end-to-end. The ART interpreter has all 218 Dalvik opcodes defined but many are simplified stubs. The x86 interpreter has ~50 opcodes implemented. Both need completion, proper memory management, and WebGPU-accelerated rendering pipelines.
-
-## [Types]
-
-New and enhanced type definitions for the emulation layer.
-
-### Core Runtime Types
+[Types]
+Type definitions for the new UI components and data structures.
 
 ```typescript
-// Execution State
-interface ExecutionState {
-  status: 'idle' | 'loading' | 'booting' | 'running' | 'paused' | 'error' | 'stopped';
-  fps: number;
-  frameTime: number;
-  cpuUsage: number;
-  memoryUsage: number;
-  gpuUsage: number;
-}
-
-// Performance Metrics
-interface PerformanceMetrics {
-  fps: number;
-  frameTimeMs: number;
-  cpuTimeMs: number;
-  gpuTimeMs: number;
-  instructionsPerFrame: number;
-  jitCompilations: number;
-  cacheHits: number;
-  cacheMisses: number;
-}
-
-// Memory Regions
-interface MemoryRegion {
-  base: number;
+// types/ui.ts
+export interface ImportedApp {
+  id: string;
+  name: string;
+  type: 'android' | 'windows';
   size: number;
-  protection: 'r' | 'rw' | 'rx' | 'rwx';
-  type: 'code' | 'data' | 'stack' | 'heap' | 'mapped';
+  uploadedAt: Date;
+  storageRef: string; // Telegram/Discord storage reference
+  thumbnail?: string;
 }
 
-// Android-specific
-interface AndroidProcess {
-  pid: number;
-  uid: number;
-  packageName: string;
-  dexFiles: DEXFile[];
-  nativeLibs: ArrayBuffer[];
-  activities: ActivityInfo[];
-  services: ServiceInfo[];
+export interface DynamicIslandState {
+  size: 'default' | 'compact' | 'large' | 'tall' | 'medium' | 'ultra' | 'massive';
+  isAnimating: boolean;
+  content: IslandContent;
 }
 
-interface DEXFile {
-  header: DEXHeader;
-  classes: Map<string, DalvikClass>;
-  strings: string[];
-  types: string[];
-  methods: MethodInfo[];
-  fields: FieldInfo[];
-}
+export type IslandContent = 
+  | { type: 'navigation'; activeRoute: string }
+  | { type: 'status'; message: string; status: 'loading' | 'success' | 'error' }
+  | { type: 'action'; label: string; onClick: () => void };
 
-// Windows-specific
-interface WindowsProcess {
-  pid: number;
-  peImage: PEImage;
-  modules: Map<string, LoadedModule>;
-  threads: Map<number, ThreadContext>;
-  handles: Map<number, Handle>;
-}
-
-interface ThreadContext {
-  id: number;
-  registers: CPURegisters;
-  stackBase: number;
-  stackLimit: number;
-  teb: number;
-  state: 'running' | 'suspended' | 'waiting';
-}
-
-// GPU Resources
-interface GPUResources {
-  device: GPUDevice;
-  context: GPUCanvasContext;
-  renderPipeline: GPURenderPipeline;
-  computePipelines: Map<string, GPUComputePipeline>;
-  buffers: Map<string, GPUBuffer>;
-  textures: Map<string, GPUTexture>;
+export interface GameImage {
+  id: string;
+  src: string;
+  alt: string;
+  title?: string;
 }
 ```
 
-## [Files]
-
-### New Files to Create
-
-1. **`lib/engine/gpu-renderer.ts`**
-   - WebGPU-accelerated display renderer
-   - Handles both Android SurfaceFlinger and Windows GDI/DirectX output
-   - Implements frame timing and vsync
-
-2. **`lib/engine/frame-scheduler.ts`**
-   - Manages execution timing for 40+ FPS target
-   - Implements frame skipping and adaptive quality
-   - Coordinates CPU/GPU work
-
-3. **`lib/challenger/android/dex-parser.ts`**
-   - Complete DEX file format parser
-   - Extracts classes, methods, fields, and code
-   - Handles multi-dex files
-
-4. **`lib/challenger/android/android-framework-services.ts`**
-   - ActivityManagerService implementation
-   - PackageManagerService implementation
-   - WindowManagerService implementation
-   - SurfaceFlinger implementation
-
-5. **`lib/challenger/android/opengl-es-renderer.ts`**
-   - OpenGL ES 3.0 to WebGPU translation
-   - Shader compilation (GLSL to WGSL)
-   - Texture and buffer management
-
-6. **`lib/challenger/windows/win32-api.ts`**
-   - Complete Kernel32 API implementation
-   - Complete User32 API implementation
-   - Complete GDI32 API implementation
-   - Common DirectX 9/11 APIs
-
-7. **`lib/challenger/windows/x86-full.ts`**
-   - Complete x86/x64 instruction decoder
-   - Full instruction set implementation
-   - SSE/AVX support
-
-8. **`lib/challenger/windows/directx-renderer.ts`**
-   - DirectX 9/11 to WebGPU translation
-   - HLSL to WGSL shader compiler
-   - State management
-
-9. **`lib/engine/jit-compiler.ts`**
-   - Hot path detection
-   - WebAssembly JIT compilation
-   - GPU compute shader generation
-
-10. **`components/runner/RunnerDisplay.tsx`**
-    - Unified display component for both APK and EXE
-    - WebGPU canvas management
-    - Input handling (keyboard, mouse, touch)
-
-11. **`components/runner/PerformanceOverlay.tsx`**
-    - Real-time FPS, CPU, memory display
-    - Frame timing graph
-    - Debug information
-
-12. **`components/runner/ControlBar.tsx`**
-    - Play/Pause/Stop/Restart controls
-    - Settings panel
-    - Screenshot/Recording
-
-### Existing Files to Modify
-
-1. **`app/android/page.tsx`**
-   - Integrate complete Android runtime
-   - Add Magic UI components (GlowingEffect, ShimmerButton)
-   - Add PerformanceOverlay component
-   - Improve error handling and loading states
-
-2. **`app/windows/page.tsx`**
-   - Integrate complete Windows runtime
-   - Add Magic UI components
-   - Add PerformanceOverlay component
-   - Improve error handling and loading states
-
-3. **`lib/engine/loaders/apk-loader.ts`**
-   - Connect to complete DEX parser
-   - Implement real app execution
-   - Add proper lifecycle management
-
-4. **`lib/challenger/windows/runtime.ts`**
-   - Complete Win32 API implementations
-   - Add proper memory management
-   - Implement threading
-
-5. **`lib/challenger/core/interpreter.ts`**
-   - Add missing x86 opcodes (200+ remaining)
-   - Implement proper memory addressing modes
-   - Add SSE/AVX support
-
-6. **`lib/challenger/android/art-interpreter.ts`**
-   - Complete all 218 opcode implementations
-   - Add proper method invocation
-   - Implement exception handling
-
-7. **`lib/challenger/gpu/webgpu.ts`**
-   - Add texture management
-   - Add render pipeline creation
-   - Add compute shader support
-
-8. **`lib/engine/execution-pipeline.ts`**
-   - Connect to real interpreters
-   - Implement proper frame timing
-   - Add JIT compilation triggers
-
-9. **`lib/nexus/os/android-boot.ts`**
-   - Complete boot sequence
-   - Initialize all framework services
-   - Connect to real display
-
-10. **`components/ui/glowing-effect.tsx`**
-    - Already exists, use in runner pages
-
-11. **`components/ui/shimmer-button.tsx`**
-    - Already exists, use in runner pages
-
-## [Functions]
-
-### New Functions
-
-1. **`lib/engine/gpu-renderer.ts`**
-   - `createGPURenderer(device: GPUDevice, canvas: HTMLCanvasElement): GPURenderer`
-   - `renderFrame(texture: GPUTexture): Promise<void>`
-   - `createTextureFromBuffer(data: ArrayBuffer, width: number, height: number): GPUTexture`
-   - `present(): void`
-
-2. **`lib/engine/frame-scheduler.ts`**
-   - `createFrameScheduler(targetFPS: number): FrameScheduler`
-   - `scheduleFrame(callback: FrameCallback): void`
-   - `getFrameBudget(): number`
-   - `adjustQuality(currentFPS: number): void`
-
-3. **`lib/challenger/android/dex-parser.ts`**
-   - `parseDEX(buffer: ArrayBuffer): DEXFile`
-   - `parseMultiDEX(buffers: ArrayBuffer[]): DEXFile[]`
-   - `resolveMethod(dex: DEXFile, methodIdx: number): MethodInfo`
-   - `resolveField(dex: DEXFile, fieldIdx: number): FieldInfo`
-
-4. **`lib/challenger/android/android-framework-services.ts`**
-   - `startActivity(intent: Intent): Promise<void>`
-   - `installPackage(apk: ArrayBuffer): Promise<PackageInfo>`
-   - `createSurface(window: Window): Surface`
-   - `composeSurfaces(): void`
-
-5. **`lib/challenger/windows/win32-api.ts`**
-   - `CreateFile(filename: string, access: number, share: number): Handle`
-   - `CreateProcess(executable: string, args: string): Process`
-   - `VirtualAlloc(size: number, type: number, protect: number): number`
-   - `CreateWindowEx(className: string, windowName: string, style: number): HWND`
-
-6. **`lib/challenger/windows/x86-full.ts`**
-   - `decodeInstruction(memory: Memory, pc: number): DecodedInstruction`
-   - `executeInstruction(cpu: CPU, inst: DecodedInstruction): void`
-   - `handleInterrupt(cpu: CPU, vector: number): void`
-
-7. **`lib/engine/jit-compiler.ts`**
-   - `compileHotPath(code: Uint8Array, type: 'x86' | 'dalvik'): Promise<WebAssembly.Module>`
-   - `shouldCompile(address: number, count: number): boolean`
-   - `getCachedModule(address: number): WebAssembly.Module | null`
-
-### Modified Functions
-
-1. **`lib/engine/loaders/apk-loader.ts`**
-   - `loadFromBuffer()` - Connect to real DEX parser and ART interpreter
-   - `runSimulation()` - Replace with actual execution
-
-2. **`lib/challenger/windows/runtime.ts`**
-   - `boot()` - Complete initialization sequence
-   - `loadPE()` - Connect to full x86 interpreter
-
-3. **`lib/challenger/core/interpreter.ts`**
-   - `step()` - Handle all instruction formats
-   - `run()` - Add cycle-accurate timing
-
-4. **`lib/challenger/android/art-interpreter.ts`**
-   - `executeInstruction()` - Complete all 218 opcodes
-   - `invokeVirtual()` - Implement method dispatch
-
-## [Classes]
-
-### New Classes
-
-1. **`GPURenderer`** (`lib/engine/gpu-renderer.ts`)
-   - Manages WebGPU rendering pipeline
-   - Methods: `initialize()`, `renderFrame()`, `present()`, `resize()`
-
-2. **`FrameScheduler`** (`lib/engine/frame-scheduler.ts`)
-   - Manages frame timing for consistent FPS
-   - Methods: `start()`, `stop()`, `scheduleFrame()`, `getMetrics()`
-
-3. **`DEXParser`** (`lib/challenger/android/dex-parser.ts`)
-   - Parses DEX file format
-   - Methods: `parse()`, `getClass()`, `getMethod()`, `getString()`
-
-4. **`AndroidFrameworkServices`** (`lib/challenger/android/android-framework-services.ts`)
-   - Implements Android system services
-   - Methods: `startActivity()`, `installPackage()`, `getSystemService()`
-
-5. **`OpenGLESRenderer`** (`lib/challenger/android/opengl-es-renderer.ts`)
-   - Translates OpenGL ES to WebGPU
-   - Methods: `glDrawArrays()`, `glDrawElements()`, `glCompileShader()`
-
-6. **`Win32API`** (`lib/challenger/windows/win32-api.ts`)
-   - Implements Win32 API functions
-   - Methods: All Kernel32, User32, GDI32 functions
-
-7. **`X86FullInterpreter`** (`lib/challenger/windows/x86-full.ts`)
-   - Complete x86/x64 interpreter
-   - Methods: `step()`, `run()`, `handleInterrupt()`
-
-8. **`DirectXRenderer`** (`lib/challenger/windows/directx-renderer.ts`)
-   - Translates DirectX to WebGPU
-   - Methods: `CreateDevice()`, `CreateSwapChain()`, `Draw()`
-
-9. **`JITCompiler`** (`lib/engine/jit-compiler.ts`)
-   - JIT compiles hot paths to WASM
-   - Methods: `compile()`, `shouldCompile()`, `getCached()`
-
-### Modified Classes
-
-1. **`APKLoader`** (`lib/engine/loaders/apk-loader.ts`)
-   - Add real execution pipeline
-   - Connect to AndroidFrameworkServices
-   - Implement proper lifecycle
-
-2. **`WindowsRuntime`** (`lib/challenger/windows/runtime.ts`)
-   - Complete Win32 API integration
-   - Add threading support
-   - Implement proper memory management
-
-3. **`SimpleInterpreter`** → **`X86Interpreter`** (`lib/challenger/core/interpreter.ts`)
-   - Rename and expand to full instruction set
-   - Add SSE/AVX support
-   - Implement all addressing modes
-
-4. **`ARTInterpreter`** (`lib/challenger/android/art-interpreter.ts`)
-   - Complete all opcode implementations
-   - Add proper method dispatch
-   - Implement exception handling
-
-5. **`WebGPUContext`** (`lib/challenger/gpu/webgpu.ts`)
-   - Add texture management
-   - Add render pipeline methods
-   - Add compute shader support
-
-## [Dependencies]
-
-### New Dependencies
-
-```json
-{
-  "dependencies": {
-    "@aspect-build/aspect-rules-js": "latest",
-    "framer-motion": "^11.0.0"
-  }
-}
-```
-
-### Existing Dependencies to Update
-
-- Ensure `@21st-dev/magic-ui` components are properly integrated
-- Update WebGPU types if needed
-
-## [Testing]
-
-### Test Files to Create
-
-1. **`tests/engine/gpu-renderer.test.ts`**
-   - Test WebGPU initialization
-   - Test frame rendering
-   - Test texture creation
-
-2. **`tests/challenger/dex-parser.test.ts`**
-   - Test DEX file parsing
-   - Test class/method resolution
-   - Test multi-dex handling
-
-3. **`tests/challenger/x86-interpreter.test.ts`**
-   - Test all instruction implementations
-   - Test memory addressing
-   - Test interrupt handling
-
-4. **`tests/challenger/art-interpreter.test.ts`**
-   - Test all 218 Dalvik opcodes
-   - Test method invocation
-   - Test exception handling
-
-5. **`tests/challenger/win32-api.test.ts`**
-   - Test Kernel32 functions
-   - Test User32 functions
-   - Test GDI32 functions
-
-### Validation Strategy
-
-1. **Unit Tests**: Test individual components in isolation
-2. **Integration Tests**: Test full execution pipeline
-3. **Performance Tests**: Verify 40+ FPS target
-4. **Compatibility Tests**: Test with real APK/EXE files
-
-## [Implementation Order]
-
-### Phase 1: Core Infrastructure (Priority: Critical)
-
-1. Create `lib/engine/frame-scheduler.ts` - Frame timing for 40+ FPS
-2. Create `lib/engine/gpu-renderer.ts` - WebGPU display rendering
-3. Enhance `lib/challenger/gpu/webgpu.ts` - Add texture/pipeline support
-
-### Phase 2: Android Runtime (Priority: High)
-
-4. Create `lib/challenger/android/dex-parser.ts` - Complete DEX parsing
-5. Complete `lib/challenger/android/art-interpreter.ts` - All 218 opcodes
-6. Create `lib/challenger/android/android-framework-services.ts` - System services
-7. Create `lib/challenger/android/opengl-es-renderer.ts` - GLES to WebGPU
-8. Update `lib/engine/loaders/apk-loader.ts` - Connect all components
-
-### Phase 3: Windows Runtime (Priority: High)
-
-9. Create `lib/challenger/windows/x86-full.ts` - Complete x86 interpreter
-10. Create `lib/challenger/windows/win32-api.ts` - Win32 API implementation
-11. Create `lib/challenger/windows/directx-renderer.ts` - DirectX to WebGPU
-12. Update `lib/challenger/windows/runtime.ts` - Connect all components
-
-### Phase 4: JIT Compilation (Priority: Medium)
-
-13. Create `lib/engine/jit-compiler.ts` - Hot path JIT compilation
-14. Integrate JIT with interpreters
-
-### Phase 5: UI Enhancement (Priority: Medium)
-
-15. Create `components/runner/RunnerDisplay.tsx` - Unified display component
-16. Create `components/runner/PerformanceOverlay.tsx` - FPS/metrics display
-17. Create `components/runner/ControlBar.tsx` - Playback controls
-18. Update `app/android/page.tsx` - Integrate all components + Magic UI
-19. Update `app/windows/page.tsx` - Integrate all components + Magic UI
-
-### Phase 6: Testing & Optimization (Priority: High)
-
-20. Create test files for all components
-21. Performance optimization for 40+ FPS
-22. Memory optimization
-23. End-to-end testing with real APK/EXE files
+[Files]
+Complete file restructuring - delete all existing UI, create new components.
+
+**Files to DELETE:**
+- `./app/page.tsx` - Current home page
+- `./app/layout.tsx` - Current layout (will be replaced)
+- `./app/games/page.tsx` - Current games page
+- `./app/android/page.tsx` - Current Android page
+- `./app/windows/page.tsx` - Current Windows page
+- `./app/virtual-machines/page.tsx` - Current VM page
+- `./app/ai/page.tsx` - Current AI page
+- `./app/library/page.tsx` - Current library page
+- `./app/storage/page.tsx` - Current storage page
+- `./app/cluster/page.tsx` - Current cluster page
+- `./app/vps/page.tsx` - Current VPS page
+- `./app/account/page.tsx` - Current account page
+- `./app/not-found.tsx` - Current 404 page
+- `./app/globals.css` - Current styles (will be replaced)
+- `./components/Sidebar.tsx` - Current sidebar
+- `./components/Header.tsx` - Current header
+- `./components/DynamicIsland.tsx` - Old dynamic island
+- `./components/SiteFooter.tsx` - Current footer
+- `./components/SiteNav.tsx` - Current nav
+- `./components/Hero3D.tsx` - 3D hero component
+- `./components/OceanCreatures.tsx` - Ocean creatures
+- `./components/OceanCreatures3D.tsx` - 3D ocean creatures
+- `./components/SeaLifeBackground.tsx` - Sea background
+- `./components/ChallengerCursor.tsx` - Custom cursor
+- `./components/ClientInit.tsx` - Client init
+- `./components/DiscordButton.tsx` - Discord button
+- `./components/PageTransition.tsx` - Page transitions
+- `./components/PixelLoader.tsx` - Pixel loader
+- `./components/PixelOverlay.tsx` - Pixel overlay
+- `./components/PixelWave.tsx` - Pixel wave
+- `./components/ai/ChatMessage.tsx` - AI chat message
+- `./components/ai/ModelSelector.tsx` - AI model selector
+- `./components/demos/glowing-effect-demo.tsx` - Demo file
+- `./components/demos/pulse-beams-demo.tsx` - Demo file
+- `./components/runner/PerformanceOverlay.tsx` - Performance overlay
+- `./components/runner/RunnerDisplay.tsx` - Runner display
+- `./components/sea-creatures/creatures.css` - Creatures CSS
+- `./components/shell/AppHeader.tsx` - App header
+- `./components/shell/ClusterIndicator.tsx` - Cluster indicator
+- `./components/ui/animated-gradient-text.tsx` - Animated text
+- `./components/ui/animated-grid-pattern.tsx` - Grid pattern
+- `./components/ui/background-paths.tsx` - Background paths (will be replaced)
+- `./components/ui/button.tsx` - Button (will be replaced)
+- `./components/ui/canvas-reveal-effect.tsx` - Canvas reveal
+- `./components/ui/Card.tsx` - Card component
+- `./components/ui/glowing-effect.tsx` - Glowing effect (will be replaced)
+- `./components/ui/Input.tsx` - Input component
+- `./components/ui/magic-card.tsx` - Magic card
+- `./components/ui/particles.tsx` - Particles
+- `./components/ui/pulse-beams.tsx` - Pulse beams
+- `./components/ui/shimmer-button.tsx` - Shimmer button
+- `./components/ui/text-hover-effect.tsx` - Text hover (will be replaced)
+
+**New Files to CREATE:**
+
+1. `./app/globals.css` - New minimal dark styles
+2. `./app/layout.tsx` - New root layout with DynamicIslandProvider
+3. `./app/page.tsx` - New home page with "challenger deep." title and dynamic island
+4. `./app/games/page.tsx` - Games page with parallax scroll
+5. `./app/android/page.tsx` - Android page with import button + stored apps
+6. `./app/windows/page.tsx` - Windows page with import button + stored apps
+7. `./app/virtual-machines/page.tsx` - VM page
+8. `./app/ai/page.tsx` - AI assistants page
+9. `./app/library/page.tsx` - Library page
+10. `./app/storage/page.tsx` - Storage page
+11. `./app/cluster/page.tsx` - Cluster page
+12. `./app/account/page.tsx` - Account page
+13. `./app/not-found.tsx` - 404 page
+14. `./components/ui/button.tsx` - shadcn button component
+15. `./components/ui/badge.tsx` - shadcn badge component
+16. `./components/ui/background-paths.tsx` - Animated background paths
+17. `./components/ui/glowing-effect.tsx` - Glowing border effect
+18. `./components/ui/text-hover-effect.tsx` - Text hover gradient effect
+19. `./components/ui/dynamic-island.tsx` - Dynamic island navigation
+20. `./components/ui/parallax-scroll.tsx` - Parallax scroll for games
+21. `./components/ui/hover-border-gradient.tsx` - Gradient hover button
+22. `./lib/utils.ts` - Utility functions (cn helper)
+23. `./types/ui.ts` - UI type definitions
+
+[Functions]
+New utility and component functions.
+
+**New Functions:**
+- `cn(...inputs: ClassValue[])` - `./lib/utils.ts` - Class name merger utility using clsx and tailwind-merge
+- `FloatingPaths({ position }: { position: number })` - `./components/ui/background-paths.tsx` - Renders animated SVG paths
+- `BackgroundPaths({ title }: { title?: string })` - `./components/ui/background-paths.tsx` - Main background component
+- `GlowingEffect(props: GlowingEffectProps)` - `./components/ui/glowing-effect.tsx` - Mouse-following glow effect
+- `TextHoverEffect({ text, duration }: props)` - `./components/ui/text-hover-effect.tsx` - SVG text with hover gradient
+- `DynamicIslandProvider({ children, initialSize }: props)` - `./components/ui/dynamic-island.tsx` - Context provider
+- `useDynamicIslandSize()` - `./components/ui/dynamic-island.tsx` - Hook for island state
+- `Component({ children, id }: props)` - `./components/ui/dynamic-island.tsx` - Main island component (renamed from DynamicIsland)
+- `ParallaxScroll({ images, className }: props)` - `./components/ui/parallax-scroll.tsx` - Scroll-based parallax grid
+- `HoverBorderGradient({ children, ...props }: props)` - `./components/ui/hover-border-gradient.tsx` - Animated border button
+
+**Modified Functions:**
+- None - all UI is being replaced
+
+[Classes]
+New class-based components and context providers.
+
+**New Classes:**
+- `DynamicIslandProvider` - `./components/ui/dynamic-island.tsx` - React context provider for island state management
+  - Methods: `setSize()`, `scheduleAnimation()`
+  - State: `size`, `previousSize`, `animationQueue`, `isAnimating`
+
+**Removed Classes:**
+- All existing UI component classes will be removed
+
+[Dependencies]
+NPM packages to install or verify.
+
+**Required Dependencies (already installed):**
+- `framer-motion` - For animations
+- `motion` - Motion library (v12+)
+- `class-variance-authority` - For component variants
+- `@radix-ui/react-slot` - For button polymorphism
+- `lucide-react` - For icons
+- `tailwind-merge` - For class merging
+- `clsx` - For conditional classes
+
+**No new dependencies required** - all packages are already in package.json
+
+[Testing]
+Testing approach for the new UI.
+
+**Test Files Required:**
+- `./components/ui/__tests__/background-paths.test.tsx` - Test path generation and animation
+- `./components/ui/__tests__/dynamic-island.test.tsx` - Test state management and animations
+- `./components/ui/__tests__/parallax-scroll.test.tsx` - Test scroll behavior
+
+**Manual Testing Checklist:**
+1. Home page renders with "challenger deep." title
+2. Dynamic island expands/collapses on interaction
+3. Background paths animate smoothly
+4. Games page parallax scroll works
+5. Android/Windows pages show import button
+6. Previously imported apps display correctly
+7. All hover effects work
+8. Dark theme is consistent
+9. Mobile responsive design works
+10. Navigation between pages works
+
+[Implementation Order]
+Sequential steps to implement the new UI.
+
+1. **Delete all existing UI files** - Remove all components, pages, and styles
+2. **Create utility functions** - Set up `./lib/utils.ts` with cn helper
+3. **Create base UI components** - button.tsx, badge.tsx
+4. **Create background-paths.tsx** - Animated background component
+5. **Create glowing-effect.tsx** - Glowing border effect component
+6. **Create text-hover-effect.tsx** - Text hover animation component
+7. **Create dynamic-island.tsx** - Navigation island with all states
+8. **Create hover-border-gradient.tsx** - Gradient button component
+9. **Create parallax-scroll.tsx** - Games page scroll component
+10. **Create new globals.css** - Dark minimal styles
+11. **Create new layout.tsx** - Root layout with providers
+12. **Create home page** - "challenger deep." with dynamic island
+13. **Create games page** - Parallax scroll with game images
+14. **Create android page** - Import button + stored apps list
+15. **Create windows page** - Import button + stored apps list
+16. **Create remaining pages** - VM, AI, Library, Storage, Cluster, Account
+17. **Create 404 page** - Not found page
+18. **Test and verify** - Full UI testing
