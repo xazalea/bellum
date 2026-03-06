@@ -9,5 +9,10 @@ compatibility_flags = ["nodejs_compat"]
 # Pages-specific configuration
 pages_build_output_dir = ".vercel/output/static"
 
+# NOTE: For Git-based deployments, configure build settings in Cloudflare Dashboard:
+# Settings → Builds & deployments → Build configurations
+# - Build command: pnpm run build:cloudflare
+# - Build output directory: .vercel/output/static
+
 [env.production]
 compatibility_flags = ["nodejs_compat"]
