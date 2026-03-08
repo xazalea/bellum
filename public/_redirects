@@ -1,6 +1,0 @@
-# Cloudflare Pages _redirects
-# Next.js worker handles all routing - no redirects needed
-# Static assets are served directly by Cloudflare Pages
-
-# Only specify static assets that should bypass the worker
-# (Usually not needed - worker can handle these too)

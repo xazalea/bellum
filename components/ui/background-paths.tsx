@@ -3,60 +3,120 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-export function FloatingPaths({ position }: { position: number }) {
-  const paths = [
-    "M-380 -189C-380 -189 -312 216 152 343C616 470 684 875 684 875",
-    "M-373 -197C-373 -197 -305 208 159 335C623 462 691 867 691 867",
-    "M-366 -205C-366 -205 -298 200 166 327C630 454 698 859 698 859",
-    "M-359 -213C-359 -213 -291 192 173 319C637 446 705 851 705 851",
-    "M-352 -221C-352 -221 -284 184 180 311C644 438 712 843 712 843",
-    "M-345 -229C-345 -229 -277 176 187 303C651 430 719 835 719 835",
-    "M-338 -237C-338 -237 -270 168 194 295C658 422 726 827 726 827",
-    "M-331 -245C-331 -245 -263 160 201 287C665 414 733 819 733 819",
-    "M-324 -253C-324 -253 -256 152 208 279C672 406 740 811 740 811",
-    "M-317 -261C-317 -261 -249 144 215 271C679 398 747 803 747 803",
-    "M-310 -269C-310 -269 -242 136 222 263C686 390 754 795 754 795",
-    "M-303 -277C-303 -277 -235 128 229 255C693 382 761 787 761 787",
-    "M-296 -285C-296 -285 -228 120 236 247C700 374 768 779 768 779",
-    "M-289 -293C-289 -293 -221 112 243 239C707 366 775 771 775 771",
-    "M-282 -301C-282 -301 -214 104 250 231C714 358 782 763 782 763",
-    "M-275 -309C-275 -309 -207 96 257 223C721 350 789 755 789 755",
-    "M-268 -317C-268 -317 -200 88 264 215C728 342 796 747 796 747",
-    "M-261 -325C-261 -325 -193 80 271 207C735 334 803 739 803 739",
-    "M-254 -333C-254 -333 -186 72 278 199C742 326 810 731 810 731",
-    "M-247 -341C-247 -341 -179 64 285 191C749 318 817 723 817 723",
-  ];
+interface BackgroundPathsProps {
+  title?: string;
+  className?: string;
+}
+
+function FloatingPaths({ position }: { position: number }) {
+  const paths = Array.from({ length: 36 }, (_, i) => ({
+    id: i,
+    d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
+      380 - i * 5 * position
+    } -${189 + i * 6} -${312 + i * 5 * position} ${216 - i * 6} ${
+      152 + i * 5 * position
+    } ${343 - i * 6}C${616 + i * 5 * position} ${471 - i * 6} ${
+      684 + i * 5 * position
+    } ${471 - i * 6} ${684 + i * 5 * position} ${471 - i * 6}`,
+    color: `rgba(255,255,255,${0.1 + i * 0.03})`,
+    width: 0.5 + i * 0.03,
+  }));
 
   return (
-    <div className="absolute inset-0 pointer-events-none">
-      <svg
-        className="w-full h-full"
-        viewBox="0 0 640 640"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        {paths.map((path, index) => (
-          <motion.path
-            key={`path-${position}-${index}`}
-            d={path}
-            stroke={`rgba(255, 255, 255, ${0.05 + index * 0.01})`}
-            strokeWidth={1}
-            fill="none"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{
-              pathLength: 1,
-              opacity: [0.1, 0.3, 0.1],
-            }}
+    <svg
+      className="absolute inset-0 w-full h-full"
+      style={{
+        filter: "blur(1px)",
+      }}
+    >
+      {paths.map((path) => (
+        <motion.path
+          key={path.id}
+          d={path.d}
+          stroke={path.color}
+          strokeWidth={path.width}
+          strokeDasharray="4 4"
+          initial={{
+            pathLength: 0,
+            strokeDashoffset: 0,
+          }}
+          animate={{
+            pathLength: 1,
+            strokeDashoffset: -100,
+          }}
+          transition={{
+            duration: 20 + Math.random() * 10,
+            repeat: Infinity,
+            ease: "linear",
+            delay: path.id * 0.1,
+          }}
+        />
+      ))}
+    </svg>
+  );
+}
+
+export function BackgroundPaths({ title, className }: BackgroundPathsProps) {
+  return (
+    <div
+      className={cn(
+        "absolute inset-0 overflow-hidden bg-background",
+        className
+      )}
+    >
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-black/20" />
+
+      {/* Animated paths - two layers for depth */}
+      <div className="absolute inset-0 opacity-30">
+        <FloatingPaths position={1} />
+      </div>
+      <div className="absolute inset-0 opacity-20">
+        <FloatingPaths position={-1} />
+      </div>
+
+      {/* Radial gradient overlay for depth */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,black_70%)]" />
+
+      {/* Optional title */}
+      {title && (
+        <div className="relative z-10 flex items-center justify-center h-full">
+          <motion.h1
+            className="text-4xl md:text-6xl lg:text-7xl font-bold text-white text-center px-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            {title}
+          </motion.h1>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Simplified version with just animated lines
+export function BackgroundLines({ className }: { className?: string }) {
+  return (
+    <div className={cn("absolute inset-0 overflow-hidden", className)}>
+      <svg className="absolute inset-0 w-full h-full opacity-20">
+        {Array.from({ length: 20 }, (_, i) => (
+          <motion.line
+            key={i}
+            x1="0%"
+            y1={`${i * 5}%`}
+            x2="100%"
+            y2={`${i * 5 + 10}%`}
+            stroke="white"
+            strokeWidth="0.5"
+            strokeDasharray="8 8"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
             transition={{
-              pathLength: {
-                duration: 8 + index * 0.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              },
-              opacity: {
-                duration: 3 + index * 0.2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              },
+              duration: 3,
+              repeat: Infinity,
+              ease: "linear",
+              delay: i * 0.2,
             }}
           />
         ))}
@@ -65,29 +125,21 @@ export function FloatingPaths({ position }: { position: number }) {
   );
 }
 
-export function BackgroundPaths({
-  title,
-  className,
-  children,
-}: {
-  title?: string;
-  className?: string;
-  children?: React.ReactNode;
-}) {
+// Grid pattern background
+export function BackgroundGrid({ className }: { className?: string }) {
   return (
-    <div className={cn("relative min-h-screen w-full overflow-hidden bg-black", className)}>
-      <FloatingPaths position={1} />
-      <FloatingPaths position={2} />
-      
-      {title && (
-        <div className="relative z-10 flex items-center justify-center min-h-screen">
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-light tracking-tight text-white/90">
-            {title}
-          </h1>
-        </div>
-      )}
-      
-      {children}
+    <div className={cn("absolute inset-0 overflow-hidden", className)}>
+      <div
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: "50px 50px",
+        }}
+      />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,black_80%)]" />
     </div>
   );
 }

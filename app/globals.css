@@ -4,107 +4,129 @@
 
 @layer base {
   :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 0% 100%;
+    --background: 0 0%;
+    --foreground: 0 0%;
+    --card: 0 0%;
+    --card-foreground: 0 0%;
+    --popover: 0 0%;
+    --popover-foreground: 0 0%;
+    --primary: 0 0%;
+    --primary-foreground: 0 0%;
+    --secondary: 0 0%;
+    --secondary-foreground: 0 0%;
+    --muted: 0 0%;
+    --muted-foreground: 0 0%;
+    --accent: 0 0%;
+    --accent-foreground: 0 0%;
+    --destructive: 0 0%;
+    --destructive-foreground: 0 0%;
+    --border: 0 0%;
+    --input: 0 0%;
+    --ring: 0 0%;
     --radius: 0.5rem;
   }
 
+  .dark {
+    --background: 0 0% 3%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 3%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 50%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
 
-  html {
-    @apply scroll-smooth;
-  }
-
   body {
-    @apply bg-black text-white antialiased;
+    @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Custom scrollbar */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar for dark theme */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: hsl(var(--background));
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-white/10 rounded-full;
+    background: hsl(var(--muted));
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-white/20;
-  }
-
-  /* Selection */
-  ::selection {
-    @apply bg-white/20 text-white;
+    background: hsl(var(--muted-foreground));
   }
 }
 
-@layer components {
+@layer utilities {
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-300 to-white;
+  }
+
   /* Glass effect */
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+    @apply backdrop-blur-xl bg-white/5 border border-white/10;
   }
 
-  /* Gradient text */
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-white/80 to-white/60;
+  /* Glow effects */
+  .glow {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1),
+                0 0 40px rgba(255, 255, 255, 0.05),
+                0 0 60px rgba(255, 255, 255, 0.025);
   }
 
-  /* Animated gradient background */
-  .animated-gradient {
-    background: linear-gradient(
-      90deg,
-      theme("colors.indigo.500"),
-      theme("colors.purple.500"),
-      theme("colors.pink.500"),
-      theme("colors.indigo.500")
-    );
-    background-size: 300% 100%;
-    animation: gradient-shift 8s ease infinite;
+  .glow-sm {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1),
+                0 0 20px rgba(255, 255, 255, 0.05);
   }
 
-  @keyframes gradient-shift {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
+  /* Noise texture overlay */
+  .noise {
+    position: relative;
   }
 
-  /* Fade in animation */
-  .fade-in {
-    animation: fade-in 0.5s ease-out;
+  .noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 1;
   }
 
-  @keyframes fade-in {
+  /* Animation utilities */
+  .animate-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
     from {
       opacity: 0;
       transform: translateY(10px);
@@ -115,35 +137,61 @@
     }
   }
 
-  /* Pulse glow */
-  .pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+  /* Dynamic Island styles */
+  .dynamic-island {
+    @apply bg-black rounded-full transition-all duration-300 ease-out;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 4px 20px rgba(0, 0, 0, 0.5),
+                0 8px 40px rgba(0, 0, 0, 0.3);
   }
 
-  @keyframes pulse-glow {
-    0%,
-    100% {
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-    }
-    50% {
-      box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
-    }
+  .dynamic-island:hover {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15),
+                0 4px 25px rgba(0, 0, 0, 0.6),
+                0 8px 50px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-1;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3),
+                0 0 20px rgba(255, 255, 255, 0.05);
+  }
+
+  /* Focus ring */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-white/20 focus:ring-offset-2 focus:ring-offset-background;
   }
 }
 
-@layer utilities {
-  /* Hide scrollbar */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* SVG path animations */
+@keyframes drawPath {
+  from {
+    stroke-dashoffset: 1000;
   }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+.animate-draw {
+  animation: drawPath 3s ease-in-out infinite;
+}
 
-  /* Text balance */
-  .text-balance {
-    text-wrap: balance;
+/* Gradient border animation */
+@keyframes gradientRotate {
+  0% {
+    transform: rotate(0deg);
   }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-gradient-rotate {
+  animation: gradientRotate 3s linear infinite;
 }
