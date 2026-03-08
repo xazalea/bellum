@@ -102,8 +102,10 @@ export async function POST(req: NextRequest) {
     }
 
     const messages = parseMessages(prompt);
-    // Dynamic import of utils to avoid execution during build
-    const { EventStream, Event } = await import('@/lib/gpt4free/utils');
+    // Dynamic import of utils - completely opaque to webpack
+    const utilsPath = ['@', '/', 'lib', '/', 'gpt4free', '/', 'utils'].join('');
+    const utilsModule = await new Function('p', 'return import(p)')(utilsPath);
+    const { EventStream, Event } = utilsModule;
     const eventStream = new EventStream();
 
     // Start the stream in the background
@@ -217,8 +219,10 @@ export async function GET(req: NextRequest) {
     }
 
     const messages = [{ role: 'user', content: prompt }];
-    // Dynamic import of utils to avoid execution during build
-    const { EventStream, Event } = await import('@/lib/gpt4free/utils');
+    // Dynamic import of utils - completely opaque to webpack
+    const utilsPath = ['@', '/', 'lib', '/', 'gpt4free', '/', 'utils'].join('');
+    const utilsModule = await new Function('p', 'return import(p)')(utilsPath);
+    const { EventStream, Event } = utilsModule;
     const eventStream = new EventStream();
 
     // Start the stream in the background
