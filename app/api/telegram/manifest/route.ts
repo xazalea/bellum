@@ -2,7 +2,7 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, requireTelegramStorageChatId, telegramDownloadFileBytes, telegramSendDocument } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export const dynamic = "force-dynamic";
 
@@ -59,20 +59,19 @@ export async function POST(req: Request) {
 
     const { fileId, messageId } = await telegramSendDocument({ token, chatId, caption, filename, bytes, mimeType: "application/json" });
 
-const db = await adminDb();db.collection("telegram_files")
-      .doc(fileId)
-      .set(
-        {
-          ownerUid: uid,
-          kind: "manifest",
-          fileName: manifest.fileName,
-          totalBytes: manifest.totalBytes,
-          totalChunks: manifest.totalChunks,
-          storedBytes: manifest.storedBytes,
-          createdAt: Date.now(),
-        },
-        { merge: true },
-      );
+    const db = await adminDb();
+    await db.collection("telegram_files").doc(fileId).set(
+      {
+        ownerUid: uid,
+        kind: "manifest",
+        fileName: manifest.fileName,
+        totalBytes: manifest.totalBytes,
+        totalChunks: manifest.totalChunks,
+        storedBytes: manifest.storedBytes,
+        createdAt: Date.now(),
+      },
+      { merge: true }
+    );
 
     return Response.json({ fileId, messageId });
   } catch (e: any) {
@@ -106,4 +105,3 @@ export async function GET(req: Request) {
     return Response.json({ error: msg }, { status });
   }
 }
-

@@ -1,281 +1,354 @@
 /**
- * Production Debugger
- * Full-featured debugger for Windows and Android apps
- * 
- * Features:
- * - Breakpoints (address, conditional, data)
- * - Stepping (over, into, out)
- * - Register inspection
- * - Memory inspection
- * - Call stack
- * - Variable watches
- * - Expression evaluation
+ * Integrated Debugger for APK/EXE Execution
+ * Provides breakpoint management, stepping, and variable inspection
  */
 
-import type { ManagedProcess } from '../engine/process-manager';
-import { virtualMemoryManager } from '../engine/memory-manager';
-
-// ============================================================================
-// Types
-// ============================================================================
+export type BreakpointType = 'line' | 'function' | 'condition';
+export type ExecutionState = 'running' | 'paused' | 'stopped' | 'step';
 
 export interface Breakpoint {
-  id: number;
-  address: number;
+  id: string;
+  type: BreakpointType;
+  file: string;
+  line?: number;
+  function?: string;
+  condition?: string;
   enabled: boolean;
   hitCount: number;
-  condition?: string;
-  type: 'address' | 'conditional' | 'data';
 }
 
 export interface CallFrame {
-  address: number;
-  functionName: string;
-  args: any[];
-  locals: Map<string, any>;
+  id: string;
+  function: string;
+  file: string;
+  line: number;
+  column: number;
+  locals: Map<string, unknown>;
+  arguments: Map<string, unknown>;
 }
 
-export interface RegisterState {
-  // x86-64 registers
-  rax?: number;
-  rbx?: number;
-  rcx?: number;
-  rdx?: number;
-  rsi?: number;
-  rdi?: number;
-  rbp?: number;
-  rsp?: number;
-  rip?: number;
-  rflags?: number;
-
-  // ARM registers
-  r0?: number;
-  r1?: number;
-  r2?: number;
-  r3?: number;
-  r4?: number;
-  r5?: number;
-  r6?: number;
-  r7?: number;
-  pc?: number;
-  sp?: number;
-  lr?: number;
-  cpsr?: number;
-}
-
-export interface WatchVariable {
-  id: number;
+export interface WatchExpression {
+  id: string;
   expression: string;
-  value: any;
-  type: string;
+  value?: unknown;
+  error?: string;
 }
 
-// ============================================================================
-// Debugger
-// ============================================================================
+export interface DebugSession {
+  id: string;
+  state: ExecutionState;
+  currentFile?: string;
+  currentLine?: number;
+  callStack: CallFrame[];
+  breakpoints: Map<string, Breakpoint>;
+  watches: Map<string, WatchExpression>;
+  logs: string[];
+  createdAt: number;
+}
 
-export class Debugger {
-  private breakpoints: Map<number, Breakpoint> = new Map();
-  private nextBreakpointId: number = 1;
-  
-  private callStack: CallFrame[] = [];
-  private registers: RegisterState = {};
-  private watches: Map<number, WatchVariable> = new Map();
-  private nextWatchId: number = 1;
-  
-  private isPaused: boolean = false;
-  private currentProcess: ManagedProcess | null = null;
-  private currentAddress: number = 0;
+export interface DebugConfig {
+  enabled: boolean;
+  breakOnError: boolean;
+  breakOnException: boolean;
+  maxCallStackDepth: number;
+  logConsole: boolean;
+}
 
-  /**
-   * Attach to process
-   */
-  attach(process: ManagedProcess): void {
-    console.log(`[Debugger] Attaching to process ${process.pid} (${process.name})`);
-    this.currentProcess = process;
-    this.isPaused = false;
+type DebugCallback = (event: string, data: any) => void;
+
+const DEFAULT_CONFIG: DebugConfig = {
+  enabled: false,
+  breakOnError: true,
+  breakOnException: true,
+  maxCallStackDepth: 100,
+  logConsole: true,
+};
+
+/**
+ * Integrated Debugger
+ */
+class IntegratedDebugger {
+  private config: DebugConfig;
+  private session: DebugSession | null = null;
+  private callbacks: Set<DebugCallback> = new Set();
+  private breakpoints: Map<string, Breakpoint> = new Map();
+  private watches: Map<string, WatchExpression> = new Map();
+
+  constructor(config: Partial<DebugConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
   /**
-   * Detach from process
+   * Enable developer mode
    */
-  detach(): void {
-    if (this.currentProcess) {
-      console.log(`[Debugger] Detaching from process ${this.currentProcess.pid}`);
-      this.currentProcess = null;
-      this.isPaused = false;
-    }
+  enable(): void {
+    this.config.enabled = true;
+    this.notify('enabled', {});
   }
 
   /**
-   * Set breakpoint at address
+   * Disable developer mode
    */
-  setBreakpoint(address: number, condition?: string): Breakpoint {
-    const bp: Breakpoint = {
-      id: this.nextBreakpointId++,
-      address,
-      enabled: true,
-      hitCount: 0,
-      condition,
-      type: condition ? 'conditional' : 'address',
+  disable(): void {
+    this.config.enabled = false;
+    this.stopSession();
+    this.notify('disabled', {});
+  }
+
+  /**
+   * Check if enabled
+   */
+  isEnabled(): boolean {
+    return this.config.enabled;
+  }
+
+  /**
+   * Start a debug session
+   */
+  startSession(id: string): DebugSession {
+    this.session = {
+      id,
+      state: 'running',
+      callStack: [],
+      breakpoints: new Map(this.breakpoints),
+      watches: new Map(this.watches),
+      logs: [],
+      createdAt: Date.now(),
     };
 
-    this.breakpoints.set(address, bp);
-    console.log(`[Debugger] Breakpoint ${bp.id} set at 0x${address.toString(16)}`);
-
-    return bp;
+    this.notify('session_started', { sessionId: id });
+    return this.session;
   }
 
   /**
-   * Remove breakpoint
+   * Stop current session
    */
-  removeBreakpoint(address: number): boolean {
-    const bp = this.breakpoints.get(address);
-    if (bp) {
-      this.breakpoints.delete(address);
-      console.log(`[Debugger] Breakpoint ${bp.id} removed`);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Enable/disable breakpoint
-   */
-  toggleBreakpoint(address: number, enabled: boolean): void {
-    const bp = this.breakpoints.get(address);
-    if (bp) {
-      bp.enabled = enabled;
-      console.log(`[Debugger] Breakpoint ${bp.id} ${enabled ? 'enabled' : 'disabled'}`);
+  stopSession(): void {
+    if (this.session) {
+      this.session.state = 'stopped';
+      this.notify('session_stopped', { sessionId: this.session.id });
+      this.session = null;
     }
   }
 
   /**
-   * Check if execution hit breakpoint
+   * Get current session
    */
-  checkBreakpoint(address: number): boolean {
-    const bp = this.breakpoints.get(address);
-    if (!bp || !bp.enabled) {
-      return false;
+  getSession(): DebugSession | null {
+    return this.session;
+  }
+
+  /**
+   * Set a breakpoint
+   */
+  setBreakpoint(params: {
+    type: BreakpointType;
+    file: string;
+    line?: number;
+    function?: string;
+    condition?: string;
+  }): Breakpoint {
+    const id = `bp_${params.file}_${params.line || params.function || Date.now()}`;
+    
+    const breakpoint: Breakpoint = {
+      id,
+      type: params.type,
+      file: params.file,
+      line: params.line,
+      function: params.function,
+      condition: params.condition,
+      enabled: true,
+      hitCount: 0,
+    };
+
+    this.breakpoints.set(id, breakpoint);
+    
+    if (this.session) {
+      this.session.breakpoints.set(id, breakpoint);
     }
 
-    bp.hitCount++;
+    this.notify('breakpoint_set', { breakpoint });
+    return breakpoint;
+  }
 
-    // Check condition if conditional breakpoint
-    if (bp.condition) {
-      try {
-        const result = this.evaluateExpression(bp.condition);
-        if (!result) {
-          return false;
-        }
-      } catch (error) {
-        console.warn(`[Debugger] Breakpoint condition evaluation failed:`, error);
-        return false;
-      }
+  /**
+   * Remove a breakpoint
+   */
+  removeBreakpoint(id: string): boolean {
+    const removed = this.breakpoints.delete(id);
+    
+    if (this.session) {
+      this.session.breakpoints.delete(id);
     }
 
-    console.log(`[Debugger] Hit breakpoint ${bp.id} at 0x${address.toString(16)}`);
-    this.isPaused = true;
-    this.currentAddress = address;
+    if (removed) {
+      this.notify('breakpoint_removed', { id });
+    }
 
+    return removed;
+  }
+
+  /**
+   * Toggle breakpoint enabled state
+   */
+  toggleBreakpoint(id: string): boolean {
+    const breakpoint = this.breakpoints.get(id);
+    if (!breakpoint) return false;
+
+    breakpoint.enabled = !breakpoint.enabled;
+    this.notify('breakpoint_toggled', { id, enabled: breakpoint.enabled });
     return true;
   }
 
   /**
-   * Step over (execute next instruction)
+   * Get all breakpoints
+   */
+  getBreakpoints(): Breakpoint[] {
+    return Array.from(this.breakpoints.values());
+  }
+
+  /**
+   * Get breakpoints for a file
+   */
+  getBreakpointsForFile(file: string): Breakpoint[] {
+    return Array.from(this.breakpoints.values()).filter(bp => bp.file === file);
+  }
+
+  /**
+   * Add a watch expression
+   */
+  addWatch(expression: string): WatchExpression {
+    const id = `watch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const watch: WatchExpression = {
+      id,
+      expression,
+    };
+
+    this.watches.set(id, watch);
+    this.notify('watch_added', { watch });
+    return watch;
+  }
+
+  /**
+   * Remove a watch expression
+   */
+  removeWatch(id: string): boolean {
+    const removed = this.watches.delete(id);
+    if (removed) {
+      this.notify('watch_removed', { id });
+    }
+    return removed;
+  }
+
+  /**
+   * Update watch values
+   */
+  updateWatches(evaluateFn: (expr: string) => unknown): void {
+    for (const watch of this.watches.values()) {
+      try {
+        watch.value = evaluateFn(watch.expression);
+        watch.error = undefined;
+      } catch (e) {
+        watch.value = undefined;
+        watch.error = String(e);
+      }
+    }
+
+    this.notify('watches_updated', { watches: Array.from(this.watches.values()) });
+  }
+
+  /**
+   * Get all watch expressions
+   */
+  getWatches(): WatchExpression[] {
+    return Array.from(this.watches.values());
+  }
+
+  /**
+   * Pause execution
+   */
+  pause(): void {
+    if (this.session && this.session.state === 'running') {
+      this.session.state = 'paused';
+      this.notify('paused', {
+        file: this.session.currentFile,
+        line: this.session.currentLine,
+      });
+    }
+  }
+
+  /**
+   * Resume execution
+   */
+  resume(): void {
+    if (this.session && this.session.state === 'paused') {
+      this.session.state = 'running';
+      this.notify('resumed', {});
+    }
+  }
+
+  /**
+   * Step over
    */
   stepOver(): void {
-    if (!this.isPaused) {
-      console.warn('[Debugger] Not paused');
-      return;
+    if (this.session && this.session.state === 'paused') {
+      this.session.state = 'step';
+      this.notify('step_over', {});
     }
-
-    console.log('[Debugger] Step over');
-    this.currentAddress += 4; // Assume 4-byte instruction
-    this.isPaused = true;
-
-    // Execute single instruction
-    this.executeSingleInstruction();
   }
 
   /**
-   * Step into (enter function call)
+   * Step into
    */
   stepInto(): void {
-    if (!this.isPaused) {
-      console.warn('[Debugger] Not paused');
-      return;
+    if (this.session && this.session.state === 'paused') {
+      this.session.state = 'step';
+      this.notify('step_into', {});
     }
-
-    console.log('[Debugger] Step into');
-    this.isPaused = true;
-
-    // Execute and potentially enter function
-    this.executeSingleInstruction();
   }
 
   /**
-   * Step out (return from function)
+   * Step out
    */
   stepOut(): void {
-    if (!this.isPaused) {
-      console.warn('[Debugger] Not paused');
-      return;
+    if (this.session && this.session.state === 'paused') {
+      this.session.state = 'step';
+      this.notify('step_out', {});
     }
+  }
 
-    console.log('[Debugger] Step out');
+  /**
+   * Handle breakpoint hit
+   */
+  handleBreakpointHit(file: string, line: number): boolean {
+    const breakpoint = Array.from(this.breakpoints.values()).find(
+      bp => bp.enabled && bp.file === file && bp.line === line
+    );
 
-    // Set temporary breakpoint at return address
-    if (this.callStack.length > 0) {
-      const returnAddress = this.callStack[this.callStack.length - 1].address;
-      const tempBp = this.setBreakpoint(returnAddress);
+    if (breakpoint) {
+      breakpoint.hitCount++;
       
-      // Continue execution
-      this.continue();
-      
-      // Remove temporary breakpoint when hit
-      setTimeout(() => this.removeBreakpoint(returnAddress), 100);
-    }
-  }
+      if (this.session) {
+        this.session.state = 'paused';
+        this.session.currentFile = file;
+        this.session.currentLine = line;
+      }
 
-  /**
-   * Continue execution
-   */
-  continue(): void {
-    if (!this.isPaused) {
-      console.warn('[Debugger] Not paused');
-      return;
+      this.notify('breakpoint_hit', { breakpoint, file, line });
+      return true;
     }
 
-    console.log('[Debugger] Continue');
-    this.isPaused = false;
+    return false;
   }
 
   /**
-   * Get registers
+   * Update call stack
    */
-  getRegisters(): RegisterState {
-    // Return current register state
-    return { ...this.registers };
-  }
-
-  /**
-   * Set register value
-   */
-  setRegister(name: keyof RegisterState, value: number): void {
-    this.registers[name] = value;
-    console.log(`[Debugger] Set ${name} = 0x${value.toString(16)}`);
-  }
-
-  /**
-   * Get memory at address
-   */
-  getMemory(address: number, size: number): Uint8Array {
-    try {
-      return virtualMemoryManager.read(address, size);
-    } catch (error) {
-      console.error(`[Debugger] Failed to read memory at 0x${address.toString(16)}:`, error);
-      return new Uint8Array(size);
+  updateCallStack(frames: CallFrame[]): void {
+    if (this.session) {
+      this.session.callStack = frames.slice(0, this.config.maxCallStackDepth);
+      this.notify('call_stack_updated', { frames: this.session.callStack });
     }
   }
 
@@ -283,161 +356,159 @@ export class Debugger {
    * Get call stack
    */
   getCallStack(): CallFrame[] {
-    return [...this.callStack];
+    return this.session?.callStack || [];
   }
 
   /**
-   * Add call frame
+   * Add log entry
    */
-  pushCallFrame(address: number, functionName: string, args: any[] = []): void {
-    this.callStack.push({
-      address,
-      functionName,
-      args,
-      locals: new Map(),
-    });
+  log(message: string): void {
+    if (this.session && this.config.logConsole) {
+      this.session.logs.push(`[${new Date().toISOString()}] ${message}`);
+      this.notify('log', { message });
+    }
   }
 
   /**
-   * Remove call frame
+   * Get logs
    */
-  popCallFrame(): CallFrame | undefined {
-    return this.callStack.pop();
+  getLogs(): string[] {
+    return this.session?.logs || [];
   }
 
   /**
-   * Watch variable
+   * Clear logs
    */
-  watchVariable(expression: string): WatchVariable {
-    const watch: WatchVariable = {
-      id: this.nextWatchId++,
-      expression,
-      value: null,
-      type: 'unknown',
+  clearLogs(): void {
+    if (this.session) {
+      this.session.logs = [];
+      this.notify('logs_cleared', {});
+    }
+  }
+
+  /**
+   * Capture heap snapshot
+   */
+  async captureHeapSnapshot(): Promise<HeapSnapshot> {
+    const snapshot: HeapSnapshot = {
+      id: `heap_${Date.now()}`,
+      timestamp: Date.now(),
+      totalSize: 0,
+      objectCount: 0,
+      objects: [],
     };
 
-    try {
-      watch.value = this.evaluateExpression(expression);
-      watch.type = typeof watch.value;
-    } catch (error) {
-      console.warn(`[Debugger] Failed to evaluate watch expression: ${expression}`, error);
+    // Get memory info if available
+    if (typeof performance !== 'undefined' && 'memory' in performance) {
+      const mem = (performance as any).memory;
+      snapshot.totalSize = mem.usedJSHeapSize;
     }
 
-    this.watches.set(watch.id, watch);
-    console.log(`[Debugger] Watching: ${expression}`);
+    // Count objects (simplified)
+    const globalKeys = Object.keys(globalThis);
+    snapshot.objectCount = globalKeys.length;
 
-    return watch;
+    this.notify('heap_snapshot', { snapshot });
+    return snapshot;
   }
 
   /**
-   * Remove watch
+   * Start CPU profiling
    */
-  unwatchVariable(id: number): boolean {
-    return this.watches.delete(id);
+  startProfiling(): void {
+    this.notify('profiling_started', {});
   }
 
   /**
-   * Update watch values
+   * Stop CPU profiling and get profile
    */
-  updateWatches(): void {
-    for (const watch of this.watches.values()) {
+  stopProfiling(): CPUProfile {
+    const profile: CPUProfile = {
+      id: `profile_${Date.now()}`,
+      duration: 0,
+      samples: [],
+    };
+
+    this.notify('profiling_stopped', { profile });
+    return profile;
+  }
+
+  /**
+   * Subscribe to debug events
+   */
+  subscribe(callback: DebugCallback): () => void {
+    this.callbacks.add(callback);
+    return () => this.callbacks.delete(callback);
+  }
+
+  /**
+   * Notify callbacks
+   */
+  private notify(event: string, data: any): void {
+    for (const callback of this.callbacks) {
       try {
-        watch.value = this.evaluateExpression(watch.expression);
-        watch.type = typeof watch.value;
-      } catch (error) {
-        watch.value = '<error>';
-        watch.type = 'error';
+        callback(event, data);
+      } catch (e) {
+        console.error('Debug callback error:', e);
       }
     }
   }
 
   /**
-   * Get all watches
+   * Update configuration
    */
-  getWatches(): WatchVariable[] {
-    return Array.from(this.watches.values());
-  }
-
-  /**
-   * Evaluate expression
-   */
-  evaluateExpression(expr: string): any {
-    console.log(`[Debugger] Evaluating: ${expr}`);
-
-    // Simple expression evaluator
-    // In real implementation, would parse and evaluate complex expressions
-
-    // Check for register references
-    if (expr.startsWith('$')) {
-      const regName = expr.substring(1) as keyof RegisterState;
-      return this.registers[regName];
-    }
-
-    // Check for memory references
-    if (expr.startsWith('*0x')) {
-      const address = parseInt(expr.substring(3), 16);
-      const data = this.getMemory(address, 8);
-      return new DataView(data.buffer).getBigUint64(0, true);
-    }
-
-    // Try to evaluate as JavaScript
-    try {
-      return eval(expr);
-    } catch (error) {
-      throw new Error(`Failed to evaluate expression: ${expr}`);
-    }
-  }
-
-  /**
-   * Get breakpoint list
-   */
-  getBreakpoints(): Breakpoint[] {
-    return Array.from(this.breakpoints.values());
-  }
-
-  /**
-   * Execute single instruction
-   */
-  private executeSingleInstruction(): void {
-    // Simulate instruction execution
-    // In real implementation, would execute actual instruction
-
-    // Update registers
-    this.registers.rip = this.currentAddress;
-
-    // Update watches
-    this.updateWatches();
-  }
-
-  /**
-   * Check if paused
-   */
-  isPausedState(): boolean {
-    return this.isPaused;
-  }
-
-  /**
-   * Get current address
-   */
-  getCurrentAddress(): number {
-    return this.currentAddress;
-  }
-
-  /**
-   * Reset debugger state
-   */
-  reset(): void {
-    console.log('[Debugger] Resetting');
-    
-    this.breakpoints.clear();
-    this.callStack = [];
-    this.registers = {};
-    this.watches.clear();
-    this.isPaused = false;
-    this.currentProcess = null;
-    this.currentAddress = 0;
+  updateConfig(config: Partial<DebugConfig>): void {
+    this.config = { ...this.config, ...config };
   }
 }
 
-// Export singleton
-export const challengerDebugger = new Debugger();
+export interface HeapSnapshot {
+  id: string;
+  timestamp: number;
+  totalSize: number;
+  objectCount: number;
+  objects: HeapObject[];
+}
+
+export interface HeapObject {
+  id: string;
+  type: string;
+  size: number;
+  retainedSize: number;
+  name?: string;
+}
+
+export interface CPUProfile {
+  id: string;
+  duration: number;
+  samples: ProfileSample[];
+}
+
+export interface ProfileSample {
+  timestamp: number;
+  stack: string[];
+}
+
+// Singleton instance
+export const integratedDebugger = new IntegratedDebugger();
+
+// Convenience exports
+export function enableDebugger(): void {
+  integratedDebugger.enable();
+}
+
+export function disableDebugger(): void {
+  integratedDebugger.disable();
+}
+
+export function isDebuggerEnabled(): boolean {
+  return integratedDebugger.isEnabled();
+}
+
+export function setBreakpoint(params: Parameters<IntegratedDebugger['setBreakpoint']>[0]): Breakpoint {
+  return integratedDebugger.setBreakpoint(params);
+}
+
+export function getBreakpoints(): Breakpoint[] {
+  return integratedDebugger.getBreakpoints();
+}

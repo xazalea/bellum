@@ -14,6 +14,11 @@ const nextConfig = {
       'puppeteer',
       'puppeteer-extra',
       'puppeteer-extra-plugin-stealth',
+      'firebase-admin',
+      '@google-cloud/firestore',
+      'google-gax',
+      'google-auth-library',
+      'gcp-metadata',
     ],
   },
   webpack: (config, { isServer, nextRuntime }) => {
@@ -36,6 +41,8 @@ const nextConfig = {
         if (!config.resolve.fallback[mod]) {
           config.resolve.fallback[mod] = false; // Don't bundle, will be provided by Almostnode
         }
+        // Also handle node: prefixed imports
+        config.resolve.fallback[`node:${mod}`] = false;
       });
       
       // Provide empty shims for packages that can't be bundled for edge
@@ -46,6 +53,15 @@ const nextConfig = {
       config.resolve.alias['puppeteer'] = path.resolve(__dirname, 'lib/compat/empty-puppeteer.js');
       config.resolve.alias['puppeteer-extra'] = path.resolve(__dirname, 'lib/compat/empty-puppeteer.js');
       config.resolve.alias['puppeteer-extra-plugin-stealth'] = path.resolve(__dirname, 'lib/compat/empty-puppeteer.js');
+      
+      // Exclude firebase-admin and its dependencies from edge bundles
+      // These will fail at runtime if used in edge routes
+      config.resolve.alias['firebase-admin'] = false;
+      config.resolve.alias['@google-cloud/firestore'] = false;
+      config.resolve.alias['google-gax'] = false;
+      config.resolve.alias['google-auth-library'] = false;
+      config.resolve.alias['gcp-metadata'] = false;
+      config.resolve.alias['google-logging-utils'] = false;
     }
     
     // Ignore README.md and other non-JS files being imported from node_modules

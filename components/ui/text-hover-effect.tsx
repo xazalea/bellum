@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionControls, useMotionValue, useTransform } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 interface TextHoverEffectProps {

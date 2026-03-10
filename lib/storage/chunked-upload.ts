@@ -336,6 +336,12 @@ export async function chunkedUploadFile(
     return { uploadId, fileId: manJson.fileId, totalChunks, storedBytes: chunks.reduce((s, c) => s + c.sizeBytes, 0) };
   }
 
+  if (!base) {
+    throw new Error(
+      "No cloud storage backend configured. Configure Discord/Telegram storage or set NEXT_PUBLIC_CLUSTER_SERVER_URL."
+    );
+  }
+
   // External Cluster Path (Custom Backend)
   const initBody: ChunkedUploadInit = {
     fileName: file.name,

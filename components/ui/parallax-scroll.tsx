@@ -136,6 +136,21 @@ export function ParallaxScroll({
 }
 
 // Grid version without parallax for better performance with many items
+interface InfiniteGridProps {
+  items: {
+    id: string;
+    src: string;
+    alt: string;
+    title?: string;
+  }[];
+  className?: string;
+  renderItem?: (item: { id: string; src: string; alt: string; title?: string }, index: number) => React.ReactNode;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoading?: boolean;
+  columns?: number;
+}
+
 export function InfiniteGrid({
   items,
   className,
@@ -144,7 +159,7 @@ export function InfiniteGrid({
   hasMore = false,
   isLoading = false,
   columns = 3,
-}: ParallaxScrollProps & { columns?: number }) {
+}: InfiniteGridProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 

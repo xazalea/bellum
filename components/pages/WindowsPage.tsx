@@ -1,269 +1,303 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
-import { BackgroundPaths } from "@/components/ui/background-paths";
-import { DynamicIslandNav } from "@/components/layout/DynamicIslandNav";
-import { HoverBorderGradient, GradientButton } from "@/components/ui/hover-border-gradient";
-import { GlowingEffect } from "@/components/ui/glowing-effect";
-import { wasmAppLibrary, WASMApp } from "@/lib/apps/wasm-app-library";
-import { Monitor, Upload, Play, MonitorPlay } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AppNav } from "@/components/layout/AppNav";
+import { Button } from "@/components/ui/button";
+import {
+  addInstalledApp,
+  detectAppType,
+  listInstalledApps,
+  removeInstalledAppWithCleanup,
+  type InstalledApp,
+} from "@/lib/apps/apps-service";
+import { authService } from "@/lib/firebase/auth-service";
+import { executionPipeline } from "@/lib/engine/execution-pipeline";
+import { chunkedUploadFile } from "@/lib/storage/chunked-upload";
+import { downloadClusterFile } from "@/lib/storage/chunked-download";
+
+type RuntimeState = "idle" | "uploading" | "launching" | "running" | "error";
 
 export function WindowsPage() {
-  const [apps, setApps] = useState<WASMApp[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [launchedApp, setLaunchedApp] = useState<WASMApp | null>(null);
+  const [uid, setUid] = useState<string>("");
+  const [apps, setApps] = useState<InstalledApp[]>([]);
+  const [state, setState] = useState<RuntimeState>("idle");
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState("Ready");
+  const [error, setError] = useState<string | null>(null);
+  const [activeAppId, setActiveAppId] = useState<string | null>(null);
+  const [activePid, setActivePid] = useState<number | null>(null);
+  const [metrics, setMetrics] = useState<{ cpuTime: number; memoryUsage: number; instructionsExecuted: number } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const metricsTimerRef = useRef<number | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const initializedRef = useRef(false);
+
+  const sortedApps = useMemo(
+    () => [...apps].sort((a, b) => b.installedAt - a.installedAt),
+    [apps]
+  );
 
   useEffect(() => {
-    // Load apps from library
-    const allApps = wasmAppLibrary.getAllApps();
-    setApps(allApps);
-    setIsLoading(false);
+    void bootstrap();
+    return () => {
+      void stopRuntime();
+    };
   }, []);
 
-  const handleLaunchApp = async (app: WASMApp) => {
-    setLaunchedApp(app);
-    
-    // Create container for app
-    const container = document.createElement("div");
-    container.id = `app-container-${app.id}`;
-    container.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90vw;
-      height: 85vh;
-      background: #1a1a1a;
-      border-radius: 8px;
-      overflow: hidden;
-      z-index: 1000;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    `;
-    
-    document.body.appendChild(container);
-    
+  async function bootstrap() {
     try {
-      await wasmAppLibrary.launchApp(app.id, container);
-    } catch (error) {
-      console.error("Failed to launch app:", error);
+      const identity = await authService.ensureIdentity();
+      setUid(identity.uid);
+      await refreshApps(identity.uid);
+    } catch (e: any) {
+      setError(e?.message || "Failed to initialize Windows runner");
     }
-  };
+  }
 
-  const handleCloseApp = () => {
-    const container = document.getElementById(`app-container-${launchedApp?.id}`);
-    if (container) {
-      container.remove();
+  async function refreshApps(nextUid: string) {
+    const all = await listInstalledApps(nextUid);
+    setApps(
+      all.filter(
+        (app) => app.type === "windows" || /\.(exe|msi)$/i.test(app.originalName)
+      )
+    );
+  }
+
+  async function ensurePipelineInitialized() {
+    if (initializedRef.current) return;
+    const gpu = (navigator as any).gpu;
+    if (!gpu) throw new Error("WebGPU is required for the Windows execution pipeline");
+
+    const adapter = await gpu.requestAdapter({ powerPreference: "high-performance" });
+    if (!adapter) throw new Error("No compatible GPU adapter found");
+
+    const device = await adapter.requestDevice();
+    await executionPipeline.initialize(device);
+    initializedRef.current = true;
+  }
+
+  function startMetricsPolling(pid: number) {
+    if (metricsTimerRef.current !== null) {
+      window.clearInterval(metricsTimerRef.current);
     }
-    setLaunchedApp(null);
-  };
 
-  // Get featured apps (first 6)
-  const featuredApps = apps.slice(0, 6);
+    metricsTimerRef.current = window.setInterval(() => {
+      const m = executionPipeline.getProcessMetrics(pid);
+      if (!m) return;
+      setMetrics({
+        cpuTime: m.cpuTime,
+        memoryUsage: m.memoryUsage,
+        instructionsExecuted: m.instructionsExecuted,
+      });
+    }, 1000);
+  }
+
+  async function stopRuntime() {
+    if (metricsTimerRef.current !== null) {
+      window.clearInterval(metricsTimerRef.current);
+      metricsTimerRef.current = null;
+    }
+
+    if (initializedRef.current) {
+      await executionPipeline.shutdown().catch(() => {});
+      initializedRef.current = false;
+    }
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+
+    setActivePid(null);
+    setActiveAppId(null);
+    setMetrics(null);
+    if (state !== "uploading") {
+      setState("idle");
+      setStatus("Ready");
+    }
+  }
+
+  async function uploadAndInstall(file: File) {
+    if (!uid) return;
+    if (!/\.(exe|msi)$/i.test(file.name)) {
+      setError("Only .exe or .msi files are supported on this page");
+      return;
+    }
+
+    setError(null);
+    setState("uploading");
+    setProgress(0);
+    setStatus(`Uploading ${file.name}`);
+
+    try {
+      const uploaded = await chunkedUploadFile(file, {
+        compressChunks: true,
+        onProgress: ({ uploadedBytes, totalBytes }) => {
+          setProgress(Math.round((uploadedBytes / Math.max(totalBytes, 1)) * 100));
+        },
+      });
+
+      await addInstalledApp(uid, {
+        name: file.name.replace(/\.(exe|msi)$/i, ""),
+        originalName: file.name,
+        type: detectAppType(file.name),
+        scope: "user",
+        originalBytes: file.size,
+        storedBytes: uploaded.storedBytes,
+        fileId: uploaded.fileId,
+        installedAt: Date.now(),
+        compression: "gzip-chunked",
+      });
+
+      await refreshApps(uid);
+      setStatus(`Installed ${file.name}`);
+      setState("idle");
+      setProgress(0);
+    } catch (e: any) {
+      setState("error");
+      setError(e?.message || "Upload failed");
+    }
+  }
+
+  async function launchApp(app: InstalledApp) {
+    setError(null);
+    setState("launching");
+    setStatus(`Preparing ${app.originalName}`);
+    setActiveAppId(app.id);
+    setProgress(0);
+
+    try {
+      await stopRuntime();
+
+      const downloaded = await downloadClusterFile(app.fileId, {
+        scope: app.scope ?? "user",
+        compressedChunks: app.compression === "gzip-chunked",
+        onProgress: ({ chunkIndex, totalChunks }) => {
+          const pct = Math.round(((chunkIndex + 1) / Math.max(totalChunks, 1)) * 100);
+          setProgress(pct);
+          setStatus(`Downloading app ${pct}%`);
+        },
+      });
+
+      const copy = new Uint8Array(downloaded.bytes.byteLength);
+      copy.set(downloaded.bytes);
+      const objectUrl = URL.createObjectURL(new Blob([copy.buffer], { type: "application/octet-stream" }));
+      objectUrlRef.current = objectUrl;
+
+      setStatus("Initializing execution pipeline");
+      await ensurePipelineInitialized();
+
+      setStatus("Executing Windows binary");
+      const process = await executionPipeline.executeWindows(objectUrl, {
+        enableProfiling: true,
+        enableMetrics: true,
+      });
+
+      setActivePid(process.pid);
+      startMetricsPolling(process.pid);
+      setState("running");
+      setStatus(`Running ${app.name} (PID ${process.pid})`);
+    } catch (e: any) {
+      setState("error");
+      setError(e?.message || "Launch failed");
+      setStatus("Launch failed");
+      setActiveAppId(null);
+    }
+  }
+
+  async function removeApp(app: InstalledApp) {
+    if (!uid) return;
+    try {
+      await removeInstalledAppWithCleanup(uid, app);
+      if (activeAppId === app.id) {
+        await stopRuntime();
+      }
+      await refreshApps(uid);
+    } catch (e: any) {
+      setError(e?.message || "Failed to remove app");
+    }
+  }
 
   return (
-    <div className="relative min-h-screen bg-background overflow-hidden">
-      {/* Background */}
-      <BackgroundPaths />
-
-      {/* Navigation */}
-      <DynamicIslandNav />
-
-      {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4">
-        {/* Header */}
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          {/* Icon */}
-          <motion.div
-            className="flex items-center justify-center mb-6"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
-              <Monitor className="w-10 h-10 text-blue-400" />
+    <div className="min-h-screen">
+      <AppNav />
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6 md:py-10">
+        <section className="surface p-6 md:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold md:text-3xl">Windows Runner</h1>
+              <p className="mt-2 text-sm text-foreground/70">
+                Upload EXE/MSI binaries, install to your account, and execute them through the Windows pipeline.
+              </p>
             </div>
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1
-            className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            Windows Apps
-          </motion.h1>
-
-          {/* Description */}
-          <motion.p
-            className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            Run Windows applications directly in your browser. Experience the power of desktop software, no installation required.
-          </motion.p>
-
-          {/* Center Launch Button */}
-          <motion.div
-            className="mb-16"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7 }}
-          >
-            <GlowingEffect
-              blur={20}
-              proximity={100}
-              spread={40}
-              className="rounded-full"
-            >
-              <motion.button
-                className="relative w-40 h-40 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/30 flex items-center justify-center group"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <div className="absolute inset-0 rounded-full bg-blue-500/5 animate-pulse" />
-                <div className="relative flex flex-col items-center gap-2">
-                  <Play className="w-12 h-12 text-blue-400 group-hover:text-blue-300 transition-colors" />
-                  <span className="text-blue-400 font-medium text-sm">Launch App</span>
-                </div>
-              </motion.button>
-            </GlowingEffect>
-          </motion.div>
-        </motion.div>
-
-        {/* Apps arranged around center button */}
-        {!isLoading && (
-          <motion.div
-            className="grid grid-cols-3 md:grid-cols-6 gap-4 max-w-4xl w-full"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9, duration: 0.6 }}
-          >
-            {featuredApps.map((app, index) => (
-              <AppIconButton
-                key={app.id}
-                app={app}
-                index={index}
-                onClick={() => handleLaunchApp(app)}
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".exe,.msi,application/octet-stream"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.currentTarget.files?.[0];
+                  if (file) void uploadAndInstall(file);
+                  e.currentTarget.value = "";
+                }}
               />
-            ))}
-          </motion.div>
-        )}
-
-        {/* Windows 98 Feature Card */}
-        <motion.div
-          className="mt-12 max-w-2xl w-full"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1 }}
-        >
-          <GlowingEffect className="rounded-2xl">
-            <div className="relative p-6 rounded-2xl bg-card/50 border border-white/5 backdrop-blur-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 flex items-center justify-center shrink-0">
-                  <MonitorPlay className="w-7 h-7 text-teal-400" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h3 className="text-lg font-semibold text-white mb-1">
-                    Windows 98 Emulator
-                  </h3>
-                  <p className="text-sm text-white/50">
-                    Experience the nostalgia of Windows 98 right in your browser.
-                  </p>
-                </div>
-                <HoverBorderGradient containerClassName="shrink-0">
-                  <button className="flex items-center gap-2">
-                    Launch
-                    <MonitorPlay className="w-4 h-4" />
-                  </button>
-                </HoverBorderGradient>
-              </div>
+              <Button onClick={() => fileInputRef.current?.click()}>Upload EXE/MSI</Button>
+              <Button variant="outline" onClick={() => void stopRuntime()}>
+                Stop Runtime
+              </Button>
             </div>
-          </GlowingEffect>
-        </motion.div>
+          </div>
+          <p className="mt-4 text-xs uppercase tracking-wide text-foreground/60">
+            State: {state} {progress > 0 && progress < 100 ? `(${progress}%)` : ""}
+          </p>
+          <p className="mt-1 text-sm text-foreground/70">{status}</p>
+          {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+        </section>
 
-        {/* Upload EXE Button */}
-        <motion.div
-          className="mt-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.3 }}
-        >
-          <HoverBorderGradient>
-            <button className="flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload EXE
-            </button>
-          </HoverBorderGradient>
-        </motion.div>
+        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="surface p-4 md:p-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Runtime Diagnostics</h2>
+            <div className="mt-3 space-y-2 text-sm text-foreground/75">
+              <p>Active PID: {activePid ?? "none"}</p>
+              <p>Active App: {activeAppId ?? "none"}</p>
+              <p>CPU Time: {metrics ? metrics.cpuTime.toFixed(2) : "0.00"} ms</p>
+              <p>Memory Usage: {metrics ? metrics.memoryUsage : 0} bytes</p>
+              <p>Instructions: {metrics ? metrics.instructionsExecuted : 0}</p>
+            </div>
+          </div>
 
-        {/* Stats */}
-        <motion.div
-          className="flex items-center justify-center gap-8 md:gap-16 mt-16"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-        >
-          <Stat value="16" label="Built-in Apps" />
-          <Stat value="Win98" label="Emulator" />
-          <Stat value="∞" label="Uploads" />
-        </motion.div>
-      </div>
-
-      {/* App modal overlay */}
-      {launchedApp && (
-        <motion.div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          onClick={handleCloseApp}
-        />
-      )}
-    </div>
-  );
-}
-
-// App icon button component
-function AppIconButton({
-  app,
-  index,
-  onClick,
-}: {
-  app: WASMApp;
-  index: number;
-  onClick: () => void;
-}) {
-  return (
-    <motion.button
-      className="group relative flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all"
-      onClick={onClick}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.9 + index * 0.05 }}
-      whileHover={{ y: -5, scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
-      <div className="text-3xl">{app.icon}</div>
-      <span className="text-xs text-white/60 group-hover:text-white/80 transition-colors truncate max-w-[80px]">
-        {app.name}
-      </span>
-    </motion.button>
-  );
-}
-
-// Stat component
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="text-center">
-      <div className="text-2xl md:text-3xl font-bold text-white">{value}</div>
-      <div className="text-sm text-white/40">{label}</div>
+          <div className="surface p-4 md:p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Installed Windows Apps</h2>
+            <div className="mt-3 space-y-2">
+              {sortedApps.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-black/10 bg-white/60 p-3 text-sm text-foreground/70">
+                  No EXE/MSI apps installed yet.
+                </p>
+              ) : (
+                sortedApps.map((app) => (
+                  <div key={app.id} className="rounded-xl border border-black/10 bg-white/80 p-3">
+                    <p className="text-sm font-medium">{app.name}</p>
+                    <p className="mt-1 text-xs text-foreground/60">{app.originalName}</p>
+                    <p className="mt-1 text-xs text-foreground/60">
+                      {(app.originalBytes / (1024 * 1024)).toFixed(2)} MB original • {app.fileId}
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" onClick={() => void launchApp(app)}>
+                        Launch
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => void removeApp(app)}>
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

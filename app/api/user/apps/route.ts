@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 type InstalledApp = {
   name: string;
@@ -53,4 +53,3 @@ export async function POST(req: Request) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
-

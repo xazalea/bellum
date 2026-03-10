@@ -1,168 +1,55 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuthedUser } from "@/app/api/user/_util";
+import { chatCompletion } from "@/lib/server/ai-gpt4free";
+import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-// Check if we're in build mode - if so, export stub handlers
-const isBuildTime = typeof process !== 'undefined' && 
-  (process.env.NEXT_PHASE === 'phase-production-build' || 
-   process.env.CF_PAGES === '1' ||
-   process.env.NEXT_PHASE);
-
-// Completely opaque imports that bundlers cannot analyze
-const getChatModelFactory = async () => {
-  if (isBuildTime) {
-    throw new Error('ChatModelFactory not available during build');
-  }
-  // Build path from parts to make it completely opaque to static analysis
-  const parts = ['@', '/', 'lib', '/', 'gpt4free', '/', 'model', '/', 'index'];
-  const path = parts.join('');
-  const dynamicImport = new Function('p', 'return import(p)');
-  const module = await dynamicImport(path);
-  return module.ChatModelFactory;
-};
-
-const getEnums = async () => {
-  // Build path from parts to make it completely opaque to static analysis
-  const parts = ['@', '/', 'lib', '/', 'gpt4free', '/', 'model', '/', 'enums'];
-  const path = parts.join('');
-  const dynamicImport = new Function('p', 'return import(p)');
-  const module = await dynamicImport(path);
-  return { Site: module.Site, ModelType: module.ModelType };
-};
-
-// Message is a type, not a value, so we can't import it dynamically
-// We'll use 'any' for the type in Edge runtime to avoid build-time analysis
-type Message = any;
-
-export const runtime = 'edge';
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 export const revalidate = 0;
-// Prevent Next.js from trying to collect page data during build
-export const generateStaticParams = async () => [];
 
-interface ChatRequest {
-  prompt: string | any[];
+type ChatBody = {
+  prompt?: string | Array<{ role: string; content: string }>;
   model?: string;
   site?: string;
-}
+};
 
-interface ChatResponse {
-  content: string;
-  error?: string;
-}
+async function run(req: NextRequest, payload: ChatBody) {
+  requireSameOrigin(req);
+  const { uid } = await requireAuthedUser(req);
+  rateLimit(req, { scope: "ai_chat", limit: 20, windowMs: 60_000, key: uid });
 
-async function parseMessages(prompt: string | any[]): Promise<any[]> {
-  if (typeof prompt === 'string') {
-    return [{ role: 'user', content: prompt }];
-  }
-  return prompt;
+  const result = await chatCompletion({
+    prompt: payload.prompt,
+    model: payload.model,
+    site: payload.site,
+  });
+
+  return NextResponse.json({ content: result.content, role: result.role, model: result.model, site: result.site });
 }
 
 export async function POST(req: NextRequest) {
-  // Immediately return during build to prevent any code execution
-  if (isBuildTime) {
-    return NextResponse.json({ error: 'Service unavailable during build' }, { status: 503 });
-  }
   try {
-    const { Site, ModelType } = await getEnums();
-    const body: ChatRequest = await req.json();
-    const { prompt, model = ModelType.GPT3p5Turbo, site = Site.Auto } = body;
-
-    if (!prompt) {
-      return NextResponse.json(
-        { error: 'Missing prompt parameter' },
-        { status: 400 }
-      );
-    }
-
-    const ChatModelFactory = await getChatModelFactory();
-    const factory = new ChatModelFactory();
-    const chatModel = factory.get(site as any);
-
-    if (!chatModel) {
-      return NextResponse.json(
-        { error: `Site '${site}' not supported` },
-        { status: 400 }
-      );
-    }
-
-    const messages = await parseMessages(prompt);
-
-    const result = await chatModel.ask({
-      prompt: '',
-      messages: messages,
-      model: model as any,
-    });
-
-    const response: ChatResponse = {
-      content: result.content || '',
-      error: result.error,
-    };
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('Chat error:', error);
+    const body = (await req.json().catch(() => ({}))) as ChatBody;
+    return await run(req, body);
+  } catch (error: any) {
     return NextResponse.json(
-      {
-        content: '',
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      },
-      { status: 500 }
+      { content: "", error: error?.message || "Unknown error" },
+      { status: error?.message?.includes("unauthenticated") ? 401 : 500 }
     );
   }
 }
 
 export async function GET(req: NextRequest) {
-  // Immediately return during build to prevent any code execution
-  if (isBuildTime) {
-    return NextResponse.json({ error: 'Service unavailable during build' }, { status: 503 });
-  }
-  const { Site, ModelType } = await getEnums();
-  const searchParams = req.nextUrl.searchParams;
-  const prompt = searchParams.get('prompt');
-  const model = searchParams.get('model') || ModelType.GPT3p5Turbo;
-  const site = searchParams.get('site') || Site.Auto;
-
-  if (!prompt) {
-    return NextResponse.json(
-      { error: 'Missing prompt parameter' },
-      { status: 400 }
-    );
-  }
-
   try {
-    const ChatModelFactory = await getChatModelFactory();
-    const factory = new ChatModelFactory();
-    const chatModel = factory.get(site as any);
-
-    if (!chatModel) {
-      return NextResponse.json(
-        { error: `Site '${site}' not supported` },
-        { status: 400 }
-      );
-    }
-
-    const messages = [{ role: 'user', content: prompt }];
-
-    const result = await chatModel.ask({
-      prompt: '',
-      messages: messages,
-      model: model as any,
-    });
-
-    const response: ChatResponse = {
-      content: result.content || '',
-      error: result.error,
-    };
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('Chat error:', error);
+    const prompt = req.nextUrl.searchParams.get("prompt") || "";
+    const model = req.nextUrl.searchParams.get("model") || undefined;
+    const site = req.nextUrl.searchParams.get("site") || undefined;
+    return await run(req, { prompt, model, site });
+  } catch (error: any) {
     return NextResponse.json(
-      {
-        content: '',
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      },
-      { status: 500 }
+      { content: "", error: error?.message || "Unknown error" },
+      { status: error?.message?.includes("unauthenticated") ? 401 : 500 }
     );
   }
 }

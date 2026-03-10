@@ -177,10 +177,13 @@ export function GameCardFeatured({ game, onPlay, className }: GameCardProps) {
                 containerClassName="w-fit"
                 className="bg-transparent"
               >
-                <span className="flex items-center gap-2">
+                <button 
+                  className="flex items-center gap-2"
+                  onClick={() => onPlay?.(game)}
+                >
                   <Play className="w-4 h-4" fill="currentColor" />
                   Play Now
-                </span>
+                </button>
               </HoverBorderGradient>
             </div>
           </div>

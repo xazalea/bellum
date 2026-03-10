@@ -2,7 +2,7 @@ import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, telegramDownloadFileBytesWithRetry, TelegramError, TelegramErrorType } from "@/lib/server/telegram";
 import { rateLimit } from "@/lib/server/security";
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export const dynamic = "force-dynamic";
 
@@ -59,4 +59,3 @@ export async function GET(req: Request) {
     return Response.json({ error: msg }, { status });
   }
 }
-

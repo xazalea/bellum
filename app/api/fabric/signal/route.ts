@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export const dynamic = 'force-dynamic';
 

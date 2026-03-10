@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(req: Request, ctx: { params: { appId: string } }) {
   try {
@@ -30,4 +30,3 @@ export async function DELETE(req: Request, ctx: { params: { appId: string } }) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
   }
 }
-

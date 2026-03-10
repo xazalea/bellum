@@ -1,24 +1,5 @@
-// Edge runtime compatible - server-only is handled by webpack alias for Cloudflare
-
-// Check if we're in edge runtime (Cloudflare Workers)
-const isEdgeRuntime = typeof process === 'undefined' || 
-  process.env.NEXT_RUNTIME === 'edge' || 
-  typeof (globalThis as any).WebSocketPair !== 'undefined';
-
-// Dynamic import holder
-let _getAdminAuth: (() => any) | null = null;
-
-// Lazy load firebase-admin only when needed and available
-function getFirebaseAdmin() {
-  if (_getAdminAuth === null && !isEdgeRuntime) {
-    try {
-      _getAdminAuth = require('@/lib/server/firebase-admin').getAdminAuth;
-    } catch {
-      _getAdminAuth = null;
-    }
-  }
-  return _getAdminAuth;
-}
+// Edge runtime compatible session handling
+// This file does NOT import firebase-admin - it uses header-based auth for edge runtime
 
 export const SESSION_COOKIE_NAME = 'challenger_session';
 
@@ -62,39 +43,26 @@ export type SessionUser = {
   picture?: string;
 };
 
+/**
+ * Verify session from request - edge runtime compatible
+ * In edge runtime, only header-based auth is supported (x-challenger-userid)
+ * For routes that need Firebase session cookie verification, use nodejs runtime
+ */
 export async function verifySessionCookieFromRequest(req: Request): Promise<SessionUser> {
   const headerUid = req.headers.get('x-challenger-userid');
   if (headerUid) {
     return { uid: headerUid };
   }
   
-  // In edge runtime (Cloudflare), firebase-admin is not available
-  // Fall back to header-based auth only
-  const adminAuth = getFirebaseAdmin();
-  if (!adminAuth) {
-    throw new Error('unauthenticated: edge runtime requires x-challenger-userid header');
-  }
-  
-  const cookieHeader = req.headers.get('cookie');
-  const cookies = parseCookieHeader(cookieHeader);
-  const session = cookies[SESSION_COOKIE_NAME];
-  if (!session) throw new Error('unauthenticated');
-
-  const decoded = await adminAuth().verifySessionCookie(session, true);
-  return {
-    uid: decoded.uid,
-    email: typeof decoded.email === 'string' ? decoded.email : undefined,
-    name: typeof (decoded as any).name === 'string' ? (decoded as any).name : undefined,
-    picture: typeof (decoded as any).picture === 'string' ? (decoded as any).picture : undefined,
-  };
+  // In edge runtime, we can't verify Firebase session cookies
+  // Routes that need this should use nodejs runtime
+  throw new Error('unauthenticated: edge runtime requires x-challenger-userid header');
 }
 
+/**
+ * Create session cookie - not available in edge runtime
+ * Use nodejs runtime for routes that need this functionality
+ */
 export async function createSessionCookieFromIdToken(idToken: string, maxAgeSeconds: number): Promise<string> {
-  if (!idToken) throw new Error('missing_id_token');
-  const adminAuth = getFirebaseAdmin();
-  if (!adminAuth) {
-    throw new Error('session cookies not available in edge runtime');
-  }
-  return await adminAuth().createSessionCookie(idToken, { expiresIn: maxAgeSeconds * 1000 });
+  throw new Error('session cookies not available in edge runtime - use nodejs runtime');
 }
-
