@@ -1,6 +1,20 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { 
+  FileArchive, 
+  FileCode, 
+  FileX, 
+  Upload, 
+  Check, 
+  X, 
+  RefreshCw,
+  Clock,
+  HardDrive,
+  AlertCircle
+} from 'lucide-react';
 
 interface UploadFile {
   id: string;
@@ -10,6 +24,8 @@ interface UploadFile {
   error?: string;
   speed?: number;
   uploadedBytes?: number;
+  eta?: number; // seconds remaining
+  startTime?: number;
 }
 
 interface UploadComponentProps {
@@ -18,6 +34,286 @@ interface UploadComponentProps {
   multiple?: boolean;
   maxSize?: number; // in bytes
   className?: string;
+}
+
+// File type detection and icon component
+function FileTypeIcon({ filename, size = 24, className = '' }: { filename: string; size?: number; className?: string }) {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  
+  if (ext === 'apk') {
+    return (
+      <div className={`relative ${className}`}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.6 11.4C17.6 11.4 16.4 9.8 14.4 9.8C12.4 9.8 11.2 11.4 11.2 11.4L12.8 14.6C12.8 14.6 13.6 13.4 14.4 13.4C15.2 13.4 16 14.6 16 14.6L17.6 11.4Z" fill="#3DDC84"/>
+          <path d="M6.4 11.4C6.4 11.4 7.6 9.8 9.6 9.8C11.6 9.8 12.8 11.4 12.8 11.4L11.2 14.6C11.2 14.6 10.4 13.4 9.6 13.4C8.8 13.4 8 14.6 8 14.6L6.4 11.4Z" fill="#3DDC84"/>
+          <rect x="4" y="4" width="16" height="16" rx="2" stroke="#3DDC84" strokeWidth="2"/>
+          <circle cx="12" cy="17" r="1.5" fill="#3DDC84"/>
+        </svg>
+      </div>
+    );
+  }
+  if (ext === 'exe') {
+    return (
+      <div className={`relative ${className}`}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="18" height="18" rx="2" stroke="#0078D4" strokeWidth="2"/>
+          <path d="M8 8H16V10H8V8Z" fill="#0078D4"/>
+          <path d="M8 12H16V14H8V12Z" fill="#0078D4"/>
+          <path d="M8 16H13V18H8V16Z" fill="#0078D4"/>
+        </svg>
+      </div>
+    );
+  }
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext || '')) {
+    return <FileArchive size={size} className={`text-yellow-400 ${className}`} />;
+  }
+  if (['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c'].includes(ext || '')) {
+    return <FileCode size={size} className={`text-purple-400 ${className}`} />;
+  }
+  
+  return <FileX size={size} className={`text-gray-400 ${className}`} />;
+}
+
+// Check if file type is supported
+function isSupportedFile(filename: string): boolean {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  return ['apk', 'exe', 'zip', 'rar', '7z', 'tar', 'gz', 'js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c'].includes(ext || '');
+}
+
+// Circular progress ring component
+function CircularProgress({ 
+  progress, 
+  size = 48, 
+  strokeWidth = 4,
+  status,
+  showAnimation = true
+}: { 
+  progress: number; 
+  size?: number; 
+  strokeWidth?: number;
+  status: 'uploading' | 'completed' | 'error';
+  showAnimation?: boolean;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (progress / 100) * circumference;
+  
+  const getColor = () => {
+    switch (status) {
+      case 'completed': return '#22c55e';
+      case 'error': return '#ef4444';
+      default: return '#3b82f6';
+    }
+  };
+
+  const getGradientId = () => `progress-gradient-${status}`;
+  
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg
+        className="transform -rotate-90"
+        width={size}
+        height={size}
+      >
+        <defs>
+          <linearGradient id={getGradientId()} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={getColor()} />
+            <stop offset="100%" stopColor={getColor()} stopOpacity="0.6" />
+          </linearGradient>
+        </defs>
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="none"
+          className="text-white/10"
+        />
+        {/* Progress circle */}
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={`url(#${getGradientId()})`}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          initial={showAnimation ? { strokeDashoffset: circumference } : false}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          style={{
+            strokeDasharray: circumference,
+          }}
+        />
+      </svg>
+      
+      {/* Center content */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {status === 'completed' ? (
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          >
+            <Check size={size * 0.4} className="text-green-500" />
+          </motion.div>
+        ) : status === 'error' ? (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          >
+            <X size={size * 0.4} className="text-red-500" />
+          </motion.div>
+        ) : (
+          <span className="text-xs font-medium text-white">
+            {Math.round(progress)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Animated border for drag zone
+function AnimatedBorder({ isDragging, children }: { isDragging: boolean; children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      {/* Animated border gradient */}
+      <motion.div
+        className="absolute inset-0 rounded-lg overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isDragging ? 1 : 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div 
+          className="absolute inset-[-200%] animate-spin-slow"
+          style={{
+            background: 'conic-gradient(from 0deg, transparent 0deg, #3b82f6 60deg, #8b5cf6 120deg, transparent 180deg)',
+            animationDuration: '3s',
+          }}
+        />
+      </motion.div>
+      
+      {/* Content */}
+      <div className="relative z-10">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Success animation with checkmark
+function SuccessAnimation({ size = 48 }: { size?: number }) {
+  return (
+    <motion.div
+      className="flex items-center justify-center"
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+    >
+      <motion.div
+        className="rounded-full bg-green-500/20 flex items-center justify-center"
+        style={{ width: size, height: size }}
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+      >
+        <motion.svg
+          width={size * 0.5}
+          height={size * 0.5}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-green-500"
+        >
+          <motion.path
+            d="M5 13l4 4L19 7"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ delay: 0.2, duration: 0.3, ease: "easeOut" }}
+          />
+        </motion.svg>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Error animation with retry option
+function ErrorAnimation({ 
+  size = 48, 
+  onRetry,
+  onDismiss 
+}: { 
+  size?: number; 
+  onRetry?: () => void;
+  onDismiss?: () => void;
+}) {
+  return (
+    <motion.div
+      className="flex flex-col items-center gap-2"
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+    >
+      <motion.div
+        className="rounded-full bg-red-500/20 flex items-center justify-center"
+        style={{ width: size, height: size }}
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+      >
+        <motion.svg
+          width={size * 0.5}
+          height={size * 0.5}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-red-500"
+        >
+          <motion.path
+            d="M18 6L6 18M6 6l12 12"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ delay: 0.2, duration: 0.3, ease: "easeOut" }}
+          />
+        </motion.svg>
+      </motion.div>
+      
+      <motion.div
+        className="flex gap-2"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white transition-colors"
+          >
+            <RefreshCw size={12} />
+            Retry
+          </button>
+        )}
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white transition-colors"
+          >
+            Dismiss
+          </button>
+        )}
+      </motion.div>
+    </motion.div>
+  );
 }
 
 export function UploadComponent({
@@ -30,6 +326,7 @@ export function UploadComponent({
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [dropSuccess, setDropSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatBytes = (bytes: number): string => {
@@ -41,7 +338,15 @@ export function UploadComponent({
   };
 
   const formatSpeed = (bytesPerSecond: number): string => {
+    if (bytesPerSecond === 0) return '0 B/s';
     return `${formatBytes(bytesPerSecond)}/s`;
+  };
+
+  const formatETA = (seconds: number): string => {
+    if (seconds < 0 || !isFinite(seconds)) return '';
+    if (seconds < 60) return `${Math.round(seconds)} seconds left`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)}s left`;
+    return `${Math.floor(seconds / 3600)} hr ${Math.floor((seconds % 3600) / 60)}m left`;
   };
 
   const addFiles = useCallback((newFiles: FileList | File[]) => {
@@ -52,6 +357,7 @@ export function UploadComponent({
       progress: 0,
       status: 'pending' as const,
       uploadedBytes: 0,
+      startTime: undefined,
     }));
 
     // Validate file sizes
@@ -64,7 +370,22 @@ export function UploadComponent({
       );
     }
 
+    // Check for unsupported files
+    const unsupportedFiles = validFiles.filter((f) => !isSupportedFile(f.file.name));
+    if (unsupportedFiles.length > 0) {
+      unsupportedFiles.forEach((f) => {
+        f.status = 'error';
+        f.error = 'Unsupported file type';
+      });
+    }
+
     setFiles((prev) => [...prev, ...validFiles]);
+    
+    // Show drop success animation
+    if (validFiles.length > 0) {
+      setDropSuccess(true);
+      setTimeout(() => setDropSuccess(false), 500);
+    }
   }, [maxSize]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -103,7 +424,7 @@ export function UploadComponent({
 
   const retryFile = useCallback((id: string) => {
     setFiles((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, status: 'pending', progress: 0, error: undefined } : f))
+      prev.map((f) => (f.id === id ? { ...f, status: 'pending', progress: 0, error: undefined, uploadedBytes: 0 } : f))
     );
   }, []);
 
@@ -111,6 +432,13 @@ export function UploadComponent({
     const startTime = Date.now();
     const totalBytes = uploadFile.file.size;
     let uploadedBytes = 0;
+
+    // Update start time
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.id === uploadFile.id ? { ...f, startTime } : f
+      )
+    );
 
     // Simulate upload progress
     while (uploadedBytes < totalBytes) {
@@ -122,6 +450,8 @@ export function UploadComponent({
       
       const elapsed = (Date.now() - startTime) / 1000;
       const speed = uploadedBytes / elapsed;
+      const remaining = totalBytes - uploadedBytes;
+      const eta = speed > 0 ? remaining / speed : undefined;
 
       setFiles((prev) =>
         prev.map((f) =>
@@ -131,6 +461,7 @@ export function UploadComponent({
                 progress: (uploadedBytes / totalBytes) * 100,
                 uploadedBytes,
                 speed,
+                eta,
               }
             : f
         )
@@ -147,6 +478,9 @@ export function UploadComponent({
     setIsUploading(true);
 
     for (const uploadFile of pendingFiles) {
+      // Skip files with errors (unsupported types)
+      if (uploadFile.error) continue;
+
       setFiles((prev) =>
         prev.map((f) =>
           f.id === uploadFile.id ? { ...f, status: 'uploading' } : f
@@ -163,7 +497,7 @@ export function UploadComponent({
         setFiles((prev) =>
           prev.map((f) =>
             f.id === uploadFile.id
-              ? { ...f, status: 'completed', progress: 100 }
+              ? { ...f, status: 'completed', progress: 100, eta: undefined }
               : f
           )
         );
@@ -194,46 +528,103 @@ export function UploadComponent({
     <div className={`bg-gray-900 rounded-lg p-6 ${className}`}>
       <h3 className="text-lg font-semibold text-white mb-4">Upload Files</h3>
 
-      {/* Drop Zone */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-          isDragging
-            ? 'border-blue-500 bg-blue-500/10'
-            : 'border-gray-700 hover:border-gray-600'
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={accept}
-          multiple={multiple}
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <div className="text-4xl mb-3">📁</div>
-        <div className="text-gray-300 mb-1">
-          Drag and drop files here, or click to select
+      {/* Drop Zone with Animated Border */}
+      <AnimatedBorder isDragging={isDragging}>
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={cn(
+            "relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-300 overflow-hidden",
+            isDragging
+              ? 'border-blue-500 bg-blue-500/10 scale-[1.02]'
+              : 'border-gray-700 hover:border-gray-600',
+            dropSuccess && 'border-green-500 bg-green-500/10'
+          )}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={accept}
+            multiple={multiple}
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          
+          {/* Drop success flash animation */}
+          <AnimatePresence>
+            {dropSuccess && (
+              <motion.div
+                className="absolute inset-0 bg-green-500/20 pointer-events-none"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              />
+            )}
+          </AnimatePresence>
+          
+          {/* Animated upload icon */}
+          <motion.div
+            className="text-4xl mb-3 flex justify-center"
+            animate={isDragging ? { y: [0, -5, 0] } : {}}
+            transition={{ repeat: Infinity, duration: 1 }}
+          >
+            <Upload className={cn(
+              "transition-colors",
+              isDragging ? "text-blue-400" : "text-gray-400"
+            )} size={48} />
+          </motion.div>
+          
+          <div className="text-gray-300 mb-1">
+            {isDragging ? 'Drop files here!' : 'Drag and drop files here, or click to select'}
+          </div>
+          <div className="text-xs text-gray-500">
+            Supported: APK, EXE, ZIP, and more • Max: {formatBytes(maxSize)}
+          </div>
+          
+          {/* Animated dots when dragging */}
+          <AnimatePresence>
+            {isDragging && (
+              <motion.div
+                className="flex justify-center gap-1 mt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="w-2 h-2 bg-blue-400 rounded-full"
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 0.6,
+                      delay: i * 0.1,
+                    }}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        <div className="text-xs text-gray-500">
-          Max file size: {formatBytes(maxSize)}
-        </div>
-      </div>
+      </AnimatedBorder>
 
       {/* File List */}
       {files.length > 0 && (
         <div className="mt-6 space-y-3">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-400">
-              {pendingCount} pending • {uploadingCount} uploading • {completedCount} completed • {errorCount} failed
+              {pendingCount > 0 && <span className="text-gray-300">{pendingCount} pending • </span>}
+              {uploadingCount > 0 && <span className="text-blue-400">{uploadingCount} uploading • </span>}
+              {completedCount > 0 && <span className="text-green-400">{completedCount} completed • </span>}
+              {errorCount > 0 && <span className="text-red-400">{errorCount} failed</span>}
             </div>
             {completedCount > 0 && (
               <button
                 onClick={clearCompleted}
-                className="text-xs text-gray-500 hover:text-gray-400"
+                className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
               >
                 Clear completed
               </button>
@@ -241,31 +632,59 @@ export function UploadComponent({
           </div>
 
           {files.map((file) => (
-            <div
+            <motion.div
               key={file.id}
-              className="bg-gray-800 rounded-lg p-4 flex items-center gap-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className={cn(
+                "bg-gray-800 rounded-lg p-4 flex items-center gap-4 transition-all",
+                file.status === 'completed' && "bg-green-900/20",
+                file.status === 'error' && "bg-red-900/20"
+              )}
             >
-              {/* File Icon */}
-              <div className="text-2xl">📄</div>
+              {/* File Type Icon */}
+              <div className="flex-shrink-0">
+                <FileTypeIcon filename={file.file.name} size={32} />
+              </div>
 
               {/* File Info */}
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-white truncate">{file.file.name}</div>
-                <div className="text-xs text-gray-500">
-                  {formatBytes(file.file.size)}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white truncate">{file.file.name}</span>
+                  {!isSupportedFile(file.file.name) && (
+                    <AlertCircle size={14} className="text-red-400 flex-shrink-0" />
+                  )}
+                </div>
+                
+                <div className="text-xs text-gray-500 flex items-center gap-3">
+                  <span>{formatBytes(file.file.size)}</span>
+                  
+                  {/* Speed display */}
                   {file.status === 'uploading' && file.speed && (
-                    <span className="ml-2">• {formatSpeed(file.speed)}</span>
+                    <span className="text-blue-400 flex items-center gap-1">
+                      <HardDrive size={10} />
+                      {formatSpeed(file.speed)}
+                    </span>
+                  )}
+                  
+                  {/* ETA display */}
+                  {file.status === 'uploading' && file.eta && file.eta > 0 && (
+                    <span className="text-gray-400 flex items-center gap-1">
+                      <Clock size={10} />
+                      {formatETA(file.eta)}
+                    </span>
                   )}
                 </div>
 
-                {/* Progress Bar */}
-                {(file.status === 'uploading' || file.status === 'completed') && (
+                {/* Progress Bar (fallback for no-JS or simpler view) */}
+                {file.status === 'uploading' && (
                   <div className="mt-2 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${
-                        file.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${file.progress}%` }}
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-blue-500 to-blue-400"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${file.progress}%` }}
+                      transition={{ duration: 0.3 }}
                     />
                   </div>
                 )}
@@ -279,55 +698,67 @@ export function UploadComponent({
               {/* Status / Actions */}
               <div className="flex items-center gap-2">
                 {file.status === 'pending' && (
-                  <span className="text-xs text-gray-500">Pending</span>
-                )}
-                {file.status === 'uploading' && (
-                  <span className="text-xs text-blue-400">
-                    {file.progress.toFixed(0)}%
-                  </span>
-                )}
-                {file.status === 'completed' && (
-                  <span className="text-green-400">✓</span>
-                )}
-                {file.status === 'error' && (
                   <>
-                    <button
-                      onClick={() => retryFile(file.id)}
-                      className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-                    >
-                      Retry
-                    </button>
+                    <span className="text-xs text-gray-500">Pending</span>
                     <button
                       onClick={() => removeFile(file.id)}
-                      className="text-gray-500 hover:text-gray-400"
+                      className="text-gray-500 hover:text-gray-400 transition-colors"
                     >
-                      ✕
+                      <X size={16} />
                     </button>
                   </>
                 )}
-                {file.status === 'pending' && (
-                  <button
-                    onClick={() => removeFile(file.id)}
-                    className="text-gray-500 hover:text-gray-400"
-                  >
-                    ✕
-                  </button>
+                
+                {file.status === 'uploading' && (
+                  <CircularProgress 
+                    progress={file.progress} 
+                    size={36} 
+                    strokeWidth={3}
+                    status="uploading" 
+                  />
+                )}
+                
+                {file.status === 'completed' && (
+                  <SuccessAnimation size={36} />
+                )}
+                
+                {file.status === 'error' && (
+                  <ErrorAnimation 
+                    size={36} 
+                    onRetry={() => {
+                      retryFile(file.id);
+                      // Auto-start upload after retry
+                      setTimeout(() => uploadFiles(), 100);
+                    }}
+                    onDismiss={() => removeFile(file.id)}
+                  />
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
 
       {/* Upload Button */}
       {files.length > 0 && pendingCount > 0 && (
-        <button
+        <motion.button
           onClick={uploadFiles}
           disabled={isUploading}
-          className="mt-4 w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
+          className="mt-4 w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors flex items-center justify-center gap-2"
+          whileTap={{ scale: 0.98 }}
         >
-          {isUploading ? 'Uploading...' : `Upload ${pendingCount} file(s)`}
-        </button>
+          {isUploading ? (
+            <>
+              <RefreshCw size={16} className="animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload size={16} />
+              Upload {pendingCount} file{pendingCount !== 1 ? 's' : ''}
+            </>
+          )}
+        </motion.button>
       )}
     </div>
   );

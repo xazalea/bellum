@@ -4,10 +4,14 @@
 
 name = "challengerdeep"
 compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat", "nodejs_als"]
 
 # Pages-specific configuration
 pages_build_output_dir = ".vercel/output/static"
+
+# AlmostNode integration for enhanced Node.js compatibility
+# Provides polyfills for Node.js APIs not natively supported in Cloudflare Workers
+# See: https://github.com/macaly/almostnode
 
 # NOTE: For Git-based deployments, configure build settings in Cloudflare Dashboard:
 # Settings → Builds & deployments → Build configurations
@@ -15,4 +19,4 @@ pages_build_output_dir = ".vercel/output/static"
 # - Build output directory: .vercel/output/static
 
 [env.production]
-compatibility_flags = ["nodejs_compat"]
+compatibility_flags = ["nodejs_compat", "nodejs_als"]

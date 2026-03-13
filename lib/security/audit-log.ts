@@ -348,7 +348,8 @@ class AuditLogger {
         events = events.filter(e => e.severity === filter.severity);
       }
       if (filter.since !== undefined) {
-        events = events.filter(e => e.timestamp >= filter.since);
+        const since = filter.since;
+        events = events.filter(e => e.timestamp >= since);
       }
     }
 

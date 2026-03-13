@@ -2,78 +2,201 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Play, ExternalLink } from "lucide-react";
+import { Play, Star, Users } from "lucide-react";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
 import { Game } from "@/lib/games-parser";
+import { useRef, useState, useEffect } from "react";
+
+// Format play count to readable format (e.g., "1.2M plays")
+function formatPlayCount(count?: number): string {
+  if (!count) return "0 plays";
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(1)}M plays`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}K plays`;
+  }
+  return `${count} plays`;
+}
+
+// Generate a random rating for demo (in real app this would come from data)
+function generateRating(): number {
+  return Math.round((Math.random() * 2 + 3) * 10) / 10; // 3.0 - 5.0
+}
+
+// Skeleton component for loading state
+export function GameCardSkeleton() {
+  return (
+    <div className="relative rounded-xl overflow-hidden bg-card border border-white/5">
+      <div className="aspect-[3/4] relative animate-pulse">
+        <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10" />
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      </div>
+      <div className="p-4 space-y-2">
+        <div className="h-4 bg-white/10 rounded animate-pulse w-3/4" />
+        <div className="h-3 bg-white/5 rounded animate-pulse w-1/2" />
+      </div>
+    </div>
+  );
+}
 
 interface GameCardProps {
   game: Game;
   index?: number;
   onPlay?: (game: Game) => void;
   className?: string;
+  showRating?: boolean;
+  showPlayCount?: boolean;
+  playCount?: number;
 }
 
-export function GameCard({ game, index = 0, onPlay, className }: GameCardProps) {
+export function GameCard({ 
+  game, 
+  index = 0, 
+  onPlay, 
+  className,
+  showRating = true,
+  showPlayCount = true,
+  playCount
+}: GameCardProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const [rating] = useState(generateRating);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "100px" }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const handleImageLoad = () => {
+    setIsLoaded(true);
+  };
+
   return (
     <motion.div
+      ref={containerRef}
       className={cn("group relative", className)}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.3, delay: index * 0.02 }}
+      whileHover={{ scale: 1.02 }}
+      style={{ transition: "transform 200ms ease-out" }}
     >
-      <GlowingEffect
-        blur={10}
-        proximity={50}
-        spread={30}
-        variant="center"
-        className="rounded-xl"
-      >
-        <div className="relative overflow-hidden rounded-xl bg-card border border-white/5">
+      <div className="relative rounded-xl">
+        <div
+          className="relative overflow-hidden rounded-xl bg-card border transition-colors duration-[var(--duration-normal)]"
+          style={{
+            borderColor: "var(--glass-border)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "var(--glass-border-hover)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "var(--glass-border)";
+          }}
+        >
           {/* Thumbnail */}
           <div className="aspect-[3/4] relative overflow-hidden">
-            {game.thumb ? (
+            {/* Skeleton while loading */}
+            {!isLoaded && (
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/10 animate-pulse">
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              </div>
+            )}
+            
+            {isInView && game.thumb && (
               <img
+                ref={imgRef}
                 src={game.thumb}
                 alt={game.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className={cn(
+                  "w-full h-full object-cover transition-transform duration-500 group-hover:scale-110",
+                  !isLoaded && "opacity-0"
+                )}
                 loading="lazy"
+                onLoad={handleImageLoad}
               />
-            ) : (
+            )}
+            
+            {!game.thumb && (
               <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
                 <Play className="w-12 h-12 text-white/20" />
               </div>
             )}
 
             {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--duration-normal)]" />
 
-            {/* Play button on hover */}
+            {/* Quick play button on hover - 44px minimum touch target */}
             <motion.button
-              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--duration-normal)]"
               onClick={() => onPlay?.(game)}
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              aria-label={`Play ${game.title}`}
+              style={{ minHeight: "44px", minWidth: "44px" }}
             >
-              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <div 
+                className="rounded-full flex items-center justify-center transition-transform duration-[var(--duration-fast)]"
+                style={{
+                  background: "var(--glass-bg)",
+                  backdropFilter: "blur(var(--glass-blur))",
+                  WebkitBackdropFilter: "blur(var(--glass-blur))",
+                  boxShadow: "var(--shadow-glow-sm)",
+                  width: "64px",
+                  height: "64px",
+                  minWidth: "44px",
+                  minHeight: "44px"
+                }}
+              >
                 <Play className="w-8 h-8 text-white ml-1" fill="white" />
               </div>
             </motion.button>
 
-            {/* Platform badge */}
-            {game.platform && (
-              <div className="absolute top-2 right-2">
-                <span className="px-2 py-1 text-xs font-medium bg-white/10 backdrop-blur-sm rounded-full text-white/80">
-                  {game.platform}
-                </span>
+            {/* Rating badge */}
+            {showRating && (
+              <div 
+                className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
+                style={{
+                  background: "var(--glass-bg)",
+                  backdropFilter: "blur(var(--glass-blur))",
+                  WebkitBackdropFilter: "blur(var(--glass-blur))",
+                  borderColor: "var(--glass-border)",
+                  borderWidth: "1px",
+                  borderStyle: "solid"
+                }}
+              >
+                <Star className="w-3 h-3 text-yellow-400" fill="currentColor" />
+                <span className="text-white">{rating.toFixed(1)}</span>
               </div>
             )}
           </div>
 
           {/* Info */}
-          <div className="p-4">
-            <h3 className="font-medium text-white truncate group-hover:text-white/90 transition-colors">
+          <div className="p-4 min-h-[44px]">
+            <h3 
+              className="font-medium text-white truncate group-hover:text-white/90 transition-colors"
+              style={{ minHeight: "24px" }}
+            >
               {game.title}
             </h3>
             {game.description && (
@@ -81,9 +204,17 @@ export function GameCard({ game, index = 0, onPlay, className }: GameCardProps) 
                 {game.description}
               </p>
             )}
+            
+            {/* Play count */}
+            {showPlayCount && (
+              <div className="flex items-center gap-1 mt-2 text-white/40 text-xs">
+                <Users className="w-3 h-3" />
+                <span>{formatPlayCount(playCount ?? Math.floor(Math.random() * 500000) + 1000)}</span>
+              </div>
+            )}
           </div>
         </div>
-      </GlowingEffect>
+      </div>
     </motion.div>
   );
 }
@@ -142,13 +273,14 @@ export function GameCardFeatured({ game, onPlay, className }: GameCardProps) {
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
     >
-      <GlowingEffect
-        blur={20}
-        proximity={100}
-        spread={50}
-        variant="center"
-        className="rounded-2xl"
-      >
+      <div className="relative rounded-2xl">
+        <GlowingEffect
+          blur={20}
+          proximity={100}
+          spread={50}
+          variant="default"
+          className="rounded-2xl"
+        />
         <div className="relative overflow-hidden rounded-2xl bg-card border border-white/5">
           {/* Thumbnail */}
           <div className="aspect-video relative overflow-hidden">
@@ -188,7 +320,7 @@ export function GameCardFeatured({ game, onPlay, className }: GameCardProps) {
             </div>
           </div>
         </div>
-      </GlowingEffect>
+      </div>
     </motion.div>
   );
 }

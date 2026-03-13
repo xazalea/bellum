@@ -23,13 +23,14 @@ export function AppCard({ app, index = 0, onLaunch, className }: AppCardProps) {
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.3, delay: index * 0.02 }}
     >
-      <GlowingEffect
-        blur={10}
-        proximity={50}
-        spread={30}
-        variant="center"
-        className="rounded-xl"
-      >
+      <div className="relative rounded-xl">
+        <GlowingEffect
+          blur={10}
+          proximity={50}
+          spread={30}
+          variant="default"
+          className="rounded-xl"
+        />
         <div className="relative overflow-hidden rounded-xl bg-card border border-white/5 p-4">
           {/* Icon */}
           <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center text-3xl mb-4">
@@ -60,7 +61,7 @@ export function AppCard({ app, index = 0, onLaunch, className }: AppCardProps) {
             Launch
           </motion.button>
         </div>
-      </GlowingEffect>
+      </div>
     </motion.div>
   );
 }
@@ -101,13 +102,14 @@ export function InstalledAppCard({
       viewport={{ once: true }}
       transition={{ duration: 0.3, delay: index * 0.02 }}
     >
-      <GlowingEffect
-        blur={10}
-        proximity={50}
-        spread={30}
-        variant="center"
-        className="rounded-xl"
-      >
+      <div className="relative rounded-xl">
+        <GlowingEffect
+          blur={10}
+          proximity={50}
+          spread={30}
+          variant="default"
+          className="rounded-xl"
+        />
         <div className="relative overflow-hidden rounded-xl bg-card border border-white/5 p-4">
           {/* Icon */}
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center overflow-hidden">
@@ -153,7 +155,7 @@ export function InstalledAppCard({
             </motion.button>
           </div>
         </div>
-      </GlowingEffect>
+      </div>
     </motion.div>
   );
 }

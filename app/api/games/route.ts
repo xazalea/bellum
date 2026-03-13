@@ -65,7 +65,7 @@ function loadGamesFromDisk(): Game[] {
 
   const publicDir = join(process.cwd(), "public");
 
-  // Try loading JSON first (much faster)
+  // Try loading games.json first (much faster)
   try {
     const jsonPath = join(publicDir, "games.json");
     const jsonContent = readFileSync(jsonPath, "utf8");
@@ -75,25 +75,39 @@ function loadGamesFromDisk(): Game[] {
     cachedGames = games;
     lastParsed = now;
 
-    console.log(`[API/games] Loaded ${games.length} games from JSON`);
+    console.log(`[API/games] Loaded ${games.length} games from games.json`);
     return games;
   } catch (jsonError) {
     console.warn(
-      "[API/games] Failed to load games.json, trying XML:",
+      "[API/games] Failed to load games.json:",
       jsonError,
     );
   }
 
-  // Fallback to XML
+  // Try loading games.xml as JSON (file may have .xml extension but contain JSON)
   try {
     const xmlPath = join(publicDir, "games.xml");
-    const xmlContent = readFileSync(xmlPath, "utf8");
+    const content = readFileSync(xmlPath, "utf8");
+    
+    // Try to parse as JSON first (games.xml may contain JSON data)
+    try {
+      const data = JSON.parse(content);
+      const games: Game[] = data.games || [];
+      cachedGames = games;
+      lastParsed = now;
 
+      console.log(`[API/games] Loaded ${games.length} games from games.xml (JSON format)`);
+      return games;
+    } catch {
+      // Not JSON, try parsing as XML below
+    }
+
+    // Fallback to XML parsing
     const games: Game[] = [];
     const urlRegex = /<url>([\s\S]*?)<\/url>/g;
     let match;
 
-    while ((match = urlRegex.exec(xmlContent)) !== null) {
+    while ((match = urlRegex.exec(content)) !== null) {
       const urlBlock = match[1];
 
       // Extract game URL and ID
@@ -125,7 +139,7 @@ function loadGamesFromDisk(): Game[] {
     cachedGames = games;
     lastParsed = now;
 
-    console.log(`[API/games] Loaded ${games.length} games from XML`);
+    console.log(`[API/games] Loaded ${games.length} games from games.xml (XML format)`);
     return games;
   } catch (xmlError) {
     console.error("[API/games] Failed to load games.xml:", xmlError);

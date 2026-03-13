@@ -393,7 +393,7 @@ function ConsoleInput() {
 
   return (
     <div className="flex gap-2">
-      <span className="text-gray-500 font-mono text-sm">></span>
+      <span className="text-gray-500 font-mono text-sm">{'>'}</span>
       <input
         type="text"
         value={input}

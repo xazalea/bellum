@@ -435,7 +435,11 @@ class ComputeProtocol {
     if (typeof CompressionStream !== 'undefined') {
       const ds = new DecompressionStream('gzip');
       const writer = ds.writable.getWriter();
-      writer.write(input);
+      // Create a fresh copy with a plain ArrayBuffer to satisfy TypeScript's BufferSource type
+      const copy = new Uint8Array(input.byteLength);
+      copy.set(input);
+      // Use type assertion to satisfy TypeScript's strict BufferSource type
+      writer.write(copy as unknown as BufferSource);
       writer.close();
 
       const reader = ds.readable.getReader();

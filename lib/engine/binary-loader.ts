@@ -428,36 +428,20 @@ export class BinaryLoader {
 
   /**
    * Fetch binary data
+   * Uses fetch for all environments - Almostnode provides Node.js compat at runtime
    */
   private async fetchBinary(path: string): Promise<ArrayBuffer> {
-    // In browser environment, fetch from HTTP
-    if (typeof fetch !== 'undefined') {
-      try {
-        const response = await fetch(path);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return await response.arrayBuffer();
-      } catch (error) {
-        console.error(`[BinaryLoader] Failed to fetch ${path}:`, error);
-        throw error;
+    // Always use fetch - works in browser and with Almostnode
+    try {
+      const response = await fetch(path);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+      return await response.arrayBuffer();
+    } catch (error) {
+      console.error(`[BinaryLoader] Failed to fetch ${path}:`, error);
+      throw error;
     }
-
-    // In Node.js environment, read from filesystem
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-      try {
-        // Use dynamic import to avoid Webpack resolving 'fs' in browser
-        const fs = (await import('fs')).default.promises;
-        const buffer = await fs.readFile(path);
-        return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-      } catch (error) {
-        console.error(`[BinaryLoader] Failed to read ${path}:`, error);
-        throw error;
-      }
-    }
-
-    throw new Error('No method available to fetch binary');
   }
 
   /**
