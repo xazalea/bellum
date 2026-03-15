@@ -39,11 +39,10 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as any;
     const signal = requireSignal(body);
 
-    // Only allow signaling within the authenticated user.
-    // Dynamic import for Edge Runtime compatibility
-    const { getAdminDb } = await import('@/lib/server/firebase-admin');
-    const db = getAdminDb();
-    await db.collection('fabric_signals').add({
+    const { adminDb } = await import('@/app/api/user/_util');
+    const { collection, addDoc } = await import('firebase/firestore');
+    const db = await adminDb();
+    await addDoc(collection(db, 'fabric_signals'), {
       uid,
       toPeerId: signal.to,
       fromPeerId: signal.from,
@@ -65,20 +64,22 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const peerId = requirePeerId(searchParams.get('peerId'), 'peerId');
 
-    // Dynamic import for Edge Runtime compatibility
-    const { getAdminDb } = await import('@/lib/server/firebase-admin');
-    const db = getAdminDb();
-    const qs = await db
-      .collection('fabric_signals')
-      .where('uid', '==', uid)
-      .where('toPeerId', '==', peerId)
-      .orderBy('createdAt', 'asc')
-      .limit(50)
-      .get();
+    const { adminDb } = await import('@/app/api/user/_util');
+    const { collection, query, where, orderBy, limit, getDocs, writeBatch } = await import('firebase/firestore');
+    const db = await adminDb();
+    const qs = await getDocs(
+      query(
+        collection(db, 'fabric_signals'),
+        where('uid', '==', uid),
+        where('toPeerId', '==', peerId),
+        orderBy('createdAt', 'asc'),
+        limit(50)
+      )
+    );
 
     const signals = qs.docs.map((d) => d.data().signal as P2PSignal);
-    if (qs.size) {
-      const batch = db.batch();
+    if (!qs.empty) {
+      const batch = writeBatch(db);
       for (const d of qs.docs) batch.delete(d.ref);
       await batch.commit();
     }

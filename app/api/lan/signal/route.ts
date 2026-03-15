@@ -1,6 +1,5 @@
 export const runtime = "edge";
 import { NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/server/firebase-admin';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 import { requireAuthedUser } from '@/app/api/user/_util';
 
@@ -48,8 +47,10 @@ export async function POST(req: Request) {
     const roomId = requireRoom(body?.roomId);
     const signal = requireSignal(body);
 
-    const db = getAdminDb();
-    await db.collection('lan_signals').add({
+    const { adminDb } = await import('@/app/api/user/_util');
+    const { collection, addDoc } = await import('firebase/firestore');
+    const db = await adminDb();
+    await addDoc(collection(db, 'lan_signals'), {
       uid,
       roomId,
       toPeerId: signal.to,
@@ -73,21 +74,25 @@ export async function GET(req: Request) {
     const peerId = requireId(searchParams.get('peerId'), 'peerId');
     const roomId = requireRoom(searchParams.get('roomId'));
 
-    const db = getAdminDb();
-    const qs = await db
-      .collection('lan_signals')
-      .where('roomId', '==', roomId)
-      .where('toPeerId', '==', peerId)
-      .limit(50)
-      .get();
+    const { adminDb } = await import('@/app/api/user/_util');
+    const { collection, query, where, limit, getDocs, writeBatch } = await import('firebase/firestore');
+    const db = await adminDb();
+    const qs = await getDocs(
+      query(
+        collection(db, 'lan_signals'),
+        where('roomId', '==', roomId),
+        where('toPeerId', '==', peerId),
+        limit(50)
+      )
+    );
 
     const signals = qs.docs.map((d) => d.data().signal as P2PSignal);
     // Sort in memory to avoid needing a composite index
     // (signals may be processed out of order by WebRTC, but offer/answer order helps)
     // Actually, we'll just return them. The client handles signaling state.
-    
-    if (qs.size) {
-      const batch = db.batch();
+
+    if (!qs.empty) {
+      const batch = writeBatch(db);
       for (const d of qs.docs) batch.delete(d.ref);
       await batch.commit();
     }

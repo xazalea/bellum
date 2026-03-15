@@ -12,21 +12,12 @@ export async function requireAuthedUser(req: Request): Promise<{ uid: string; em
 }
 
 /**
- * Get admin database - only available in nodejs runtime
- * For edge runtime routes, this will throw an error
+ * Get firestore database
  */
 export async function adminDb() {
-  // Check if we're in edge runtime
-  const isEdgeRuntime = typeof process === 'undefined' || 
-    (typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'edge');
-  
-  if (isEdgeRuntime) {
-    throw new Error('adminDb is not available in edge runtime - use nodejs runtime');
-  }
-  
-  // Dynamic import for nodejs runtime
-  const { getAdminDb } = await import('@/lib/server/firebase-admin');
-  return getAdminDb();
+  const { app } = await import('@/lib/firebase');
+  const { getFirestore } = await import('firebase/firestore');
+  return getFirestore(app);
 }
 
 export function jsonError(e: any, status = 400) {

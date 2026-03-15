@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { randomInt } from 'crypto';
-import { getAdminDb } from '@/lib/server/firebase-admin';
 
 export type ChallengerAuthOk = { status: 'ok'; username: string };
 export type ChallengerAuthChallenge = {
@@ -31,14 +30,16 @@ function randCode(): string {
 
 export async function signupUsername(usernameInput: string, fingerprint: string): Promise<ChallengerAuthResult> {
   const username = normalizeUsername(usernameInput);
-  const db = getAdminDb();
+  const { app } = await import('@/lib/firebase');
+  const { getFirestore, doc, getDoc, setDoc } = await import('firebase/firestore');
+  const db = getFirestore(app);
 
-  const ref = db.collection('accounts').doc(username);
-  const snap = await ref.get();
-  if (snap.exists) throw new Error('Username already taken.');
+  const ref = doc(db, 'accounts', username);
+  const snap = await getDoc(ref);
+  if (snap.exists()) throw new Error('Username already taken.');
 
   const now = Date.now();
-  await ref.set({
+  await setDoc(ref, {
     username,
     primaryUid: username, // legacy field; we treat username as principal id
     trustedUids: [username],
@@ -52,24 +53,26 @@ export async function signupUsername(usernameInput: string, fingerprint: string)
 
 export async function signinUsername(usernameInput: string, fingerprint: string): Promise<ChallengerAuthResult> {
   const username = normalizeUsername(usernameInput);
-  const db = getAdminDb();
+  const { app } = await import('@/lib/firebase');
+  const { getFirestore, doc, getDoc, setDoc, collection, addDoc } = await import('firebase/firestore');
+  const db = getFirestore(app);
 
-  const ref = db.collection('accounts').doc(username);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error('User not found.');
+  const ref = doc(db, 'accounts', username);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('User not found.');
 
   const acc = snap.data() as any;
   const trusted = Array.isArray(acc?.trustedFingerprints) && acc.trustedFingerprints.includes(fingerprint);
 
   const now = Date.now();
   if (trusted) {
-    await ref.set({ lastLogin: now }, { merge: true });
+    await setDoc(ref, { lastLogin: now }, { merge: true });
     return { status: 'ok', username };
   }
 
   const code = randCode();
   const expiresAt = now + 5 * 60 * 1000;
-  const chRef = await ref.collection('challenges').add({
+  const chRef = await addDoc(collection(db, 'accounts', username, 'challenges'), {
     code,
     status: 'pending',
     requesterFingerprint: fingerprint,
@@ -85,21 +88,26 @@ export async function approveLoginCode(usernameInput: string, fingerprint: strin
   const normalizedCode = code.trim();
   if (!/^\d{6}$/.test(normalizedCode)) throw new Error('Enter a 6-digit code.');
 
-  const db = getAdminDb();
-  const ref = db.collection('accounts').doc(username);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error('Account not found');
+  const { app } = await import('@/lib/firebase');
+  const { getFirestore, doc, getDoc, setDoc, collection, query, where, limit, getDocs } = await import('firebase/firestore');
+  const db = getFirestore(app);
+
+  const ref = doc(db, 'accounts', username);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('Account not found');
 
   const acc = snap.data() as any;
   const isTrusted = Array.isArray(acc?.trustedFingerprints) && acc.trustedFingerprints.includes(fingerprint);
   if (!isTrusted) throw new Error('This device is not trusted for that username.');
 
-  const qs = await ref
-    .collection('challenges')
-    .where('status', '==', 'pending')
-    .where('code', '==', normalizedCode)
-    .limit(1)
-    .get();
+  const qs = await getDocs(
+    query(
+      collection(db, 'accounts', username, 'challenges'),
+      where('status', '==', 'pending'),
+      where('code', '==', normalizedCode),
+      limit(1)
+    )
+  );
 
   if (qs.empty) throw new Error('Code not found or already used.');
 
@@ -107,7 +115,7 @@ export async function approveLoginCode(usernameInput: string, fingerprint: strin
   const ch = chSnap.data() as any;
   const exp = typeof ch?.expiresAt === 'number' ? ch.expiresAt : 0;
   if (Date.now() > exp) {
-    await chSnap.ref.set({ status: 'expired', resolvedAt: Date.now() }, { merge: true });
+    await setDoc(chSnap.ref, { status: 'expired', resolvedAt: Date.now() }, { merge: true });
     throw new Error('Code expired.');
   }
 
@@ -117,9 +125,9 @@ export async function approveLoginCode(usernameInput: string, fingerprint: strin
   // Add fingerprint to trusted list (idempotent)
   const next = new Set<string>(Array.isArray(acc?.trustedFingerprints) ? acc.trustedFingerprints : []);
   next.add(requesterFingerprint);
-  await ref.set({ trustedFingerprints: Array.from(next), lastLogin: Date.now() }, { merge: true });
+  await setDoc(ref, { trustedFingerprints: Array.from(next), lastLogin: Date.now() }, { merge: true });
 
-  await chSnap.ref.set(
+  await setDoc(chSnap.ref,
     {
       status: 'approved',
       approvedByFingerprint: fingerprint,
@@ -132,9 +140,12 @@ export async function approveLoginCode(usernameInput: string, fingerprint: strin
 
 export async function isCurrentDeviceTrusted(usernameInput: string, fingerprint: string): Promise<boolean> {
   const username = normalizeUsername(usernameInput);
-  const db = getAdminDb();
-  const snap = await db.collection('accounts').doc(username).get();
-  if (!snap.exists) return false;
+  const { app } = await import('@/lib/firebase');
+  const { getFirestore, doc, getDoc } = await import('firebase/firestore');
+  const db = getFirestore(app);
+
+  const snap = await getDoc(doc(db, 'accounts', username));
+  if (!snap.exists()) return false;
   const acc = snap.data() as any;
   return Array.isArray(acc?.trustedFingerprints) && acc.trustedFingerprints.includes(fingerprint);
 }
