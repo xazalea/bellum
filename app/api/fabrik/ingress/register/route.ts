@@ -1,8 +1,9 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { rateLimit } from '@/lib/server/security';
 import { registerIngressNode } from '@/lib/server/fabrik-ingress-rendezvous';
 
-export const runtime = 'edge';
+
 
 export async function POST(req: Request) {
   try {

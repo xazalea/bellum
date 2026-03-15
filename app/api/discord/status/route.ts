@@ -1,7 +1,8 @@
+export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { getDiscordWebhookCount } from "@/lib/server/discord";
 
-export const runtime = "nodejs";
+
 export const dynamic = "force-dynamic";
 
 export async function GET() {

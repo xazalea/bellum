@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 import { extendLease, getLease } from '@/lib/gpu-rental/store';
 import type { ExtendLeaseRequest } from '@/lib/gpu-rental/types';
 
-export const runtime = 'edge';
+
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   let body: ExtendLeaseRequest | null = null;

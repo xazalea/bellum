@@ -1,9 +1,10 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { getClusterBaseCandidates } from '@/lib/cluster/cluster-base';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 
-export const runtime = 'edge';
+
 
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || '*';

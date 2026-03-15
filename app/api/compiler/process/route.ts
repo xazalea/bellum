@@ -1,3 +1,4 @@
+export const runtime = "edge";
 /**
  * Compiler Process API
  * Bridges frontend to .NET backend for APK/EXE compilation
@@ -5,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+
 export const dynamic = 'force-dynamic';
 
 // Backend URL - configurable via environment

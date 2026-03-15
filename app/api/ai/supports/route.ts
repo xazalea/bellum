@@ -1,9 +1,10 @@
+export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthedUser } from "@/app/api/user/_util";
 import { getSupports } from "@/lib/server/ai-gpt4free";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = "nodejs";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {

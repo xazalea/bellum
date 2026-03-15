@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MinimalNavIsland } from "@/components/ui/dynamic-island";
-import { 
+import {
   X, Maximize, Minimize, Volume2, VolumeX, Info,
   Star, Users, AlertTriangle, Gamepad2
 } from "lucide-react";
@@ -80,12 +80,12 @@ function ConfirmDialog({
 }
 
 // Volume Slider Component
-function VolumeSlider({ 
-  volume, 
-  onChange, 
-  isOpen 
-}: { 
-  volume: number; 
+function VolumeSlider({
+  volume,
+  onChange,
+  isOpen
+}: {
+  volume: number;
   onChange: (value: number) => void;
   isOpen: boolean;
 }) {
@@ -115,17 +115,17 @@ function VolumeSlider({
 }
 
 // Game Info Sidebar
-function GameInfoSidebar({ 
-  title, 
-  width, 
-  height, 
-  isOpen, 
-  onClose 
-}: { 
-  title: string; 
-  width: number; 
-  height: number; 
-  isOpen: boolean; 
+function GameInfoSidebar({
+  title,
+  width,
+  height,
+  isOpen,
+  onClose
+}: {
+  title: string;
+  width: number;
+  height: number;
+  isOpen: boolean;
   onClose: () => void;
 }) {
   return (
@@ -139,7 +139,7 @@ function GameInfoSidebar({
             onClick={onClose}
             className="fixed inset-0 bg-black/50 z-40"
           />
-          
+
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -157,13 +157,13 @@ function GameInfoSidebar({
                   <X className="w-5 h-5 text-neutral-400" />
                 </button>
               </div>
-              
+
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
                   <p className="text-sm text-neutral-500">Now Playing</p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white/5 rounded-xl p-4">
                     <div className="flex items-center gap-2 text-yellow-500 mb-1">
@@ -171,7 +171,7 @@ function GameInfoSidebar({
                       <span className="text-sm">Rating</span>
                     </div>
                     <p className="text-xl font-bold text-white">
-                      {(Math.random() * 2 + 3).toFixed(1)}
+                      {((title.split("").reduce((a: number, b: string) => a + b.charCodeAt(0), 0) % 20 + 30) / 10).toFixed(1)}
                     </p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-4">
@@ -180,11 +180,11 @@ function GameInfoSidebar({
                       <span className="text-sm">Plays</span>
                     </div>
                     <p className="text-xl font-bold text-white">
-                      {Math.floor(Math.random() * 100000).toLocaleString()}
+                      {(title.split("").reduce((a: number, b: string) => a + b.charCodeAt(0), 0) * 137 % 100000).toLocaleString()}
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-neutral-400 uppercase tracking-wide">Details</h4>
                   <div className="space-y-2 text-sm">
@@ -198,7 +198,7 @@ function GameInfoSidebar({
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-neutral-400 uppercase tracking-wide">Keyboard Shortcuts</h4>
                   <div className="bg-white/5 rounded-xl p-4 space-y-2 text-sm">
@@ -229,7 +229,7 @@ function PlayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   const gameUrl = searchParams.get("url") || "";
   const gameTitle = searchParams.get("title") || "Game";
   const width = Number(searchParams.get("width") || "800") || 800;
@@ -249,7 +249,18 @@ function PlayContent() {
     return `/api/proxy/game?url=${encodeURIComponent(gameUrl)}`;
   }, [gameUrl]);
 
-  // Keyboard shortcuts
+  // ROOT FIX: Define toggleFullscreen BEFORE the keyboard shortcut effect that uses it
+  const toggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      containerRef.current.requestFullscreen();
+    }
+  }, []);
+
+  // Keyboard shortcuts — now safe because toggleFullscreen is defined above
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "f" || e.key === "F") {
@@ -267,7 +278,7 @@ function PlayContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isFullscreen]);
+  }, [isFullscreen, toggleFullscreen]);
 
   // Fullscreen change listener
   useEffect(() => {
@@ -277,16 +288,6 @@ function PlayContent() {
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = useCallback(() => {
-    if (!containerRef.current) return;
-    
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      containerRef.current.requestFullscreen();
-    }
   }, []);
 
   const handleExit = useCallback(() => {
@@ -336,14 +337,14 @@ function PlayContent() {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* Volume Control */}
             <div className="relative">
-              <VolumeSlider 
-                volume={volume} 
-                onChange={setVolume} 
-                isOpen={showVolumeSlider} 
+              <VolumeSlider
+                volume={volume}
+                onChange={setVolume}
+                isOpen={showVolumeSlider}
               />
               <button
                 onClick={() => {
@@ -367,7 +368,7 @@ function PlayContent() {
                 )}
               </button>
             </div>
-            
+
             {/* Info Button */}
             <button
               onClick={() => setShowSidebar(true)}
@@ -376,7 +377,7 @@ function PlayContent() {
             >
               <Info className="w-5 h-5 text-white" />
             </button>
-            
+
             {/* Fullscreen Button */}
             <button
               onClick={toggleFullscreen}
@@ -395,7 +396,8 @@ function PlayContent() {
 
       {/* Game Container */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-[{width}px] bg-neutral-900 rounded-xl overflow-hidden border border-white/10">
+        {/* ROOT FIX: Using inline style instead of broken Tailwind interpolation max-w-[{width}px] */}
+        <div className="relative w-full bg-neutral-900 rounded-xl overflow-hidden border border-white/10" style={{ maxWidth: `${width}px` }}>
           {loading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80">
               <div className="flex flex-col items-center gap-3">

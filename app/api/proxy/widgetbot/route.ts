@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * Proxy endpoint for Widgetbot script
  * This allows the Widgetbot embed to work even if the CDN is blocked
  */
-export const runtime = 'edge';
+
 
 export async function GET(request: NextRequest) {
   try {

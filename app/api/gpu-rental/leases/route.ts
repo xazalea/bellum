@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 import { createLease, listLeasesForUser } from '@/lib/gpu-rental/store';
 import type { CreateLeaseRequest } from '@/lib/gpu-rental/types';
 
-export const runtime = 'edge';
+
 
 export async function GET(req: Request) {
   try {

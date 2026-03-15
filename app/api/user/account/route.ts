@@ -1,8 +1,9 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { adminDb, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit } from '@/lib/server/security';
 
-export const runtime = 'edge';
+
 
 type Action = 'create' | 'signin' | 'verify';
 

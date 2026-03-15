@@ -1,6 +1,7 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+
 
 function pickClientIp(req: Request): string | null {
   const h = req.headers;

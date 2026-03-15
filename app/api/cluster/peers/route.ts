@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { listActivePeersForUser, prunePeers } from '@/lib/cluster/presence-store';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { adminDb } from '@/app/api/user/_util';
 
 // Use nodejs runtime for firebase-admin compatibility
-export const runtime = 'nodejs';
+
 
 const ACTIVE_WINDOW_MS = 60_000;
 

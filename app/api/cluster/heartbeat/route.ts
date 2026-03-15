@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { prunePeers, upsertPeer } from '@/lib/cluster/presence-store';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 import { adminDb } from '@/app/api/user/_util';
 
-export const runtime = 'edge';
+
 
 type Body = {
   deviceId?: string;

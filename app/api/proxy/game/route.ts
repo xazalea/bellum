@@ -1,7 +1,8 @@
+export const runtime = "edge";
 import { NextRequest, NextResponse } from 'next/server';
 
 // Use edge runtime for Cloudflare compatibility
-export const runtime = 'edge';
+
 export const dynamic = 'force-dynamic';
 
 // Allowed game domains - security whitelist

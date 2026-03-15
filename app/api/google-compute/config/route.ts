@@ -1,3 +1,4 @@
+export const runtime = "edge";
 /**
  * Google Compute Configuration Endpoint
  * Manage configuration for Google compute offloading
@@ -6,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfigManager } from '@/lib/google-compute/config';
 
-export const runtime = 'edge';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {

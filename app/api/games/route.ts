@@ -1,9 +1,8 @@
+export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync } from "fs";
-import { join } from "path";
 
-// Use Node.js runtime for file system access
-export const runtime = "nodejs";
+// Use edge-compatible fetch for static assets
+
 export const dynamic = "force-dynamic";
 
 // Cache the parsed games in memory
@@ -55,7 +54,7 @@ function shuffleArray<T>(array: T[], seed?: string): T[] {
   return shuffled;
 }
 
-function loadGamesFromDisk(): Game[] {
+async function loadGames(request: NextRequest): Promise<Game[]> {
   const now = Date.now();
 
   // Return cached if available and fresh
@@ -63,33 +62,33 @@ function loadGamesFromDisk(): Game[] {
     return cachedGames;
   }
 
-  const publicDir = join(process.cwd(), "public");
-
   // Try loading games.json first (much faster)
   try {
-    const jsonPath = join(publicDir, "games.json");
-    const jsonContent = readFileSync(jsonPath, "utf8");
-    const data = JSON.parse(jsonContent);
+    const url = new URL('/games.json', request.url);
+    const res = await fetch(url.toString());
+    if (res.ok) {
+      const data = await res.json();
+      const games: Game[] = data.games || [];
+      cachedGames = games;
+      lastParsed = now;
 
-    const games: Game[] = data.games || [];
-    cachedGames = games;
-    lastParsed = now;
-
-    console.log(`[API/games] Loaded ${games.length} games from games.json`);
-    return games;
+      console.log(`[API/games] Loaded ${games.length} games from games.json`);
+      return games;
+    }
   } catch (jsonError) {
     console.warn(
-      "[API/games] Failed to load games.json:",
+      "[API/games] Failed to load games.json via fetch:",
       jsonError,
     );
   }
 
-  // Try loading games.xml as JSON (file may have .xml extension but contain JSON)
+  // Fallback to XML parsing
   try {
-    const xmlPath = join(publicDir, "games.xml");
-    const content = readFileSync(xmlPath, "utf8");
-    
-    // Try to parse as JSON first (games.xml may contain JSON data)
+    const url = new URL('/games.xml', request.url);
+    const res = await fetch(url.toString());
+    const content = await res.text();
+
+    // Try to parse as JSON first (games.xml may contain JSON data sometimes)
     try {
       const data = JSON.parse(content);
       const games: Game[] = data.games || [];
@@ -102,7 +101,6 @@ function loadGamesFromDisk(): Game[] {
       // Not JSON, try parsing as XML below
     }
 
-    // Fallback to XML parsing
     const games: Game[] = [];
     const urlRegex = /<url>([\s\S]*?)<\/url>/g;
     let match;
@@ -155,8 +153,8 @@ export async function GET(request: NextRequest) {
     const randomize = searchParams.get("randomize") === "true";
     const seed = searchParams.get("seed") || undefined;
 
-    // Load games from disk
-    let allGames = loadGamesFromDisk();
+    // Load games via edge-compatible fetch
+    let allGames = await loadGames(request);
 
     if (allGames.length === 0) {
       return NextResponse.json(

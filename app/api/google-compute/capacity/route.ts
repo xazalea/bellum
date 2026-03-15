@@ -1,3 +1,4 @@
+export const runtime = "edge";
 /**
  * Google Compute Capacity Endpoint
  * Get Google compute capacity/availability
@@ -6,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGoogleComputeService } from '@/lib/google-compute';
 
-export const runtime = 'edge';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {

@@ -1,6 +1,7 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+
 
 export async function PUT(req: Request, ctx: { params: { uploadId: string; chunkIndex: string } }) {
     try {

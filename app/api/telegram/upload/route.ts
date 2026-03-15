@@ -1,8 +1,9 @@
+export const runtime = "edge";
 import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, requireTelegramStorageChatId, telegramSendDocumentWithRetry, TelegramError, TelegramErrorType } from "@/lib/server/telegram";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = 'nodejs';
+
 
 export const dynamic = "force-dynamic";
 

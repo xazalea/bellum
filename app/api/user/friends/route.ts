@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { jsonError, requireAuthedUser } from '@/app/api/user/_util';
 // Dynamic import for firebase-admin to avoid Edge Runtime issues
 // import type { Firestore } from 'firebase-admin/firestore';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'edge';
+
 
 type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
 type FriendRequest = {

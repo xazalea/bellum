@@ -1,9 +1,10 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { createSessionCookieFromIdToken, makeSessionCookieOptions, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 // 14 days
-export const runtime = 'edge';
+
 
 const MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 

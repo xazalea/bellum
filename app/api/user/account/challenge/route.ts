@@ -1,7 +1,8 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { adminDb, requireAuthedUser } from '@/app/api/user/_util';
 
-export const runtime = 'edge';
+
 
 function normalizeUsername(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;

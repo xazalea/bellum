@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/server/firebase-admin';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 import { requireAuthedUser } from '@/app/api/user/_util';
 
 // Use nodejs runtime for firebase-admin compatibility
-export const runtime = 'nodejs';
+
 
 export const dynamic = 'force-dynamic';
 

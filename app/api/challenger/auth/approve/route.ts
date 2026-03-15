@@ -1,7 +1,8 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { approveLoginCode, requireFingerprint } from '@/lib/server/challenger-auth';
 
-export const runtime = 'nodejs';
+
 
 export async function POST(req: Request) {
   try {

@@ -1,9 +1,10 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';
 import { getLease, releaseLease } from '@/lib/gpu-rental/store';
 
-export const runtime = 'edge';
+
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {

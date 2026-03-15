@@ -1,8 +1,9 @@
+export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { adminDb, jsonError, requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
-export const runtime = 'edge';
+
 
 function normalizeDomain(input: string): string {
   const d = input.trim().toLowerCase();

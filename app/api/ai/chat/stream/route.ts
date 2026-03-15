@@ -1,8 +1,9 @@
+export const runtime = "edge";
 import { NextRequest } from "next/server";
 import { requireAuthedUser } from "@/app/api/user/_util";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 
-export const runtime = "nodejs";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;

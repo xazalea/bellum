@@ -19,14 +19,14 @@ function log(step, message, data = {}) {
     runId: 'build-debug',
     hypothesisId: 'A'
   };
-  
+
   // Write to log file
   try {
     fs.appendFileSync(logPath, JSON.stringify(logEntry) + '\n');
   } catch (err) {
     // Ignore log write errors
   }
-  
+
   // Also try to send via HTTP (non-blocking)
   try {
     require('http').request({
@@ -35,11 +35,11 @@ function log(step, message, data = {}) {
       path: '/ingest/5cc2c9a0-642b-4978-b141-93157e15cb6e',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
-    }, () => {}).on('error', () => {}).end(JSON.stringify(logEntry));
+    }, () => { }).on('error', () => { }).end(JSON.stringify(logEntry));
   } catch (err) {
     // Ignore HTTP errors
   }
-  
+
   console.log(`[DEBUG ${step}] ${message}`, data);
 }
 
@@ -65,19 +65,18 @@ try {
   }
   // #endregion
 
-  // Step 2: Run Next.js build
+  // Step 2 & 5: Run next-on-pages (which runs vercel build to create .vercel/output)
   // #region agent log
-  log('NEXT_BUILD_START', 'Starting Next.js build');
+  log('NEXT_ON_PAGES_START', 'Running next-on-pages');
   // #endregion
-  
-  process.env.CF_PAGES = '1';
-  execSync('next build --no-lint', { 
+
+  execSync('pnpm exec next-on-pages', {
     stdio: 'inherit',
     env: { ...process.env, CF_PAGES: '1' }
   });
-  
+
   // #region agent log
-  log('NEXT_BUILD_SUCCESS', 'Next.js build completed successfully');
+  log('NEXT_ON_PAGES_SUCCESS', 'Next.js build and next-on-pages completed successfully');
   // #endregion
 
   // Remove not-found function since we have static HTML
@@ -85,7 +84,7 @@ try {
   const notFoundRscFuncDir = path.join(process.cwd(), '.vercel/output/functions/_not-found.rsc.func');
   const notFoundPrerender = path.join(process.cwd(), '.vercel/output/functions/_not-found.prerender-config.json');
   const notFoundPrerenderFallback = path.join(process.cwd(), '.vercel/output/functions/_not-found.prerender-fallback.html');
-  
+
   try {
     if (fs.existsSync(notFoundFuncDir)) {
       fs.rmSync(notFoundFuncDir, { recursive: true });
@@ -105,52 +104,24 @@ try {
     log('REMOVE_NOTFOUND_ERROR', 'Failed to remove _not-found', { error: err.message });
   }
 
-  // Step 3: Create output directory and config
-  // #region agent log
-  log('OUTPUT_DIR_START', 'Creating output directory');
-  // #endregion
-  
-  const outputDir = path.join(process.cwd(), '.vercel/output');
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-  
-  const configPath = path.join(outputDir, 'config.json');
-  fs.writeFileSync(configPath, JSON.stringify({ version: 3, framework: 'nextjs' }));
-  
-  // #region agent log
-  log('OUTPUT_DIR_SUCCESS', 'Output directory created', { configExists: fs.existsSync(configPath) });
-  // #endregion
-
   // Step 4: Copy static assets
   // #region agent log
   log('COPY_STATIC_START', 'Copying static assets');
   // #endregion
-  
+
   execSync('node scripts/copy-static-assets.js', { stdio: 'inherit' });
-  
+
   // #region agent log
   log('COPY_STATIC_SUCCESS', 'Static assets copied');
-  // #endregion
-
-  // Step 5: Run next-on-pages
-  // #region agent log
-  log('NEXT_ON_PAGES_START', 'Running next-on-pages');
-  // #endregion
-  
-  execSync('pnpm exec next-on-pages -s', { stdio: 'inherit' });
-  
-  // #region agent log
-  log('NEXT_ON_PAGES_SUCCESS', 'next-on-pages completed');
   // #endregion
 
   // Step 6: Update routes
   // #region agent log
   log('UPDATE_ROUTES_START', 'Updating routes');
   // #endregion
-  
+
   execSync('node scripts/update-routes.js', { stdio: 'inherit' });
-  
+
   // #region agent log
   log('UPDATE_ROUTES_SUCCESS', 'Routes updated');
   // #endregion
@@ -159,9 +130,9 @@ try {
   // #region agent log
   log('PATCH_ASYNC_HOOKS_START', 'Patching async_hooks imports');
   // #endregion
-  
+
   execSync('node scripts/patch-async-hooks.js', { stdio: 'inherit' });
-  
+
   // #region agent log
   log('PATCH_ASYNC_HOOKS_SUCCESS', 'async_hooks patched');
   // #endregion
@@ -169,20 +140,20 @@ try {
   // #region agent log
   log('BUILD_SUCCESS', 'Build completed successfully');
   // #endregion
-  
+
   console.log('✅ Cloudflare build completed successfully');
   process.exit(0);
-  
+
 } catch (error) {
   // #region agent log
-  log('BUILD_ERROR', 'Build failed', { 
-    error: error.message, 
+  log('BUILD_ERROR', 'Build failed', {
+    error: error.message,
     code: error.code,
     signal: error.signal,
     stack: error.stack?.split('\n').slice(0, 5).join('\n')
   });
   // #endregion
-  
+
   console.error('❌ Build failed:', error.message);
   process.exit(1);
 }

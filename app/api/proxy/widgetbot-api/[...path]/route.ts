@@ -1,10 +1,11 @@
+export const runtime = "edge";
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * Proxy endpoint for Widgetbot API requests
  * This allows the widget to communicate with Discord even if Widgetbot API is blocked
  */
-export const runtime = 'edge';
+
 
 export async function GET(
   request: NextRequest,
