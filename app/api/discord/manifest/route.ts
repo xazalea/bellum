@@ -53,11 +53,9 @@ export async function POST(req: Request) {
       ownerUid: uid,
     };
 
+    const { doc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    await db
-      .collection("discord_manifests")
-      .doc(fileId)
-      .set(manifest);
+    await setDoc(doc(db, "discord_manifests", fileId), manifest);
 
     return Response.json({ fileId, manifest });
   } catch (e: any) {
@@ -80,13 +78,15 @@ export async function GET(req: Request) {
       return Response.json({ error: "Missing fileId parameter" }, { status: 400 });
     }
 
-    const doc = await (await adminDb()).collection("discord_manifests").doc(fileId).get();
+    const { doc, getDoc } = await import('firebase/firestore');
+    const db = await adminDb();
+    const manifestDocSnap = await getDoc(doc(db, "discord_manifests", fileId));
 
-    if (!doc.exists) {
+    if (!manifestDocSnap.exists()) {
       return Response.json({ error: "Manifest not found" }, { status: 404 });
     }
 
-    const manifest = doc.data() as DiscordManifest;
+    const manifest = manifestDocSnap.data() as DiscordManifest;
 
     // Verify ownership
     if (manifest.ownerUid !== uid) {

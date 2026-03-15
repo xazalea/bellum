@@ -29,14 +29,16 @@ export async function GET(req: Request) {
       return Response.json({ error: "Missing messageId parameter" }, { status: 400 });
     }
 
+    const { doc, getDoc } = await import('firebase/firestore');
     // Fetch metadata from Firebase
-    const doc = await (await adminDb()).collection("discord_files").doc(messageId).get();
+    const db = await adminDb();
+    const metaSnap = await getDoc(doc(db, "discord_files", messageId));
 
-    if (!doc.exists) {
+    if (!metaSnap.exists()) {
       return Response.json({ error: "File not found" }, { status: 404 });
     }
 
-    const data = doc.data();
+    const data = metaSnap.data();
     if (!data) {
       return Response.json({ error: "File metadata missing" }, { status: 404 });
     }
@@ -51,10 +53,10 @@ export async function GET(req: Request) {
     if (data.expiresAt && data.expiresAt < now) {
       // URL has expired - this should trigger a refresh mechanism
       // For now, return an error indicating the URL needs to be refreshed
-      return Response.json({ 
-        error: "CDN URL expired", 
+      return Response.json({
+        error: "CDN URL expired",
         messageId,
-        expired: true 
+        expired: true
       }, { status: 410 });
     }
 
@@ -64,10 +66,7 @@ export async function GET(req: Request) {
       expectedSha256: data.sha256,
     });
 
-    // Convert Uint8Array to Buffer for Node.js runtime
-    const buffer = Buffer.from(bytes);
-
-    return new Response(buffer, {
+    return new Response(bytes as any, {
       status: 200,
       headers: {
         "Content-Type": "application/octet-stream",

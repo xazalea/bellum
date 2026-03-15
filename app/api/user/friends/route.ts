@@ -1,8 +1,7 @@
 export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { jsonError, requireAuthedUser } from '@/app/api/user/_util';
-// Dynamic import for firebase-admin to avoid Edge Runtime issues
-// import type { Firestore } from 'firebase-admin/firestore';
+
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 
@@ -42,17 +41,19 @@ function normalizeHandle(input: string): string {
 }
 
 async function getHandleForUid(db: any, uid: string): Promise<string | null> {
-  const snap = await db.collection('users').doc(uid).get();
-  if (!snap.exists) return null;
+  const { doc, getDoc } = await import('firebase/firestore');
+  const snap = await getDoc(doc(db, 'users', uid));
+  if (!snap.exists()) return null;
   const d = snap.data() as any;
   const h = typeof d?.handle === 'string' ? d.handle : null;
   return h ? normalizeHandle(h) : null;
 }
 
 async function resolveUidByHandle(db: any, handleInput: string): Promise<string> {
+  const { doc, getDoc } = await import('firebase/firestore');
   const handle = normalizeHandle(handleInput);
-  const snap = await db.collection('handles').doc(handle).get();
-  if (!snap.exists) throw new Error('User not found');
+  const snap = await getDoc(doc(db, 'handles', handle));
+  if (!snap.exists()) throw new Error('User not found');
   const uid = String((snap.data() as any)?.uid || '');
   if (!uid) throw new Error('User not found');
   return uid;
@@ -61,21 +62,29 @@ async function resolveUidByHandle(db: any, handleInput: string): Promise<string>
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
+    const { collection, getDocs, query, where } = await import('firebase/firestore');
     // Dynamic import for Edge Runtime compatibility
     const { adminDb } = await import('@/app/api/user/_util');
     const db = await adminDb();
 
-    const reqSnap = await db
-      .collection('friend_requests')
-      .where('toUid', '==', uid)
-      .where('status', '==', 'pending')
-      .get();
+    const reqSnap = await getDocs(
+      query(
+        collection(db, 'friend_requests'),
+        where('toUid', '==', uid),
+        where('status', '==', 'pending')
+      )
+    );
 
     const incoming = reqSnap.docs
       .map((d) => ({ id: d.id, ...(d.data() as any) }) as FriendRequest)
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-    const fSnap = await db.collection('friendships').where('users', 'array-contains', uid).get();
+    const fSnap = await getDocs(
+      query(
+        collection(db, 'friendships'),
+        where('users', 'array-contains', uid)
+      )
+    );
     const friends = fSnap.docs
       .map((d) => ({ id: d.id, ...(d.data() as any) }) as Friendship)
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -96,8 +105,8 @@ export async function POST(req: Request) {
       | { action: 'accept'; requestId: string }
       | { action: 'decline'; requestId: string };
 
-    // Dynamic import for Edge Runtime compatibility
     const { adminDb } = await import('@/app/api/user/_util');
+    const { doc, getDoc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
     const now = Date.now();
 
@@ -108,7 +117,7 @@ export async function POST(req: Request) {
       if (fromUid === toUid) throw new Error("You can't friend yourself.");
       const id = requestId(fromUid, toUid);
       const fromHandle = await getHandleForUid(db, fromUid);
-      await db.collection('friend_requests').doc(id).set(
+      await setDoc(doc(db, 'friend_requests', id),
         {
           fromUid,
           toUid,
@@ -125,9 +134,9 @@ export async function POST(req: Request) {
     if (body.action === 'accept') {
       const id = String(body.requestId || '');
       if (!id) throw new Error('Missing requestId');
-      const rRef = db.collection('friend_requests').doc(id);
-      const snap = await rRef.get();
-      if (!snap.exists) throw new Error('Request not found');
+      const rRef = doc(db, 'friend_requests', id);
+      const snap = await getDoc(rRef);
+      if (!snap.exists()) throw new Error('Request not found');
       const r = snap.data() as any;
       if (r?.toUid !== uid) throw new Error('Not allowed');
       const fromUid = String(r?.fromUid || '');
@@ -136,7 +145,7 @@ export async function POST(req: Request) {
       const fromHandle = typeof r?.fromHandle === 'string' ? r.fromHandle : null;
       const toHandle = typeof r?.toHandle === 'string' ? r.toHandle : null;
       const fId = friendshipId(fromUid, toUid);
-      await db.collection('friendships').doc(fId).set(
+      await setDoc(doc(db, 'friendships', fId),
         {
           users: [fromUid, toUid].sort() as [string, string],
           handles: [fromHandle || '', toHandle || ''].sort() as any,
@@ -144,19 +153,19 @@ export async function POST(req: Request) {
         },
         { merge: true },
       );
-      await rRef.set({ status: 'accepted', resolvedAt: now }, { merge: true });
+      await setDoc(rRef, { status: 'accepted', resolvedAt: now }, { merge: true });
       return new NextResponse(null, { status: 204 });
     }
 
     if (body.action === 'decline') {
       const id = String((body as any).requestId || '');
       if (!id) throw new Error('Missing requestId');
-      const rRef = db.collection('friend_requests').doc(id);
-      const snap = await rRef.get();
-      if (!snap.exists) throw new Error('Request not found');
+      const rRef = doc(db, 'friend_requests', id);
+      const snap = await getDoc(rRef);
+      if (!snap.exists()) throw new Error('Request not found');
       const r = snap.data() as any;
       if (r?.toUid !== uid) throw new Error('Not allowed');
-      await rRef.set({ status: 'declined', resolvedAt: now }, { merge: true });
+      await setDoc(rRef, { status: 'declined', resolvedAt: now }, { merge: true });
       return new NextResponse(null, { status: 204 });
     }
 

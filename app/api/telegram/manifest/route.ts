@@ -60,8 +60,9 @@ export async function POST(req: Request) {
 
     const { fileId, messageId } = await telegramSendDocument({ token, chatId, caption, filename, bytes, mimeType: "application/json" });
 
+    const { doc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    await db.collection("telegram_files").doc(fileId).set(
+    await setDoc(doc(db, "telegram_files", fileId),
       {
         ownerUid: uid,
         kind: "manifest",
@@ -90,8 +91,10 @@ export async function GET(req: Request) {
 
     const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: "telegram_manifest_fetch", limit: 240, windowMs: 60_000, key: uid });
-    const snap = await (await adminDb()).collection("telegram_files").doc(fileId).get();
-    if (!snap.exists) return Response.json({ error: "not_found" }, { status: 404 });
+    const { doc, getDoc } = await import('firebase/firestore');
+    const db = await adminDb();
+    const snap = await getDoc(doc(db, "telegram_files", fileId));
+    if (!snap.exists()) return Response.json({ error: "not_found" }, { status: 404 });
     const meta = snap.data() as any;
     if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });
 

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 import { requireAuthedUser } from '@/app/api/user/_util';
 
-// Use nodejs runtime for firebase-admin compatibility
+
 
 
 export const dynamic = 'force-dynamic';

@@ -7,8 +7,9 @@ import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export async function GET() {
   try {
+    const { collection, getDocs, query, where } = await import('firebase/firestore');
     const db = await adminDb();
-    const snap = await db.collection('game_repositories').where('isPublic', '==', true).get();
+    const snap = await getDocs(query(collection(db, 'game_repositories'), where('isPublic', '==', true)));
     const out = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     return NextResponse.json(out, { status: 200 });
   } catch (e: any) {
@@ -26,8 +27,9 @@ export async function POST(req: Request) {
     const repo = body.repo as any;
     if (!repo?.name || !repo?.description) throw new Error('Invalid repo');
 
+    const { collection, addDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    const ref = await db.collection('game_repositories').add({
+    const ref = await addDoc(collection(db, 'game_repositories'), {
       ...repo,
       ownerUid: uid,
       ownerName: typeof name === 'string' && name ? name : null,

@@ -11,13 +11,14 @@ export async function DELETE(req: Request, ctx: { params: { id: string } }) {
     const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: 'archives_delete', limit: 60, windowMs: 60_000, key: uid });
 
+    const { collection, doc, getDoc, deleteDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    const ref = db.collection('archives').doc(ctx.params.id);
-    const snap = await ref.get();
-    if (!snap.exists) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    const ref = doc(db, 'archives', ctx.params.id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     const data = snap.data() as any;
     if (data?.publisherUid && data.publisherUid !== uid) throw new Error('Not allowed');
-    await ref.delete();
+    await deleteDoc(ref);
     return new NextResponse(null, { status: 204 });
   } catch (e: any) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);

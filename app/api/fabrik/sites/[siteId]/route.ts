@@ -21,11 +21,12 @@ function normalizeDomain(input: string): string {
 }
 
 async function requireOwnedSite(req: Request, siteId: string) {
+  const { doc, getDoc } = await import('firebase/firestore');
   const { uid } = await requireAuthedUser(req);
   const db = await adminDb();
-  const ref = db.collection('xfabric_sites').doc(siteId);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error('not_found');
+  const ref = doc(db, 'xfabric_sites', siteId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('not_found');
   const site = snap.data() as any;
   if (String(site?.ownerUid || '') !== uid) throw new Error('forbidden');
   return { uid, ref, site };
@@ -45,10 +46,10 @@ function normalizeRules(raw: any): SiteRules {
     .filter((r: { from: string; to: string; status: number }) => r.from.length > 0 && r.to.length > 0);
 
   out.redirects = normalizedRedirects.map((r: { from: string; to: string; status: number }) => ({
-      from: r.from.startsWith('/') ? r.from : `/${r.from}`,
-      to: r.to,
-      status: r.status === 301 || r.status === 302 || r.status === 307 || r.status === 308 ? r.status : 302,
-    }));
+    from: r.from.startsWith('/') ? r.from : `/${r.from}`,
+    to: r.to,
+    status: r.status === 301 || r.status === 302 || r.status === 307 || r.status === 308 ? r.status : 302,
+  }));
 
   const headersIn = Array.isArray(raw?.headers) ? raw.headers : [];
   const normalizedHeaders: Array<{ name: string; value: string }> = headersIn
@@ -84,7 +85,8 @@ export async function PATCH(req: Request, ctx: { params: { siteId: string } }) {
       patch.rules = normalizeRules((body as any).rules);
     }
 
-    await ref.set(patch, { merge: true });
+    const { setDoc } = await import('firebase/firestore');
+    await setDoc(ref, patch, { merge: true });
     return NextResponse.json({ id: ref.id, ...(site as any), ...patch }, { status: 200 });
   } catch (e: any) {
     const status = e?.message === 'not_found' ? 404 : e?.message === 'forbidden' ? 403 : e?.message?.includes('unauthenticated') ? 401 : 400;
@@ -99,7 +101,8 @@ export async function DELETE(req: Request, ctx: { params: { siteId: string } }) 
     if (!siteId) throw new Error('missing_siteId');
     const { uid, ref } = await requireOwnedSite(req, siteId);
     rateLimit(req, { scope: 'fabrik_sites_delete', limit: 30, windowMs: 60_000, key: uid });
-    await ref.delete();
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(ref);
     return new NextResponse(null, { status: 204 });
   } catch (e: any) {
     const status = e?.message === 'not_found' ? 404 : e?.message === 'forbidden' ? 403 : e?.message?.includes('unauthenticated') ? 401 : 400;

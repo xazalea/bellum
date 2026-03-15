@@ -16,11 +16,12 @@ function normalizeDomain(input: string): string {
 }
 
 async function requireOwnedSite(req: Request, siteId: string) {
+  const { doc, getDoc } = await import('firebase/firestore');
   const { uid } = await requireAuthedUser(req);
   const db = await adminDb();
-  const ref = db.collection('xfabric_sites').doc(siteId);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error('not_found');
+  const ref = doc(db, 'xfabric_sites', siteId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('not_found');
   const site = snap.data() as any;
   if (String(site?.ownerUid || '') !== uid) throw new Error('forbidden');
   return { uid, db, ref, site };
@@ -38,7 +39,8 @@ export async function PATCH(req: Request, ctx: { params: { siteId: string } }) {
     const domainRaw = body.domain === null ? '' : String(body.domain || '').trim();
     const domain = domainRaw ? normalizeDomain(domainRaw) : null;
 
-    await ref.set({ domain, updatedAt: Date.now() }, { merge: true });
+    const { setDoc } = await import('firebase/firestore');
+    await setDoc(ref, { domain, updatedAt: Date.now() }, { merge: true });
     return NextResponse.json({ id: ref.id, ...(site as any), domain }, { status: 200 });
   } catch (e: any) {
     const status = e?.message === 'not_found' ? 404 : e?.message === 'forbidden' ? 403 : e?.message?.includes('unauthenticated') ? 401 : 400;
@@ -53,7 +55,8 @@ export async function DELETE(req: Request, ctx: { params: { siteId: string } }) 
     if (!siteId) throw new Error('missing_siteId');
     const { uid, ref } = await requireOwnedSite(req, siteId);
     rateLimit(req, { scope: 'xfabric_sites_delete', limit: 30, windowMs: 60_000, key: uid });
-    await ref.delete();
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(ref);
     return new NextResponse(null, { status: 204 });
   } catch (e: any) {
     const status = e?.message === 'not_found' ? 404 : e?.message === 'forbidden' ? 403 : e?.message?.includes('unauthenticated') ? 401 : 400;

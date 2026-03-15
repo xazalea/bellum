@@ -26,13 +26,16 @@ type SiteRecord = {
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
+    const { collection, getDocs, query, where, orderBy, limit } = await import('firebase/firestore');
     const db = await adminDb();
-    const snap = await db
-      .collection('xfabric_sites')
-      .where('ownerUid', '==', uid)
-      .orderBy('createdAt', 'desc')
-      .limit(50)
-      .get();
+    const snap = await getDocs(
+      query(
+        collection(db, 'xfabric_sites'),
+        where('ownerUid', '==', uid),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      )
+    );
 
     const sites = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as SiteRecord[];
     return NextResponse.json({ sites }, { status: 200 });
@@ -52,10 +55,12 @@ export async function POST(req: Request) {
     const bundleFileId = String(body.bundleFileId || '');
     if (!bundleFileId) throw new Error('Missing bundleFileId');
 
+    const { collection, doc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
     const createdAt = Date.now();
-    const ref = db.collection('xfabric_sites').doc();
-    await ref.set(
+    const ref = doc(collection(db, 'xfabric_sites'));
+    await setDoc(
+      ref,
       {
         ownerUid: uid,
         domain,

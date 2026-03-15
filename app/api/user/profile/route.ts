@@ -14,9 +14,10 @@ function normalizeHandle(input: string): string {
 export async function GET(req: Request) {
   try {
     const { uid, email, name } = await requireAuthedUser(req);
+    const { doc, getDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    const snap = await db.collection('users').doc(uid).get();
-    const d = snap.exists ? (snap.data() as any) : {};
+    const snap = await getDoc(doc(db, 'users', uid));
+    const d = snap.exists() ? (snap.data() as any) : {};
     const handle = typeof d?.handle === 'string' ? d.handle : null;
     return NextResponse.json({ uid, email: email ?? null, name: name ?? null, handle }, { status: 200 });
   } catch (e: any) {
@@ -32,12 +33,13 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as { handle?: string | null };
     const handleRaw = body.handle;
     const nextHandle = handleRaw === null ? null : normalizeHandle(String(handleRaw || ''));
+    const { doc, runTransaction } = await import('firebase/firestore');
     const db = await adminDb();
 
-    await db.runTransaction(async (tx) => {
-      const userRef = db.collection('users').doc(uid);
+    await runTransaction(db, async (tx) => {
+      const userRef = doc(db, 'users', uid);
       const userSnap = await tx.get(userRef);
-      const prev = userSnap.exists ? (userSnap.data() as any) : {};
+      const prev = userSnap.exists() ? (userSnap.data() as any) : {};
       const prevHandle = typeof prev?.handle === 'string' ? normalizeHandle(prev.handle) : null;
 
       // No change
@@ -45,17 +47,17 @@ export async function POST(req: Request) {
 
       // Release old handle mapping
       if (prevHandle) {
-        const prevRef = db.collection('handles').doc(prevHandle);
+        const prevRef = doc(db, 'handles', prevHandle);
         const prevMap = await tx.get(prevRef);
-        if (prevMap.exists && String((prevMap.data() as any)?.uid || '') === uid) {
+        if (prevMap.exists() && String((prevMap.data() as any)?.uid || '') === uid) {
           tx.delete(prevRef);
         }
       }
 
       if (nextHandle) {
-        const hRef = db.collection('handles').doc(nextHandle);
+        const hRef = doc(db, 'handles', nextHandle);
         const hSnap = await tx.get(hRef);
-        if (hSnap.exists) {
+        if (hSnap.exists()) {
           const owner = String((hSnap.data() as any)?.uid || '');
           if (owner && owner !== uid) throw new Error('Handle already taken');
         }

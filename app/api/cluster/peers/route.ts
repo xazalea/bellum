@@ -4,7 +4,7 @@ import { listActivePeersForUser, prunePeers } from '@/lib/cluster/presence-store
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { adminDb } from '@/app/api/user/_util';
 
-// Use nodejs runtime for firebase-admin compatibility
+
 
 
 const ACTIVE_WINDOW_MS = 60_000;
@@ -34,11 +34,13 @@ export async function GET(req: Request) {
 
   let effectiveUserId = uid;
   try {
-     const userSnap = await (await adminDb()).collection('users').doc(uid).get();
-     const handle = userSnap.exists ? (userSnap.data() as any)?.handle : null;
-     if (handle) effectiveUserId = handle;
+    const { doc, getDoc } = await import('firebase/firestore');
+    const db = await adminDb();
+    const userSnap = await getDoc(doc(db, 'users', uid));
+    const handle = userSnap.exists() ? (userSnap.data() as any)?.handle : null;
+    if (handle) effectiveUserId = handle;
   } catch {
-     // ignore
+    // ignore
   }
 
   prunePeers(ACTIVE_WINDOW_MS);

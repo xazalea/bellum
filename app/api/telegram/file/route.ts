@@ -16,14 +16,16 @@ export async function GET(req: Request) {
     const fileId = searchParams.get("file_id") || "";
     if (!fileId) return Response.json({ error: "file_id required" }, { status: 400 });
 
+    const { doc, getDoc } = await import('firebase/firestore');
     // Enforce ownership.
-    const snap = await (await adminDb()).collection("telegram_files").doc(fileId).get();
-    if (!snap.exists) return Response.json({ error: "not_found" }, { status: 404 });
+    const db = await adminDb();
+    const snap = await getDoc(doc(db, "telegram_files", fileId));
+    if (!snap.exists()) return Response.json({ error: "not_found" }, { status: 404 });
     const meta = snap.data() as any;
     if (String(meta?.ownerUid || "") !== uid) return Response.json({ error: "forbidden" }, { status: 403 });
 
-    const bytes = await telegramDownloadFileBytesWithRetry({ 
-      token, 
+    const bytes = await telegramDownloadFileBytesWithRetry({
+      token,
       fileId,
       expectedSha256: meta?.sha256 // Verify hash if stored
     });

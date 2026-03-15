@@ -33,24 +33,28 @@ export async function POST(req: Request) {
     const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: 'account_route', limit: 60, windowMs: 60_000, key: `${action || 'unknown'}:${name}` });
 
+    const { doc, getDoc, writeBatch, collection } = await import('firebase/firestore');
+    const { adminDb } = await import('@/app/api/user/_util');
+    const db = await adminDb();
+    rateLimit(req, { scope: 'account_route', limit: 60, windowMs: 60_000, key: `${action || 'unknown'}:${name}` });
+
     if (action === 'create') {
-      const doc = (await adminDb()).collection('accounts').doc(name);
-      const snapshot = await doc.get();
-      if (snapshot.exists) return NextResponse.json({ error: 'username_taken' }, { status: 409 });
-      
-      // Update account ownership and sync profile/handle
-      const db = await adminDb();
-      const batch = db.batch();
-      batch.set(doc, { username: name, ownerUid: uid, createdAt: Date.now() });
-      batch.set((await adminDb()).collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
-      batch.set((await adminDb()).collection('handles').doc(name), { uid, updatedAt: Date.now() });
+      const accountRef = doc(db, 'accounts', name);
+      const snapshot = await getDoc(accountRef);
+      if (snapshot.exists()) return NextResponse.json({ error: 'username_taken' }, { status: 409 });
+
+      const batch = writeBatch(db);
+      batch.set(accountRef, { username: name, ownerUid: uid, createdAt: Date.now() });
+      batch.set(doc(db, 'users', uid), { handle: name, updatedAt: Date.now() }, { merge: true });
+      batch.set(doc(db, 'handles', name), { uid, updatedAt: Date.now() });
       await batch.commit();
-      
+
       return NextResponse.json({ status: 'created' });
     }
 
-    const acctDoc = await (await adminDb()).collection('accounts').doc(name).get();
-    if (!acctDoc.exists) {
+    const acctRef = doc(db, 'accounts', name);
+    const acctDoc = await getDoc(acctRef);
+    if (!acctDoc.exists()) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
     const acct = acctDoc.data() as { ownerUid: string };
@@ -59,29 +63,31 @@ export async function POST(req: Request) {
       if (acct.ownerUid === uid) {
         return NextResponse.json({ status: 'ok' });
       }
-      const challengeDoc = (await adminDb()).collection('account_challenges').doc(name);
+      const challengeDocRef = doc(db, 'account_challenges', name);
       const challengeCode = generateCode();
-      await challengeDoc.set({
+      await import('firebase/firestore').then(({ setDoc }) => setDoc(challengeDocRef, {
         username: name,
         code: challengeCode,
         newUid: uid,
         createdAt: Date.now(),
         expiresAt: Date.now() + CODE_TTL_MS,
-      });
+      }));
       return NextResponse.json({ status: 'challenge_created' });
     }
 
     if (action === 'verify') {
       if (!code) return NextResponse.json({ error: 'code_required' }, { status: 400 });
-      const challengeDoc = await (await adminDb()).collection('account_challenges').doc(name).get();
-      if (!challengeDoc.exists) return NextResponse.json({ error: 'challenge_missing' }, { status: 404 });
+      const challengeDocRef = doc(db, 'account_challenges', name);
+      const challengeDoc = await getDoc(challengeDocRef);
+      if (!challengeDoc.exists()) return NextResponse.json({ error: 'challenge_missing' }, { status: 404 });
       const challenge = challengeDoc.data() as {
         code: string;
         expiresAt: number;
         newUid: string;
       };
       if (challenge.expiresAt < Date.now()) {
-        await challengeDoc.ref.delete();
+        const { deleteDoc } = await import('firebase/firestore');
+        await deleteDoc(challengeDocRef);
         return NextResponse.json({ error: 'challenge_expired' }, { status: 410 });
       }
       if (challenge.newUid !== uid) {
@@ -90,17 +96,16 @@ export async function POST(req: Request) {
       if (challenge.code !== code.trim()) {
         return NextResponse.json({ error: 'invalid_code' }, { status: 400 });
       }
-      
-      const db = await adminDb();
-      const batch = db.batch();
+
+      const batch = writeBatch(db);
       // Transfer account ownership
-      batch.set((await adminDb()).collection('accounts').doc(name), { ownerUid: uid, lastSwitchedAt: Date.now() }, { merge: true });
+      batch.set(doc(db, 'accounts', name), { ownerUid: uid, lastSwitchedAt: Date.now() }, { merge: true });
       // Sync profile and handle index
-      batch.set((await adminDb()).collection('users').doc(uid), { handle: name, updatedAt: Date.now() }, { merge: true });
-      batch.set((await adminDb()).collection('handles').doc(name), { uid, updatedAt: Date.now() });
+      batch.set(doc(db, 'users', uid), { handle: name, updatedAt: Date.now() }, { merge: true });
+      batch.set(doc(db, 'handles', name), { uid, updatedAt: Date.now() });
       // Delete challenge
-      batch.delete(challengeDoc.ref);
-      
+      batch.delete(challengeDocRef);
+
       await batch.commit();
 
       return NextResponse.json({ status: 'ok' });

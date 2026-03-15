@@ -7,8 +7,9 @@ import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 
 export async function GET() {
   try {
+    const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
     const db = await adminDb();
-    const snap = await db.collection('archives').orderBy('publishedAt', 'desc').get();
+    const snap = await getDocs(query(collection(db, 'archives'), orderBy('publishedAt', 'desc')));
     const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     return NextResponse.json(items, { status: 200 });
   } catch (e: any) {
@@ -26,9 +27,10 @@ export async function POST(req: Request) {
     const entry = body.entry as any;
     if (!entry?.fileId || !entry?.name) throw new Error('Invalid entry');
 
+    const { collection, addDoc } = await import('firebase/firestore');
     const db = await adminDb();
     const now = Date.now();
-    const ref = await db.collection('archives').add({
+    const ref = await addDoc(collection(db, 'archives'), {
       ...entry,
       publisherUid: uid,
       publishedAt: now,

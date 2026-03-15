@@ -1,7 +1,6 @@
 export const runtime = "edge";
 import { NextResponse } from 'next/server';
-// Dynamic import for firebase-admin to avoid Edge Runtime issues
-// import { getAdminDb } from '@/lib/server/firebase-admin';
+
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 

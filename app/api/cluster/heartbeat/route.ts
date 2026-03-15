@@ -57,11 +57,13 @@ export async function POST(req: Request) {
     // Resolve handle (username) if available to group devices
     let effectiveUserId = uid;
     try {
-       const userSnap = await (await adminDb()).collection('users').doc(uid).get();
-       const handle = userSnap.exists ? (userSnap.data() as any)?.handle : null;
-       if (handle) effectiveUserId = handle;
+      const { doc, getDoc } = await import('firebase/firestore');
+      const db = await adminDb();
+      const userSnap = await getDoc(doc(db, 'users', uid));
+      const handle = userSnap.exists() ? (userSnap.data() as any)?.handle : null;
+      if (handle) effectiveUserId = handle;
     } catch {
-       // ignore firestore error, fallback to uid
+      // ignore firestore error, fallback to uid
     }
 
     upsertPeer({

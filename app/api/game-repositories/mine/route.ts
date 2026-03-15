@@ -8,8 +8,9 @@ export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
 
+    const { collection, getDocs, query, where } = await import('firebase/firestore');
     const db = await adminDb();
-    const snap = await db.collection('game_repositories').where('ownerUid', '==', uid).get();
+    const snap = await getDocs(query(collection(db, 'game_repositories'), where('ownerUid', '==', uid)));
     const out = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     return NextResponse.json(out, { status: 200 });
   } catch (e: any) {

@@ -20,14 +20,15 @@ type InstalledApp = {
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
+    const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
     const db = await adminDb();
 
-    const snap = await db
-      .collection('users')
-      .doc(uid)
-      .collection('apps')
-      .orderBy('installedAt', 'desc')
-      .get();
+    const snap = await getDocs(
+      query(
+        collection(db, 'users', uid, 'apps'),
+        orderBy('installedAt', 'desc')
+      )
+    );
 
     const apps = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
     return NextResponse.json(apps, { status: 200 });
@@ -46,9 +47,10 @@ export async function POST(req: Request) {
     if (!app) throw new Error('Missing app');
     if (!app.fileId || !app.name) throw new Error('Invalid app');
 
+    const { collection, doc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    const ref = db.collection('users').doc(uid).collection('apps').doc();
-    await ref.set(app, { merge: true });
+    const ref = doc(collection(db, 'users', uid, 'apps'));
+    await setDoc(ref, app, { merge: true });
     return NextResponse.json({ id: ref.id }, { status: 200 });
   } catch (e: any) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);

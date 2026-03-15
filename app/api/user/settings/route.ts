@@ -14,14 +14,15 @@ const DEFAULTS: ChallengerUserSettings = { clusterParticipation: true };
 export async function GET(req: Request) {
   try {
     const { uid } = await requireAuthedUser(req);
+    const { doc, getDoc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    const ref = db.collection('users').doc(uid).collection('settings').doc('main');
-    const snap = await ref.get();
-    const data = (snap.exists ? (snap.data() as any) : {}) || {};
+    const ref = doc(db, 'users', uid, 'settings', 'main');
+    const snap = await getDoc(ref);
+    const data = (snap.exists() ? (snap.data() as any) : {}) || {};
     const out: ChallengerUserSettings = {
       clusterParticipation: typeof data.clusterParticipation === 'boolean' ? data.clusterParticipation : true,
     };
-    if (!snap.exists) await ref.set(DEFAULTS, { merge: true });
+    if (!snap.exists()) await setDoc(ref, DEFAULTS, { merge: true });
     return NextResponse.json(out, { status: 200 });
   } catch (e: any) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
@@ -36,8 +37,9 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as Partial<ChallengerUserSettings>;
     const patch: Partial<ChallengerUserSettings> = {};
     if (typeof body.clusterParticipation === 'boolean') patch.clusterParticipation = body.clusterParticipation;
+    const { doc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    await db.collection('users').doc(uid).collection('settings').doc('main').set(patch, { merge: true });
+    await setDoc(doc(db, 'users', uid, 'settings', 'main'), patch, { merge: true });
     return new NextResponse(null, { status: 204 });
   } catch (e: any) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);

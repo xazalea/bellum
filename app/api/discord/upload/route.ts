@@ -53,8 +53,9 @@ export async function POST(req: Request) {
     });
 
     const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+    const { doc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    await db.collection("discord_files").doc(messageId).set(
+    await setDoc(doc(db, "discord_files", messageId),
       {
         ownerUid: uid,
         kind: chunkIndex !== null ? "chunk" : "file",

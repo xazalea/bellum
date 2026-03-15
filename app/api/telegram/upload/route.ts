@@ -65,8 +65,9 @@ export async function POST(req: Request) {
     });
 
     // Record ownership so clients can only access their own objects.
+    const { doc, setDoc } = await import('firebase/firestore');
     const db = await adminDb();
-    await db.collection("telegram_files").doc(fileId).set(
+    await setDoc(doc(db, "telegram_files", fileId),
       {
         ownerUid: uid,
         kind: chunkIndex !== null ? "chunk" : "file",

@@ -8,10 +8,11 @@ import { rateLimit, requireSameOrigin } from '@/lib/server/security';
 export async function GET(req: Request, ctx: { params: { appId: string } }) {
   try {
     const { uid } = await requireAuthedUser(req);
+    const { doc, getDoc } = await import('firebase/firestore');
     const { appId } = ctx.params;
     const db = await adminDb();
-    const snap = await db.collection('users').doc(uid).collection('apps').doc(appId).get();
-    if (!snap.exists) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    const snap = await getDoc(doc(db, 'users', uid, 'apps', appId));
+    if (!snap.exists()) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     return NextResponse.json({ id: snap.id, ...(snap.data() as any) }, { status: 200 });
   } catch (e: any) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
@@ -23,9 +24,10 @@ export async function DELETE(req: Request, ctx: { params: { appId: string } }) {
     requireSameOrigin(req);
     const { uid } = await requireAuthedUser(req);
     rateLimit(req, { scope: 'user_apps_delete', limit: 60, windowMs: 60_000, key: uid });
+    const { doc, deleteDoc } = await import('firebase/firestore');
     const { appId } = ctx.params;
     const db = await adminDb();
-    await db.collection('users').doc(uid).collection('apps').doc(appId).delete();
+    await deleteDoc(doc(db, 'users', uid, 'apps', appId));
     return new NextResponse(null, { status: 204 });
   } catch (e: any) {
     return jsonError(e, e?.message?.includes('unauthenticated') ? 401 : 400);
