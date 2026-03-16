@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { GamePlayer } from '@/components/game/game-player';
