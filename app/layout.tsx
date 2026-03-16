@@ -1,28 +1,24 @@
-import type { Metadata } from "next";
-import { Inter, IBM_Plex_Mono } from "next/font/google";
-import { Providers } from "@/components/providers";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { AuthProvider } from '@/components/providers/auth-provider';
+import { ThemeProvider } from '@/components/providers/theme-provider';
+import { GameProvider } from '@/components/providers/game-provider';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 
 const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-mono",
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "Challenger Deep",
-  description: "Play 20,000+ games instantly. Run Android and Windows apps in your browser.",
-  keywords: ["games", "android", "windows", "emulator", "browser games", "cloud gaming"],
-  authors: [{ name: "Challenger Deep" }],
+  title: 'Challenger – Play Any Game, Any Device',
+  description: 'A high-performance gaming platform supporting HTML5, Android APK, and Windows EXE games in the browser.',
   openGraph: {
-    title: "Challenger Deep",
-    description: "Play 20,000+ games instantly. Run Android and Windows apps in your browser.",
-    type: "website",
+    title: 'Challenger – Play Any Game, Any Device',
+    description: 'HTML5, Android, and Windows games running instantly in your browser.',
+    type: 'website',
   },
 };
 
@@ -32,11 +28,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${ibmPlexMono.variable} antialiased`}>
-        <Providers>
-          {children}
-        </Providers>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
+        <AuthProvider>
+          <ThemeProvider>
+            <GameProvider>
+              <div className="min-h-screen flex flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </div>
+            </GameProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );
