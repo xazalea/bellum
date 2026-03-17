@@ -109,6 +109,7 @@ const DEFAULT_CSP_CONFIG: ContentSecurityPolicyConfig = {
     'frame-src': [
       "'self'",
       'blob:',
+      'https://html5.gamedistribution.com',
     ],
     'object-src': ["'none'"],
     'base-uri': ["'self'"],

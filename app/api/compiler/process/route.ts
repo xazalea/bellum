@@ -1,28 +1,24 @@
 export const runtime = "edge";
 /**
  * Compiler Process API
- * Bridges frontend to .NET backend for APK/EXE compilation
+ * Handles APK/EXE registration for client-side WASM processing.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 
-
 export const dynamic = 'force-dynamic';
 
-// Backend URL - configurable via environment
-const BACKEND_URL = process.env.COMPILER_BACKEND_URL || 'http://localhost:5000';
-
 /**
- * Process APK/EXE file through the backend compiler
+ * Register APK/EXE file for client-side processing
  * POST /api/compiler/process
- * 
+ *
  * Body: { file: base64, fileName: string, type: 'apk' | 'exe' }
- * Returns: { compiledUrl: string, metadata: object }
+ * Returns: { success: true, clientSide: true, fileName, type, processedAt, message }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { file, fileName, type, options } = body;
+    const { file, fileName, type } = body;
 
     if (!file || !fileName || !type) {
       return NextResponse.json(
@@ -31,7 +27,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
     if (!['apk', 'exe'].includes(type)) {
       return NextResponse.json(
         { error: 'Invalid file type. Must be apk or exe' },
@@ -39,37 +34,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[Compiler] Processing ${fileName} (${type})`);
-
-    // Forward to backend compiler
-    const response = await fetch(`${BACKEND_URL}/api/emulator/extract-app`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: `data:application/octet-stream;base64,${file}`,
-        appType: type,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('[Compiler] Backend error:', error);
-      return NextResponse.json(
-        { error: 'Compiler backend error', details: error },
-        { status: 502 }
-      );
-    }
-
-    const result = await response.json();
-
     return NextResponse.json({
       success: true,
-      compiled: result,
+      clientSide: true,
       fileName,
       type,
       processedAt: new Date().toISOString(),
+      message: 'Processing client-side via WASM runtime',
     });
 
   } catch (error: any) {
@@ -86,28 +57,5 @@ export async function POST(request: NextRequest) {
  * GET /api/compiler/process
  */
 export async function GET() {
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/emulator/health`, {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { status: 'offline', error: 'Backend not reachable' },
-        { status: 503 }
-      );
-    }
-
-    const health = await response.json();
-    return NextResponse.json({
-      status: 'online',
-      backend: health,
-    });
-
-  } catch (error) {
-    return NextResponse.json(
-      { status: 'offline', error: 'Backend not reachable' },
-      { status: 503 }
-    );
-  }
+  return NextResponse.json({ status: 'online', clientSide: true, engine: 'ChallengerJIT' });
 }

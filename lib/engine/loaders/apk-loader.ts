@@ -7,7 +7,6 @@
 
 import { androidBootManager } from '@/lib/nexus/os/android-boot';
 import { executionPipeline } from '@/lib/engine/execution-pipeline';
-import { persistentKernelsV2 } from '@/lib/nexus/gpu/persistent-kernels-v2';
 
 export class APKLoader {
     public onStatusUpdate: ((status: string, detail?: string) => void) | null = null;
@@ -61,10 +60,11 @@ export class APKLoader {
             // Clean up the object URL after a delay
             setTimeout(() => URL.revokeObjectURL(url), 60000);
         } catch (e: any) {
-            // If execution pipeline fails, try direct APK simulation
-            this.update('Note', 'Running in simulation mode');
-            console.warn('Execution pipeline error, using simulation:', e);
-            this.runSimulation(container, fileName);
+            const msg = e?.message || 'unknown_error';
+            console.error('Execution pipeline error:', e);
+            this.update('Error', `APK execution failed: ${msg}`);
+            this.showError(container, fileName, msg);
+            throw e;
         }
 
         this.update('Running', 'App launched');
@@ -105,13 +105,11 @@ export class APKLoader {
     }
 
     /**
-     * Run a simulation when the full pipeline isn't available
+     * Render an error UI in the container when the execution pipeline fails.
      */
-    private runSimulation(container: HTMLElement, fileName: string) {
-        const display = this.displayEl;
-        if (!display) return;
+    private showError(container: HTMLElement, fileName: string, errorMessage: string) {
+        const display = this.displayEl || container;
 
-        // Create a simple app simulation UI
         display.innerHTML = '';
         display.style.cssText = `
             width: 100%;
@@ -125,12 +123,12 @@ export class APKLoader {
             font-family: 'Roboto', sans-serif;
         `;
 
-        // App icon
+        // Error icon
         const icon = document.createElement('div');
         icon.style.cssText = `
             width: 80px;
             height: 80px;
-            background: #2d5a8a;
+            background: #7f1d1d;
             border-radius: 16px;
             display: flex;
             align-items: center;
@@ -138,74 +136,42 @@ export class APKLoader {
             font-size: 40px;
             margin-bottom: 16px;
         `;
-        icon.textContent = '📱';
+        icon.textContent = '\u26a0\ufe0f';
         display.appendChild(icon);
 
-        // App name
+        // File name
         const name = document.createElement('div');
         name.style.cssText = `
             font-size: 18px;
             font-weight: 500;
             margin-bottom: 8px;
         `;
-        name.textContent = fileName.replace('.apk', '');
+        name.textContent = fileName;
         display.appendChild(name);
 
-        // Status
-        const status = document.createElement('div');
-        status.style.cssText = `
+        // Error message
+        const errMsg = document.createElement('div');
+        errMsg.style.cssText = `
             font-size: 14px;
-            color: #94a3b8;
+            color: #fca5a5;
+            margin-bottom: 12px;
+            max-width: 80%;
+            text-align: center;
+            word-break: break-word;
         `;
-        status.textContent = 'Running in Challenger Deep Runtime';
-        display.appendChild(status);
+        errMsg.textContent = `APK execution failed: ${errorMessage}`;
+        display.appendChild(errMsg);
 
-        // Performance stats
-        const stats = document.createElement('div');
-        stats.style.cssText = `
-            margin-top: 24px;
-            display: flex;
-            gap: 24px;
+        // Description
+        const desc = document.createElement('div');
+        desc.style.cssText = `
             font-size: 12px;
-            color: #64748b;
+            color: #94a3b8;
+            text-align: center;
+            max-width: 80%;
         `;
-        stats.innerHTML = `
-            <span>FPS: <span style="color: #22c55e;">60</span></span>
-            <span>JIT: <span style="color: #2d5a8a;">${this.perfStats.jitCompiles}</span></span>
-            <span>GPU: <span style="color: #2d5a8a;">Active</span></span>
-        `;
-        display.appendChild(stats);
-
-        // Start updating stats
-        this.startStatsUpdate(stats);
-    }
-
-    /**
-     * Update performance stats periodically
-     */
-    private startStatsUpdate(statsEl: HTMLElement) {
-        const interval = setInterval(() => {
-            if (!this.running) {
-                clearInterval(interval);
-                return;
-            }
-            
-            // Get stats from persistent kernels if available
-            try {
-                const kernelStats = persistentKernelsV2.getStatistics();
-                this.perfStats.gpuKernels = kernelStats.dispatchCount;
-                this.perfStats.jitCompiles = Math.floor(kernelStats.totalWorkItems / 100);
-            } catch {
-                // Increment simulated stats
-                this.perfStats.jitCompiles += Math.floor(Math.random() * 3);
-            }
-            
-            statsEl.innerHTML = `
-                <span>FPS: <span style="color: #22c55e;">${this.perfStats.fps}</span></span>
-                <span>JIT: <span style="color: #2d5a8a;">${this.perfStats.jitCompiles}</span></span>
-                <span>GPU: <span style="color: #2d5a8a;">Active</span></span>
-            `;
-        }, 1000);
+        desc.textContent = 'The execution pipeline encountered an error. Check console for details.';
+        display.appendChild(desc);
     }
 
     /**

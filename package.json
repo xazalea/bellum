@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-games-json.js",
     "build": "next build",
     "build:cloudflare": "node scripts/build-cloudflare-debug.js",
     "deploy:cloudflare": "npx wrangler pages deploy .vercel/output/static --project-name=challenger",

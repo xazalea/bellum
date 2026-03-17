@@ -131,7 +131,7 @@ export function GamePlayer({ gameId, title }: GamePlayerProps) {
           onError={handleError}
           allowFullScreen
           allow="autoplay; fullscreen; gamepad; microphone"
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-pointer-lock allow-storage-access-by-user-activation"
           title={title || 'Game'}
         />
       </div>
