@@ -1,72 +1,86 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { GamePlayer } from '@/components/game/game-player';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Share2 } from 'lucide-react';
-import Link from 'next/link';
-import { addRecentlyPlayed } from '@/lib/recently-played';
-import { useGame } from '@/components/providers/game-provider';
+import { addRecentlyPlayed, getRecentlyPlayed } from '@/lib/recently-played';
 
-export default function GamePlayPage() {
+function GamePageInner() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const gameId = params.id as string;
-  const { games } = useGame();
 
-  const game = games.find(g => g.id === gameId);
-  const title = game?.title || `Game ${gameId.substring(0, 8)}`;
+  const titleParam = searchParams.get('title');
+  const cached = getRecentlyPlayed().find((g) => g.id === gameId);
+  const title = titleParam || cached?.title || `Game ${gameId.slice(0, 8)}`;
+  const thumbnail = cached?.thumbnail || '';
 
   useEffect(() => {
-    addRecentlyPlayed({
-      id: gameId,
-      title,
-      thumbnail: game?.thumbnail || '',
-    });
-  }, [gameId, title, game?.thumbnail]);
+    document.title = `${title} — Challenger`;
+    addRecentlyPlayed({ id: gameId, title, thumbnail });
+  }, [gameId, title, thumbnail]);
 
   const handleShare = async () => {
     const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({ title, url });
-    } else {
-      await navigator.clipboard.writeText(url);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
+    } catch {
+      // Share cancelled or not supported
     }
   };
 
   return (
-    <div className="py-6">
-      <div className="container-max">
-        <div className="flex items-center justify-between mb-4">
-          <Link href="/games">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Games
-            </Button>
-          </Link>
-          <Button variant="ghost" size="sm" className="gap-2" onClick={handleShare}>
-            <Share2 className="h-4 w-4" />
-            Share
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 3.5rem)' }}>
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-background/95 border-b border-border backdrop-blur-sm z-20 shrink-0">
+        <Link href="/games">
+          <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
-        </div>
-
-        <div className="max-w-5xl mx-auto">
-          <GamePlayer gameId={gameId} title={title} />
-
-          <div className="mt-4 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-bold">{title}</h1>
-              {game?.description && (
-                <p className="text-sm text-muted-foreground mt-1">{game.description}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-4 text-xs text-muted-foreground p-3 rounded-lg bg-muted/50">
-            Loaded through Challenger edge proxy · All requests routed via Almostnode on Cloudflare Pages
-          </div>
-        </div>
+        </Link>
+        <h1 className="text-sm font-medium text-foreground truncate max-w-xs sm:max-w-md px-2">
+          {title}
+        </h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 text-muted-foreground hover:text-foreground"
+          onClick={handleShare}
+        >
+          <Share2 className="h-4 w-4" />
+          <span className="hidden sm:inline">Share</span>
+        </Button>
       </div>
+
+      {/* Player — fills remaining space */}
+      <GamePlayer
+        gameId={gameId}
+        title={title}
+        thumbnail={thumbnail}
+        className="flex-1 h-full"
+      />
     </div>
+  );
+}
+
+export default function GamePlayPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 3.5rem)' }}>
+          <div className="h-10 w-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <GamePageInner />
+    </Suspense>
   );
 }

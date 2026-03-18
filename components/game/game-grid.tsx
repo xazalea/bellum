@@ -1,92 +1,66 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { useGame } from '@/components/providers/game-provider';
-import { GameCard } from '@/components/game/game-card';
-import { Button } from '@/components/ui/button';
-import type { GameFilters } from '@/lib/types/games';
+import { useState, useEffect, useRef } from 'react';
+import { gamesAPI } from '@/lib/api/games';
+import { GameCard } from './game-card';
+import type { Game } from '@/lib/types/games';
 
 interface GameGridProps {
-  filters?: GameFilters;
   limit?: number;
 }
 
-export function GameGrid({ filters, limit }: GameGridProps) {
-  const { games, isLoading, hasMore, hasLoaded, fetchGames, loadMore } = useGame();
+export function GameGrid({ limit = 12 }: GameGridProps) {
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const hasFetched = useRef(false);
+
+  const fetch = () => {
+    hasFetched.current = true;
+    setLoading(true);
+    setError(false);
+    gamesAPI
+      .getGames(1, limit)
+      .then((res) => { setGames(res.games.slice(0, limit)); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  };
 
   useEffect(() => {
-    if (!hasLoaded) {
-      fetchGames(1, 24);
-    }
-  }, [hasLoaded, fetchGames]);
+    if (hasFetched.current) return;
+    fetch();
+  }, [limit]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredGames = useMemo(() => {
-    let result = games;
-
-    if (filters?.search) {
-      const term = filters.search.toLowerCase();
-      result = result.filter(
-        g =>
-          g.title.toLowerCase().includes(term) ||
-          g.description.toLowerCase().includes(term)
-      );
-    }
-
-    if (filters?.category) {
-      result = result.filter(g => g.category === filters.category);
-    }
-
-    if (filters?.type) {
-      result = result.filter(g => g.type === filters.type);
-    }
-
-    if (limit) {
-      result = result.slice(0, limit);
-    }
-
-    return result;
-  }, [games, filters, limit]);
-
-  if (isLoading && !hasLoaded) {
+  if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {Array.from({ length: limit || 10 }).map((_, i) => (
-          <div key={i} className="aspect-[4/3] rounded-lg bg-muted animate-pulse" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+        {Array.from({ length: limit }).map((_, i) => (
+          <div key={i} className="rounded-xl overflow-hidden border border-border bg-card">
+            <div className="aspect-video bg-muted animate-pulse" />
+            <div className="p-2.5">
+              <div className="h-3 bg-muted animate-pulse rounded w-2/3" />
+            </div>
+          </div>
         ))}
       </div>
     );
   }
 
-  if (filteredGames.length === 0) {
+  if (error) {
     return (
-      <div className="text-center py-16">
-        <p className="text-lg font-medium">No games found</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Try adjusting your search or filters
-        </p>
+      <div className="flex flex-col items-center py-16 text-center gap-3">
+        <p className="text-muted-foreground text-sm">Failed to load games.</p>
+        <button onClick={fetch} className="text-sm text-primary underline underline-offset-4 hover:opacity-80">
+          Retry
+        </button>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {filteredGames.map(game => (
-          <GameCard key={game.id} game={game} />
-        ))}
-      </div>
-      {!limit && hasMore && (
-        <div className="flex justify-center mt-8">
-          <Button
-            variant="outline"
-            onClick={loadMore}
-            disabled={isLoading}
-            className="min-w-[200px]"
-          >
-            {isLoading ? 'Loading...' : 'Load More Games'}
-          </Button>
-        </div>
-      )}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+      {games.map((game, i) => (
+        <GameCard key={game.id} game={game} priority={i < 6} />
+      ))}
     </div>
   );
 }
