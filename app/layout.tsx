@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -7,29 +6,20 @@ import { GameProvider } from '@/components/providers/game-provider';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-});
-
 export const metadata: Metadata = {
-  title: 'Challenger – Play Any Game, Any Device',
-  description: 'A high-performance gaming platform supporting HTML5, Android APK, and Windows EXE games in the browser.',
+  title: { default: 'Challenger Deep', template: '%s | Challenger Deep' },
+  description: 'Play HTML5 games, Android APKs, and Windows EXEs instantly in your browser. No downloads, no installs.',
   openGraph: {
-    title: 'Challenger – Play Any Game, Any Device',
-    description: 'HTML5, Android, and Windows games running instantly in your browser.',
     type: 'website',
+    title: 'Challenger Deep',
+    description: 'Next-generation browser gaming platform.',
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body>
         <AuthProvider>
           <ThemeProvider>
             <GameProvider>

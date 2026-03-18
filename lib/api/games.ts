@@ -2,9 +2,11 @@ import type { Game, GamesResponse } from '@/lib/types/games';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api';
 const GAME_CDN = 'https://html5.gamedistribution.com';
+const GAME_PATH_PREFIX = 'rvvASMiM';
 
+// Games MUST be loaded through the Almostnode proxy — never directly
 export const getGameUrl = (gameId: string): string => {
-  return `${GAME_CDN}/${gameId}/`;
+  return `${GAME_CDN}/${GAME_PATH_PREFIX}/${gameId}/`;
 };
 
 export const getGameProxyUrl = (gameId: string): string => {
@@ -37,10 +39,14 @@ function transformGame(raw: RawGame): Game {
 }
 
 export const gamesAPI = {
-  getGames: async (page = 1, limit = 50): Promise<GamesResponse> => {
-    const res = await fetch(
-      `${API_BASE}/games?page=${page}&limit=${limit}&randomize=true`
-    );
+  getGames: async (page = 1, limit = 24, seed?: string): Promise<GamesResponse> => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      randomize: 'true',
+    });
+    if (seed) params.set('seed', seed);
+    const res = await fetch(`${API_BASE}/games?${params}`);
     if (!res.ok) throw new Error('Failed to fetch games');
     const data = await res.json();
     return {

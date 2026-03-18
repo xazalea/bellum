@@ -16,7 +16,7 @@ export function GameGrid({ filters, limit }: GameGridProps) {
 
   useEffect(() => {
     if (!hasLoaded) {
-      fetchGames(1, 50);
+      fetchGames(1, 24);
     }
   }, [hasLoaded, fetchGames]);
 
