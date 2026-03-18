@@ -415,11 +415,11 @@ export class ChallengerJITCompiler {
             // Generate WebAssembly
             const wasmBytes = await this.generateWASM(optimizedIR, tier);
 
-            // Compile WASM module — use a plain ArrayBuffer slice so
-            // WebAssembly.compile never receives a SharedArrayBuffer.
-            const buffer = wasmBytes.buffer.slice(
-                wasmBytes.byteOffset,
-                wasmBytes.byteOffset + wasmBytes.byteLength,
+            // Always copy into a fresh ArrayBuffer so WebAssembly.compile
+            // never receives a SharedArrayBuffer (which is not a BufferSource).
+            const buffer = new ArrayBuffer(wasmBytes.byteLength);
+            new Uint8Array(buffer).set(
+                new Uint8Array(wasmBytes.buffer, wasmBytes.byteOffset, wasmBytes.byteLength),
             );
             func.wasmModule = await WebAssembly.compile(buffer);
             func.wasmInstance = await WebAssembly.instantiate(func.wasmModule);
