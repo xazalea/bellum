@@ -519,14 +519,201 @@ export class ChallengerJITCompiler {
         return ir;
     }
 
-    private eliminateDeadCode(ir: any): any { return ir; }
-    private foldConstants(ir: any): any { return ir; }
-    private propagateCopies(ir: any): any { return ir; }
-    private inlineFunctions(ir: any): any { return ir; }
-    private unrollLoops(ir: any): any { return ir; }
-    private eliminateCommonSubexpressions(ir: any): any { return ir; }
-    private allocateRegisters(ir: any): any { return ir; }
-    private reduceStrength(ir: any): any { return ir; }
+    private eliminateDeadCode(ir: any): any {
+        // Remove instructions whose results are never used (useCount === 0)
+        if (!ir || !Array.isArray(ir.instructions)) return ir;
+        const used = new Set<number>();
+        // Mark all operands as used
+        for (const instr of ir.instructions) {
+            if (instr.operands) for (const op of instr.operands) used.add(op);
+            if (instr.op1?.type === 'temp') used.add(instr.op1.value as number);
+            if (instr.op2?.type === 'temp') used.add(instr.op2.value as number);
+        }
+        ir.instructions = ir.instructions.filter((instr: any) => {
+            // Keep side-effecting instructions always
+            const op = (instr.opcode || '').toLowerCase();
+            if (['store', 'store32', 'call', 'call_indirect', 'trap', 'ret', 'br', 'br_if', 'syscall', 'int'].includes(op)) return true;
+            // Keep if result is used
+            if (instr.result !== undefined && used.has(instr.result)) return true;
+            if (instr.id !== undefined && used.has(instr.id)) return true;
+            return false;
+        });
+        return ir;
+    }
+
+    private foldConstants(ir: any): any {
+        if (!ir || !Array.isArray(ir.instructions)) return ir;
+        const constVals = new Map<number, number>();
+        for (const instr of ir.instructions) {
+            const op = (instr.opcode || '').toLowerCase();
+            if ((op === 'const_i32' || op === 'i32.const') && instr.imm !== undefined) {
+                constVals.set(instr.result ?? instr.id, Number(instr.imm));
+            }
+            if (op === 'add' && instr.operands?.length === 2) {
+                const a = constVals.get(instr.operands[0]);
+                const b = constVals.get(instr.operands[1]);
+                if (a !== undefined && b !== undefined) {
+                    instr.opcode = 'const_i32';
+                    instr.imm = (a + b) | 0;
+                    instr.operands = [];
+                    constVals.set(instr.result ?? instr.id, instr.imm);
+                }
+            }
+            if (op === 'mul' && instr.operands?.length === 2) {
+                const a = constVals.get(instr.operands[0]);
+                const b = constVals.get(instr.operands[1]);
+                if (a !== undefined && b !== undefined) {
+                    instr.opcode = 'const_i32';
+                    instr.imm = Math.imul(a, b);
+                    instr.operands = [];
+                    constVals.set(instr.result ?? instr.id, instr.imm);
+                }
+            }
+            if (op === 'sub' && instr.operands?.length === 2) {
+                const a = constVals.get(instr.operands[0]);
+                const b = constVals.get(instr.operands[1]);
+                if (a !== undefined && b !== undefined) {
+                    instr.opcode = 'const_i32';
+                    instr.imm = (a - b) | 0;
+                    instr.operands = [];
+                    constVals.set(instr.result ?? instr.id, instr.imm);
+                }
+            }
+            if ((op === 'div_s' || op === 'div') && instr.operands?.length === 2) {
+                const a = constVals.get(instr.operands[0]);
+                const b = constVals.get(instr.operands[1]);
+                if (a !== undefined && b !== undefined) {
+                    if (b === 0) { instr.opcode = 'trap'; instr.operands = []; }
+                    else {
+                        instr.opcode = 'const_i32';
+                        instr.imm = (a / b) | 0;
+                        instr.operands = [];
+                        constVals.set(instr.result ?? instr.id, instr.imm);
+                    }
+                }
+            }
+        }
+        return ir;
+    }
+
+    private propagateCopies(ir: any): any {
+        if (!ir || !Array.isArray(ir.instructions)) return ir;
+        const copies = new Map<number, number>(); // dest → src
+        for (const instr of ir.instructions) {
+            const op = (instr.opcode || '').toLowerCase();
+            if (op === 'mov' && instr.operands?.length === 1) {
+                copies.set(instr.result ?? instr.id, instr.operands[0]);
+            }
+            // Replace operands with copy source
+            if (instr.operands) {
+                instr.operands = instr.operands.map((op: number) => {
+                    let v = op;
+                    const seen = new Set<number>();
+                    while (copies.has(v) && !seen.has(v)) { seen.add(v); v = copies.get(v)!; }
+                    return v;
+                });
+            }
+        }
+        return ir;
+    }
+
+    private inlineFunctions(ir: any): any {
+        // Basic inlining: for CALL instructions with known small callee bodies
+        if (!ir || !Array.isArray(ir.instructions)) return ir;
+        // Inline only if callee body available in ir.callees map and has ≤45 instructions
+        if (!ir.callees) return ir;
+        const result: any[] = [];
+        let idOffset = 1000000;
+        for (const instr of ir.instructions) {
+            const op = (instr.opcode || '').toLowerCase();
+            if (op === 'call' && instr.branchTarget !== undefined) {
+                const callee = ir.callees.get(instr.branchTarget);
+                if (callee && Array.isArray(callee.instructions) && callee.instructions.length <= 45) {
+                    // Clone callee with remapped IDs
+                    for (const ci of callee.instructions) {
+                        result.push({ ...ci, id: ci.id + idOffset, result: ci.result !== undefined ? ci.result + idOffset : undefined });
+                    }
+                    idOffset += 1000000;
+                    continue;
+                }
+            }
+            result.push(instr);
+        }
+        ir.instructions = result;
+        return ir;
+    }
+
+    private unrollLoops(ir: any): any {
+        // Unroll loops with statically known trip counts ≤8 and body < 200 instructions
+        if (!ir || !Array.isArray(ir.basicBlocks)) return ir;
+        // Simple: look for back edges (block with successor at lower address)
+        // For now: identity pass (requires proper CFG analysis)
+        return ir;
+    }
+
+    private eliminateCommonSubexpressions(ir: any): any {
+        if (!ir || !Array.isArray(ir.instructions)) return ir;
+        const exprMap = new Map<string, number>(); // hash → result id
+        for (const instr of ir.instructions) {
+            const op = (instr.opcode || '').toLowerCase();
+            if (['add', 'sub', 'mul', 'and', 'or', 'xor', 'shl', 'shr_s', 'shr_u'].includes(op) && instr.operands?.length >= 2) {
+                const key = `${op}:${instr.operands.join(',')}`;
+                if (exprMap.has(key)) {
+                    // Replace with MOV from previous result
+                    instr.opcode = 'mov';
+                    instr.operands = [exprMap.get(key)!];
+                } else {
+                    exprMap.set(key, instr.result ?? instr.id);
+                }
+            }
+        }
+        return ir;
+    }
+
+    private allocateRegisters(ir: any): any {
+        // Linear scan register allocator: assign WASM local indices
+        if (!ir || !Array.isArray(ir.instructions)) return ir;
+        const localPools = { i32: 0, i64: 0, f32: 0, f64: 0, v128: 0 };
+        const assignments = new Map<number, number>(); // valueId → localIdx
+        for (const instr of ir.instructions) {
+            const type = instr.resultType || 'i32';
+            const valueId = instr.result ?? instr.id;
+            if (!assignments.has(valueId)) {
+                const poolKey = type as keyof typeof localPools;
+                if (poolKey in localPools) {
+                    assignments.set(valueId, localPools[poolKey]++);
+                }
+            }
+        }
+        ir.registerAssignments = assignments;
+        return ir;
+    }
+
+    private reduceStrength(ir: any): any {
+        if (!ir || !Array.isArray(ir.instructions)) return ir;
+        for (const instr of ir.instructions) {
+            const op = (instr.opcode || '').toLowerCase();
+            // x * 2 → x + x (strength reduction)
+            if (op === 'mul' && instr.operands?.length === 2) {
+                const imm = instr.imm;
+                if (imm === 2) {
+                    instr.opcode = 'add';
+                    instr.operands = [instr.operands[0], instr.operands[0]];
+                    delete instr.imm;
+                } else if (imm !== undefined && imm > 0 && (imm & (imm - 1)) === 0) {
+                    // Power of 2: use shift
+                    instr.opcode = 'shl';
+                    instr.imm2 = Math.log2(imm);
+                }
+            }
+            // x / 2^n → x >> n
+            if ((op === 'div_s' || op === 'div') && instr.imm !== undefined && instr.imm > 0 && (instr.imm & (instr.imm - 1)) === 0) {
+                instr.opcode = 'shr_s';
+                instr.imm = Math.log2(instr.imm);
+            }
+        }
+        return ir;
+    }
 
     /**
      * Generate a valid WebAssembly binary module from IR.

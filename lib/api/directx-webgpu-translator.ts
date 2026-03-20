@@ -1,6 +1,16 @@
-import { HLSLToWGSLTranslator } from '../rendering/hlsl-to-wgsl';
 import { shaderPrecompiler } from '../rendering/shader-precompiler';
 import { GPUScheduler } from '../rendering/gpu-scheduler';
+// Use the new full transpiler; fall back to legacy if not yet compiled
+let HLSLToWGSLTranspilerClass: { new(): { translate(hlsl: string, profile: string): string } } | null = null;
+try {
+  // Dynamic import to avoid circular deps at module load time
+  const mod = require('../gpu/hlsl-wgsl-transpiler');
+  HLSLToWGSLTranspilerClass = mod.HLSLToWGSLTranspiler;
+} catch {
+  // Will fall back to legacy translator
+  HLSLToWGSLTranspilerClass = null;
+}
+import { HLSLToWGSLTranslator as LegacyHLSLTranslator } from '../rendering/hlsl-to-wgsl';
 
 /**
  * DirectX to WebGPU Translator - Zero Overhead
@@ -55,8 +65,11 @@ export class DirectXWebGPUTranslator {
     // Shader cache
     private hlslCache: Map<string, string> = new Map(); // HLSL -> WGSL
     private pipelineCache: Map<string, GPURenderPipeline> = new Map();
-    private hlslTranslator = new HLSLToWGSLTranslator();
+    private hlslTranslator: { translate(hlsl: string, profile: string): string } =
+        HLSLToWGSLTranspilerClass ? new HLSLToWGSLTranspilerClass() : new LegacyHLSLTranslator();
     private scheduler = new GPUScheduler();
+    private commandLists: Map<number, D3D12CommandList> = new Map();
+    private activeEncoders: Map<number, GPUCommandEncoder> = new Map();
     
     // Statistics
     private drawCalls: number = 0;
@@ -139,15 +152,17 @@ export class DirectXWebGPUTranslator {
      * CreateGraphicsCommandList → GPUCommandEncoder
      */
     CreateGraphicsCommandList(deviceHandle: number): number {
+        const d3d12Device = this.d3d12Devices.get(deviceHandle);
         const handle = this.nextHandle++;
 
         const commandList: D3D12CommandList = {
             handle,
             commands: [],
+            encoder: d3d12Device ? d3d12Device.gpuDevice.createCommandEncoder() : undefined,
         };
 
+        this.commandLists.set(handle, commandList);
         console.log(`[DirectX→WebGPU] Created command list (handle: ${handle})`);
-
         return handle;
     }
 
@@ -271,13 +286,32 @@ export class DirectXWebGPUTranslator {
         queueHandle: number,
         commandListHandles: number[]
     ): void {
-        // Batch command lists into warps for improved scheduling
         this.scheduler.enqueueWarp(`queue:${queueHandle}`, commandListHandles.length);
         const { warps } = this.scheduler.flush();
         this.drawCalls += commandListHandles.length;
 
         for (const warp of warps) {
             console.log(`[DirectX→WebGPU] Scheduled warp ${warp.pipelineKey} (${warp.commandCount} commands)`);
+        }
+
+        // Find queue device and submit command buffers
+        for (const [, d3dDev] of this.d3d12Devices) {
+            for (const [qh, queue] of d3dDev.commandQueues) {
+                if (qh === queueHandle) {
+                    const commandBuffers: GPUCommandBuffer[] = [];
+                    for (const clHandle of commandListHandles) {
+                        const cl = this.commandLists.get(clHandle);
+                        if (cl?.encoder) {
+                            commandBuffers.push(cl.encoder.finish());
+                            // Replace encoder for future use
+                            cl.encoder = d3dDev.gpuDevice.createCommandEncoder();
+                        }
+                    }
+                    if (commandBuffers.length > 0) {
+                        queue.gpuQueue.submit(commandBuffers);
+                    }
+                }
+            }
         }
     }
 

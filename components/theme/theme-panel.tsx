@@ -119,46 +119,68 @@ export function ThemePanel({ open, onClose }: ThemePanelProps) {
         <div className="flex-1 overflow-y-auto px-3 py-3">
           {filtered.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-8">No themes found</p>
-          ) : (
-            <div className="grid grid-cols-5 gap-1.5">
-              {filtered.map(t => {
-                const colors = colorMode === 'dark' ? t.dark : t.light;
-                const isActive = t.name === themeName;
-                return (
-                  <button
-                    key={t.name}
-                    onClick={() => handleSelect(t.name)}
-                    className={`relative flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] transition-all hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                      isActive ? 'ring-2 ring-primary bg-accent' : ''
-                    }`}
-                    title={t.label}
-                    aria-label={`Select ${t.label} theme${isActive ? ' (active)' : ''}`}
-                    aria-pressed={isActive}
-                  >
-                    {/* Color swatch */}
-                    <div className="flex gap-0.5">
-                      <div
-                        className="h-5 w-5 rounded-full border border-black/10 dark:border-white/10"
-                        style={{ backgroundColor: `hsl(${colors.primary})` }}
-                      />
-                      <div
-                        className="h-5 w-5 rounded-full border border-black/10 dark:border-white/10"
-                        style={{ backgroundColor: `hsl(${colors.background})` }}
-                      />
-                    </div>
-                    <span className="truncate w-full text-center leading-tight text-muted-foreground">
-                      {t.label}
-                    </span>
-                    {isActive && (
-                      <div className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-2 w-2 text-primary-foreground" />
+          ) : (() => {
+            const originals = filtered.filter(t => !t.name.startsWith('tweakcn-'));
+            const tweakcn = filtered.filter(t => t.name.startsWith('tweakcn-'));
+            const renderGrid = (items: typeof filtered) => (
+              <div className="grid grid-cols-5 gap-1.5">
+                {items.map(t => {
+                  const colors = colorMode === 'dark' ? t.dark : t.light;
+                  const isActive = t.name === themeName;
+                  const bg = `hsl(${colors.background})`;
+                  const pr = `hsl(${colors.primary})`;
+                  const ac = `hsl(${colors.accent})`;
+                  return (
+                    <button
+                      key={t.name}
+                      onClick={() => handleSelect(t.name)}
+                      className={`relative flex flex-col items-center gap-1 rounded-lg p-2 text-[10px] transition-all hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        isActive ? 'ring-2 ring-primary bg-accent' : ''
+                      }`}
+                      title={t.label}
+                      aria-label={`Select ${t.label} theme${isActive ? ' (active)' : ''}`}
+                      aria-pressed={isActive}
+                    >
+                      {/* 3-color swatch strip */}
+                      <div className="flex gap-0.5 overflow-hidden rounded-sm border border-black/10 dark:border-white/10">
+                        <div className="h-4 w-4" style={{ backgroundColor: bg }} />
+                        <div className="h-4 w-4" style={{ backgroundColor: pr }} />
+                        <div className="h-4 w-4" style={{ backgroundColor: ac }} />
                       </div>
+                      <span className="truncate w-full text-center leading-tight text-muted-foreground">
+                        {t.label.replace(/^TW: /, '')}
+                      </span>
+                      {isActive && (
+                        <div className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-2 w-2 text-primary-foreground" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+            return (
+              <>
+                {originals.length > 0 && (
+                  <div className="mb-4">
+                    {tweakcn.length > 0 && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-0.5">Originals</p>
                     )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                    {renderGrid(originals)}
+                  </div>
+                )}
+                {tweakcn.length > 0 && (
+                  <div>
+                    {originals.length > 0 && (
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 px-0.5">TweakCN Presets</p>
+                    )}
+                    {renderGrid(tweakcn)}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Footer — active theme info */}

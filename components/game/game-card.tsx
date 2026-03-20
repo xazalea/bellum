@@ -14,7 +14,7 @@ export const GameCard = React.memo(function GameCard({ game, priority }: GameCar
   return (
     <Link
       href={`/games/${game.id}`}
-      className="group block rounded-xl overflow-hidden border border-border bg-card transition-colors duration-200 hover:border-primary/40"
+      className="group block rounded-xl overflow-hidden border border-border bg-card transition-all duration-200 hover:border-primary/40 hover:ring-2 hover:ring-primary/50 hover:-translate-y-0.5 animate-gpu"
     >
       {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-muted">
@@ -32,8 +32,11 @@ export const GameCard = React.memo(function GameCard({ game, priority }: GameCar
           </div>
         )}
 
-        {/* Dark overlay on hover */}
+        {/* Dark overlay + subtle gold glass sheen on hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200" />
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+          style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.06) 0%, transparent 60%)' }}
+        />
 
         {/* Play button — appears on hover */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
