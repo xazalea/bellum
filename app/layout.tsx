@@ -9,23 +9,18 @@ import { Footer } from '@/components/layout/footer';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0a1020',
+  themeColor: '#0a0a0a',
 };
 
 export const metadata: Metadata = {
-  title: { default: 'Challenger Deep', template: '%s | Challenger Deep' },
-  description: 'Play HTML5 games, Android APKs, and Windows EXEs instantly in your browser. No downloads, no installs.',
-  keywords: ['browser games', 'html5 games', 'android emulator', 'play games online', 'no download games'],
+  title: { default: 'Bellum', template: '%s — Bellum' },
+  description: 'Run Android APKs and Windows EXEs in your browser. Export to self-contained HTML.',
+  keywords: ['browser emulator', 'apk runner', 'android emulator', 'exe runner', 'web emulator'],
   openGraph: {
     type: 'website',
-    title: 'Challenger Deep — Play Any Game, Instantly',
-    description: 'Browser-native gaming platform: 20,000+ HTML5 games, Android APKs, and Windows EXEs. No downloads. No plugins.',
-    siteName: 'Challenger Deep',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Challenger Deep',
-    description: 'Play 20,000+ games instantly in your browser.',
+    title: 'Bellum — Run Anything',
+    description: 'Browser-native execution for Android APKs and Windows EXEs. Export to single HTML files.',
+    siteName: 'Bellum',
   },
   robots: { index: true, follow: true },
 };

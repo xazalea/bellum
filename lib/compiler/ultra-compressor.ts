@@ -1,16 +1,31 @@
+import { compressSync } from 'fflate';
+
 export interface CompressionResult {
   payload: Uint8Array;
   algorithm: string;
+  originalSize: number;
 }
 
 export class UltraCompressor {
   async compress(buffers: Record<string, ArrayBuffer>): Promise<Record<string, CompressionResult>> {
     const result: Record<string, CompressionResult> = {};
     for (const [key, buffer] of Object.entries(buffers)) {
-      result[key] = {
-        payload: new Uint8Array(buffer),
-        algorithm: 'none',
-      };
+      const input = new Uint8Array(buffer);
+      const originalSize = input.byteLength;
+      if (originalSize === 0) {
+        result[key] = { payload: new Uint8Array(0), algorithm: 'none', originalSize: 0 };
+        continue;
+      }
+      try {
+        const compressed = compressSync(input, { level: 9 });
+        if (compressed.byteLength < originalSize) {
+          result[key] = { payload: compressed, algorithm: 'deflate-9', originalSize };
+        } else {
+          result[key] = { payload: input, algorithm: 'none', originalSize };
+        }
+      } catch {
+        result[key] = { payload: input, algorithm: 'none', originalSize };
+      }
     }
     return result;
   }
