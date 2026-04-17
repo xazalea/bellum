@@ -22,9 +22,12 @@ export class AndroidRuntime {
   private nextFd = 100; // Start FDs at 100 to reserve 0,1,2
   private nextThreadId = 1;
   private memory: SharedArrayBuffer;
+  private memoryView: Uint8Array;
+  private nextMmapAddr = 0x10000; // bump allocator for mmap
 
   constructor(memorySize: number = 1024 * 1024 * 64) { // Default 64MB RAM
     this.memory = new SharedArrayBuffer(memorySize);
+    this.memoryView = new Uint8Array(this.memory);
     this.initializeSyscalls();
   }
 
@@ -72,14 +75,12 @@ export class AndroidRuntime {
       const bytesRead = Math.min(count, fileData.length - fileDesc.position);
       if (bytesRead <= 0) return 0; // EOF
 
-      // If buffer is a pointer (number), we'd write to this.memory
+      // If buffer is a pointer (number), write to SharedArrayBuffer
       // If buffer is Uint8Array (JS simulation), we copy directly
       if (buffer instanceof Uint8Array) {
           buffer.set(fileData.subarray(fileDesc.position, fileDesc.position + bytesRead));
-      } else {
-          // TODO: Write to SharedArrayBuffer at pointer 'buffer'
-          // const heap = new Uint8Array(this.memory);
-          // heap.set(fileData.subarray(fileDesc.position, fileDesc.position + bytesRead), buffer);
+      } else if (typeof buffer === 'number' && buffer >= 0 && buffer + bytesRead <= this.memoryView.length) {
+          this.memoryView.set(fileData.subarray(fileDesc.position, fileDesc.position + bytesRead), buffer);
       }
       
       fileDesc.position += bytesRead;
@@ -93,12 +94,36 @@ export class AndroidRuntime {
       
       // Stdout/Stderr redirection
       if (fd === 1 || fd === 2) {
-          const msg = new TextDecoder().decode(args[1].subarray(0, count));
-          console.log(`[AndroidRuntime][STDOUT/ERR] ${msg}`);
+          const data = args[1];
+          if (data instanceof Uint8Array) {
+              const msg = new TextDecoder().decode(data.subarray(0, count));
+              console.log(`[AndroidRuntime][${fd===1?'STDOUT':'STDERR'}] ${msg}`);
+          }
           return count;
       }
 
-      // TODO: Implement file writing
+      // File writing to virtual filesystem
+      const fileDesc = this.openFiles.get(fd);
+      if (!fileDesc) return -1; // EBADF
+
+      const data = args[1];
+      if (data instanceof Uint8Array || (typeof data === 'number' && data >= 0)) {
+          const src = data instanceof Uint8Array ? data.subarray(0, count) : this.memoryView.subarray(data, data + count);
+          let existing = this.fileSystem.get(fileDesc.path);
+          if (!existing) {
+              existing = new Uint8Array(0);
+          }
+          // Extend the file if needed
+          const newPos = fileDesc.position + count;
+          if (newPos > existing.length) {
+              const extended = new Uint8Array(newPos);
+              extended.set(existing);
+              existing = extended;
+              this.fileSystem.set(fileDesc.path, existing);
+          }
+          existing.set(src, fileDesc.position);
+          fileDesc.position = newPos;
+      }
       return count;
     });
 
@@ -122,9 +147,17 @@ export class AndroidRuntime {
 
         console.log(`[AndroidRuntime] mmap request: addr=${addr}, len=${length}, fd=${fd}`);
 
-        // Simple allocation simulation
-        // In a real WASM runtime, this would interface with the WASM Memory.grow or a specific heap allocator
-        return 0x10000; // Fake pointer
+        // Bump allocator from the shared memory pool
+        const aligned = (this.nextMmapAddr + 0xFFF) & ~0xFFF; // page-align
+        if (aligned + length > this.memoryView.length) {
+            console.error(`[AndroidRuntime] mmap: out of memory (requested ${length} at 0x${aligned.toString(16)})`);
+            return -1; // ENOMEM
+        }
+        // Zero-fill the allocated region
+        this.memoryView.fill(0, aligned, aligned + length);
+        this.nextMmapAddr = aligned + length;
+        console.log(`[AndroidRuntime] mmap allocated 0x${length.toString(16)} bytes at 0x${aligned.toString(16)}`);
+        return aligned;
     });
 
     // --- Threading ---
@@ -190,5 +223,22 @@ export class AndroidRuntime {
    */
   getMemory(): SharedArrayBuffer {
       return this.memory;
+  }
+
+  // -----------------------------------------------------------------------
+  // Dalvik string resolution (used by DalvikInterpreter for const-string)
+  // -----------------------------------------------------------------------
+
+  private stringResolver: ((idx: number) => string) | null = null;
+
+  /** Install a string resolver callback (typically provided by DEXParser). */
+  setStringResolver(resolver: (idx: number) => string): void {
+    this.stringResolver = resolver;
+  }
+
+  /** Resolve a string by index. Returns '' if no resolver is installed. */
+  resolveString(idx: number): string {
+    if (this.stringResolver) return this.stringResolver(idx);
+    return '';
   }
 }

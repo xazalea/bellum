@@ -1,3 +1,5 @@
+export type ThemeName = string;
+
 export interface ThemeColors {
   background: string;
   foreground: string;

@@ -87,6 +87,10 @@ export class WindowsKernel {
     // Last Win32 error (per-thread; single-threaded emulation uses one slot)
     private lastError = 0;
 
+    // Process / Thread IDs
+    private _pid: number = Math.floor(Math.random() * 60000) + 1000;
+    private _tid: number = Math.floor(Math.random() * 60000) + 1000;
+
     // Kernel object stores
     private mutants:    Map<number, { name: string; owned: boolean; count: number }> = new Map();
     private events:     Map<number, { name: string; signaled: boolean; autoReset: boolean }> = new Map();
@@ -876,15 +880,28 @@ export class WindowsKernel {
                 return 0;
             },
             GetCurrentProcessId(): number {
-                return 0x1234; // stub PID
+                return k._pid;
             },
             GetCurrentThreadId(): number {
-                return 0x5678; // stub TID
+                return k._tid;
             },
             GetProcAddress(moduleHandle: number, procName: number): number {
                 console.log(`[Kernel32] GetProcAddress module=${moduleHandle} procName@0x${procName.toString(16)}`);
-                // Cannot resolve without string table; return stub non-zero
-                return 0x7FFF0000;
+                // Search all loaded modules for the export
+                for (const [modName, mod] of k.modules) {
+                    // Try to read the function name from process memory if procName is a valid pointer
+                    if (procName > 0 && procName < k.processMemoryView.length) {
+                        let end = procName;
+                        while (end < k.processMemoryView.length && k.processMemoryView[end] !== 0) end++;
+                        const fnName = String.fromCharCode(...k.processMemoryView.slice(procName, end));
+                        if (mod[fnName]) {
+                            console.log(`[Kernel32] GetProcAddress resolved: ${modName}!${fnName}`);
+                            return 0x7FFF0000 + modName.length * 256 + fnName.charCodeAt(0); // unique per name
+                        }
+                    }
+                }
+                console.warn(`[Kernel32] GetProcAddress: unresolved procName@0x${procName.toString(16)}`);
+                return 0; // NULL = not found
             },
             LoadLibraryA(namePtr: number): number {
                 console.log(`[Kernel32] LoadLibraryA namePtr=0x${namePtr.toString(16)}`);
@@ -897,7 +914,29 @@ export class WindowsKernel {
             },
             GetSystemInfo(sysInfoPtr: number): number {
                 console.log(`[Kernel32] GetSystemInfo sysInfoPtr=0x${sysInfoPtr.toString(16)}`);
-                // Stub: would write SYSTEM_INFO struct into guest memory
+                if (sysInfoPtr > 0 && sysInfoPtr + 36 < k.processMemoryView.length) {
+                    const v = k.processMemoryView;
+                    v[sysInfoPtr + 0] = 0;                            // wProcessorArchitecture (x86)
+                    k.processMemoryView[sysInfoPtr + 2] = 0; k.processMemoryView[sysInfoPtr + 3] = 0; // wReserved
+                    // dwPageSize
+                    v[sysInfoPtr+4]=0x00; v[sysInfoPtr+5]=0x10; v[sysInfoPtr+6]=0; v[sysInfoPtr+7]=0;
+                    // lpMinimumApplicationAddress
+                    v[sysInfoPtr+8]=0; v[sysInfoPtr+9]=0; v[sysInfoPtr+10]=1; v[sysInfoPtr+11]=0;
+                    // lpMaximumApplicationAddress
+                    v[sysInfoPtr+12]=0xFF; v[sysInfoPtr+13]=0xFE; v[sysInfoPtr+14]=0xFF; v[sysInfoPtr+15]=0x7F;
+                    // dwActiveProcessorMask
+                    v[sysInfoPtr+16]=1; v[sysInfoPtr+17]=0; v[sysInfoPtr+18]=0; v[sysInfoPtr+19]=0;
+                    // dwNumberOfProcessors
+                    v[sysInfoPtr+20]=1; v[sysInfoPtr+21]=0; v[sysInfoPtr+22]=0; v[sysInfoPtr+23]=0;
+                    // dwProcessorType
+                    v[sysInfoPtr+24]=0; v[sysInfoPtr+25]=0; v[sysInfoPtr+26]=0x40; v[sysInfoPtr+27]=0;
+                    // dwAllocationGranularity
+                    v[sysInfoPtr+28]=0; v[sysInfoPtr+29]=0; v[sysInfoPtr+30]=1; v[sysInfoPtr+31]=0;
+                    // wProcessorLevel
+                    v[sysInfoPtr+32]=6; v[sysInfoPtr+33]=0;
+                    // wProcessorRevision
+                    v[sysInfoPtr+34]=1; v[sysInfoPtr+35]=0;
+                }
                 return 0;
             },
             GlobalAlloc(flags: number, size: number): number {
@@ -990,11 +1029,23 @@ export class WindowsKernel {
             },
             GetModuleFileNameA(moduleHandle: number, bufPtr: number, size: number): number {
                 console.log(`[Kernel32] GetModuleFileNameA module=${moduleHandle} bufPtr=0x${bufPtr.toString(16)}`);
-                return 0; // 0 chars written (stub)
+                const name = 'C:\\game.exe';
+                const written = Math.min(name.length, size - 1);
+                if (bufPtr > 0 && bufPtr + written < k.processMemoryView.length) {
+                    for (let i = 0; i < written; i++) k.processMemoryView[bufPtr + i] = name.charCodeAt(i);
+                    k.processMemoryView[bufPtr + written] = 0; // null terminator
+                }
+                return written;
             },
             FormatMessageA(flags: number, source: number, msgId: number, langId: number, bufPtr: number, size: number, args: number): number {
                 console.log(`[Kernel32] FormatMessageA msgId=0x${msgId.toString(16)}`);
-                return 0; // 0 chars written (stub)
+                const msg = `Error ${msgId}`;
+                const written = Math.min(msg.length, size - 1);
+                if (bufPtr > 0 && bufPtr + written < k.processMemoryView.length) {
+                    for (let i = 0; i < written; i++) k.processMemoryView[bufPtr + i] = msg.charCodeAt(i);
+                    k.processMemoryView[bufPtr + written] = 0;
+                }
+                return written;
             },
             OutputDebugStringA(strPtr: number): number {
                 console.log(`[Kernel32] OutputDebugStringA strPtr=0x${strPtr.toString(16)}`);
@@ -1008,6 +1059,7 @@ export class WindowsKernel {
     // ════════════════════════════════════════════════════════════════════════
 
     private loadUser32() {
+        const k = this; // same alias as loadKernel32 for consistent access
         this.modules.set('user32.dll', {
             MessageBoxA(hwnd: number, textPtr: number, captionPtr: number, type: number): number {
                 console.log(`[User32] MessageBoxA hwnd=${hwnd} text@0x${textPtr.toString(16)} type=${type}`);
@@ -1039,8 +1091,26 @@ export class WindowsKernel {
             },
             GetMessageA(msgPtr: number, hwnd: number, msgFilterMin: number, msgFilterMax: number): number {
                 console.log(`[User32] GetMessageA hwnd=${hwnd} filter=[${msgFilterMin},${msgFilterMax}]`);
-                // Return 0 = WM_QUIT (causes message loop to exit in stub)
-                return 0;
+                // Return WM_PAINT by default to keep the message loop alive (return 1 = continue)
+                if (msgPtr > 0 && msgPtr + 28 < k.processMemoryView.length) {
+                    const v = k.processMemoryView;
+                    // MSG struct: hwnd(4), message(4), wParam(4), lParam(4), time(4), pt(8)
+                    v[msgPtr+4]=0x0F; v[msgPtr+5]=0; v[msgPtr+6]=0; v[msgPtr+7]=0; // WM_PAINT
+                    // time
+                    const t = Date.now() & 0xFFFFFFFF;
+                    v[msgPtr+16]=t&0xFF; v[msgPtr+17]=(t>>8)&0xFF; v[msgPtr+18]=(t>>16)&0xFF; v[msgPtr+19]=(t>>24)&0xFF;
+                }
+                return 1; // 1 = continue message loop (0 = WM_QUIT)
+            },
+            PeekMessageA(msgPtr: number, hwnd: number, msgFilterMin: number, msgFilterMax: number, removeMsg: number): number {
+                // Same as GetMessageA but never blocks — always return a WM_PAINT
+                if (msgPtr > 0 && msgPtr + 28 < k.processMemoryView.length) {
+                    const v = k.processMemoryView;
+                    v[msgPtr+4]=0x0F; v[msgPtr+5]=0; v[msgPtr+6]=0; v[msgPtr+7]=0;
+                    const t = Date.now() & 0xFFFFFFFF;
+                    v[msgPtr+16]=t&0xFF; v[msgPtr+17]=(t>>8)&0xFF; v[msgPtr+18]=(t>>16)&0xFF; v[msgPtr+19]=(t>>24)&0xFF;
+                }
+                return 1;
             },
             TranslateMessage(msgPtr: number): number {
                 console.log(`[User32] TranslateMessage msgPtr=0x${msgPtr.toString(16)}`);
@@ -1056,7 +1126,15 @@ export class WindowsKernel {
             },
             GetClientRect(hwnd: number, rectPtr: number): number {
                 console.log(`[User32] GetClientRect hwnd=${hwnd} rectPtr=0x${rectPtr.toString(16)}`);
-                return 1; // TRUE — would write RECT{0,0,800,600} into guest memory
+                if (rectPtr > 0 && rectPtr + 16 <= k.processMemoryView.length) {
+                    const v = k.processMemoryView;
+                    // left=0, top=0, right=800, bottom=600
+                    v[rectPtr+0]=0; v[rectPtr+1]=0; v[rectPtr+2]=0; v[rectPtr+3]=0;
+                    v[rectPtr+4]=0; v[rectPtr+5]=0; v[rectPtr+6]=0; v[rectPtr+7]=0;
+                    v[rectPtr+8]=0x20; v[rectPtr+9]=0x03; v[rectPtr+10]=0; v[rectPtr+11]=0; // 800
+                    v[rectPtr+12]=0x58; v[rectPtr+13]=0x02; v[rectPtr+14]=0; v[rectPtr+15]=0; // 600
+                }
+                return 1;
             },
             InvalidateRect(hwnd: number, rectPtr: number, erase: number): number {
                 console.log(`[User32] InvalidateRect hwnd=${hwnd} erase=${erase}`);
@@ -1066,6 +1144,25 @@ export class WindowsKernel {
                 console.log(`[User32] SendMessageA hwnd=${hwnd} msg=0x${msg.toString(16)}`);
                 return 0;
             },
+            GetAsyncKeyState(vKey: number): number {
+                // Kernel-level emulation has no keyboard state; unified-runtime provides real implementation
+                return 0;
+            },
+            LoadCursorA(hInstance: number, lpCursorName: number): number {
+                return 0x10000; // pseudo handle
+            },
+            LoadIconA(hInstance: number, lpIconName: number): number {
+                return 0x10001; // pseudo handle
+            },
+            SetCursor(hCursor: number): number {
+                return hCursor;
+            },
+            ShowCursor(bShow: number): number {
+                return bShow ? 1 : 0;
+            },
+            AdjustWindowRect(lpRect: number, dwStyle: number, bMenu: number): number {
+                return 1;
+            },
         });
     }
 
@@ -1074,10 +1171,21 @@ export class WindowsKernel {
     // ════════════════════════════════════════════════════════════════════════
 
     private loadGdiStubs() {
+        const k = this;
         this.modules.set('gdi32.dll', {
             CreateDC(driverPtr: number, devicePtr: number, outputPtr: number, initDataPtr: number): number {
-                console.log('[GDI32] CreateDC stub');
-                return 1; // pseudo-HDC
+                console.log('[GDI32] CreateDC');
+                const h = k.allocHandle('dc', {});
+                return h;
+            },
+            CreateCompatibleDC(hdc: number): number {
+                console.log(`[GDI32] CreateCompatibleDC hdc=${hdc}`);
+                const h = k.allocHandle('dc', { compatWith: hdc });
+                return h;
+            },
+            DeleteDC(hdc: number): number {
+                console.log(`[GDI32] DeleteDC hdc=${hdc}`);
+                return k.closeHandle(hdc) ? 1 : 0;
             },
             BitBlt(
                 destDC: number, x: number, y: number, w: number, h: number,
@@ -1093,13 +1201,131 @@ export class WindowsKernel {
                 console.log(`[GDI32] StretchBlt dest=${destDC} src=${srcDC} rop=0x${rop.toString(16)}`);
                 return 1;
             },
-            CreateCompatibleDC(hdc: number): number {
-                console.log(`[GDI32] CreateCompatibleDC hdc=${hdc}`);
-                return 2; // pseudo compatible-HDC
+            CreateBitmap(w: number, height: number, planes: number, bitCount: number, bitsPtr: number): number {
+                console.log(`[GDI32] CreateBitmap w=${w} h=${height} planes=${planes} bitCount=${bitCount}`);
+                const h = k.allocHandle('bitmap', { width: w, height, bitCount, data: new Uint8Array(w * height * 4) });
+                return h;
             },
-            CreateBitmap(w: number, h: number, planes: number, bitCount: number, bitsPtr: number): number {
-                console.log(`[GDI32] CreateBitmap w=${w} h=${h} planes=${planes} bitCount=${bitCount}`);
-                return 3; // pseudo-HBITMAP
+            CreateCompatibleBitmap(hdc: number, w: number, height: number): number {
+                console.log(`[GDI32] CreateCompatibleBitmap hdc=${hdc} w=${w} h=${height}`);
+                const h = k.allocHandle('bitmap', { width: w, height, data: new Uint8Array(w * height * 4) });
+                return h;
+            },
+            CreateSolidBrush(color: number): number {
+                const h = k.allocHandle('brush', { color });
+                return h;
+            },
+            CreatePen(style: number, width: number, color: number): number {
+                const h = k.allocHandle('pen', { style, width, color });
+                return h;
+            },
+            SelectObject(hdc: number, obj: number): number {
+                const dcEntry = k.handles.get(hdc);
+                const objEntry = k.handles.get(obj);
+                if (dcEntry && objEntry) {
+                    // Track currently selected object
+                    const prev = dcEntry.data.selected?.[objEntry.type] ?? 0;
+                    if (!dcEntry.data.selected) dcEntry.data.selected = {};
+                    dcEntry.data.selected[objEntry.type] = obj;
+                    return prev;
+                }
+                return 0;
+            },
+            DeleteObject(obj: number): number {
+                return k.closeHandle(obj) ? 1 : 0;
+            },
+            SetTextColor(hdc: number, color: number): number {
+                const dcEntry = k.handles.get(hdc);
+                if (!dcEntry) return 0;
+                const prev = dcEntry.data.textColor ?? 0;
+                dcEntry.data.textColor = color;
+                return prev;
+            },
+            SetBkColor(hdc: number, color: number): number {
+                const dcEntry = k.handles.get(hdc);
+                if (!dcEntry) return 0;
+                const prev = dcEntry.data.bkColor ?? 0x00FFFFFF;
+                dcEntry.data.bkColor = color;
+                return prev;
+            },
+            SetBkMode(hdc: number, mode: number): number {
+                const dcEntry = k.handles.get(hdc);
+                if (!dcEntry) return 0;
+                const prev = dcEntry.data.bkMode ?? 2; // OPAQUE
+                dcEntry.data.bkMode = mode;
+                return prev;
+            },
+            TextOutA(hdc: number, x: number, y: number, strPtr: number, len: number): number {
+                const dcEntry = k.handles.get(hdc);
+                if (!dcEntry || !dcEntry.data) return 0;
+                let text = '';
+                if (strPtr > 0 && strPtr < k.processMemoryView.length) {
+                    let end = strPtr;
+                    const maxEnd = Math.min(strPtr + len, k.processMemoryView.length);
+                    while (end < maxEnd && k.processMemoryView[end] !== 0) end++;
+                    text = String.fromCharCode(...k.processMemoryView.slice(strPtr, end));
+                }
+                console.log(`[GDI32] TextOutA hdc=${hdc} x=${x} y=${y} "${text}"`);
+                // Store text for rendering; actual pixel drawing happens via WindowManager in unified-runtime
+                dcEntry.data.lastText = { x, y, text, color: dcEntry.data.textColor ?? 0x00FFFFFF };
+                return 1;
+            },
+            FillRect(hdc: number, rectPtr: number, hbrush: number): number {
+                const dcEntry = k.handles.get(hdc);
+                if (!dcEntry || !dcEntry.data) return 0;
+                let left = 0, top = 0, right = 800, bottom = 600;
+                if (rectPtr > 0 && rectPtr + 16 <= k.processMemoryView.length) {
+                    left = k.processMemoryView[rectPtr] | (k.processMemoryView[rectPtr+1]<<8) | (k.processMemoryView[rectPtr+2]<<16) | (k.processMemoryView[rectPtr+3]<<24);
+                    top = k.processMemoryView[rectPtr+4] | (k.processMemoryView[rectPtr+5]<<8) | (k.processMemoryView[rectPtr+6]<<16) | (k.processMemoryView[rectPtr+7]<<24);
+                    right = k.processMemoryView[rectPtr+8] | (k.processMemoryView[rectPtr+9]<<8) | (k.processMemoryView[rectPtr+10]<<16) | (k.processMemoryView[rectPtr+11]<<24);
+                    bottom = k.processMemoryView[rectPtr+12] | (k.processMemoryView[rectPtr+13]<<8) | (k.processMemoryView[rectPtr+14]<<16) | (k.processMemoryView[rectPtr+15]<<24);
+                }
+                // Look up brush color
+                const brushEntry = k.handles.get(hbrush);
+                const color = brushEntry?.data?.color ?? 0x00FFFFFF;
+                dcEntry.data.lastFill = { left, top, right, bottom, color };
+                console.log(`[GDI32] FillRect hdc=${hdc} [${left},${top},${right},${bottom}] color=0x${(color>>>0).toString(16)}`);
+                return 1;
+            },
+            Rectangle(hdc: number, left: number, top: number, right: number, bottom: number): number {
+                const dcEntry = k.handles.get(hdc);
+                if (!dcEntry || !dcEntry.data) return 0;
+                const penColor = dcEntry.data.selected?.pen ? (k.handles.get(dcEntry.data.selected.pen)?.data?.color ?? 0x00FFFFFF) : 0x00FFFFFF;
+                const brushColor = dcEntry.data.selected?.brush ? (k.handles.get(dcEntry.data.selected.brush)?.data?.color ?? 0x00FFFFFF) : 0x00FFFFFF;
+                dcEntry.data.lastRect = { left, top, right, bottom, penColor, brushColor };
+                console.log(`[GDI32] Rectangle hdc=${hdc} [${left},${top},${right},${bottom}]`);
+                return 1;
+            },
+            GetPixel(hdc: number, x: number, y: number): number {
+                // Return white as default — actual pixel reading requires WindowManager integration
+                return 0x00FFFFFF;
+            },
+            SetPixel(hdc: number, x: number, y: number, color: number): number {
+                return color;
+            },
+            PatBlt(hdc: number, x: number, y: number, w: number, h: number, rop: number): number {
+                console.log(`[GDI32] PatBlt hdc=${hdc} x=${x} y=${y} w=${w} h=${h} rop=0x${rop.toString(16)}`);
+                return 1;
+            },
+            MoveToEx(hdc: number, x: number, y: number, prevPtr: number): number {
+                const dcEntry = k.handles.get(hdc);
+                if (!dcEntry) return 0;
+                const prev = { x: dcEntry.data.posX ?? 0, y: dcEntry.data.posY ?? 0 };
+                dcEntry.data.posX = x;
+                dcEntry.data.posY = y;
+                if (prevPtr && prevPtr + 8 <= k.processMemoryView.length) {
+                    k.processMemoryView[prevPtr] = prev.x & 0xFF;
+                    k.processMemoryView[prevPtr+1] = (prev.x >> 8) & 0xFF;
+                    k.processMemoryView[prevPtr+4] = prev.y & 0xFF;
+                    k.processMemoryView[prevPtr+5] = (prev.y >> 8) & 0xFF;
+                }
+                return 1;
+            },
+            LineTo(hdc: number, x: number, y: number): number {
+                console.log(`[GDI32] LineTo hdc=${hdc} x=${x} y=${y}`);
+                const dcEntry = k.handles.get(hdc);
+                if (dcEntry) { dcEntry.data.posX = x; dcEntry.data.posY = y; }
+                return 1;
             },
         });
     }

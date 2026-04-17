@@ -5,6 +5,8 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { GameProvider } from '@/components/providers/game-provider';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { Sidebar } from '@/components/layout/sidebar';
+import { MobileNav } from '@/components/layout/mobile-nav';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -34,8 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <GameProvider>
               <div className="min-h-screen flex flex-col">
                 <Header />
-                <main className="flex-1">{children}</main>
+                <div className="flex flex-1">
+                  <Sidebar />
+                  <main className="flex-1 pb-14 sm:pb-0">{children}</main>
+                </div>
                 <Footer />
+                <MobileNav />
               </div>
             </GameProvider>
           </ThemeProvider>
