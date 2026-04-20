@@ -3,14 +3,19 @@
  * Uses fingerprintjs and thumbmarkjs for robust, precise browser fingerprinting
  * Enhanced with WASM-accelerated hashing for faster generation
  */
-import FingerprintJS from '@fingerprintjs/fingerprintjs';
-import { Thumbmark } from '@thumbmarkjs/thumbmarkjs';
 import { hashCombined, generateFingerprintId, initFingerprint } from '@/lib/wasm/fingerprint';
 
+// Browser-only packages are aliased to `false` in next.config.js for
+// server/edge builds (they reference `document` at module level).
+// Static imports would crash the build — use dynamic imports with typeof-window guards.
 let fpPromise: Promise<any> | null = null;
 
 if (typeof window !== 'undefined') {
-    fpPromise = FingerprintJS.load();
+    // Assign the full import chain to fpPromise immediately so any
+    // concurrent call to getFingerprint() awaits the same Promise.
+    fpPromise = import('@fingerprintjs/fingerprintjs')
+        .then(({ default: FingerprintJS }) => FingerprintJS?.load?.())
+        .catch(() => null);
 }
 
 export const getFingerprint = async (): Promise<string> => {
@@ -26,6 +31,10 @@ export const getFingerprint = async (): Promise<string> => {
             getThumbmarkId()
         ]);
 
+        if (!fpInstance) {
+            // FingerprintJS unavailable — use thumbmark + fallback
+            return thumbmarkId !== 'tm-failed' ? thumbmarkId : crypto.randomUUID();
+        }
         const fpResult = await fpInstance.get();
         const fingerprintId = fpResult.visitorId;
 
@@ -57,6 +66,8 @@ export const getFingerprint = async (): Promise<string> => {
 
 const getThumbmarkId = async (): Promise<string> => {
     try {
+        const { Thumbmark } = await import('@thumbmarkjs/thumbmarkjs');
+        if (!Thumbmark) return 'tm-unavailable';
         const tm = new Thumbmark();
         const data = await tm.get();
         return data.thumbmark;

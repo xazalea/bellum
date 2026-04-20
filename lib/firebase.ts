@@ -1,5 +1,4 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -16,14 +15,19 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 
-// Analytics (only on client side)
-let analytics = null;
+// Analytics — loaded lazily to avoid crashing edge/SSR builds.
+// firebase/analytics references `document` at module level, which throws
+// ReferenceError in non-browser environments.
+let analytics: unknown = null;
 if (typeof window !== "undefined") {
-  isSupported().then((supported) => {
-    if (supported) {
-      analytics = getAnalytics(app);
-    }
-  });
+  import("firebase/analytics")
+    .then((mod) => mod.isSupported().then((supported) => supported ? mod : null))
+    .then((mod) => {
+      if (mod) analytics = mod.getAnalytics(app);
+    })
+    .catch(() => {
+      // Analytics not available — non-critical
+    });
 }
 
 export { app, auth, analytics };

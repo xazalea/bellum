@@ -1,4 +1,4 @@
-import { WebGL2Renderer } from '../graphics/webgl2-renderer';
+import { WebGL2Renderer, type RenderSurface } from '../graphics/webgl2-renderer';
 
 const GL_TRIANGLES = 0x0004;
 const GL_TRIANGLE_STRIP = 0x0005;
@@ -47,9 +47,18 @@ export class GLESWebGLTranslator {
   private boundElementBuffer = -1;
   private attribs: Map<number, { size: number; type: number; normalized: boolean; stride: number; offset: number; bufferId: number }> = new Map();
   private drawColor = [1, 1, 1, 1];
+  private glesSurface: RenderSurface;
 
   constructor(renderer: WebGL2Renderer) {
     this.renderer = renderer;
+    const surf = renderer.getSurface();
+    this.glesSurface = {
+      width: surf.width,
+      height: surf.height,
+      pixels: new Uint8Array(surf.width * surf.height * 4),
+      dirty: true,
+      stride: surf.width * 4,
+    };
   }
 
   genBuffer(): number {
@@ -95,17 +104,17 @@ export class GLESWebGLTranslator {
 
   clearColorBuffer(r: number, g: number, b: number, a: number): void {
     this.clearColor = [r, g, b, a];
-    this.renderer.clear((r * 255) | 0, (g * 255) | 0, (b * 255) | 0, (a * 255) | 0);
+    const surf = this.glesSurface;
+    const ri = (r * 255) | 0, gi = (g * 255) | 0, bi = (b * 255) | 0, ai = (a * 255) | 0;
+    const pattern32 = ((ai << 24) | (bi << 16) | (gi << 8) | ri) >>> 0;
+    const view32 = new Uint32Array(surf.pixels.buffer, 0, surf.pixels.length / 4);
+    view32.fill(pattern32);
+    surf.dirty = true;
   }
 
   clear(mask: number): void {
     if (mask & GL_COLOR_BUFFER_BIT) {
-      this.renderer.clear(
-        (this.clearColor[0] * 255) | 0,
-        (this.clearColor[1] * 255) | 0,
-        (this.clearColor[2] * 255) | 0,
-        (this.clearColor[3] * 255) | 0
-      );
+      this.clearColorBuffer(...this.clearColor as [number, number, number, number]);
     }
   }
 
@@ -126,21 +135,22 @@ export class GLESWebGLTranslator {
     const data = buf.data as Float32Array;
     const stride = posAttr.stride || (posAttr.size * 4);
     const offset = posAttr.offset || 0;
+    const surf = this.glesSurface;
+    const cr = (this.drawColor[0] * 255) | 0;
+    const cg = (this.drawColor[1] * 255) | 0;
+    const cb = (this.drawColor[2] * 255) | 0;
 
     if (mode === GL_TRIANGLES && posAttr.size >= 2) {
       for (let i = first; i < first + count; i += 3) {
         for (let v = 0; v < 3 && (i + v) < first + count; v++) {
           const base = ((i + v - first) * stride / 4 + offset / 4) | 0;
           if (base + 1 < data.length) {
-            const x = data[base];
-            const y = data[base + 1];
-            this.renderer.setPixel(
-              ((x + 1) * 0.5 * this.renderer.getSurface().width) | 0,
-              ((1 - y) * 0.5 * this.renderer.getSurface().height) | 0,
-              (this.drawColor[0] * 255) | 0,
-              (this.drawColor[1] * 255) | 0,
-              (this.drawColor[2] * 255) | 0
-            );
+            const x = ((data[base] + 1) * 0.5 * surf.width) | 0;
+            const y = ((1 - data[base + 1]) * 0.5 * surf.height) | 0;
+            if (x >= 0 && x < surf.width && y >= 0 && y < surf.height) {
+              const idx = (y * surf.stride + x * 4) | 0;
+              surf.pixels[idx] = cr; surf.pixels[idx + 1] = cg; surf.pixels[idx + 2] = cb; surf.pixels[idx + 3] = 255;
+            }
           }
         }
       }
@@ -149,20 +159,15 @@ export class GLESWebGLTranslator {
         const b0 = ((i) * stride / 4 + offset / 4) | 0;
         const b1 = ((i + 1) * stride / 4 + offset / 4) | 0;
         if (b0 + 1 < data.length && b1 + 1 < data.length) {
-          const surf = this.renderer.getSurface();
-          this.renderer.drawLine(
-            ((data[b0] + 1) * 0.5 * surf.width) | 0,
-            ((1 - data[b0 + 1]) * 0.5 * surf.height) | 0,
-            ((data[b1] + 1) * 0.5 * surf.width) | 0,
-            ((1 - data[b1 + 1]) * 0.5 * surf.height) | 0,
-            (this.drawColor[0] * 255) | 0,
-            (this.drawColor[1] * 255) | 0,
-            (this.drawColor[2] * 255) | 0
-          );
+          const x0 = ((data[b0] + 1) * 0.5 * surf.width) | 0;
+          const y0 = ((1 - data[b0 + 1]) * 0.5 * surf.height) | 0;
+          const x1 = ((data[b1] + 1) * 0.5 * surf.width) | 0;
+          const y1 = ((1 - data[b1 + 1]) * 0.5 * surf.height) | 0;
+          this.bresenham(surf, x0, y0, x1, y1, cr, cg, cb);
         }
       }
     }
-    this.renderer.getSurface().dirty = true;
+    surf.dirty = true;
   }
 
   drawElements(mode: number, count: number, type: number, offset: number): void {
@@ -175,7 +180,10 @@ export class GLESWebGLTranslator {
     const positions = posBuf.data as Float32Array;
     const indices = idxBuf.data;
     const stride = posAttr.stride || (posAttr.size * 4);
-    const surf = this.renderer.getSurface();
+    const surf = this.glesSurface;
+    const cr = (this.drawColor[0] * 255) | 0;
+    const cg = (this.drawColor[1] * 255) | 0;
+    const cb = (this.drawColor[2] * 255) | 0;
 
     const getIdx = (i: number): number => {
       if (indices instanceof Uint16Array) return indices[i];
@@ -190,13 +198,12 @@ export class GLESWebGLTranslator {
           const idx = getIdx(idxStart + i + v);
           const base = (idx * stride / 4 + posAttr.offset / 4) | 0;
           if (base + 1 < positions.length) {
-            this.renderer.setPixel(
-              ((positions[base] + 1) * 0.5 * surf.width) | 0,
-              ((1 - positions[base + 1]) * 0.5 * surf.height) | 0,
-              (this.drawColor[0] * 255) | 0,
-              (this.drawColor[1] * 255) | 0,
-              (this.drawColor[2] * 255) | 0
-            );
+            const x = ((positions[base] + 1) * 0.5 * surf.width) | 0;
+            const y = ((1 - positions[base + 1]) * 0.5 * surf.height) | 0;
+            if (x >= 0 && x < surf.width && y >= 0 && y < surf.height) {
+              const di = (y * surf.stride + x * 4) | 0;
+              surf.pixels[di] = cr; surf.pixels[di + 1] = cg; surf.pixels[di + 2] = cb; surf.pixels[di + 3] = 255;
+            }
           }
         }
       }
@@ -207,7 +214,19 @@ export class GLESWebGLTranslator {
   blitTexture(texId: number, dstX: number, dstY: number): void {
     const tex = this.textures.get(texId);
     if (!tex) return;
-    this.renderer.blit(tex.pixels, tex.width, tex.height, dstX, dstY);
+    const surf = this.glesSurface;
+    for (let row = 0; row < tex.height; row++) {
+      const dy = dstY + row;
+      if (dy < 0 || dy >= surf.height) continue;
+      const srcOff = row * tex.width * 4;
+      const dstOff = (dy * surf.stride + dstX * 4) | 0;
+      const copyLen = Math.min(tex.width * 4, (surf.width - dstX) * 4);
+      if (copyLen <= 0 || dstOff < 0 || dstOff + copyLen > surf.pixels.length) continue;
+      if (srcOff + copyLen <= tex.pixels.length) {
+        surf.pixels.set(tex.pixels.subarray(srcOff, srcOff + copyLen), dstOff);
+      }
+    }
+    surf.dirty = true;
   }
 
   setColor(r: number, g: number, b: number, a = 1): void {
@@ -218,5 +237,21 @@ export class GLESWebGLTranslator {
     this.renderer.present();
   }
 
-  getSurface() { return this.renderer.getSurface(); }
+  getSurface() { return this.glesSurface; }
+
+  private bresenham(surf: RenderSurface, x0: number, y0: number, x1: number, y1: number, r: number, g: number, b: number): void {
+    let dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    let dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    while (true) {
+      if (x0 >= 0 && x0 < surf.width && y0 >= 0 && y0 < surf.height) {
+        const idx = (y0 * surf.stride + x0 * 4) | 0;
+        surf.pixels[idx] = r; surf.pixels[idx + 1] = g; surf.pixels[idx + 2] = b; surf.pixels[idx + 3] = 255;
+      }
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+  }
 }

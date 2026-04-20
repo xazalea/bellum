@@ -1,5 +1,3 @@
-import { X86Interpreter } from '../cpu/x86_interpreter';
-
 export interface RenderSurface {
   width: number;
   height: number;
@@ -7,6 +5,17 @@ export interface RenderSurface {
   dirty: boolean;
   stride: number;
 }
+
+/** Dirty rectangle tracking for efficient partial uploads */
+interface DirtyRect {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+const EMPTY_DIRTY: DirtyRect = { minX: 0x7FFFFFFF, minY: 0x7FFFFFFF, maxX: 0, maxY: 0 };
+const FULL_DIRTY: DirtyRect = { minX: 0, minY: 0, maxX: 0x7FFFFFFF, maxY: 0x7FFFFFFF };
 
 export class WebGL2Renderer {
   private gl: WebGL2RenderingContext;
@@ -16,14 +25,12 @@ export class WebGL2Renderer {
   private surface: RenderSurface;
   private canvas: HTMLCanvasElement;
   private frameBuffer: Uint8Array;
-  private fbTexture: WebGLTexture | null = null;
-  private fbProgram: WebGLProgram | null = null;
-  private fbVAO: WebGLVertexArrayObject | null = null;
   private quadVerts: WebGLBuffer | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private _fps = 0;
   private frameCount = 0;
   private lastFpsTime = performance.now();
+  private dirtyRect: DirtyRect = { ...FULL_DIRTY };
 
   constructor(canvas: HTMLCanvasElement, width = 800, height = 600) {
     this.canvas = canvas;
@@ -153,9 +160,16 @@ export class WebGL2Renderer {
 
   private handleResize(): void {
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = Math.floor(this.canvas.clientWidth * dpr);
-    this.canvas.height = Math.floor(this.canvas.clientHeight * dpr);
-    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    const w = Math.floor(this.canvas.clientWidth * dpr);
+    const h = Math.floor(this.canvas.clientHeight * dpr);
+    if (w === 0 || h === 0) return;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.gl.viewport(0, 0, w, h);
+  }
+
+  syncCanvasSize(): void {
+    this.handleResize();
   }
 
   resizeSurface(w: number, h: number): void {
@@ -165,6 +179,8 @@ export class WebGL2Renderer {
     this.surface.stride = w * 4;
     this.surface.pixels = new Uint8Array(w * h * 4);
     this.frameBuffer = new Uint8Array(w * h * 4);
+    // Full surface dirty on resize
+    this.dirtyRect = { ...FULL_DIRTY };
     this.surface.dirty = true;
 
     const gl = this.gl;
@@ -172,17 +188,51 @@ export class WebGL2Renderer {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
   }
 
+  /** Mark a region as dirty for partial upload */
+  private markDirty(x: number, y: number, w = 1, h = 1): void {
+    if (x < this.dirtyRect.minX) this.dirtyRect.minX = x;
+    if (y < this.dirtyRect.minY) this.dirtyRect.minY = y;
+    const rx = x + w;
+    const ry = y + h;
+    if (rx > this.dirtyRect.maxX) this.dirtyRect.maxX = rx;
+    if (ry > this.dirtyRect.maxY) this.dirtyRect.maxY = ry;
+    this.surface.dirty = true;
+  }
+
   flush(): void {
     if (!this.surface.dirty) return;
+
     const gl = this.gl;
+    const minX = Math.max(0, this.dirtyRect.minX);
+    const minY = Math.max(0, this.dirtyRect.minY);
+    const maxX = Math.min(this.surface.width, this.dirtyRect.maxX);
+    const maxY = Math.min(this.surface.height, this.dirtyRect.maxY);
 
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    gl.texSubImage2D(
-      gl.TEXTURE_2D, 0, 0, 0,
-      this.surface.width, this.surface.height,
-      gl.RGBA, gl.UNSIGNED_BYTE,
-      this.surface.pixels
-    );
+
+    const fullUpload = (minX === 0 && minY === 0
+      && maxX >= this.surface.width && maxY >= this.surface.height);
+
+    if (fullUpload) {
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D, 0, 0, 0,
+        this.surface.width, this.surface.height,
+        gl.RGBA, gl.UNSIGNED_BYTE,
+        this.surface.pixels
+      );
+    } else if (minX < maxX && minY < maxY) {
+      const rw = maxX - minX;
+      const rh = maxY - minY;
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, this.surface.width);
+      const byteOffset = (minY * this.surface.width + minX) * 4;
+      gl.texSubImage2D(
+        gl.TEXTURE_2D, 0, minX, minY, rw, rh,
+        gl.RGBA, gl.UNSIGNED_BYTE,
+        this.surface.pixels, byteOffset
+      );
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    }
 
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
@@ -194,6 +244,7 @@ export class WebGL2Renderer {
     gl.bindVertexArray(null);
 
     this.surface.dirty = false;
+    this.dirtyRect = { ...EMPTY_DIRTY };
   }
 
   present(): void {
@@ -214,7 +265,7 @@ export class WebGL2Renderer {
     this.surface.pixels[idx + 1] = g;
     this.surface.pixels[idx + 2] = b;
     this.surface.pixels[idx + 3] = a;
-    this.surface.dirty = true;
+    this.markDirty(x, y);
   }
 
   private fillRowCache: Uint8Array | null = null;
@@ -247,7 +298,7 @@ export class WebGL2Renderer {
       const dstOff = row * stride + sx * 4;
       pixels.set(rowPattern.subarray(0, rowLen), dstOff);
     }
-    this.surface.dirty = true;
+    this.markDirty(sx, sy, ex - sx, ey - sy);
   }
 
   drawLine(x0: number, y0: number, x1: number, y1: number, r: number, g: number, b: number, a = 255): void {
@@ -274,7 +325,7 @@ export class WebGL2Renderer {
       if (srcOff < 0 || srcOff + copyLen > src.length) continue;
       this.surface.pixels.set(src.subarray(srcOff, srcOff + copyLen), dstOff);
     }
-    this.surface.dirty = true;
+    this.markDirty(dstX, dstY, bw, bh);
   }
 
   drawText(text: string, x: number, y: number, r: number, g: number, b: number, font: Uint8Array[] | null = null): void {
@@ -312,6 +363,8 @@ export class WebGL2Renderer {
     const pattern32 = ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
     const view32 = new Uint32Array(pixels.buffer, 0, len / 4);
     view32.fill(pattern32);
+    // Full surface dirty — skip per-pixel tracking
+    this.dirtyRect = { ...FULL_DIRTY };
     this.surface.dirty = true;
   }
 

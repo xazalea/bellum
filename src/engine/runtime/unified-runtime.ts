@@ -153,36 +153,12 @@ export class UnifiedRuntime {
         this.activityManager = new ActivityManager(this.renderer);
       }
 
-      if (this.config.type === 'exe' && this.config.useWorker && this.cpu) {
-        this.worker = new Worker(new URL('../cpu/cpu-worker.ts', import.meta.url));
-        this.worker.onmessage = (e: MessageEvent) => {
-          const msg = e.data;
-          if (msg.type === 'ready') {
-            this.workerReady = true;
-            this.log('[Runtime] CPU worker ready');
-          } else if (msg.type === 'state') {
-            this.syncFromWorker(msg);
-            this.workerBusy = false;
-            if (this.workerResolve) {
-              this.workerResolve(msg);
-              this.workerResolve = null;
-            }
-          } else if (msg.type === 'halted') {
-            this.workerBusy = false;
-          }
-        };
-        const memBase64 = this.uint8ToBase64(this.cpu.mem);
-        this.worker.postMessage({
-          type: 'init',
-          memSize: this.cpu.mem.length,
-          memBase64,
-          regs: Array.from(this.cpu.regs),
-          eip: this.cpu.eip,
-          eflags: this.cpu.eflags,
-          segs: Array.from(this.cpu.segs),
-          batchSize: this.instructionsPerFrame,
-        });
-        this.log('[Runtime] CPU worker initializing...');
+      // CPU worker is DISABLED for EXE mode because Win32 thunk dispatch (INT 0xFE)
+      // requires synchronous main-thread execution — postMessage cannot deliver thunks.
+      // All x86 execution runs on the main thread with time-budgeted batches.
+      if (this.config.type === 'exe' && this.config.useWorker) {
+        this.log('[Runtime] CPU worker disabled for EXE mode (thunk dispatch requires main thread)');
+        this.config.useWorker = false;
       }
 
       this.setState('idle');
@@ -386,18 +362,22 @@ export class UnifiedRuntime {
     }
   }
 
-  /** Execute a chunk of Dalvik bytecode (non-blocking: runs up to a limit, then returns). */
+  /** Execute a chunk of Dalvik bytecode (non-blocking: runs up to a time budget, then returns). */
   private dalvikInsnsExecuted = 0;
   private readonly DALVIK_INSNS_PER_FRAME = 50000;
+  private readonly DALVIK_TIME_BUDGET_MS = 10; // Max 10ms per frame for Dalvik
 
   private executeDalvikChunk(insns: Uint8Array, insnsSize: number): void {
     if (!this.dalvik) return;
     const interp = this.dalvik;
     interp.setCode(insns);
     interp.setPC(0);
+    const deadline = performance.now() + this.DALVIK_TIME_BUDGET_MS;
     try {
       const maxInsns = Math.min(this.DALVIK_INSNS_PER_FRAME, insnsSize);
       for (let i = 0; i < maxInsns; i++) {
+        // Check time budget every 256 instructions (bitwise AND is fast)
+        if ((i & 0xFF) === 0 && performance.now() > deadline) break;
         if (interp.getPC() >= insns.length) break;
         const opcode = insns[interp.getPC()];
         if (!interp.step(opcode)) break; // step returns false on return
@@ -729,14 +709,13 @@ export class UnifiedRuntime {
   run(): void {
     if (this._state !== 'idle' && this._state !== 'paused') return;
     this.setState('running');
-    this.log('[Runtime] Execution started');
+    this.renderer?.syncCanvasSize();
+    this.log('[Runtime] Execution started — tick() must be called each frame by the host');
     this.lastFrameTime = performance.now();
-    this.loop();
   }
 
   pause(): void {
     if (this._state !== 'running') return;
-    cancelAnimationFrame(this.animFrameId);
     this.setState('paused');
     this.log('[Runtime] Paused');
   }
@@ -746,22 +725,16 @@ export class UnifiedRuntime {
     this.run();
   }
 
-  private loop = (): void => {
+  /** Main execution tick — called by FramePacer or requestAnimationFrame.
+   *  Time-budgeted: spends at most ~12ms on CPU/Dalvik work per frame. */
+  tick(delta: number): void {
     if (this._state !== 'running') return;
 
-    const now = performance.now();
-    const delta = now - this.lastFrameTime;
-    this.lastFrameTime = now;
+    const frameDeadline = performance.now() + 12; // 12ms budget for compute, 4ms for render
 
     if (this.cpu && !this.cpu.halted) {
-      if (this.worker && this.workerReady && !this.workerBusy) {
-        const ips = this.adaptInstructions(delta);
-        this.workerBusy = true;
-        this.worker.postMessage({ type: 'run', count: ips });
-      } else if (!this.worker) {
-        const ips = this.adaptInstructions(delta);
-        this.cpu.run(ips);
-      }
+      const ips = this.adaptInstructions(delta);
+      this.cpu.run(ips);
 
       if (this.cpu.halted) {
         this.log('[Runtime] CPU halted');
@@ -807,10 +780,12 @@ export class UnifiedRuntime {
         }
       }
 
-      // Continue main Dalvik execution
+      // Continue main Dalvik execution with time budget
       const code = this.dalvik.getCode();
       const maxInsns = this.DALVIK_INSNS_PER_FRAME;
       for (let i = 0; i < maxInsns; i++) {
+        // Check time budget every 256 instructions
+        if ((i & 0xFF) === 0 && performance.now() > frameDeadline) break;
         if (this.dalvik.getPC() >= code.length) { this.dalvikRunning = false; break; }
         if (!this.dalvik.step(code[this.dalvik.getPC()])) { this.dalvikRunning = false; break; }
       }
@@ -827,9 +802,7 @@ export class UnifiedRuntime {
 
     this.renderer?.present();
     this.config.onFPS?.(this.renderer?.fps ?? 0);
-
-    this.animFrameId = requestAnimationFrame(this.loop);
-  };
+  }
 
   private adaptInstructions(frameDelta: number): number {
     this.framePacingBuffer.push(frameDelta);
@@ -1862,7 +1835,6 @@ export class UnifiedRuntime {
   }
 
   destroy(): void {
-    cancelAnimationFrame(this.animFrameId);
     this.detachInputHandlers();
     if (this.worker) {
       this.worker.terminate();

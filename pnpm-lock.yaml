@@ -59,6 +59,9 @@ importers:
       almostnode:
         specifier: ^0.2.14
         version: 0.2.14(react@18.3.1)(rollup@4.52.4)(vite@7.1.9(@types/node@20.19.30)(jiti@1.21.7)(yaml@2.8.2))
+      animejs:
+        specifier: ^4.3.6
+        version: 4.3.6
       axios:
         specifier: ^1.6.0
         version: 1.13.4
@@ -2764,6 +2767,9 @@ packages:
   amdefine@1.0.1:
     resolution: {integrity: sha512-S2Hw0TtNkMJhIabBwIojKL9YHO5T0n5eNqWJ7Lrlel/zDbftQpxpapi8tZs3X1HWa+u+QeydGmzzNU0m09+Rcg==}
     engines: {node: '>=0.4.2'}
+
+  animejs@4.3.6:
+    resolution: {integrity: sha512-rzZ4bDc8JAtyx6hYwxj7s5M/yWfnM5qqY4hZDnhy1cWFvMb6H5/necHS2sbCY3WQTDbRLuZL10dPXSxSCFOr/w==}
 
   ansi-escapes@4.3.2:
     resolution: {integrity: sha512-gKXj5ALrKWQLsYG9jlTRmR/xKluxHV+Z9QEwNIgCfM1/uwPMCuzVVnh5mwTd+OuBZcwSIMbqssNWRm1lE51QaQ==}
@@ -9580,6 +9586,8 @@ snapshots:
       - vite
 
   amdefine@1.0.1: {}
+
+  animejs@4.3.6: {}
 
   ansi-escapes@4.3.2:
     dependencies:

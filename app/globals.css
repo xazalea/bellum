@@ -86,34 +86,24 @@
   box-shadow: 0 0 0 1px hsl(var(--background)), 0 0 0 1.5px hsl(var(--ring) / 0.6);
 }
 
-/* ── Keyframes ── */
-@keyframes border-pulse {
-  0%, 100% { border-color: hsl(var(--muted-foreground) / 0.2); }
-  50% { border-color: hsl(var(--foreground) / 0.5); }
+  /* ── Keyframes ── */
+@keyframes shimmer-line {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+  @keyframes breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+ }
+@keyframes spin-ring {
+  to { transform: rotate(360deg); }
 }
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@keyframes fade-in-slow {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes shimmer-line {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-@keyframes breathe {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
-}
-@keyframes spin-ring {
-  to { transform: rotate(360deg); }
-}
 
-.animate-border-pulse { animation: border-pulse 2s ease-in-out infinite; }
 .animate-fade-in { animation: fade-in 0.3s var(--transition-fast) both; }
-.animate-fade-in-slow { animation: fade-in-slow 0.6s ease both; }
 .animate-breathe { animation: breathe 3s ease-in-out infinite; }
 
 /* ── FPS overlay ── */
@@ -190,21 +180,23 @@
   animation: shimmer-line 1.5s ease-in-out infinite;
 }
 
-/* ── Interactive hover states ── */
-.hover-lift {
+ /* ── Interactive hover states ── */
+ .hover-lift {
+  cursor: pointer;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
-}
-.hover-lift:hover {
+ }
+ .hover-lift:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px hsl(var(--foreground) / 0.04);
-}
+ }
 
-.hover-glow {
+ .hover-glow {
+  cursor: pointer;
   transition: box-shadow var(--transition-base);
-}
-.hover-glow:hover {
+ }
+ .hover-glow:hover {
   box-shadow: 0 0 0 1px hsl(var(--foreground) / 0.08), 0 0 20px hsl(var(--foreground) / 0.03);
-}
+ }
 
 /* ── Loading spinner ── */
 .spinner {
@@ -253,4 +245,217 @@
 .tag {
   @apply inline-flex items-center px-2 py-0.5 text-[10px] font-medium;
   @apply border border-border text-muted-foreground font-mono;
+}
+
+/* ── Glass card ── */
+.glass-card {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid hsl(var(--primary) / 0.1);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.glass-card:hover {
+  border-color: hsl(var(--primary) / 0.25);
+}
+
+/* ── Gold glow effects ── */
+.gold-glow {
+  box-shadow: 0 0 24px 2px hsl(45 100% 51% / 0.2),
+              0 0 8px 1px hsl(45 100% 51% / 0.1);
+}
+.gold-glow-sm {
+  box-shadow: 0 0 12px 1px hsl(45 100% 51% / 0.12);
+}
+.gold-border {
+  background: linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+              linear-gradient(135deg, hsl(45 100% 51% / 0.6), hsl(38 92% 50% / 0.3)) border-box;
+  border: 1px solid transparent;
+}
+
+/* ── Material Symbols font ── */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Telemetry streaming indicator ── */
+@keyframes telemetry-pulse {
+  0%, 100% { opacity: 0.4; box-shadow: 0 0 4px hsl(142 71% 45% / 0.3); }
+  50% { opacity: 1; box-shadow: 0 0 12px hsl(142 71% 45% / 0.6); }
+}
+.telemetry-dot {
+  animation: telemetry-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── Achievement locked/unlocked ── */
+.achievement-locked {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.achievement-unlocked {
+  color: hsl(45 100% 51%);
+  filter: none;
+}
+
+/* ── Mini chart bar ── */
+.mini-chart-bar {
+  @apply w-1 rounded-sm bg-primary/30 transition-all duration-300;
+}
+.mini-chart-bar.current {
+  @apply bg-primary/70;
+}
+
+/* ── Premium gradient animations ── */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+/* ── Premium card hover ── */
+.premium-card {
+  position: relative;
+  overflow: hidden;
+}
+.premium-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.03), transparent);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+.premium-card:hover::before {
+  left: 100%;
+}
+
+/* ── Glass card elevated ── */
+.glass-card-elevated {
+  background: hsl(var(--card) / 0.4);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid hsl(var(--primary) / 0.08);
+  box-shadow: 0 4px 24px -4px hsl(var(--foreground) / 0.04);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+}
+.glass-card-elevated:hover {
+  border-color: hsl(var(--primary) / 0.2);
+  box-shadow: 0 8px 32px -4px hsl(var(--foreground) / 0.06);
+}
+
+/* ── Gradient border ── */
+.gradient-border {
+  position: relative;
+}
+.gradient-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, hsl(45 100% 51% / 0.3), hsl(142 71% 45% / 0.15), hsl(220 100% 55% / 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Streaming gradient bar ── */
+.streaming-bar {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, hsl(142 71% 45% / 0.6), hsl(45 100% 51% / 0.4), transparent);
+  background-size: 200% 100%;
+  animation: gradient-shift 3s linear infinite;
+}
+
+/* ── Feature icon accent backgrounds ── */
+.feature-icon-bg {
+  position: relative;
+}
+.feature-icon-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+.feature-icon-bg:hover::after {
+  opacity: 1;
+}
+
+/* ── Tooltip/floating label ── */
+.float-label {
+  @apply absolute left-full ml-2 px-2 py-1 text-[10px] font-medium bg-popover border border-border rounded shadow-lg pointer-events-none whitespace-nowrap z-50;
+  @apply opacity-0 group-hover:opacity-100 transition-opacity duration-200;
+}
+
+/* ── FPS color variants for perf overlay ── */
+.fps-legendary {
+  color: hsl(45 100% 51%);
+  text-shadow: 0 0 8px hsl(45 100% 51% / 0.4);
+}
+.fps-excellent {
+  color: hsl(142 71% 45%);
+  text-shadow: 0 0 6px hsl(142 71% 45% / 0.3);
+}
+
+/* ── Ambient background glow ── */
+.ambient-glow {
+  position: fixed;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(120px);
+  opacity: 0.08;
+  z-index: 0;
+}
+.ambient-glow-gold {
+  background: hsl(45 100% 51%);
+}
+.ambient-glow-green {
+  background: hsl(142 71% 45%);
+}
+.ambient-glow-blue {
+  background: hsl(220 100% 55%);
 }

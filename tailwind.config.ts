@@ -49,6 +49,18 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        sans: ['var(--font-inter)', 'Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        mono: ['SF Mono', 'JetBrains Mono', 'Fira Code', 'monospace'],
+        display: ['var(--font-space-grotesk)', 'Space Grotesk', 'Inter', 'sans-serif'],
+        symbols: ['Material Symbols Outlined', 'Material Symbols'],
+      },
+      boxShadow: {
+        'gold': '0 0 24px 2px hsl(45 100% 51% / 0.25)',
+        'gold-sm': '0 0 12px 1px hsl(45 100% 51% / 0.15)',
+        'gold-lg': '0 0 40px 4px hsl(45 100% 51% / 0.2)',
+        'inner-glow': 'inset 0 0 12px 2px hsl(45 100% 51% / 0.08)',
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

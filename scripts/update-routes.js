@@ -69,11 +69,16 @@ const finalRoutes = {
     '/games.json',
     '/sw.js',
     '/_next/*',
+    // Static assets served directly by CF Pages (bypass worker)
+    '/fonts/*',
+    '/images/*',
+    '/wasm/*',
+    '/v86/*',
   ],
 };
 
 fs.writeFileSync(routesJsonPath, JSON.stringify(finalRoutes, null, 2));
-console.log('✅ Updated _routes.json (Next.js worker handles all routes)');
+console.log('✅ Updated _routes.json (Next.js worker handles dynamic routes)');
 console.log(`   Structure: version=${finalRoutes.version}, include=[${finalRoutes.include.length} items], exclude=[${finalRoutes.exclude.length} items]`);
 
 // Also update _redirects file

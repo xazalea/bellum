@@ -2,11 +2,10 @@ import type { Game, GamesResponse } from '@/lib/types/games';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api';
 const GAME_CDN = 'https://html5.gamedistribution.com';
-const GAME_PATH_PREFIX = 'rvvASMiM';
 
 // Games MUST be loaded through the Almostnode proxy — never directly
 export const getGameUrl = (gameId: string): string => {
-  return `${GAME_CDN}/${GAME_PATH_PREFIX}/${gameId}/`;
+  return `${GAME_CDN}/${gameId}/`;
 };
 
 export const getGameProxyUrl = (gameId: string): string => {

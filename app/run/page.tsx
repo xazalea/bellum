@@ -6,8 +6,11 @@ import { BinaryAnalyzer, FileType } from '@/lib/engine/analyzers/binary-analyzer
 import { FramePacer } from '@/lib/engine/frame-pacer';
 import { SingleFileBundler } from '@/lib/compiler/single-file-bundler';
 import { UnifiedRuntime, type RuntimeState } from '../../src/engine/runtime/unified-runtime';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { animate, spring, ease, dur } from '@/lib/hooks/use-anime';
 
 type RunStatus = 'idle' | 'loading' | 'booting' | 'running' | 'paused' | 'error' | 'exporting' | 'exported';
+type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 
 interface PerfStats {
   fps: number;
@@ -26,6 +29,10 @@ export default function RunPage() {
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false);
+  const [qualityPreset, setQualityPreset] = useState<QualityPreset>('high');
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -71,6 +78,19 @@ export default function RunPage() {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
+  // Click-outside handler for quality menu
+  useEffect(() => {
+    if (!showQualityMenu) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-quality-menu]')) {
+        setShowQualityMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showQualityMenu]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -110,6 +130,7 @@ export default function RunPage() {
 
       setStatus('booting');
       setStatusDetail('Initializing runtime...');
+      setSessionStartTime(null);
 
       const loader = new APKLoader();
       loaderRef.current = loader;
@@ -118,7 +139,8 @@ export default function RunPage() {
         setStatusDetail(detail || s);
         if (s === 'Running') {
           setStatus('running');
-          framePacerRef.current?.start();
+          const canvas = document.querySelector('[data-anime="runtime-canvas"]');
+          if (canvas) animate(canvas, { opacity: [0, 1], scale: [0.98, 1], ease: spring({ bounce: 0.15 }), duration: dur.slow });
         } else if (s === 'Error' || s === 'Boot failed') {
           setError(detail || 'Boot failed');
           setStatus('error');
@@ -144,12 +166,14 @@ export default function RunPage() {
           onStateChange: (s: RuntimeState) => {
             if (s === 'running') {
               setStatus('running');
-              framePacerRef.current?.start();
+              setSessionStartTime(Date.now());
             } else if (s === 'halted') {
               setStatusDetail('Program exited');
+              framePacerRef.current?.stop();
             } else if (s === 'error') {
               setError('Runtime error');
               setStatus('error');
+              framePacerRef.current?.stop();
             }
           },
           onLog: (msg: string) => setStatusDetail(msg.replace(/^\[Runtime\]\s*/, '')),
@@ -166,6 +190,26 @@ export default function RunPage() {
 
         runtimeRef.current = runtime;
         runtime.run();
+
+        // Wire FramePacer → runtime.tick() — the main execution loop
+        // FramePacer drives rAF and calls onFrame(dt, fps) each vsync.
+        // UnifiedRuntime.tick(delta) executes time-budgeted CPU/Dalvik work + render.
+        const pacer = framePacerRef.current;
+        if (pacer) {
+          pacer.onFrame = (dt: number, _fps: number) => {
+            try {
+              if (runtimeRef.current?.state === 'running') {
+                runtimeRef.current.tick(dt);
+              }
+            } catch (e: any) {
+              console.error('[RunPage] Runtime tick error:', e);
+              setError(e?.message || 'Runtime execution error');
+              setStatus('error');
+              pacer.stop();
+            }
+          };
+          pacer.start();
+        }
       }
     } catch (e: any) {
       const msg = e?.message || 'Unknown error';
@@ -183,10 +227,16 @@ export default function RunPage() {
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setDragOver(true);
-  }, []);
+    if (!dragOver) {
+      setDragOver(true);
+      if (containerRef.current) animate(containerRef.current, { borderColor: 'hsl(var(--foreground) / 0.4)', scale: [1, 1.005], ease: spring({ bounce: 0.2 }), duration: dur.fast });
+    }
+  }, [dragOver]);
 
-  const onDragLeave = useCallback(() => setDragOver(false), []);
+  const onDragLeave = useCallback(() => {
+    setDragOver(false);
+    if (containerRef.current) animate(containerRef.current, { borderColor: 'hsl(var(--border))', scale: 1, ease: ease.out, duration: dur.fast });
+  }, []);
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -204,6 +254,8 @@ export default function RunPage() {
     setFileBuffer(null);
     setError('');
     setExportUrl(null);
+    setSessionStartTime(null);
+    setElapsedTime(0);
   }, []);
 
   const exportToHtml = useCallback(async () => {
@@ -254,13 +306,52 @@ export default function RunPage() {
 
   const fpsClass = perfStats.fps >= 40 ? 'fps-good' : perfStats.fps >= 20 ? 'fps-warn' : 'fps-bad';
 
+  // Detect SharedArrayBuffer support (requires COOP/COEP headers)
+  const [sabAvailable] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return typeof SharedArrayBuffer !== 'undefined';
+    } catch {
+      return false;
+    }
+  });
+
+  // Elapsed time tracker
+  useEffect(() => {
+    if (status !== 'running' || !sessionStartTime) return;
+    const interval = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - sessionStartTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [status, sessionStartTime]);
+
+  const formatElapsed = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // Quality preset — UI placeholder until runtime supports dynamic target FPS
+  const qualitySettings: Record<QualityPreset, { label: string; targetFps: number; description: string }> = {
+    low: { label: 'Low', targetFps: 30, description: 'Max compatibility' },
+    medium: { label: 'Medium', targetFps: 40, description: 'Balanced' },
+    high: { label: 'High', targetFps: 60, description: 'Recommended' },
+    ultra: { label: 'Ultra', targetFps: 120, description: 'High refresh rate' },
+  };
+
   return (
+    <ErrorBoundary>
     <div className="min-h-screen">
       <div className="cd-container py-6">
         {/* Header bar */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-sm font-medium text-foreground tracking-tight">Run</h1>
+            {!sabAvailable && (
+              <p className="text-[10px] text-yellow-500/70 mt-0.5">
+                ⚠ COOP/COEP headers missing — performance may be limited
+              </p>
+            )}
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {status === 'idle' ? 'Drop an APK or EXE to run it in your browser' :
                status === 'running' ? `${fileName} — running` :
@@ -368,24 +459,55 @@ export default function RunPage() {
           )}
 
           {/* Canvas — always in DOM so ref is available during boot */}
-          <canvas
-            ref={canvasRef}
-            className={`runtime-canvas w-full h-full absolute inset-0 ${
-              (status === 'running' || status === 'paused') ? '' : 'invisible pointer-events-none'
-            }`}
-            tabIndex={0}
-          />
+        <canvas
+          ref={canvasRef}
+          data-anime="runtime-canvas"
+          className={`runtime-canvas w-full h-full absolute inset-0 ${
+            (status === 'running' || status === 'paused') ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+          tabIndex={0}
+        />
 
           {/* Running overlay controls — auto-hide */}
           {status === 'running' && (
             <>
-              {/* FPS counter — always visible */}
-              <div className="absolute top-3 right-3 z-20 perf-overlay">
-                <span className={fpsClass}>{Math.round(perfStats.fps)}</span>
-                <span className="text-muted-foreground/60 ml-1">FPS</span>
-                {perfStats.quality < 1.0 && (
-                  <span className="ml-2 text-muted-foreground/40">{Math.round(perfStats.quality * 100)}%</span>
+              {/* FPS counter & streaming indicator — always visible */}
+              <div className="absolute top-3 right-3 z-20 flex items-center gap-3">
+                {/* Streaming indicator */}
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-background/70 backdrop-blur-sm border border-border/50">
+                  <span className="telemetry-dot w-1.5 h-1.5 rounded-full bg-green-500/70 inline-block" />
+                  <span className="text-[9px] text-green-400/80 font-medium uppercase tracking-wider">Live</span>
+                </div>
+                {/* Quality preset badge */}
+                <button
+                  onClick={() => setShowQualityMenu(!showQualityMenu)}
+                  className="px-2 py-1 rounded-md bg-background/70 backdrop-blur-sm border border-border/50 text-[9px] text-muted-foreground/60 font-mono hover:text-foreground transition-colors"
+                  data-quality-menu
+                >
+                  {qualitySettings[qualityPreset].label}
+                </button>
+                {showQualityMenu && (
+                  <div className="absolute top-8 right-0 z-30 bg-popover border border-border rounded-lg shadow-xl overflow-hidden min-w-[140px]" data-quality-menu>
+                    {(Object.entries(qualitySettings) as [QualityPreset, typeof qualitySettings[QualityPreset]][]).map(([key, val]) => (
+                      <button
+                        key={key}
+                        onClick={() => { setQualityPreset(key); setShowQualityMenu(false); }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-[10px] transition-colors ${qualityPreset === key ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
+                      >
+                        <span className="font-medium">{val.label}</span>
+                        <span className="text-muted-foreground/50 font-mono">{val.targetFps}fps</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
+                {/* FPS display */}
+                <div className="perf-overlay">
+                  <span className={fpsClass}>{Math.round(perfStats.fps)}</span>
+                  <span className="text-muted-foreground/60 ml-1">FPS</span>
+                  {perfStats.quality < 1.0 && (
+                    <span className="ml-2 text-muted-foreground/40">{Math.round(perfStats.quality * 100)}%</span>
+                  )}
+                </div>
               </div>
 
               {/* Bottom controls — auto-hide */}
@@ -472,14 +594,19 @@ export default function RunPage() {
             </div>
             <div>
               <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Quality</p>
-              <p className="text-[11px] text-foreground/70 mt-0.5 font-mono">{Math.round(perfStats.quality * 100)}%</p>
+              <p className="text-[11px] text-foreground/70 mt-0.5 font-mono">{Math.round(perfStats.quality * 100)}% · {qualitySettings[qualityPreset].label}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Time</p>
+              <p className="text-[11px] text-foreground/70 mt-0.5 font-mono tabular-nums">{formatElapsed(elapsedTime)}</p>
             </div>
             <div className="ml-auto">
-              <p className="text-[9px] text-muted-foreground/40">Press <kbd className="px-1 py-0.5 bg-accent border border-border text-[9px] font-mono">F</kbd> for fullscreen</p>
+              <p className="text-[9px] text-muted-foreground/40">Press <kbd className="px-1 py-0.5 bg-accent border border-border text-[9px] font-mono">F</kbd> for fullscreen · <kbd className="px-1 py-0.5 bg-accent border border-border text-[9px] font-mono">Esc</kbd> exit</p>
             </div>
           </div>
         )}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
