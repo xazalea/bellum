@@ -6,19 +6,21 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: [
-    '@ffmpeg-installer/ffmpeg',
-    '@ffprobe-installer/ffprobe',
-    'fluent-ffmpeg',
-    'puppeteer',
-    'puppeteer-extra',
-    'puppeteer-extra-plugin-stealth',
-    'firebase-admin',
-    '@google-cloud/firestore',
-    'google-gax',
-    'google-auth-library',
-    'gcp-metadata',
-  ],
+  experimental: {
+    serverComponentsExternalPackages: [
+      '@ffmpeg-installer/ffmpeg',
+      '@ffprobe-installer/ffprobe',
+      'fluent-ffmpeg',
+      'puppeteer',
+      'puppeteer-extra',
+      'puppeteer-extra-plugin-stealth',
+      'firebase-admin',
+      '@google-cloud/firestore',
+      'google-gax',
+      'google-auth-library',
+      'gcp-metadata',
+    ],
+  },
   webpack: (config, { isServer, nextRuntime }) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
 

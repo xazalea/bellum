@@ -1,11 +1,17 @@
 'use client';
 
 import { useTheme } from '@/components/providers/theme-provider';
+import { useAuth } from '@/components/providers/auth-provider';
+import { useCompute } from '@/components/providers/compute-provider';
 import { themes } from '@/lib/themes';
 import { useState } from 'react';
+import Link from 'next/link';
+import { User, Coins } from 'lucide-react';
 
 export default function SettingsPage() {
   const { theme, mode, setTheme, setMode } = useTheme();
+  const { user, isAuthenticated, signOut } = useAuth();
+  const { balance, tier, earningRate, streak, referral, isInitialized } = useCompute();
   const [search, setSearch] = useState('');
 
   const coreThemes = themes.filter(t => !t.name.startsWith('tweakcn-'));
@@ -179,6 +185,91 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Account Section */}
+        <section className="mb-10">
+          <h2 className="text-xs font-medium text-foreground mb-4 flex items-center gap-2">
+            <User size={14} className="text-primary/60" />
+            Account
+          </h2>
+          {isAuthenticated && user ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Username</span>
+                <span className="text-[11px] text-foreground/70 font-mono">{user.username}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Device ID</span>
+                <span className="text-[11px] text-foreground/70 font-mono truncate max-w-[180px]">{user.fingerprint?.slice(0, 12)}…</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Member Since</span>
+                <span className="text-[11px] text-foreground/70 font-mono">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</span>
+              </div>
+              <button
+                onClick={() => { if (confirm('Sign out? You can sign back in from any trusted device.')) signOut(); }}
+                className="text-[11px] text-muted-foreground hover:text-destructive transition-colors mt-2"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground/50">Not signed in</p>
+              <Link href="/login" className="text-[11px] text-primary hover:text-primary/80 transition-colors">
+                Sign In →
+              </Link>
+            </div>
+          )}
+        </section>
+
+        {/* Compute Tokens Section */}
+        <section className="mb-10">
+          <h2 className="text-xs font-medium text-foreground mb-4 flex items-center gap-2">
+            <Coins size={14} className="text-primary/60" />
+            Compute Tokens
+            <span className="ml-auto text-[9px] text-primary/40 border border-primary/20 px-2 py-0.5 rounded-full">OPTIONAL</span>
+          </h2>
+          {isInitialized ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Balance</span>
+                <span className="text-[11px] text-foreground/70 font-mono">{Math.round(balance.tokens).toLocaleString()} tokens</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Tier</span>
+                <span className="text-[11px] font-mono" style={{ color: tier.color }}>{tier.name}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Earning Rate</span>
+                <span className="text-[11px] text-foreground/70 font-mono">{earningRate.tokensPerMinute.toFixed(1)} t/min ({earningRate.source})</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Streak</span>
+                <span className="text-[11px] text-foreground/70 font-mono">{streak.currentStreak} days{streak.currentStreak >= 3 ? ` (${streak.currentStreak >= 30 ? '3.0' : streak.currentStreak >= 14 ? '2.0' : streak.currentStreak >= 7 ? '1.5' : '1.2'}x bonus)` : ''}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Mesh Nodes</span>
+                <span className="text-[11px] text-foreground/70 font-mono">{tier.maxMeshNodes} (max)</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Cloud Storage</span>
+                <span className="text-[11px] text-foreground/70 font-mono">{tier.storageGB} GB</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-[11px] text-muted-foreground">Referral Code</span>
+                <span className="text-[11px] text-primary font-mono">{referral.code || '—'}</span>
+              </div>
+              <div className="pt-2">
+                <Link href="/referral" className="text-[11px] text-primary hover:text-primary/80 transition-colors">
+                  View Quests & Referrals →
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground/40">Loading token data…</p>
+          )}
+        </section>
+
         {/* Danger Zone */}
         <section>
           <h2 className="text-xs font-medium text-foreground mb-4 flex items-center gap-2">
@@ -212,6 +303,18 @@ export default function SettingsPage() {
               className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
             >
               Reset theme to default
+            </button>
+            <br />
+            <button
+              onClick={() => {
+                if (confirm('Reset all compute token data? This cannot be undone.')) {
+                  ['cd_token_balance', 'cd_token_transactions', 'cd_streak', 'cd_quests', 'cd_referral', 'cd_earning_state'].forEach(k => localStorage.removeItem(k));
+                  window.location.reload();
+                }
+              }}
+              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+            >
+              Reset compute tokens
             </button>
           </div>
         </section>

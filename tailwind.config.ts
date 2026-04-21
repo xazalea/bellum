@@ -53,7 +53,6 @@ const config: Config = {
         sans: ['var(--font-inter)', 'Inter', 'SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
         mono: ['SF Mono', 'JetBrains Mono', 'Fira Code', 'monospace'],
         display: ['var(--font-space-grotesk)', 'Space Grotesk', 'Inter', 'sans-serif'],
-        symbols: ['Material Symbols Outlined', 'Material Symbols'],
       },
       boxShadow: {
         'gold': '0 0 24px 2px hsl(45 100% 51% / 0.25)',

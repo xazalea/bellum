@@ -3,6 +3,7 @@
 import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { animate, spring, ease, dur } from '@/lib/hooks/use-anime';
+import { History } from 'lucide-react';
 
 export interface SessionEntry {
   id: string;
@@ -46,7 +47,7 @@ export function SessionHistory({ sessions, className, limit = 10 }: SessionHisto
     return (
       <div className={cn('flex items-center justify-center py-8', className)}>
         <div className="text-center">
-          <span className="material-symbols-outlined text-muted-foreground/20" style={{ fontSize: 24 }}>history</span>
+          <History size={24} className="text-muted-foreground/20" />
           <p className="text-[10px] text-muted-foreground/40 mt-2">No sessions yet</p>
         </div>
       </div>

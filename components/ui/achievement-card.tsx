@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { animate, spring, ease, dur } from '@/lib/hooks/use-anime';
+import { getLucideIcon } from '@/lib/lucide-icons';
 
 export interface Achievement {
   id: string;
@@ -83,9 +84,7 @@ export function AchievementCard({ achievement, className, compact = false }: Ach
         achievement.unlocked ? rarityColors[rarity] : 'border-border/50 text-muted-foreground/30',
         compact ? 'w-8 h-8 text-base' : 'w-10 h-10 text-lg',
       )}>
-        <span className="material-symbols-outlined" style={{ fontSize: compact ? 16 : 20 }}>
-          {achievement.icon}
-        </span>
+        {(() => { const Icon = getLucideIcon(achievement.icon); return <Icon size={compact ? 16 : 20} />; })()}
       </div>
 
       {/* Content */}

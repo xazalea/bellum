@@ -47,7 +47,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'calculator',
             name: 'Calculator',
-            icon: '🔢',
+            icon: 'hash',
             category: 'productivity',
             wasmModule: null,
             size: 50 * 1024, // 50KB
@@ -58,7 +58,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'notepad',
             name: 'Notepad',
-            icon: '📝',
+            icon: 'file_text',
             category: 'productivity',
             wasmModule: null,
             size: 30 * 1024, // 30KB
@@ -69,7 +69,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'paint',
             name: 'Paint',
-            icon: '🎨',
+            icon: 'palette',
             category: 'productivity',
             wasmModule: null,
             size: 100 * 1024, // 100KB
@@ -80,7 +80,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'code-editor',
             name: 'Code Editor',
-            icon: '💻',
+            icon: 'code',
             category: 'productivity',
             wasmModule: null,
             size: 200 * 1024, // 200KB
@@ -92,7 +92,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'media-player',
             name: 'Media Player',
-            icon: '🎵',
+            icon: 'music',
             category: 'media',
             wasmModule: null,
             size: 150 * 1024, // 150KB
@@ -103,7 +103,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'image-viewer',
             name: 'Image Viewer',
-            icon: '🖼️',
+            icon: 'image',
             category: 'media',
             wasmModule: null,
             size: 80 * 1024, // 80KB
@@ -114,7 +114,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'pdf-viewer',
             name: 'PDF Viewer',
-            icon: '📄',
+            icon: 'file_text',
             category: 'media',
             wasmModule: null,
             size: 300 * 1024, // 300KB
@@ -126,7 +126,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'file-manager',
             name: 'File Manager',
-            icon: '📁',
+            icon: 'folder',
             category: 'utilities',
             wasmModule: null,
             size: 120 * 1024, // 120KB
@@ -137,7 +137,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'terminal',
             name: 'Terminal',
-            icon: '⌨️',
+            icon: 'terminal',
             category: 'utilities',
             wasmModule: null,
             size: 100 * 1024, // 100KB
@@ -149,7 +149,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'game-2048',
             name: '2048',
-            icon: '🎮',
+            icon: 'gamepad',
             category: 'games',
             wasmModule: null,
             size: 40 * 1024, // 40KB
@@ -160,7 +160,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'game-snake',
             name: 'Snake',
-            icon: '🐍',
+            icon: 'zap',
             category: 'games',
             wasmModule: null,
             size: 35 * 1024, // 35KB
@@ -171,7 +171,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'game-tetris',
             name: 'Tetris',
-            icon: '🧱',
+            icon: 'box',
             category: 'games',
             wasmModule: null,
             size: 45 * 1024, // 45KB
@@ -182,7 +182,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'game-minesweeper',
             name: 'Minesweeper',
-            icon: '💣',
+            icon: 'alert',
             category: 'games',
             wasmModule: null,
             size: 50 * 1024, // 50KB
@@ -193,7 +193,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'game-solitaire',
             name: 'Solitaire',
-            icon: '🃏',
+            icon: 'crown',
             category: 'games',
             wasmModule: null,
             size: 60 * 1024, // 60KB
@@ -204,7 +204,7 @@ export class WASMAppLibrary {
         this.registerApp({
             id: 'game-chess',
             name: 'Chess',
-            icon: '♟️',
+            icon: 'shield',
             category: 'games',
             wasmModule: null,
             size: 200 * 1024, // 200KB
@@ -416,7 +416,7 @@ export class WASMAppLibrary {
     private async launchMediaPlayer(container: HTMLElement): Promise<void> {
         container.innerHTML = `
             <div style="width: 100%; height: 100%; display: flex; flex-direction: column; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                <div style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 64px;">🎵</div>
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; font-size: 48px; color: rgba(255,255,255,0.3);">&#9835;</div>
                 <div style="padding: 24px; text-align: center;">
                     <div style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">No media playing</div>
                     <div style="opacity: 0.8;">Select a file to play</div>
@@ -477,10 +477,10 @@ export class WASMAppLibrary {
                 <div style="padding: 12px; background: #f5f5f5; border-bottom: 1px solid #ddd; display: flex; gap: 8px; align-items: center;">
                     <button style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">New Folder</button>
                     <button style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Upload</button>
-                    <div style="flex: 1; padding: 8px 16px; background: white; border: 1px solid #ddd; border-radius: 4px;">📁 / Home / Documents</div>
+                    <div style="flex: 1; padding: 8px 16px; background: white; border: 1px solid #ddd; border-radius: 4px;">&#128193; / Home / Documents</div>
                 </div>
                 <div style="flex: 1; padding: 16px;">
-                    ${['📁 Projects', '📁 Photos', '📁 Videos', '📄 Document.txt', '📄 Readme.md'].map(item => 
+                    ${['&#128193; Projects', '&#128193; Photos', '&#128193; Videos', '&#128196; Document.txt', '&#128196; Readme.md'].map(item => 
                         `<div style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;" 
                          onmouseenter="this.style.background='#f5f5f5'" 
                          onmouseleave="this.style.background='transparent'">${item}</div>`
@@ -576,8 +576,8 @@ export class WASMAppLibrary {
                 <div style="font-size: 48px; font-weight: bold; color: white;">Solitaire</div>
                 <div style="font-size: 18px; color: white;">Classic card game coming soon...</div>
                 <div style="display: flex; gap: 16px;">
-                    ${['🂡', '🂱', '🃁', '🃑'].map(card => 
-                        `<div style="width: 80px; height: 120px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 48px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">${card}</div>`
+                    ${['A', 'K', 'Q', 'J'].map(card => 
+                        `<div style="width: 80px; height: 120px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 36px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); color: #333;">${card}</div>`
                     ).join('')}
                 </div>
             </div>

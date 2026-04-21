@@ -8,6 +8,8 @@ import { SingleFileBundler } from '@/lib/compiler/single-file-bundler';
 import { UnifiedRuntime, type RuntimeState } from '../../src/engine/runtime/unified-runtime';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { animate, spring, ease, dur } from '@/lib/hooks/use-anime';
+import { AlertTriangle } from 'lucide-react';
+import { getRecentlyPlayed } from '@/lib/recently-played';
 
 type RunStatus = 'idle' | 'loading' | 'booting' | 'running' | 'paused' | 'error' | 'exporting' | 'exported';
 type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
@@ -41,6 +43,26 @@ export default function RunPage() {
   const framePacerRef = useRef<FramePacer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Handle ?id= URL param (from games/[id] redirects)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const idParam = params.get('id');
+    const titleParam = params.get('title');
+    if (idParam) {
+      const recent = getRecentlyPlayed();
+      const found = recent.find(g => g.id === idParam);
+      if (found) {
+        setFileName(found.title);
+        setStatusDetail(`Session: ${found.title}`);
+      } else if (titleParam) {
+        setFileName(titleParam);
+        setStatusDetail(`Session not found in history — drop the original file to re-run`);
+      }
+      // Clear the URL params after reading them
+      window.history.replaceState({}, '', '/run');
+    }
+  }, []);
 
   useEffect(() => {
     const pacer = new FramePacer();
@@ -349,7 +371,7 @@ export default function RunPage() {
             <h1 className="text-sm font-medium text-foreground tracking-tight">Run</h1>
             {!sabAvailable && (
               <p className="text-[10px] text-yellow-500/70 mt-0.5">
-                ⚠ COOP/COEP headers missing — performance may be limited
+                <AlertTriangle size={10} className="inline mr-1" />COOP/COEP headers missing — performance may be limited
               </p>
             )}
             <p className="text-[11px] text-muted-foreground mt-0.5">

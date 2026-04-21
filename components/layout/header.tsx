@@ -25,8 +25,8 @@ export function Header() {
   useEffect(() => {
     run(s => {
       s.add(self => {
-        animate('[data-anime="logo"]', { translateY: [-8, 0], opacity: [0, 1], ease: ease.out, duration: dur.base });
-        animate('[data-anime="nav-link"]', { translateX: [8, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: stagger(60, { start: 150 }) });
+        animate('[data-anime="logo"]', { translateY: [-6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base });
+        animate('[data-anime="nav-link"]', { translateX: [6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: stagger(50, { start: 120 }) });
       });
     });
   }, [run]);
@@ -34,32 +34,32 @@ export function Header() {
   useEffect(() => {
     if (prevPathname.current !== pathname) {
       const underline = document.querySelector('[data-anime="nav-underline"]');
-      if (underline) animate(underline, { scaleX: [0, 1], ease: spring({ bounce: 0.4, stiffness: 250, damping: 14 }), duration: dur.base });
+      if (underline) animate(underline, { scaleX: [0, 1], ease: spring({ bounce: 0.3, stiffness: 250, damping: 14 }), duration: dur.base });
       prevPathname.current = pathname;
     }
   }, [pathname]);
 
   useEffect(() => {
-    if (headerRef.current) animate(headerRef.current, { backgroundColor: scrolled ? 'hsl(0 0% 2% / 0.8)' : 'hsl(0 0% 2%)', ease: ease.out, duration: dur.base });
+    if (headerRef.current) animate(headerRef.current, { backgroundColor: scrolled ? 'hsl(var(--background) / 0.85)' : 'hsl(var(--background))', ease: ease.out, duration: dur.base });
   }, [scrolled]);
 
   useEffect(() => {
     if (menuOpen) {
       run(s => {
         s.add(self => {
-          animate('[data-anime="mobile-item"]', { translateY: [8, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: stagger(50, { start: 50 }) });
+          animate('[data-anime="mobile-item"]', { translateY: [6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: stagger(40, { start: 40 }) });
         });
       });
     }
   }, [menuOpen, run]);
 
-  const navItems = [{ href: '/games', label: 'Library' }, { href: '/run', label: 'Run' }];
+  const navItems = [{ href: '/games', label: 'Library' }, { href: '/run', label: 'Run' }, { href: '/mesh', label: 'Mesh' }, { href: '/referral', label: 'Referrals' }];
 
   return (
     <header ref={headerRef} className={`sticky top-0 z-50 border-b ${scrolled ? 'border-border backdrop-blur-xl' : 'border-transparent'}`}>
       <div ref={root} className="cd-container flex h-12 items-center justify-between">
-        <Link href="/" data-anime="logo" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-foreground hover:text-foreground/80" style={{ opacity: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="opacity-80"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <Link href="/" data-anime="logo" className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground hover:text-foreground/80" style={{ opacity: 0 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="opacity-70"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <span>BELLUM</span>
         </Link>
         <nav className="hidden sm:flex items-center gap-1">
@@ -68,7 +68,7 @@ export function Header() {
             return (
               <Link key={item.href} href={item.href} data-anime="nav-link" className={`relative px-3 h-8 inline-flex items-center text-xs font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`} style={{ opacity: 0 }}>
                 {item.label}
-                {isActive && <span data-anime="nav-underline" className="absolute bottom-0 left-3 right-3 h-px bg-foreground origin-left" />}
+                {isActive && <span data-anime="nav-underline" className="absolute bottom-0 left-3 right-3 h-px bg-primary origin-left" />}
               </Link>
             );
           })}

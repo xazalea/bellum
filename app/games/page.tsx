@@ -1,110 +1,184 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { addRecentlyPlayed, getRecentlyPlayed } from '@/lib/recently-played';
-import { GameCard } from '@/components/ui/game-card';
+import { getRecentlyPlayed, type RecentGame } from '@/lib/recently-played';
 import { useAnimeScope, animate, stagger, spring, ease, dur } from '@/lib/hooks/use-anime';
 
-interface Game { id: string; title: string; thumbnail: string; url: string; platform?: string; }
-type SortMode = 'recent' | 'title';
-
 export default function GamesPage() {
-  const [games, setGames] = useState<Game[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sortMode, setSortMode] = useState<SortMode>('recent');
-  const [recentIds, setRecentIds] = useState<Set<string>>(new Set());
+  const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [loadingFile, setLoadingFile] = useState(false);
   const router = useRouter();
   const { root, run } = useAnimeScope();
-  const searchRef = useRef<HTMLInputElement>(null);
-  const prevLoadingRef = useRef(true);
-
-  useEffect(() => { setRecentIds(new Set(getRecentlyPlayed().map(g => g.id))); }, []);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const animatedRef = useRef(false);
 
   useEffect(() => {
-    async function loadGames() {
-      try {
-        const res = await fetch('/api/games?page=1&limit=500');
-        if (res.ok) {
-          const data = await res.json();
-          setGames((data.games || []).map((g: Record<string, unknown>, idx: number) => ({
-            id: String(g.id ?? g.game_id ?? `game-${idx}`),
-            title: String(g.title ?? g.name ?? 'Untitled'),
-            thumbnail: String(g.thumbnail ?? g.image ?? ''),
-            url: String(g.url ?? g.game_url ?? ''),
-            platform: g.platform ? String(g.platform) : undefined,
-          })));
-        }
-      } catch { setGames([]); }
-      setLoading(false);
-    }
-    loadGames();
+    setRecentGames(getRecentlyPlayed());
   }, []);
 
   useEffect(() => {
-    if (prevLoadingRef.current && !loading) {
-      run(s => {
-        s.add(self => {
-          animate('[data-anime="header"]', { translateY: [-10, 0], opacity: [0, 1], ease: ease.out, duration: dur.base });
-          animate('[data-anime="game-card"]', { translateY: [16, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal, delay: stagger(40, { grid: [6, 1], from: 'center', start: 200 }) });
+    if (animatedRef.current) return;
+    animatedRef.current = true;
+    run(s => {
+      s.add(self => {
+        animate('[data-anime="header"]', { translateY: [-10, 0], opacity: [0, 1], ease: ease.out, duration: dur.base });
+        animate('[data-anime="recent-card"]', {
+          translateY: [16, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
+          delay: stagger(80, { from: 0, start: 200 }),
+        });
+        animate('[data-anime="drop-zone"]', {
+          scale: [0.95, 1], opacity: [0, 1], ease: spring({ bounce: 0.2 }),
+          duration: dur.base, delay: 400,
         });
       });
-      prevLoadingRef.current = false;
+    });
+  }, [run]);
+
+  const handleFiles = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'apk' || ext === 'exe') {
+      router.push(`/run?file=${encodeURIComponent(file.name)}`);
+    } else {
+      setLoadingFile(false);
     }
-  }, [loading, run]);
+  }, [router]);
 
-  const onSearchFocus = useCallback(() => {
-    if (searchRef.current) animate(searchRef.current, { borderColor: 'hsl(var(--foreground) / 0.3)', ease: spring({ bounce: 0.2 }), duration: dur.fast });
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (dropRef.current) animate(dropRef.current, { scale: [1.01, 1], ease: spring({ bounce: 0.3 }), duration: dur.fast });
+    setLoadingFile(true);
+    handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (!dragOver) {
+      setDragOver(true);
+      if (dropRef.current) animate(dropRef.current, { scale: 1.005, ease: spring({ bounce: 0.2 }), duration: dur.fast });
+    }
+  }, [dragOver]);
+
+  const onDragLeave = useCallback(() => {
+    setDragOver(false);
+    if (dropRef.current) animate(dropRef.current, { scale: 1, ease: ease.out, duration: dur.fast });
   }, []);
-  const onSearchBlur = useCallback(() => {
-    if (searchRef.current) animate(searchRef.current, { borderColor: 'hsl(var(--border))', ease: ease.out, duration: dur.fast });
+
+  const playRecent = useCallback((game: RecentGame) => {
+    router.push(`/run?id=${encodeURIComponent(game.id)}`);
+  }, [router]);
+
+  const onCardEnter = useCallback((e: React.MouseEvent) => {
+    animate(e.currentTarget, { translateY: -2, scale: [1, 1.01], ease: spring({ bounce: 0.2 }), duration: dur.fast });
   }, []);
-
-  const filtered = search ? games.filter(g => g.title.toLowerCase().includes(search.toLowerCase())) : games;
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortMode === 'recent') { return (recentIds.has(a.id) ? 0 : 1) - (recentIds.has(b.id) ? 0 : 1); }
-    return a.title.localeCompare(b.title);
-  });
-
-  const openGame = useCallback((id: string) => {
-    const game = games.find(g => g.id === id);
-    if (game) addRecentlyPlayed({ id: game.id, title: game.title, thumbnail: game.thumbnail });
-    router.push(`/games/${id}`);
-  }, [games, router]);
+  const onCardLeave = useCallback((e: React.MouseEvent) => {
+    animate(e.currentTarget, { translateY: 0, scale: 1, ease: ease.out, duration: dur.fast });
+  }, []);
 
   return (
     <div ref={root} className="min-h-screen">
       <div className="cd-container py-8">
+        {/* Header */}
         <div data-anime="header" className="flex items-start justify-between mb-8" style={{ opacity: 0 }}>
           <div>
             <h1 className="text-lg font-semibold text-foreground tracking-tight">Library</h1>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{filtered.length} game{filtered.length !== 1 ? 's' : ''} available</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Run Android APKs and Windows EXEs in your browser</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex border border-border">
-              <button onClick={() => setSortMode('recent')} className={`px-2.5 h-7 text-[10px] font-medium ${sortMode === 'recent' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>Recent</button>
-              <button onClick={() => setSortMode('title')} className={`px-2.5 h-7 text-[10px] font-medium ${sortMode === 'title' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>A–Z</button>
-            </div>
-            <div className="relative">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-              <input ref={searchRef} type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." onFocus={onSearchFocus} onBlur={onSearchBlur} className="pl-7 pr-3 h-7 text-[11px] bg-card border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none w-44" />
+          <Link href="/run" className="btn-primary text-[10px] h-8 px-4">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+            </svg>
+            Upload File
+          </Link>
+        </div>
+
+        {/* Drop Zone */}
+        <div data-anime="drop-zone" style={{ opacity: 0 }} className="mb-10">
+          <div
+            ref={dropRef}
+            className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer ${dragOver ? 'border-primary/50 bg-primary/5 scale-[1.01]' : 'border-border hover:border-primary/25 hover:bg-card/50'}`}
+            onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
+            onClick={() => inputRef.current?.click()}
+          >
+            <input ref={inputRef} type="file" accept=".apk,.exe" className="hidden" onChange={(e) => { setLoadingFile(true); handleFiles(e.target.files); }} />
+            {loadingFile ? (
+              <div className="spinner mx-auto mb-3" />
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4 text-muted-foreground/30">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+            )}
+            <p className="text-sm font-medium text-foreground mb-1">
+              {loadingFile ? 'Loading file...' : 'Drop APK or EXE here'}
+            </p>
+            <p className="text-[11px] text-muted-foreground/40">
+              {loadingFile ? 'Preparing runtime...' : 'or click to browse \u00b7 APK or EXE files'}
+            </p>
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <span className="tag">.apk</span>
+              <span className="tag">.exe</span>
             </div>
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-32"><div className="spinner" /></div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" className="text-muted-foreground/30 mb-3"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-            <p className="text-xs text-muted-foreground">{search ? 'No games match your search' : 'No games available'}</p>
+        {/* Recent Sessions */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-foreground tracking-tight">Recent Sessions</h2>
+            {recentGames.length > 0 && (
+              <span className="text-[10px] text-muted-foreground/40">{recentGames.length} session{recentGames.length !== 1 ? 's' : ''}</span>
+            )}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {sorted.map((game) => <GameCard key={game.id} id={game.id} title={game.title} thumbnail={game.thumbnail} platform={game.platform} onClick={openGame} data-anime="game-card" />)}
-          </div>
-        )}
+
+          {recentGames.length === 0 ? (
+            <div className="glass-card rounded-xl p-12 text-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" className="mx-auto mb-3 text-muted-foreground/20">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 2H8a2 2 0 00-2 2v0h12V2z" />
+                <path d="M12 11v4M10 13h4" />
+              </svg>
+              <p className="text-xs text-muted-foreground mb-1">No sessions yet</p>
+              <p className="text-[10px] text-muted-foreground/30">Drop an APK or EXE above to run your first app</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {recentGames.map((game) => (
+                <div
+                  key={game.id}
+                  data-anime="recent-card"
+                  style={{ opacity: 0 }}
+                  className="glass-card rounded-xl p-4 cursor-pointer group flex items-center gap-3"
+                  onClick={() => playRecent(game)}
+                  onMouseEnter={onCardEnter}
+                  onMouseLeave={onCardLeave}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center shrink-0 overflow-hidden">
+                    {game.thumbnail ? (
+                      <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-muted-foreground/20">
+                        <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium text-foreground truncate group-hover:text-primary/70 transition-colors">{game.title}</p>
+                    <p className="text-[9px] text-muted-foreground/30 mt-0.5">{game.id}</p>
+                  </div>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-muted-foreground/30 group-hover:text-primary/50 transition-colors shrink-0">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

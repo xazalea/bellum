@@ -1,74 +1,42 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useAnimeScope, animate, spring, ease, dur } from '@/lib/hooks/use-anime';
+import { animate, spring, ease, dur } from '@/lib/hooks/use-anime';
 import { Gamepad2, User, AlertCircle, Check, Fingerprint } from 'lucide-react';
 
-export default function LoginPage() {
-  const { signUp, signIn, isLoading, user, isAuthenticated, error: authError } = useAuth();
+export function SignupModal() {
+  const { showUsernameModal, setShowUsernameModal, needsUsername, signUp, signIn, isLoading, user, error } = useAuth();
   const [username, setUsername] = useState('');
   const [isSignUp, setIsSignUp] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const { root, run } = useAnimeScope();
-  const animatedRef = useRef(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const inputWrapRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const animatedRef = useRef(false);
 
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isAuthenticated) router.push('/dashboard');
-  }, [isAuthenticated, router]);
+  const visible = showUsernameModal && needsUsername && !user;
 
   useEffect(() => {
-    if (animatedRef.current) return;
+    if (!visible || animatedRef.current) return;
     animatedRef.current = true;
-    run(s => {
-      s.add(self => {
-        if (cardRef.current) {
-          animate(cardRef.current, {
-            scale: [0.95, 1], opacity: [0, 1],
-            ease: spring({ bounce: 0.2, stiffness: 220, damping: 18 }),
-            duration: dur.slow,
-          });
-        }
-        if (titleRef.current) {
-          animate(titleRef.current, {
-            translateY: [12, 0], opacity: [0, 1],
-            ease: ease.out, duration: dur.base, delay: 150,
-          });
-        }
-        if (subtitleRef.current) {
-          animate(subtitleRef.current, {
-            translateY: [8, 0], opacity: [0, 1],
-            ease: ease.out, duration: dur.base, delay: 250,
-          });
-        }
-        if (inputWrapRef.current) {
-          animate(inputWrapRef.current, {
-            translateY: [6, 0], opacity: [0, 1],
-            ease: ease.out, duration: dur.base, delay: 350,
-          });
-        }
-        if (btnRef.current) {
-          animate(btnRef.current, {
-            scale: [0.9, 1], opacity: [0, 1],
-            ease: spring({ bounce: 0.3, stiffness: 260, damping: 14 }),
-            duration: dur.base, delay: 450,
-          });
-        }
-      });
+
+    requestAnimationFrame(() => {
+      if (overlayRef.current) animate(overlayRef.current, { opacity: [0, 1], ease: ease.out, duration: dur.base });
+      if (cardRef.current) animate(cardRef.current, { scale: [0.95, 1], opacity: [0, 1], ease: spring({ bounce: 0.2, stiffness: 220, damping: 18 }), duration: dur.slow });
+      if (inputWrapRef.current) animate(inputWrapRef.current, { translateY: [6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: 200 });
+      if (btnRef.current) animate(btnRef.current, { scale: [0.9, 1], opacity: [0, 1], ease: spring({ bounce: 0.3 }), duration: dur.base, delay: 350 });
+      setTimeout(() => inputRef.current?.focus(), 400);
     });
-    setTimeout(() => inputRef.current?.focus(), 500);
-  }, [run]);
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) animatedRef.current = false;
+  }, [visible]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,8 +56,12 @@ export default function LoginPage() {
       const result = isSignUp ? await signUp(username.trim()) : await signIn(username.trim());
       if (result.success) {
         setSuccess(true);
-        if (btnRef.current) animate(btnRef.current, { scale: [1, 1.02, 1], ease: spring({ bounce: 0.3 }), duration: dur.base });
-        setTimeout(() => router.push('/dashboard'), 1000);
+        if (cardRef.current) animate(cardRef.current, { scale: [1, 1.01, 1], ease: spring({ bounce: 0.3 }), duration: dur.base });
+        setTimeout(() => {
+          if (overlayRef.current) {
+            animate(overlayRef.current, { opacity: [1, 0], ease: ease.out, duration: dur.base, onComplete: () => setShowUsernameModal(false) });
+          }
+        }, 1000);
       } else {
         setLocalError(result.error || 'Something went wrong');
         if (inputWrapRef.current) animate(inputWrapRef.current, { translateX: [0, -5, 5, -2, 2, 0], ease: ease.out, duration: 300 });
@@ -99,22 +71,28 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [username, isSignUp, signUp, signIn, router]);
+  }, [username, isSignUp, signUp, signIn, setShowUsernameModal]);
+
+  if (!visible) return null;
 
   return (
-    <div ref={root} className="min-h-screen flex items-center justify-center p-4">
+    <div
+      ref={overlayRef}
+      style={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === overlayRef.current) setShowUsernameModal(false); }}
+    >
       <div ref={cardRef} style={{ opacity: 0 }} className="w-full max-w-sm glass-card rounded-xl p-6">
-        {/* Logo */}
-        <div className="flex items-center justify-center mb-5">
+        <div className="flex items-center justify-center mb-4">
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <Gamepad2 size={20} className="text-primary" />
           </div>
         </div>
 
-        <h2 ref={titleRef} style={{ opacity: 0 }} className="text-lg font-bold text-center text-foreground tracking-tight">
+        <h2 className="text-lg font-bold text-center text-foreground tracking-tight">
           {isSignUp ? 'Create Account' : 'Sign In'}
         </h2>
-        <p ref={subtitleRef} style={{ opacity: 0 }} className="text-[11px] text-muted-foreground/50 text-center mt-1.5 mb-5">
+        <p className="text-[11px] text-muted-foreground/50 text-center mt-1.5 mb-5">
           {isSignUp ? 'Pick a username. Your device is your key.' : 'Sign in from a trusted device.'}
         </p>
 
@@ -138,10 +116,10 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {(localError || authError) && (
+          {(localError || error) && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
               <AlertCircle size={14} className="text-destructive" />
-              <p className="text-[11px] text-destructive">{localError || authError}</p>
+              <p className="text-[11px] text-destructive">{localError || error}</p>
             </div>
           )}
 
@@ -159,7 +137,7 @@ export default function LoginPage() {
             style={{ opacity: 0 }}
             className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
-            {submitting || isLoading ? (
+            {submitting ? (
               <><span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />{isSignUp ? 'Creating...' : 'Signing in...'}</>
             ) : success ? (
               <><Check size={16} />Ready</>
@@ -170,10 +148,7 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-3 text-center">
-          <button
-            onClick={() => { setIsSignUp(!isSignUp); setLocalError(null); }}
-            className="text-[10px] text-muted-foreground/40 hover:text-foreground/60 transition-colors"
-          >
+          <button onClick={() => { setIsSignUp(!isSignUp); setLocalError(null); }} className="text-[10px] text-muted-foreground/40 hover:text-foreground/60 transition-colors">
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
         </div>
