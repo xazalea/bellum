@@ -59,21 +59,18 @@ const finalRoutes = {
   version: 1,
   include: ['/*'],
   exclude: [
-    '/index.html',
-    '/games.html',
-    '/android.html',
-    '/windows.html',
-    '/ai.html',
-    '/play.html',
-    '/_not-found.html',
-    '/games.json',
+    '/_next/static/*',
+    '/_next/image/*',
+    '/favicon.ico',
+    '/robots.txt',
     '/sw.js',
-    '/_next/*',
+    '/manifest.json',
     // Static assets served directly by CF Pages (bypass worker)
     '/fonts/*',
     '/images/*',
     '/wasm/*',
     '/v86/*',
+    '/optimizers/*',
   ],
 };
 
