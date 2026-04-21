@@ -699,12 +699,12 @@ class ComputeProtocol {
   }
 }
 
-// Export singleton factory
+// Export singleton factory (async for SSR-safe dynamic import)
 let computeProtocolInstance: ComputeProtocol | null = null;
 
-export function getComputeProtocol(): ComputeProtocol {
+export async function getComputeProtocol(): Promise<ComputeProtocol> {
   if (!computeProtocolInstance) {
-    const { fabricMesh } = require('./mesh');
+    const { fabricMesh } = await import('./mesh');
     computeProtocolInstance = new ComputeProtocol(fabricMesh);
   }
   return computeProtocolInstance;

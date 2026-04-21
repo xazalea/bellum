@@ -4,7 +4,39 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useCompute } from '@/components/providers/compute-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAnimeScope, animate, stagger, spring, ease, dur } from '@/lib/hooks/use-anime';
-import { Network, User, Coins, HelpCircle, Eye, Clock, Gamepad2, Shield } from 'lucide-react';
+import { Network, User, Coins, HelpCircle, Eye, Clock, Gamepad2, Shield, Wifi, WifiOff, Radio } from 'lucide-react';
+
+// Types for P2P status (imported dynamically to avoid SSR issues)
+interface PeerStatus {
+  peerId: string;
+  nodeId: string | null;
+  connectionState: string;
+  iceState: string;
+  channelState: string;
+  rttMs: number;
+  avgRttMs: number;
+  bytesSent: number;
+  bytesReceived: number;
+  connectedAt: number | null;
+}
+
+// Helper: format bytes to human-readable string (outside component to avoid re-creation)
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`;
+}
+
+// Helper: get dot color based on WebRTC connection state
+function getConnectionDotColor(state: string): string {
+  switch (state) {
+    case 'connected': return 'bg-primary/70';
+    case 'connecting': case 'new': return 'bg-yellow-500/60 animate-pulse';
+    case 'disconnected': case 'failed': return 'bg-red-500/50';
+    default: return 'bg-muted-foreground/20';
+  }
+}
 
 export default function MeshPage() {
   const { balance, tier, earningRate, streak, setComputeState, isInitialized } = useCompute();
@@ -14,6 +46,67 @@ export default function MeshPage() {
   const [isContributing, setIsContributing] = useState(false);
   const [tabState, setTabState] = useState<'active' | 'idle' | 'background'>('active');
   const [contributeMinutes, setContributeMinutes] = useState(0);
+
+  // P2P network status
+  const [p2pStatus, setP2pStatus] = useState<{
+    localNodeId: string | null;
+    connectedPeers: number;
+    totalPeers: number;
+    signalingReady: boolean;
+    peers: PeerStatus[];
+  } | null>(null);
+
+  // Poll P2P status every 3 seconds
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const pollP2P = async () => {
+      try {
+        const { p2pNode } = await import('@/src/challenger/net/p2p_node');
+        const { fabricMesh } = await import('@/lib/fabric/mesh');
+
+        if (!p2pNode) {
+          setP2pStatus({ localNodeId: null, connectedPeers: 0, totalPeers: 0, signalingReady: false, peers: [] });
+          return;
+        }
+
+        const connections = p2pNode.getPeerConnections();
+        const meshPeers = fabricMesh.getPeers();
+
+        const peerStatuses: PeerStatus[] = connections.map(conn => {
+          const stats = fabricMesh.getPeerStats(conn.peerId);
+          return {
+            peerId: conn.peerId,
+            nodeId: fabricMesh.getPeerNodeId(conn.peerId),
+            connectionState: conn.connectionState,
+            iceState: conn.iceConnectionState,
+            channelState: conn.dataChannelState,
+            rttMs: stats?.rttMs ?? 0,
+            avgRttMs: stats?.avgRttMs ?? 0,
+            bytesSent: stats?.bytesSent ?? 0,
+            bytesReceived: stats?.bytesReceived ?? 0,
+            connectedAt: conn.connectedAt,
+          };
+        });
+
+        setP2pStatus({
+          localNodeId: p2pNode.getId(),
+          connectedPeers: p2pNode.getConnectedPeerCount(),
+          totalPeers: meshPeers.length,
+          signalingReady: true, // If p2pNode exists, signaling was attempted
+          peers: peerStatuses,
+        });
+      } catch {
+        // Dynamic import or P2P access failed — show degraded state
+        setP2pStatus(prev => prev ?? { localNodeId: null, connectedPeers: 0, totalPeers: 0, signalingReady: false, peers: [] });
+      }
+    };
+
+    // Initial poll
+    pollP2P();
+    const interval = setInterval(pollP2P, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -74,7 +167,79 @@ export default function MeshPage() {
           </p>
         </div>
 
-        {/* Status */}
+        {/* P2P Network Status */}
+        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            {p2pStatus?.connectedPeers ? (
+              <Wifi size={14} className="text-primary/70" />
+            ) : (
+              <WifiOff size={14} className="text-muted-foreground/30" />
+            )}
+            <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium">P2P Network</h3>
+            {p2pStatus?.connectedPeers ? (
+              <span className="ml-auto text-[8px] font-mono text-primary/60 flex items-center gap-1">
+                <Radio size={8} className="animate-pulse" />
+                LIVE
+              </span>
+            ) : (
+              <span className="ml-auto text-[8px] font-mono text-muted-foreground/30">STANDBY</span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            <div className="text-center">
+              <p className="text-lg font-bold tracking-tighter text-foreground">{p2pStatus?.connectedPeers ?? 0}</p>
+              <p className="text-[8px] text-muted-foreground/50 uppercase tracking-wider">Connected</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold tracking-tighter text-foreground">{p2pStatus?.totalPeers ?? 0}</p>
+              <p className="text-[8px] text-muted-foreground/50 uppercase tracking-wider">Discovered</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold tracking-tighter text-foreground">
+                {p2pStatus?.peers.length ? Math.round(p2pStatus.peers.reduce((sum, p) => sum + p.avgRttMs, 0) / p2pStatus.peers.length) : '—'}
+              </p>
+              <p className="text-[8px] text-muted-foreground/50 uppercase tracking-wider">Avg RTT</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold tracking-tighter text-foreground">
+                {p2pStatus?.peers.length ? formatBytes(p2pStatus.peers.reduce((sum, p) => sum + p.bytesSent + p.bytesReceived, 0)) : '0'}
+              </p>
+              <p className="text-[8px] text-muted-foreground/50 uppercase tracking-wider">Traffic</p>
+            </div>
+          </div>
+
+          {/* Node ID */}
+          {p2pStatus?.localNodeId && (
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/30 mb-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+              <span className="text-[9px] font-mono text-muted-foreground/50">Node {p2pStatus.localNodeId.slice(0, 8)}…{p2pStatus.localNodeId.slice(-4)}</span>
+            </div>
+          )}
+
+          {/* Peer list */}
+          {p2pStatus?.peers.length ? (
+            <div className="space-y-1.5 max-h-32 overflow-y-auto">
+              {p2pStatus.peers.map(peer => (
+                <div key={peer.peerId} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/20 transition-colors">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${getConnectionDotColor(peer.connectionState)}`} />
+                  <span className="text-[10px] font-mono text-muted-foreground/60 truncate flex-1">
+                    {peer.nodeId || peer.peerId.slice(0, 12)}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground/30 shrink-0">
+                    {peer.channelState === 'open' ? `${Math.round(peer.avgRttMs)}ms` : peer.connectionState}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[10px] text-muted-foreground/30 text-center py-2">
+              {p2pStatus?.signalingReady ? 'Searching for peers…' : 'Initializing P2P node…'}
+            </p>
+          )}
+        </div>
+
+        {/* Compute Status */}
         <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">

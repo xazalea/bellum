@@ -1,4 +1,4 @@
-import { p2pNode, PeerMessage } from "../../src/challenger/net/p2p_node";
+import { type PeerMessage } from "../../src/challenger/net/p2p_node";
 
 export type FabricWireMessage =
   | { type: "FABRIC_HELLO"; payload: { nodeId: string } }
@@ -60,74 +60,128 @@ export class FabricMesh {
     }
   >();
 
+  // SSR-safe: lazily resolved P2PNode reference
+  private _p2pNode: import('../../src/challenger/net/p2p_node').P2PNode | null = null;
+  private p2pNodeInitAttempted = false;
+
+  /** Get the P2PNode instance lazily (SSR-safe, async) */
+  private async getP2PNodeAsync(): Promise<import('../../src/challenger/net/p2p_node').P2PNode | null> {
+    if (this._p2pNode) return this._p2pNode;
+    if (this.p2pNodeInitAttempted) return null;
+    this.p2pNodeInitAttempted = true;
+
+    try {
+      const mod = await import('../../src/challenger/net/p2p_node');
+      this._p2pNode = mod.p2pNode;
+      return this._p2pNode;
+    } catch {
+      // SSR or module not available — return null gracefully
+      return null;
+    }
+  }
+
+  /** Synchronous getter — returns cached node or null if not yet loaded */
+  private getP2PNode(): import('../../src/challenger/net/p2p_node').P2PNode | null {
+    return this._p2pNode;
+  }
+
+  private initialized = false;
+
+  /** Promise that resolves when init() completes — used by dependents to avoid race conditions */
+  readonly ready: Promise<void>;
+  private resolveReady!: () => void;
+
   constructor() {
-    const node = p2pNode;
-    if (!node) return;
+    // SSR-safe: defer all browser-dependent initialization
+    this.ready = new Promise<void>(resolve => { this.resolveReady = resolve; });
+    if (typeof window === 'undefined') {
+      // On server, resolve immediately so dependents don't hang
+      this.resolveReady();
+      return;
+    }
 
-    node.onMessage((msg: PeerMessage, from: string) => {
-      this.peers.set(from, { peerId: from, lastSeenAt: Date.now() });
-      this.ensurePeerStats(from);
-      this.peerStats.get(from)!.lastSeenAt = Date.now();
+    // Use microtask to ensure module system is ready
+    Promise.resolve().then(() => this.init());
+  }
 
-      const wire = msg as unknown as FabricWireMessage;
-      if (wire.type === "FABRIC_HELLO") {
-        this.peerNodeIds.set(from, wire.payload.nodeId);
-      }
+  /** Initialize mesh — called lazily after constructor in browser */
+  private async init(): Promise<void> {
+    if (this.initialized) return;
+    this.initialized = true;
 
-      if (wire.type === "FABRIC_SERVICE_AD") {
-        const ad = wire.payload;
-        this.services.set(ad.serviceId, { ...ad, peerId: from, lastSeenAt: Date.now() });
-      }
+    try {
+      const node = await this.getP2PNodeAsync();
+      if (!node) return;
 
-      if (wire.type === "FABRIC_RPC_REQ") {
-        const { id, serviceId, request } = wire.payload;
-        this.rpcHandlers.forEach((h) => h({ id, serviceId, request, fromPeerId: from }));
-      }
+      node.onMessage((msg: PeerMessage, from: string) => {
+        this.peers.set(from, { peerId: from, lastSeenAt: Date.now() });
+        this.ensurePeerStats(from);
+        this.peerStats.get(from)!.lastSeenAt = Date.now();
 
-      if (wire.type === "FABRIC_RPC_RES") {
-        const { id, ok, response, error } = wire.payload;
-        const r = this.rpcResolvers.get(id);
-        if (r) {
-          this.rpcResolvers.delete(id);
-          r({ ok, response, error });
+        const wire = msg as unknown as FabricWireMessage;
+        if (wire.type === "FABRIC_HELLO") {
+          this.peerNodeIds.set(from, wire.payload.nodeId);
         }
-      }
 
-      if (wire.type === "FABRIC_PING") {
-        this.handlePing(from, wire.payload);
-      }
+        if (wire.type === "FABRIC_SERVICE_AD") {
+          const ad = wire.payload;
+          this.services.set(ad.serviceId, { ...ad, peerId: from, lastSeenAt: Date.now() });
+        }
 
-      if (wire.type === "FABRIC_PONG") {
-        this.handlePong(from, wire.payload);
-      }
-    });
+        if (wire.type === "FABRIC_RPC_REQ") {
+          const { id, serviceId, request } = wire.payload;
+          this.rpcHandlers.forEach((h) => h({ id, serviceId, request, fromPeerId: from }));
+        }
 
-    // High-throughput raw frames (binary, chunked) for "bandwidth mode".
-    node.onRawMessage((buf: ArrayBuffer, from: string) => {
-      try {
-        const parsed = this.parseRawFrame(buf);
-        if (!parsed) return;
-        const { header, payload } = parsed;
-        this.recordBytesReceived(from, payload.byteLength);
-        this.onRawFrame(from, header, payload);
-      } catch {
-        // ignore malformed frames
-      }
-    });
+        if (wire.type === "FABRIC_RPC_RES") {
+          const { id, ok, response, error } = wire.payload;
+          const r = this.rpcResolvers.get(id);
+          if (r) {
+            this.rpcResolvers.delete(id);
+            r({ ok, response, error });
+          }
+        }
 
-    // Announce ourselves on any existing channels with identity (async, fire and forget)
-    this.initializeIdentity().catch(() => {
-      // ignore errors
-    });
+        if (wire.type === "FABRIC_PING") {
+          this.handlePing(from, wire.payload);
+        }
 
-    this.startPingLoop();
+        if (wire.type === "FABRIC_PONG") {
+          this.handlePong(from, wire.payload);
+        }
+      });
+
+      // High-throughput raw frames (binary, chunked) for "bandwidth mode".
+      node.onRawMessage((buf: ArrayBuffer, from: string) => {
+        try {
+          const parsed = this.parseRawFrame(buf);
+          if (!parsed) return;
+          const { header, payload } = parsed;
+          this.recordBytesReceived(from, payload.byteLength);
+          this.onRawFrame(from, header, payload);
+        } catch {
+          // ignore malformed frames
+        }
+      });
+
+      // Announce ourselves on any existing channels with identity (async, fire and forget)
+      this.initializeIdentity().catch(() => {
+        // ignore errors
+      });
+
+      this.startPingLoop();
+    } catch {
+      // Initialization failed — mesh will operate in degraded mode
+    } finally {
+      this.resolveReady();
+    }
   }
 
   /**
    * Initialize identity asynchronously
    */
   private async initializeIdentity(): Promise<void> {
-    const node = p2pNode;
+    const node = this.getP2PNode() || await this.getP2PNodeAsync();
     if (!node) return;
 
     try {
@@ -142,7 +196,7 @@ export class FabricMesh {
         payload: {
           nodeId: node.getId(),
           vpsId: identity.vpsId,
-          nodePassport: identity.nodePassport, // Include signed passport
+          nodePassport: identity.nodePassport,
           alias: identity.alias,
         }
       });
@@ -152,7 +206,7 @@ export class FabricMesh {
   }
 
   getLocalNodeId(): string | null {
-    return p2pNode?.getId() ?? null;
+    return this.getP2PNode()?.getId() ?? null;
   }
 
   getPeers(): FabricPeer[] {
@@ -179,7 +233,7 @@ export class FabricMesh {
   }
 
   advertiseService(serviceId: string, serviceName: string) {
-    const node = p2pNode;
+    const node = this.getP2PNode();
     if (!node) return;
     node.broadcast({
       type: "FABRIC_SERVICE_AD",
@@ -192,7 +246,7 @@ export class FabricMesh {
   }
 
   async rpcCall(serviceId: string, request: unknown): Promise<unknown> {
-    const node = p2pNode;
+    const node = this.getP2PNode();
     if (!node) throw new Error("P2P not available");
 
     const ad = this.services.get(serviceId);
@@ -231,7 +285,7 @@ export class FabricMesh {
 
   // Called by runtime to respond to a specific peer.
   respondRpc(toPeerId: string, id: string, ok: boolean, response?: unknown, error?: string) {
-    const node = p2pNode;
+    const node = this.getP2PNode();
     if (!node) return;
     node.send(toPeerId, {
       type: "FABRIC_RPC_RES",
@@ -257,7 +311,7 @@ export class FabricMesh {
     const chunkBytes = Math.max(minChunk, Math.min(adaptiveChunk, maxChunk));
     const windowChunks = opts?.windowChunks ?? (rtt < 50 ? 8 : 4);
 
-    const node = p2pNode;
+    const node = this.getP2PNode();
     if (!node) throw new Error("P2P not available");
 
     const streamId = crypto.randomUUID();
@@ -285,7 +339,7 @@ export class FabricMesh {
    * using binary DataChannel frames (no base64).
    */
   async sendBytes(toPeerId: string, bytes: Uint8Array, opts?: { chunkBytes?: number; timeoutMs?: number }): Promise<void> {
-    const node = p2pNode;
+    const node = this.getP2PNode();
     if (!node) throw new Error("P2P not available");
     const chunkBytes = Math.max(16 * 1024, Math.min(opts?.chunkBytes ?? 64 * 1024, 512 * 1024));
 
@@ -341,7 +395,7 @@ export class FabricMesh {
   }
 
   private sendPing(toPeerId: string): void {
-    const node = p2pNode;
+    const node = this.getP2PNode();
     if (!node) return;
     const id = crypto.randomUUID();
     const sentAt = performance.now();
@@ -354,7 +408,7 @@ export class FabricMesh {
   }
 
   private handlePing(fromPeerId: string, payload: { id: string; sentAt: number }): void {
-    const node = p2pNode;
+    const node = this.getP2PNode();
     if (!node) return;
     node.send(fromPeerId, {
       type: "FABRIC_PONG",
@@ -482,4 +536,6 @@ export class FabricMesh {
   }
 }
 
-export const fabricMesh = new FabricMesh();
+// SSR-safe singleton — only create in browser
+export const fabricMesh: FabricMesh =
+  typeof window !== 'undefined' ? new FabricMesh() : (null as unknown as FabricMesh);

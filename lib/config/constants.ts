@@ -106,16 +106,17 @@ export const JSDELIVR_CDN = {
 
 /**
  * Firebase Project Configuration
- * Project: challengeroooo
+ * Project: chat-27898
  */
 export const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBjrbAulLgYH8gCQO2GwPES3jk7sVmjQ3g",
-  authDomain: "challengeroooo.firebaseapp.com",
-  projectId: "challengeroooo",
-  storageBucket: "challengeroooo.firebasestorage.app",
-  messagingSenderId: "704146905294",
-  appId: "1:704146905294:web:b00f9b142ef90efc5b589f",
-  measurementId: "G-0JH56QWXR3"
+  apiKey: "AIzaSyB2XAEj5HddF2X0vaB7uf1P1F5HqjRiRfw",
+  authDomain: "chat-27898.firebaseapp.com",
+  databaseURL: "https://chat-27898-default-rtdb.firebaseio.com",
+  projectId: "chat-27898",
+  storageBucket: "chat-27898.firebasestorage.app",
+  messagingSenderId: "42715262921",
+  appId: "1:42715262921:web:1458b8fb5054c78ccd8218",
+  measurementId: "G-VZPS8TT56B"
 };
 
 // ============================================================

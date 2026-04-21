@@ -1,15 +1,9 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { FIREBASE_CONFIG } from "./config/constants";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBjrbAulLgYH8gCQO2GwPES3jk7sVmjQ3g",
-  authDomain: "challengeroooo.firebaseapp.com",
-  projectId: "challengeroooo",
-  storageBucket: "challengeroooo.firebasestorage.app",
-  messagingSenderId: "704146905294",
-  appId: "1:704146905294:web:b00f9b142ef90efc5b589f",
-  measurementId: "G-0JH56QWXR3"
-};
+// Single source of truth: all Firebase config lives in lib/config/constants.ts
+const firebaseConfig = FIREBASE_CONFIG;
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

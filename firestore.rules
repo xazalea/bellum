@@ -20,8 +20,39 @@ service cloud.firestore {
     // --- Rules ---
     //
     // SECURITY MODE:
-    // All client direct access is denied. The app must use server-side APIs
-    // (Next.js route handlers + Firebase Admin) for all Firestore reads/writes.
+    // Server-side APIs use Firebase Admin (bypass rules).
+    // Client-side access is allowed only for mesh P2P signaling collections.
+
+    // Mesh signaling: authenticated users can read/write their own presence,
+    // signals addressed to them, and ICE candidates.
+    match /mesh/peers/{peerId} {
+      // Anyone authenticated can read peer presence (discovery)
+      allow read: if request.auth != null;
+      // Peers can write their own presence doc, or create/update any peer doc
+      // (presence docs are public info — nodeId + lastSeen timestamp only)
+      allow create, update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+
+    match /mesh/signals/{signalId} {
+      // Anyone authenticated can read signals (they filter by `to` field)
+      allow read: if request.auth != null;
+      // Anyone authenticated can write signals (offer/answer exchange)
+      allow create: if request.auth != null;
+      // Allow delete for cleanup after signal is consumed
+      allow delete: if request.auth != null;
+    }
+
+    match /mesh/candidates/{candidateId} {
+      // Anyone authenticated can read ICE candidates (they filter by `to` field)
+      allow read: if request.auth != null;
+      // Anyone authenticated can write ICE candidates
+      allow create: if request.auth != null;
+      // Allow delete for cleanup after candidate is consumed
+      allow delete: if request.auth != null;
+    }
+
+    // All other collections: deny client access (use server-side APIs)
     match /{document=**} {
       allow read, write: if false;
     }

@@ -1,6 +1,5 @@
+// SSR-safe: all imports are lazy/dynamic to avoid crashing on server
 import { fabricMesh } from './mesh';
-import { p2pNode } from '../../src/challenger/net/p2p_node';
-import { DBT } from '../../src/challenger/jit/dbt';
 
 export interface ComputeJob {
     id: string;
@@ -37,11 +36,14 @@ export interface TaskSchedulingResult {
 }
 
 export class FabricComputeService {
-    private static instance: FabricComputeService;
-    private dbt: DBT = new DBT();
+    private static instance: FabricComputeService | null = null;
+    private dbt: import('../../src/challenger/jit/dbt').DBT | null = null;
+    private initialized = false;
 
     private constructor() {
-        this.initialize();
+        // SSR-safe: defer all browser-dependent initialization
+        if (typeof window === 'undefined') return;
+        Promise.resolve().then(() => this.init());
     }
 
     public static getInstance(): FabricComputeService {
@@ -51,7 +53,22 @@ export class FabricComputeService {
         return FabricComputeService.instance;
     }
 
-    private initialize() {
+    /** Lazy initialization — called after constructor in browser */
+    private async init(): Promise<void> {
+        if (this.initialized) return;
+        this.initialized = true;
+
+        // Wait for FabricMesh to finish loading its P2PNode before calling mesh methods
+        await fabricMesh.ready;
+
+        // Lazily load DBT (heavy JIT module)
+        try {
+            const { DBT } = await import('../../src/challenger/jit/dbt');
+            this.dbt = new DBT();
+        } catch {
+            // DBT not available — compute jobs will fail gracefully
+        }
+
         console.log("[Fabrik] Initializing Compute Service...");
 
         // Advertise "compute" capability
@@ -139,4 +156,6 @@ export class FabricComputeService {
     }
 }
 
-export const fabricCompute = FabricComputeService.getInstance();
+// SSR-safe singleton — only create in browser
+export const fabricCompute: FabricComputeService =
+  typeof window !== 'undefined' ? FabricComputeService.getInstance() : (null as unknown as FabricComputeService);

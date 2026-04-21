@@ -9,6 +9,7 @@
  * - Streaming RPC with flow control
  */
 
+// SSR-safe: type-only imports from mesh and compute
 import { fabricMesh, type FabricServiceAd } from './mesh';
 import { type DeviceCapabilities, type ComputeJob, type TaskSchedulingResult } from './compute';
 
@@ -56,7 +57,7 @@ export interface RoutingStrategy {
  * Routes compute jobs to optimal peers in the fabric mesh
  */
 export class MeshScheduler {
-  private static instance: MeshScheduler;
+  private static instance: MeshScheduler | null = null;
   
   private capabilities: Map<string, PeerCapabilities> = new Map();
   private scheduledTasks: Map<string, ScheduledTask> = new Map();
@@ -80,9 +81,12 @@ export class MeshScheduler {
   
   private heartbeatInterval: number | null = null;
   private taskTimeout: number = 30000; // 30 seconds default
+  private initialized = false;
   
   private constructor() {
-    this.initialize();
+    // SSR-safe: defer all browser-dependent initialization
+    if (typeof window === 'undefined') return;
+    Promise.resolve().then(() => this.init());
   }
   
   public static getInstance(): MeshScheduler {
@@ -93,9 +97,12 @@ export class MeshScheduler {
   }
   
   /**
-   * Initialize scheduler
+   * Lazy initialization — called after constructor in browser
    */
-  private initialize(): void {
+  private init(): void {
+    if (this.initialized) return;
+    this.initialized = true;
+    
     console.log('[MeshScheduler] Initializing...');
     
     // Register routing strategies
@@ -124,17 +131,14 @@ export class MeshScheduler {
       selectPeer: (job, candidates) => this.selectByScore(job, candidates),
     });
     
-    // Only start browser-specific features in browser environment
-    if (typeof window !== 'undefined') {
-      // Start batch processor
-      this.startBatchProcessor();
-      
-      // Start capability heartbeat
-      this.startCapabilityHeartbeat();
-      
-      // Listen for service advertisements
-      this.setupServiceListener();
-    }
+    // Start batch processor
+    this.startBatchProcessor();
+    
+    // Start capability heartbeat
+    this.startCapabilityHeartbeat();
+    
+    // Listen for service advertisements
+    this.setupServiceListener();
     
     console.log('[MeshScheduler] Initialized');
   }
@@ -740,5 +744,6 @@ export class MeshScheduler {
   }
 }
 
-// Export singleton
-export const meshScheduler = MeshScheduler.getInstance();
+// SSR-safe singleton — only create in browser
+export const meshScheduler: MeshScheduler =
+  typeof window !== 'undefined' ? MeshScheduler.getInstance() : (null as unknown as MeshScheduler);

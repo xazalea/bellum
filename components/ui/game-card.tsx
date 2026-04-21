@@ -25,15 +25,15 @@ export function GameCard({
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const onEnter = useCallback(() => {
-    if (cardRef.current) animate(cardRef.current, { translateY: -2, boxShadow: '0 4px 12px -2px hsl(var(--foreground) / 0.06)', ease: spring({ bounce: 0.2, stiffness: 200, damping: 12 }), duration: dur.fast });
-    if (imgRef.current) animate(imgRef.current, { scale: 1.03, ease: spring({ bounce: 0.1 }), duration: dur.base });
-    if (overlayRef.current) animate(overlayRef.current, { opacity: 1, scale: [0.85, 1], ease: spring({ bounce: 0.3, stiffness: 250, damping: 12 }), duration: dur.base });
+    if (cardRef.current) animate(cardRef.current, { translateY: -3, boxShadow: '0 8px 24px -4px hsl(var(--foreground) / 0.08)', borderColor: 'hsl(var(--primary) / 0.2)', ease: spring({ bounce: 0.2, stiffness: 200, damping: 12 }), duration: dur.fast });
+    if (imgRef.current) animate(imgRef.current, { scale: 1.05, ease: spring({ bounce: 0.1 }), duration: dur.base });
+    if (overlayRef.current) animate(overlayRef.current, { opacity: 1, scale: [0.8, 1], ease: spring({ bounce: 0.35, stiffness: 280, damping: 14 }), duration: dur.base });
   }, []);
 
   const onLeave = useCallback(() => {
-    if (cardRef.current) animate(cardRef.current, { translateY: 0, boxShadow: '0 0 0 0 hsl(var(--foreground) / 0)', ease: ease.out, duration: dur.fast });
+    if (cardRef.current) animate(cardRef.current, { translateY: 0, boxShadow: '0 0 0 0 hsl(var(--foreground) / 0)', borderColor: 'hsl(var(--border))', ease: ease.out, duration: dur.fast });
     if (imgRef.current) animate(imgRef.current, { scale: 1, ease: ease.out, duration: dur.base });
-    if (overlayRef.current) animate(overlayRef.current, { opacity: 0, scale: 0.85, ease: ease.out, duration: dur.fast });
+    if (overlayRef.current) animate(overlayRef.current, { opacity: 0, scale: 0.8, ease: ease.out, duration: dur.fast });
   }, []);
 
   return (
@@ -42,7 +42,7 @@ export function GameCard({
       onClick={() => onClick?.(id)}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={cn('group relative text-left overflow-hidden rounded-lg border border-border bg-card/50', className)}
+      className={cn('group relative text-left overflow-hidden rounded-lg border border-border bg-card/50 premium-sweep', className)}
       data-anime={dataAnime}
     >
       <div className={cn('relative overflow-hidden bg-muted', aspectClass)}>
@@ -53,9 +53,9 @@ export function GameCard({
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-muted-foreground/10"><path d="M8 5v14l11-7z" /></svg>
           </div>
         )}
-        <div ref={overlayRef} className="absolute inset-0 bg-background/15 flex items-center justify-center" style={{ opacity: 0 }}>
-          <div className="w-10 h-10 rounded-full bg-background/80 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-foreground ml-0.5"><path d="M8 5v14l11-7z" /></svg>
+        <div ref={overlayRef} className="absolute inset-0 bg-background/20 backdrop-blur-[2px] flex items-center justify-center" style={{ opacity: 0 }}>
+          <div className="w-12 h-12 rounded-full bg-background/90 flex items-center justify-center shadow-lg border border-border/50">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-foreground ml-0.5"><path d="M8 5v14l11-7z" /></svg>
           </div>
         </div>
         {platform && (

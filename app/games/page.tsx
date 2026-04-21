@@ -5,16 +5,22 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getRecentlyPlayed, type RecentGame } from '@/lib/recently-played';
 import { useAnimeScope, animate, stagger, spring, ease, dur } from '@/lib/hooks/use-anime';
+import { Gamepad2, Upload, Search, Clock, Play, X } from 'lucide-react';
+
+type FilterType = 'all' | 'apk' | 'exe';
 
 export default function GamesPage() {
   const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [loadingFile, setLoadingFile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const router = useRouter();
   const { root, run } = useAnimeScope();
   const dropRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const animatedRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setRecentGames(getRecentlyPlayed());
@@ -26,13 +32,20 @@ export default function GamesPage() {
     run(s => {
       s.add(self => {
         animate('[data-anime="header"]', { translateY: [-10, 0], opacity: [0, 1], ease: ease.out, duration: dur.base });
-        animate('[data-anime="recent-card"]', {
-          translateY: [16, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
-          delay: stagger(80, { from: 0, start: 200 }),
+        animate('[data-anime="search-bar"]', {
+          translateY: [8, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: 100,
+        });
+        animate('[data-anime="filter-pill"]', {
+          scale: [0.9, 1], opacity: [0, 1], ease: spring({ bounce: 0.2 }),
+          duration: dur.base, delay: stagger(60, { start: 200 }),
         });
         animate('[data-anime="drop-zone"]', {
           scale: [0.95, 1], opacity: [0, 1], ease: spring({ bounce: 0.2 }),
-          duration: dur.base, delay: 400,
+          duration: dur.base, delay: 350,
+        });
+        animate('[data-anime="recent-card"]', {
+          translateY: [16, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
+          delay: stagger(80, { from: 0, start: 400 }),
         });
       });
     });
@@ -75,109 +88,232 @@ export default function GamesPage() {
   }, [router]);
 
   const onCardEnter = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { translateY: -2, scale: [1, 1.01], ease: spring({ bounce: 0.2 }), duration: dur.fast });
+    animate(e.currentTarget, { translateY: -2, boxShadow: '0 4px 16px -4px hsl(var(--foreground) / 0.06)', ease: spring({ bounce: 0.2 }), duration: dur.fast });
   }, []);
   const onCardLeave = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { translateY: 0, scale: 1, ease: ease.out, duration: dur.fast });
+    animate(e.currentTarget, { translateY: 0, boxShadow: '0 0 0 0 hsl(var(--foreground) / 0)', ease: ease.out, duration: dur.fast });
+  }, []);
+
+  // Filter and search logic
+  const filteredGames = recentGames.filter(game => {
+    const matchesSearch = !searchQuery || game.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = activeFilter === 'all' || 
+      (activeFilter === 'apk' && game.id.toLowerCase().includes('apk')) ||
+      (activeFilter === 'exe' && game.id.toLowerCase().includes('exe'));
+    return matchesSearch && matchesFilter;
+  });
+
+  const filters: { key: FilterType; label: string; icon: typeof Gamepad2 }[] = [
+    { key: 'all', label: 'All', icon: Gamepad2 },
+    { key: 'apk', label: 'APK', icon: Gamepad2 },
+    { key: 'exe', label: 'EXE', icon: Gamepad2 },
+  ];
+
+  const onFilterClick = useCallback((key: FilterType) => {
+    setActiveFilter(key);
+  }, []);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    searchInputRef.current?.focus();
   }, []);
 
   return (
-    <div ref={root} className="min-h-screen">
+    <div ref={root} className="min-h-screen page-enter">
       <div className="cd-container py-8">
         {/* Header */}
-        <div data-anime="header" className="flex items-start justify-between mb-8" style={{ opacity: 0 }}>
+        <div data-anime="header" className="flex items-start justify-between mb-6" style={{ opacity: 0 }}>
           <div>
             <h1 className="text-lg font-semibold text-foreground tracking-tight">Library</h1>
             <p className="text-[11px] text-muted-foreground mt-0.5">Run Android APKs and Windows EXEs in your browser</p>
           </div>
-          <Link href="/run" className="btn-primary text-[10px] h-8 px-4">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-            </svg>
+          <Link href="/run" className="btn-primary text-[10px] h-8 px-4 btn-press">
+            <Upload size={12} className="mr-1.5" />
             Upload File
           </Link>
+        </div>
+
+        {/* Search Bar */}
+        <div data-anime="search-bar" style={{ opacity: 0 }} className="mb-4">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/30" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions..."
+              className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card/50 text-foreground text-xs placeholder:text-muted-foreground/25 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/15 transition-colors"
+            />
+            {searchQuery && (
+              <button onClick={clearSearch} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-2 mb-6">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              data-anime="filter-pill"
+              style={{ opacity: 0 }}
+              onClick={() => onFilterClick(f.key)}
+              className={`inline-flex items-center gap-1.5 px-3 h-7 rounded-full text-[10px] font-medium transition-all duration-200 ${
+                activeFilter === f.key
+                  ? 'bg-primary/15 text-primary border border-primary/25'
+                  : 'bg-card/50 text-muted-foreground/60 border border-border hover:border-foreground/15 hover:text-foreground/70'
+              }`}
+            >
+              {f.label}
+              {activeFilter === f.key && filteredGames.length > 0 && (
+                <span className="text-[8px] opacity-60">{filteredGames.length}</span>
+              )}
+            </button>
+          ))}
+          <div className="flex-1" />
+          {recentGames.length > 0 && (
+            <span className="text-[10px] text-muted-foreground/30">{recentGames.length} session{recentGames.length !== 1 ? 's' : ''}</span>
+          )}
         </div>
 
         {/* Drop Zone */}
         <div data-anime="drop-zone" style={{ opacity: 0 }} className="mb-10">
           <div
             ref={dropRef}
-            className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer ${dragOver ? 'border-primary/50 bg-primary/5 scale-[1.01]' : 'border-border hover:border-primary/25 hover:bg-card/50'}`}
+            className={`relative glass-card rounded-xl p-6 text-center cursor-pointer group premium-sweep ${
+              dragOver ? 'border-primary/40 bg-primary/5' : 'hover:border-primary/20'
+            }`}
             onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => fileInputRef.current?.click()}
           >
-            <input ref={inputRef} type="file" accept=".apk,.exe" className="hidden" onChange={(e) => { setLoadingFile(true); handleFiles(e.target.files); }} />
+            <input ref={fileInputRef} type="file" accept=".apk,.exe" className="hidden" onChange={(e) => { setLoadingFile(true); handleFiles(e.target.files); }} />
             {loadingFile ? (
-              <div className="spinner mx-auto mb-3" />
+              <div className="flex flex-col items-center">
+                <div className="spinner mb-3" />
+                <p className="text-xs font-medium text-foreground">Loading file...</p>
+                <div className="flex items-center gap-3 mt-3">
+                  <div className="loading-step active">
+                    <span className="step-indicator" />
+                    <span>Detecting format</span>
+                  </div>
+                  <div className="loading-step">
+                    <span className="step-indicator" />
+                    <span>Preparing runtime</span>
+                  </div>
+                  <div className="loading-step">
+                    <span className="step-indicator" />
+                    <span>Booting</span>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4 text-muted-foreground/30">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-              </svg>
+              <>
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl border border-border bg-card/60 mx-auto mb-3 group-hover:border-primary/20 group-hover:bg-primary/5 transition-colors duration-300">
+                  <Upload size={18} className="text-muted-foreground/30 group-hover:text-primary/60 transition-colors" />
+                </div>
+                <p className="text-xs font-medium text-foreground mb-1">
+                  Drop APK or EXE here
+                </p>
+                <p className="text-[10px] text-muted-foreground/40">
+                  or click to browse · Instant runtime · No install
+                </p>
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <span className="tag">.apk</span>
+                  <span className="tag">.exe</span>
+                </div>
+              </>
             )}
-            <p className="text-sm font-medium text-foreground mb-1">
-              {loadingFile ? 'Loading file...' : 'Drop APK or EXE here'}
-            </p>
-            <p className="text-[11px] text-muted-foreground/40">
-              {loadingFile ? 'Preparing runtime...' : 'or click to browse \u00b7 APK or EXE files'}
-            </p>
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <span className="tag">.apk</span>
-              <span className="tag">.exe</span>
-            </div>
           </div>
         </div>
 
         {/* Recent Sessions */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-foreground tracking-tight">Recent Sessions</h2>
-            {recentGames.length > 0 && (
-              <span className="text-[10px] text-muted-foreground/40">{recentGames.length} session{recentGames.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-2">
+              <Clock size={12} className="text-muted-foreground/30" />
+              <h2 className="text-sm font-semibold text-foreground tracking-tight">Recent Sessions</h2>
+            </div>
+            {filteredGames.length > 0 && searchQuery && (
+              <span className="text-[10px] text-muted-foreground/40">{filteredGames.length} result{filteredGames.length !== 1 ? 's' : ''}</span>
             )}
           </div>
 
           {recentGames.length === 0 ? (
             <div className="glass-card rounded-xl p-12 text-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" className="mx-auto mb-3 text-muted-foreground/20">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                <path d="M16 2H8a2 2 0 00-2 2v0h12V2z" />
-                <path d="M12 11v4M10 13h4" />
-              </svg>
-              <p className="text-xs text-muted-foreground mb-1">No sessions yet</p>
-              <p className="text-[10px] text-muted-foreground/30">Drop an APK or EXE above to run your first app</p>
+              <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-card border border-border mx-auto mb-4">
+                <Gamepad2 size={24} className="text-muted-foreground/15" />
+              </div>
+              <p className="text-xs text-muted-foreground/70 mb-1">No sessions yet</p>
+              <p className="text-[10px] text-muted-foreground/30 mb-4">Drop an APK or EXE above to run your first app</p>
+              <Link href="/run" className="btn-secondary text-[10px] h-8 px-4 btn-press">
+                <Play size={12} className="mr-1.5" />
+                Start Playing
+              </Link>
+            </div>
+          ) : filteredGames.length === 0 ? (
+            <div className="glass-card rounded-xl p-8 text-center">
+              <Search size={20} className="text-muted-foreground/20 mx-auto mb-3" />
+              <p className="text-xs text-muted-foreground/70 mb-1">No matches for &ldquo;{searchQuery}&rdquo;</p>
+              <button onClick={clearSearch} className="text-[10px] text-primary/50 hover:text-primary/70 transition-colors mt-2">
+                Clear search
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recentGames.map((game) => (
+              {filteredGames.map((game) => (
                 <div
                   key={game.id}
                   data-anime="recent-card"
                   style={{ opacity: 0 }}
-                  className="glass-card rounded-xl p-4 cursor-pointer group flex items-center gap-3"
+                  className="glass-card rounded-xl overflow-hidden cursor-pointer group premium-sweep"
                   onClick={() => playRecent(game)}
                   onMouseEnter={onCardEnter}
                   onMouseLeave={onCardLeave}
                 >
-                  <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center shrink-0 overflow-hidden">
-                    {game.thumbnail ? (
-                      <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-muted-foreground/20">
-                        <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
-                      </svg>
-                    )}
+                  <div className="flex items-center gap-3 p-3">
+                    <div className="w-11 h-11 rounded-lg bg-card border border-border flex items-center justify-center shrink-0 overflow-hidden">
+                      {game.thumbnail ? (
+                        <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <Gamepad2 size={16} className="text-muted-foreground/20" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-medium text-foreground truncate group-hover:text-primary/70 transition-colors">{game.title}</p>
+                      <p className="text-[9px] text-muted-foreground/30 mt-0.5">{game.id}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="tag">{game.id.endsWith('.apk') || game.id.endsWith('.APK') ? 'APK' : 'EXE'}</span>
+                      <div className="w-7 h-7 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-sm">
+                        <Play size={10} className="text-foreground ml-0.5" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-foreground truncate group-hover:text-primary/70 transition-colors">{game.title}</p>
-                    <p className="text-[9px] text-muted-foreground/30 mt-0.5">{game.id}</p>
-                  </div>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-muted-foreground/30 group-hover:text-primary/50 transition-colors shrink-0">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
                 </div>
               ))}
             </div>
           )}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-10">
+          <div className="glass-card-elevated rounded-xl p-6 text-center relative overflow-hidden">
+            <div className="relative z-10">
+              <h3 className="text-sm font-semibold text-foreground tracking-tight mb-1">
+                <span className="gradient-text">Run Anything In Your Browser</span>
+              </h3>
+              <p className="text-[10px] text-muted-foreground/40 mb-4 max-w-sm mx-auto">
+                No downloads, no installs. Drop an APK or EXE and it runs natively via WebGL2 + Dalvik/x86 interpreter.
+              </p>
+              <Link href="/run" className="btn-primary text-[11px] h-9 px-6 btn-press">
+                <Upload size={14} className="mr-1.5" />
+                Upload APK or EXE
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

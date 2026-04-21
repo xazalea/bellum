@@ -51,8 +51,32 @@ export class BinaryAnalyzer {
     // Check for PK (Zip/APK)
     // 0x50 0x4B 0x03 0x04
     if (magic4 === 0x504B0304) {
-        // Check for classes.dex in zip directory (simplified check)
-        return FileType.ZIP; 
+        // APK files are ZIP archives — if extension says APK, it's APK.
+        // For binary-only detection, scan for AndroidManifest.xml or classes.dex signature.
+        if (fileName) {
+            const ext = fileName.split('.').pop()?.toLowerCase();
+            if (ext === 'apk') return FileType.APK;
+        }
+        // Heuristic: scan first 64KB for "classes.dex" or "AndroidManifest.xml"
+        const view8 = new Uint8Array(buffer);
+        const scanLen = Math.min(view8.length, 65536);
+        const dexSig = [0x63, 0x6C, 0x61, 0x73, 0x73, 0x65, 0x73, 0x2E, 0x64, 0x65, 0x78]; // "classes.dex"
+        const manifestSig = [0x41, 0x6E, 0x64, 0x72, 0x6F, 0x69, 0x64, 0x4D, 0x61, 0x6E, 0x69, 0x66, 0x65, 0x73, 0x74]; // "AndroidManifest"
+        outer:
+        for (let i = 0; i < scanLen - 15; i++) {
+            for (let j = 0; j < dexSig.length; j++) {
+                if (view8[i + j] !== dexSig[j]) continue outer;
+            }
+            return FileType.APK;
+        }
+        outer2:
+        for (let i = 0; i < scanLen - manifestSig.length; i++) {
+            for (let j = 0; j < manifestSig.length; j++) {
+                if (view8[i + j] !== manifestSig[j]) continue outer2;
+            }
+            return FileType.APK;
+        }
+        return FileType.ZIP;
     }
     
     // Check for DEX (Android Bytecode) directly

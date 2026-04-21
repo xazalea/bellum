@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { APKLoader } from '@/lib/engine/loaders/apk-loader';
 import { BinaryAnalyzer, FileType } from '@/lib/engine/analyzers/binary-analyzer';
 import { FramePacer } from '@/lib/engine/frame-pacer';
 import { SingleFileBundler } from '@/lib/compiler/single-file-bundler';
@@ -38,7 +37,6 @@ export default function RunPage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const loaderRef = useRef<APKLoader | null>(null);
   const runtimeRef = useRef<UnifiedRuntime | null>(null);
   const framePacerRef = useRef<FramePacer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +70,6 @@ export default function RunPage() {
     framePacerRef.current = pacer;
     return () => {
       pacer.stop();
-      loaderRef.current?.stop();
     };
   }, []);
 
@@ -154,84 +151,64 @@ export default function RunPage() {
       setStatusDetail('Initializing runtime...');
       setSessionStartTime(null);
 
-      const loader = new APKLoader();
-      loaderRef.current = loader;
-
-      loader.onStatusUpdate = (s, detail) => {
-        setStatusDetail(detail || s);
-        if (s === 'Running') {
-          setStatus('running');
-          const canvas = document.querySelector('[data-anime="runtime-canvas"]');
-          if (canvas) animate(canvas, { opacity: [0, 1], scale: [0.98, 1], ease: spring({ bounce: 0.15 }), duration: dur.slow });
-        } else if (s === 'Error' || s === 'Boot failed') {
-          setError(detail || 'Boot failed');
-          setStatus('error');
-        }
-      };
-
-      if (!containerRef.current) {
-        setError('Container not ready');
+      if (!canvasRef.current) {
+        setError('Canvas not ready');
         setStatus('error');
         return;
       }
 
-      if (detectedType === FileType.APK || detectedType === FileType.PE_EXE) {
-        if (!canvasRef.current) {
-          setError('Canvas not ready');
-          setStatus('error');
-          return;
-        }
+      const runtime = new UnifiedRuntime({
+        canvas: canvasRef.current,
+        type: detectedType === FileType.APK ? 'apk' : 'exe',
+        onStateChange: (s: RuntimeState) => {
+          if (s === 'running') {
+            setStatus('running');
+            setSessionStartTime(Date.now());
+          } else if (s === 'halted') {
+            setStatusDetail('Program exited');
+            framePacerRef.current?.stop();
+          } else if (s === 'error') {
+            setError('Runtime error');
+            setStatus('error');
+            framePacerRef.current?.stop();
+          }
+        },
+        onLog: (msg: string) => setStatusDetail(msg.replace(/^\[Runtime\]\s*/, '')),
+        onFPS: (fps: number) => setPerfStats(prev => ({ ...prev, fps })),
+      });
 
-        const runtime = new UnifiedRuntime({
-          canvas: canvasRef.current,
-          type: detectedType === FileType.APK ? 'apk' : 'exe',
-          onStateChange: (s: RuntimeState) => {
-            if (s === 'running') {
-              setStatus('running');
-              setSessionStartTime(Date.now());
-            } else if (s === 'halted') {
-              setStatusDetail('Program exited');
-              framePacerRef.current?.stop();
-            } else if (s === 'error') {
-              setError('Runtime error');
-              setStatus('error');
-              framePacerRef.current?.stop();
+      await runtime.boot();
+      setStatusDetail('Loading binary...');
+
+      if (detectedType === FileType.APK) {
+        await runtime.loadAPK(buffer);
+      } else {
+        await runtime.loadEXE(buffer);
+      }
+
+      runtimeRef.current = runtime;
+      runtime.run();
+
+      // Animate canvas in
+      const canvas = document.querySelector('[data-anime="runtime-canvas"]');
+      if (canvas) animate(canvas, { opacity: [0, 1], scale: [0.98, 1], ease: spring({ bounce: 0.15 }), duration: dur.slow });
+
+      // Wire FramePacer → runtime.tick() — the main execution loop
+      const pacer = framePacerRef.current;
+      if (pacer) {
+        pacer.onFrame = (dt: number, _fps: number) => {
+          try {
+            if (runtimeRef.current?.state === 'running') {
+              runtimeRef.current.tick(dt);
             }
-          },
-          onLog: (msg: string) => setStatusDetail(msg.replace(/^\[Runtime\]\s*/, '')),
-          onFPS: (fps: number) => setPerfStats(prev => ({ ...prev, fps })),
-        });
-
-        await runtime.boot();
-
-        if (detectedType === FileType.APK) {
-          await runtime.loadAPK(buffer);
-        } else {
-          await runtime.loadEXE(buffer);
-        }
-
-        runtimeRef.current = runtime;
-        runtime.run();
-
-        // Wire FramePacer → runtime.tick() — the main execution loop
-        // FramePacer drives rAF and calls onFrame(dt, fps) each vsync.
-        // UnifiedRuntime.tick(delta) executes time-budgeted CPU/Dalvik work + render.
-        const pacer = framePacerRef.current;
-        if (pacer) {
-          pacer.onFrame = (dt: number, _fps: number) => {
-            try {
-              if (runtimeRef.current?.state === 'running') {
-                runtimeRef.current.tick(dt);
-              }
-            } catch (e: any) {
-              console.error('[RunPage] Runtime tick error:', e);
-              setError(e?.message || 'Runtime execution error');
-              setStatus('error');
-              pacer.stop();
-            }
-          };
-          pacer.start();
-        }
+          } catch (e: any) {
+            console.error('[RunPage] Runtime tick error:', e);
+            setError(e?.message || 'Runtime execution error');
+            setStatus('error');
+            pacer.stop();
+          }
+        };
+        pacer.start();
       }
     } catch (e: any) {
       const msg = e?.message || 'Unknown error';
@@ -266,7 +243,6 @@ export default function RunPage() {
   }, [loadFile]);
 
   const stopExecution = useCallback(() => {
-    loaderRef.current?.stop();
     runtimeRef.current?.destroy();
     runtimeRef.current = null;
     framePacerRef.current?.stop();
@@ -444,25 +420,36 @@ export default function RunPage() {
                 onChange={onFileChange}
               />
               <div className="text-center">
-                <svg
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-muted-foreground/30 mx-auto mb-4 group-hover:text-muted-foreground/50 transition-colors"
-                >
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-                </svg>
-                <p className="text-xs text-muted-foreground mb-1">Drop APK or EXE here</p>
-                <p className="text-[10px] text-muted-foreground/40">or click to browse</p>
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  {/* Animated dashed ring */}
+                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/20 group-hover:border-primary/30 transition-colors animate-spin" style={{ animationDuration: '12s' }} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl border border-border bg-card/80 flex items-center justify-center group-hover:border-primary/25 group-hover:bg-primary/5 transition-all duration-300">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/30 group-hover:text-primary/60 transition-colors">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm font-medium text-foreground mb-1">Drop APK or EXE here</p>
+                <p className="text-[10px] text-muted-foreground/40">or click to browse · No install needed</p>
                 <div className="mt-4 flex gap-2 justify-center">
-                  {['.apk', '.exe'].map((f) => (
-                    <span key={f} className="tag">{f}</span>
-                  ))}
+                  <span className="tag">.apk</span>
+                  <span className="tag">.exe</span>
+                </div>
+                <div className="mt-4 flex items-center justify-center gap-4 text-[9px] text-muted-foreground/25">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-green-500/40" />
+                    40+ FPS
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-primary/40" />
+                    WebGL2
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-primary/40" />
+                    Sandboxed
+                  </span>
                 </div>
               </div>
             </div>
@@ -470,12 +457,45 @@ export default function RunPage() {
 
           {/* Loading / Booting */}
           {(status === 'loading' || status === 'booting') && (
-            <div className="absolute inset-0 flex items-center justify-center bg-card">
-              <div className="text-center">
-                <div className="spinner mx-auto mb-4" />
-                <p className="text-[11px] text-muted-foreground">
-                  {status === 'loading' ? `Loading ${fileName}...` : statusDetail}
+            <div className="absolute inset-0 flex items-center justify-center bg-card/95 backdrop-blur-sm">
+              <div className="text-center max-w-xs">
+                <div className="relative w-16 h-16 mx-auto mb-5">
+                  {/* Animated ring */}
+                  <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
+                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary/70 animate-spin" style={{ animationDuration: '1s' }} />
+                  <div className="absolute inset-2 rounded-full border border-transparent border-b-primary/40 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {fileType === FileType.APK ? (
+                      <span className="text-[10px] font-bold text-primary/80">A</span>
+                    ) : fileType === FileType.PE_EXE ? (
+                      <span className="text-[10px] font-bold text-primary/80">E</span>
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse" />
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-foreground mb-3">
+                  {status === 'loading' ? `Loading ${fileName}` : statusDetail}
                 </p>
+                {/* Animated loading steps */}
+                <div className="flex flex-col items-start gap-2 mx-auto w-fit">
+                  <div className={`loading-step ${status === 'loading' ? 'active' : 'completed'}`}>
+                    <span className="step-indicator" />
+                    <span>Detecting format</span>
+                  </div>
+                  <div className={`loading-step ${status === 'booting' && statusDetail.includes('Initializing') ? 'active' : status === 'booting' ? 'completed' : ''}`}>
+                    <span className="step-indicator" />
+                    <span>Initializing runtime</span>
+                  </div>
+                  <div className={`loading-step ${status === 'booting' && !statusDetail.includes('Initializing') && statusDetail !== 'Initializing runtime...' ? 'active' : ''}`}>
+                    <span className="step-indicator" />
+                    <span>Booting system</span>
+                  </div>
+                  <div className="loading-step">
+                    <span className="step-indicator" />
+                    <span>Starting execution</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
