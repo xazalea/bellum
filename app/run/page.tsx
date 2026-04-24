@@ -11,7 +11,7 @@ import { AlertTriangle } from 'lucide-react';
 import { getRecentlyPlayed } from '@/lib/recently-played';
 
 type RunStatus = 'idle' | 'loading' | 'booting' | 'running' | 'paused' | 'halted' | 'error' | 'exporting' | 'exported';
-const VISIBLE_STATUSES = ['running', 'paused', 'halted', 'error'] as const;
+const VISIBLE_STATUSES = ['idle', 'running', 'paused', 'halted', 'error'] as const;
 type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 
 interface PerfStats {
@@ -508,7 +508,7 @@ export default function RunPage() {
             ref={canvasRef}
             data-anime="runtime-canvas"
             className={`runtime-canvas w-full h-full absolute inset-0 ${
-              VISIBLE_STATUSES.includes(status as RunStatus) ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              VISIBLE_STATUSES.includes(status as typeof VISIBLE_STATUSES[number]) ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
             tabIndex={0}
           />
