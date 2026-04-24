@@ -4,7 +4,6 @@ export const runtime = 'edge';
 
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getRecentlyPlayed } from '@/lib/recently-played';
 
 export default function GameDetailPage() {
   const params = useParams();
@@ -12,13 +11,8 @@ export default function GameDetailPage() {
   const gameId = params.id as string;
 
   useEffect(() => {
-    if (!gameId) return;
-    const recent = getRecentlyPlayed();
-    const found = recent.find(g => g.id === gameId);
-    if (found) {
-      router.replace(`/run?id=${encodeURIComponent(found.id)}&title=${encodeURIComponent(found.title)}`);
-    } else {
-      router.replace('/run');
+    if (gameId) {
+      router.replace(`/run?id=${encodeURIComponent(gameId)}`);
     }
   }, [gameId, router]);
 

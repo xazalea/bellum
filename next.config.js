@@ -14,49 +14,6 @@ const nextConfig = {
       'puppeteer',
       'puppeteer-extra',
       'puppeteer-extra-plugin-stealth',
-      'firebase-admin',
-      '@google-cloud/firestore',
-      'google-gax',
-      'google-auth-library',
-      'gcp-metadata',
-      '@google/generative-ai',
-      'firebase',
-    ],
-    // Externalize large packages from edge function bundles on CF Pages
-    serverExternalPackages: [
-      '@google/generative-ai',
-      '@google/generative-ai-web',
-      'firebase',
-      'firebase-admin',
-      '@google-cloud/firestore',
-      'google-gax',
-      'google-auth-library',
-      'gcp-metadata',
-      'google-logging-utils',
-      '@google-cloud/aiplatform',
-      // gpt4free is too large to bundle (~9MB per function)
-      'gpt4free',
-      // Large dependencies used by gpt4free
-      'tiktoken',
-      'chalk',
-      'moment',
-      'uuid',
-      'axios',
-      'lodash',
-      'event-stream',
-      'stream',
-      'form-data',
-      'xlsx',
-      'pdf-parse',
-      'image-size',
-      'string-similarity',
-      'user-agents',
-      'opencc-js',
-      'joi',
-      'turndown',
-      'mint-filter',
-      'js-sha3',
-      'tunnel',
     ],
   },
   webpack: (config, { isServer, nextRuntime }) => {
@@ -97,13 +54,16 @@ const nextConfig = {
         'winston', 'winston-transport', '@elastic/ecs-winston-format', 'elastic-apm-node', 'heapdump',
         // AI/LLM packages (too large for edge)
         'tiktoken',
-        // Firebase Admin
-        'firebase-admin', '@google-cloud/firestore', 'google-gax', 'google-auth-library', 'gcp-metadata', 'google-logging-utils',
+        // Firebase Admin + Client
+        'firebase-admin', 'firebase', '@google-cloud/firestore', 'google-gax', 'google-auth-library', 'gcp-metadata', 'google-logging-utils',
+        '@firebase/analytics', '@firebase/auth', '@firebase/firestore', '@firebase/app', '@firebase/app-check', '@firebase/database', '@firebase/storage',
         // Large dependencies
         'uuid', 'lodash', 'chalk', 'moment', 'axios', 'form-data',
         'event-stream', 'stream', 'xlsx', 'pdf-parse', 'image-size',
         'string-similarity', 'user-agents', 'opencc-js', 'joi', 'turndown',
         'mint-filter', 'js-sha3', 'tunnel',
+        // More large packages
+        'ws', 'adm-zip', 'jszip', 'fflate', 'three',
         // Local gpt4free
         '@/lib/gpt4free',
       ];
