@@ -19,6 +19,21 @@ const nextConfig = {
       'google-gax',
       'google-auth-library',
       'gcp-metadata',
+      '@google/generative-ai',
+      'firebase',
+    ],
+    // Externalize large packages from edge function bundles on CF Pages
+    serverExternalPackages: [
+      '@google/generative-ai',
+      '@google/generative-ai-web',
+      'firebase',
+      'firebase-admin',
+      '@google-cloud/firestore',
+      'google-gax',
+      'google-auth-library',
+      'gcp-metadata',
+      'google-logging-utils',
+      '@google-cloud/aiplatform',
     ],
   },
   webpack: (config, { isServer, nextRuntime }) => {
