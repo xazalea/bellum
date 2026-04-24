@@ -1,0 +1,12 @@
+quart
+aiosqlite
+PyYaml
+revChatGPT
+tiktoken
+claude-api
+bardapi
+hugchat
+g4f
+revTongYi
+colorlog
+git+https://github.com/Zai-Kun/reverse-engineered-chatgpt
