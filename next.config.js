@@ -34,6 +34,29 @@ const nextConfig = {
       'gcp-metadata',
       'google-logging-utils',
       '@google-cloud/aiplatform',
+      // gpt4free is too large to bundle (~9MB per function)
+      'gpt4free',
+      // Large dependencies used by gpt4free
+      'tiktoken',
+      'chalk',
+      'moment',
+      'uuid',
+      'axios',
+      'lodash',
+      'event-stream',
+      'stream',
+      'form-data',
+      'xlsx',
+      'pdf-parse',
+      'image-size',
+      'string-similarity',
+      'user-agents',
+      'opencc-js',
+      'joi',
+      'turndown',
+      'mint-filter',
+      'js-sha3',
+      'tunnel',
     ],
   },
   webpack: (config, { isServer, nextRuntime }) => {
@@ -62,26 +85,32 @@ const nextConfig = {
     }
 
     // ── Edge-runtime-specific shims ─────────────────────────────────
-    // Node.js built-ins are provided by Almostnode at runtime on CF Pages
+    // Node.js built-ins and heavy packages are provided by Almostnode at runtime on CF Pages
     if (nextRuntime === 'edge') {
       config.resolve.alias = config.resolve.alias || {};
 
       // ── Node-only packages that CANNOT run on edge runtime ──────────
-      // These must be aliased to false ONLY for edge builds.
-      // In Node.js runtime, serverExternalPackages lets webpack externalize
-      // them so they load at runtime via require() — alias=false would break that.
-      config.resolve.alias['winston'] = false;
-      config.resolve.alias['winston-transport'] = false;
-      config.resolve.alias['@elastic/ecs-winston-format'] = false;
-      config.resolve.alias['elastic-apm-node'] = false;
-      config.resolve.alias['heapdump'] = false;
-      config.resolve.alias['tiktoken'] = false;
-      config.resolve.alias['firebase-admin'] = false;
-      config.resolve.alias['@google-cloud/firestore'] = false;
-      config.resolve.alias['google-gax'] = false;
-      config.resolve.alias['google-auth-library'] = false;
-      config.resolve.alias['gcp-metadata'] = false;
-      config.resolve.alias['google-logging-utils'] = false;
+      // These must be aliased to false for edge builds to prevent crashes
+      // and reduce bundle size (CF Pages 25MB limit)
+      const packagesToAlias = [
+        // Logging
+        'winston', 'winston-transport', '@elastic/ecs-winston-format', 'elastic-apm-node', 'heapdump',
+        // AI/LLM packages (too large for edge)
+        'tiktoken',
+        // Firebase Admin
+        'firebase-admin', '@google-cloud/firestore', 'google-gax', 'google-auth-library', 'gcp-metadata', 'google-logging-utils',
+        // Large dependencies
+        'uuid', 'lodash', 'chalk', 'moment', 'axios', 'form-data',
+        'event-stream', 'stream', 'xlsx', 'pdf-parse', 'image-size',
+        'string-similarity', 'user-agents', 'opencc-js', 'joi', 'turndown',
+        'mint-filter', 'js-sha3', 'tunnel',
+        // Local gpt4free
+        '@/lib/gpt4free',
+      ];
+
+      packagesToAlias.forEach(pkg => {
+        config.resolve.alias[pkg] = false;
+      });
 
       const nodeModules = [
         'fs', 'path', 'stream', 'crypto', 'os', 'buffer', 'events', 'util',
@@ -104,11 +133,9 @@ const nextConfig = {
       // Inject document/window/self stubs into the edge runtime bundle.
       // Webpack's own runtime code references `document.baseURI` and `self`
       // (e.g. `t.b=document.baseURI||self.location.href`), which throws
-      // ReferenceError in the edge sandbox during build. Some transitive
-      // dependencies also reference `document` at module level. The stubs
-      // prevent these from crashing the build; packages aliased to `false`
-      // above will return empty modules at runtime (their functions won't work
-      // on edge — that's expected for Node-only deps like winston/tiktoken).
+      // ReferenceError in the edge sandbox during build. The stubs prevent
+      // these from crashing the build; packages aliased to `false` will
+      // return empty modules at runtime (their functions won't work on edge).
       const globalStubs = require('fs').readFileSync(
         path.resolve(__dirname, 'lib/compat/global-stubs.js'),
         'utf8'
