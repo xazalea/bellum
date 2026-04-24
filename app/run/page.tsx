@@ -10,7 +10,8 @@ import { animate, spring, ease, dur } from '@/lib/hooks/use-anime';
 import { AlertTriangle } from 'lucide-react';
 import { getRecentlyPlayed } from '@/lib/recently-played';
 
-type RunStatus = 'idle' | 'loading' | 'booting' | 'running' | 'paused' | 'error' | 'exporting' | 'exported';
+type RunStatus = 'idle' | 'loading' | 'booting' | 'running' | 'paused' | 'halted' | 'error' | 'exporting' | 'exported';
+const VISIBLE_STATUSES = ['running', 'paused', 'halted', 'error'] as const;
 type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
 
 interface PerfStats {
@@ -165,7 +166,9 @@ export default function RunPage() {
             setStatus('running');
             setSessionStartTime(Date.now());
           } else if (s === 'halted') {
+            setStatus('halted');
             setStatusDetail('Program exited');
+            setSessionStartTime(null);
             framePacerRef.current?.stop();
           } else if (s === 'error') {
             setError('Runtime error');
@@ -501,14 +504,14 @@ export default function RunPage() {
           )}
 
           {/* Canvas — always in DOM so ref is available during boot */}
-        <canvas
-          ref={canvasRef}
-          data-anime="runtime-canvas"
-          className={`runtime-canvas w-full h-full absolute inset-0 ${
-            (status === 'running' || status === 'paused') ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-          tabIndex={0}
-        />
+          <canvas
+            ref={canvasRef}
+            data-anime="runtime-canvas"
+            className={`runtime-canvas w-full h-full absolute inset-0 ${
+              VISIBLE_STATUSES.includes(status as RunStatus) ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            tabIndex={0}
+          />
 
           {/* Running overlay controls — auto-hide */}
           {status === 'running' && (
@@ -579,6 +582,32 @@ export default function RunPage() {
                 </div>
               </div>
             </>
+          )}
+
+          {/* Halted overlay — app exited, show final frame with exit banner */}
+          {status === 'halted' && (
+            <div className="absolute inset-0 z-20">
+              {/* The canvas underneath shows the final frame */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent pt-12 pb-4 px-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="status-badge status-badge-idle">Exited</span>
+                    <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">{fileName}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={exportToHtml} className="btn-ghost text-[10px] h-7 px-2">
+                      Export HTML
+                    </button>
+                    <button
+                      onClick={() => stopExecution()}
+                      className="btn-primary text-[10px] h-7 px-3"
+                    >
+                      Run Another
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Error */}

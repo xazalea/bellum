@@ -319,11 +319,11 @@ export default function MeshPage() {
           </div>
           <div className="space-y-2">
             {[
-              { name: 'Free', tokens: 0, nodes: 1, storage: '1 GB', color: 'hsl(230 8% 42%)' },
-              { name: 'Plus', tokens: 1000, nodes: 2, storage: '3 GB', color: 'hsl(250 60% 65%)' },
-              { name: 'Pro', tokens: 5000, nodes: 4, storage: '5 GB', color: 'hsl(230 60% 60%)' },
-              { name: 'Ultra', tokens: 20000, nodes: 8, storage: '10 GB', color: 'hsl(250 70% 70%)' },
-              { name: 'Omega', tokens: 50000, nodes: 16, storage: '20 GB', color: 'hsl(270 80% 75%)' },
+              { name: 'Free', tokens: 0, nodes: 1, storage: '1 GB', color: 'hsl(0 0% 42%)' },
+              { name: 'Plus', tokens: 1000, nodes: 2, storage: '3 GB', color: 'hsl(var(--primary))' },
+              { name: 'Pro', tokens: 5000, nodes: 4, storage: '5 GB', color: 'hsl(var(--accent-orange))' },
+              { name: 'Ultra', tokens: 20000, nodes: 8, storage: '10 GB', color: 'hsl(var(--accent-coral-dim))' },
+              { name: 'Omega', tokens: 50000, nodes: 16, storage: '20 GB', color: 'hsl(var(--accent-warm))' },
             ].map((t) => (
               <div
                 key={t.name}

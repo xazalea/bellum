@@ -739,9 +739,20 @@ export class UnifiedRuntime {
       if (this.cpu.halted) {
         this.log('[Runtime] CPU halted');
         this.setState('halted');
+        // Keep rendering the final frame so the canvas shows the app's last state
+        // instead of a blank/random static image
+        if (this.windowManager && this.mainHwnd) {
+          this.windowManager.present(this.mainHwnd);
+        }
         this.renderer?.present();
         return;
       }
+    }
+
+    // If CPU halted but we still have a window surface, keep presenting it
+    // so the user sees the final rendered state, not a blank canvas
+    if (this.cpu && this.cpu.halted && this.windowManager && this.mainHwnd) {
+      this.windowManager.present(this.mainHwnd);
     }
 
     // Continue Dalvik execution for APK mode (game loops, animations, event callbacks)

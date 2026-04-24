@@ -10,24 +10,44 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { FeaturedBanner } from '@/components/ui/featured-banner';
 import { Gamepad2, UserPlus, Upload, Play, Cpu, Globe, Zap, ArrowRight } from 'lucide-react';
 
-const featuredItems = [
-  {
-    id: 'featured-1',
-    title: 'Challenger Deep',
-    subtitle: 'Browser Gaming Platform',
-    description: 'Run Android APKs and Windows EXEs natively in your browser. No downloads, no installs, no plugins.',
-    tags: ['Featured'],
-    accentColor: 'hsl(250 60% 65% / 0.08)',
-  },
-  {
-    id: 'featured-2',
+// Build featured items from real recent games + platform capabilities
+function buildFeaturedItems(recentGames: RecentGame[]) {
+  const items = [];
+  
+  // If user has recent games, feature the most recent one
+  if (recentGames.length > 0) {
+    const latest = recentGames[0];
+    items.push({
+      id: latest.id,
+      title: latest.title,
+      subtitle: 'Continue Playing',
+      description: `Last played ${new Date(latest.playedAt).toLocaleDateString()}. Pick up where you left off — your session is restored instantly.`,
+      tags: ['Recent'],
+      accentColor: 'hsl(0 80% 60% / 0.08)',
+    });
+  }
+  
+  // Always show the platform capability cards (ensures ≥2 items for banner rotation)
+  items.push({
+    id: 'platform-run',
+    title: 'Run Anything',
+    subtitle: 'Browser-Native Execution',
+    description: 'Drop an APK or EXE and it runs natively in your browser via WebGL2 + Dalvik/x86 interpreter. No downloads, no installs, no plugins.',
+    tags: ['Platform'],
+    accentColor: 'hsl(24 90% 55% / 0.06)',
+  });
+
+  items.push({
+    id: 'platform-mesh',
     title: 'Mesh Compute',
     subtitle: 'Earn While Idle',
-    description: 'Contribute idle browser power to the P2P mesh network. Earn compute tokens passively. Optional.',
+    description: 'Contribute idle browser power to the P2P mesh network. Earn compute tokens passively. Optional and transparent.',
     tags: ['Mesh'],
-    accentColor: 'hsl(230 60% 60% / 0.06)',
-  },
-];
+    accentColor: 'hsl(30 80% 65% / 0.06)',
+  });
+  
+  return items;
+}
 
 function ParticleField() {
   const dots = useRef(
@@ -141,8 +161,15 @@ export default function HomePage() {
     <div ref={root} className="min-h-screen">
       {/* Hero */}
       <FeaturedBanner
-        items={featuredItems}
-        onPlay={() => router.push('/games')}
+        items={buildFeaturedItems(recentGames)}
+        onPlay={(id) => {
+          // If it's a recent game ID, navigate to run it
+          if (id && id !== 'platform-run') {
+            router.push(`/run?id=${encodeURIComponent(id)}`);
+          } else {
+            router.push('/games');
+          }
+        }}
         className="h-[360px] md:h-[440px]"
       />
 

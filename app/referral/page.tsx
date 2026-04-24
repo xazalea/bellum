@@ -96,9 +96,9 @@ export default function ReferralPage() {
         <div data-anime="ref-card" style={{ opacity: 0 }} className="grid grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Tokens', value: Math.round(balance.tokens).toLocaleString(), sub: tier.name, color: tier.color },
-            { label: 'Streak', value: `${streak.currentStreak}d`, sub: streak.currentStreak >= 3 ? 'Bonus active' : '3d for bonus', color: 'hsl(250 60% 65%)' },
-            { label: 'Referrals', value: referral.referredUsers.length, sub: `${referral.earnedTokens} earned`, color: 'hsl(230 60% 60%)' },
-            { label: 'Quests', value: `${completedQuests.length}/${quests.length}`, sub: `${inProgressQuests.length} active`, color: 'hsl(270 80% 75%)' },
+            { label: 'Streak', value: `${streak.currentStreak}d`, sub: streak.currentStreak >= 3 ? 'Bonus active' : '3d for bonus', color: 'hsl(var(--primary))' },
+            { label: 'Referrals', value: referral.referredUsers.length, sub: `${referral.earnedTokens} earned`, color: 'hsl(var(--accent-orange))' },
+            { label: 'Quests', value: `${completedQuests.length}/${quests.length}`, sub: `${inProgressQuests.length} active`, color: 'hsl(var(--accent-warm))' },
           ].map(stat => (
             <div key={stat.label} className="glass-card rounded-lg p-3 text-center" onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
               <p className="text-lg font-bold tracking-tighter text-foreground">{stat.value}</p>
