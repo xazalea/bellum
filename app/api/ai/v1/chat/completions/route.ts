@@ -1,8 +1,8 @@
-export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthedUser } from "@/app/api/user/_util";
 import { chatCompletion } from "@/lib/server/ai-gpt4free";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
+import 'server-only';
 
 
 export const dynamic = "force-dynamic";
