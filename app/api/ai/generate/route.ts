@@ -1,4 +1,5 @@
-export const runtime = 'edge';
+// API route excluded from edge runtime via next.config.js serverComponentsExternalPackages
+// This route is handled by Node.js server, not edge worker
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -164,6 +165,9 @@ function classifyPrompt(prompt: string): string {
   return 'platformer';
 }
 
+// Node.js runtime only - excluded from edge bundle via serverComponentsExternalPackages
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   const { prompt } = await request.json();
 
@@ -183,7 +187,7 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `Generate a complete, self-contained HTML5 canvas game in JavaScript based on this description: "${prompt}". The code should create its own canvas element, handle keyboard input, and have a game loop. Only output the JavaScript code, no HTML or markdown.`,
+                text: `Generate a complete, self-contained HTML5 canvas game in JavaScript based on this description: \"${prompt}\". The code should create its own canvas element, handle keyboard input, and have a game loop. Only output the JavaScript code, no HTML or markdown.`,
               }],
             }],
           }),
@@ -193,7 +197,7 @@ export async function POST(request: NextRequest) {
       if (response.ok) {
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const code = text.replace(/^```\w*\n?/gm, '').replace(/```$/gm, '').trim();
+        const code = text.replace(/^```\n?/gm, '').replace(/```$/gm, '').trim();
         if (code.length > 50) {
           return NextResponse.json({ code, source: 'ai' });
         }

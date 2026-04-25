@@ -6,6 +6,17 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Static redirects - handled by Next.js without edge runtime!
+  // This saves ~650KB from the edge worker bundle
+  async redirects() {
+    return [
+      {
+        source: '/games/:id',
+        destination: '/run?id=:id',
+        permanent: false,
+      },
+    ];
+  },
   experimental: {
     serverComponentsExternalPackages: [
       '@ffmpeg-installer/ffmpeg',
@@ -14,6 +25,10 @@ const nextConfig = {
       'puppeteer',
       'puppeteer-extra',
       'puppeteer-extra-plugin-stealth',
+      '@google/generative-ai',
+      'tiktoken',
+      'ai',
+      'openai',
     ],
   },
   webpack: (config, { isServer, nextRuntime }) => {
@@ -48,24 +63,35 @@ const nextConfig = {
 
       // ── Node-only packages that CANNOT run on edge runtime ──────────
       // These must be aliased to false for edge builds to prevent crashes
-      // and reduce bundle size (CF Pages 25MB limit)
+      // and reduce bundle size (CF Pages 3 MiB free tier limit)
+      // Sorted by impact: largest first
       const packagesToAlias = [
+        // AI/LLM packages (HUGE - tiktoken is 1MB+)
+        'tiktoken', '@google/generative-ai',
+        // Firebase Admin + Client (massive)
+        'firebase-admin', 'firebase', '@google-cloud/firestore', 'google-gax', 'google-auth-library', 
+        'gcp-metadata', 'google-logging-utils', '@firebase/analytics', '@firebase/auth', 
+        '@firebase/firestore', '@firebase/app', '@firebase/app-check', '@firebase/database', '@firebase/storage',
+        // 3D/Graphics (three is ~500KB minified)
+        'three', '@react-three/fiber', '@react-three/drei',
+        // Animation libraries
+        'gsap', '@gsap/react', 'motion', 'framer-motion', 'animejs',
+        // Heavy utilities
+        'lodash', 'uuid', 'moment', 'axios', 'chalk', 'ws',
+        // File processing
+        'xlsx', 'pdf-parse', 'image-size', 'adm-zip', 'jszip', 'fflate',
+        // Other heavy deps
+        'event-stream', 'stream', 'form-data', 'joi', 'turndown', 'tunnel',
+        'user-agents', 'opencc-js', 'string-similarity', 'mint-filter', 'js-sha3',
         // Logging
         'winston', 'winston-transport', '@elastic/ecs-winston-format', 'elastic-apm-node', 'heapdump',
-        // AI/LLM packages (too large for edge)
-        'tiktoken',
-        // Firebase Admin + Client
-        'firebase-admin', 'firebase', '@google-cloud/firestore', 'google-gax', 'google-auth-library', 'gcp-metadata', 'google-logging-utils',
-        '@firebase/analytics', '@firebase/auth', '@firebase/firestore', '@firebase/app', '@firebase/app-check', '@firebase/database', '@firebase/storage',
-        // Large dependencies
-        'uuid', 'lodash', 'chalk', 'moment', 'axios', 'form-data',
-        'event-stream', 'stream', 'xlsx', 'pdf-parse', 'image-size',
-        'string-similarity', 'user-agents', 'opencc-js', 'joi', 'turndown',
-        'mint-filter', 'js-sha3', 'tunnel',
-        // More large packages
-        'ws', 'adm-zip', 'jszip', 'fflate', 'three',
         // Local gpt4free
         '@/lib/gpt4free',
+        // Puppeteer/FFmpeg (shouldn't be in edge anyway)
+        'puppeteer', 'puppeteer-extra', 'puppeteer-extra-plugin-stealth',
+        '@ffmpeg-installer/ffmpeg', '@ffprobe-installer/ffprobe', 'fluent-ffmpeg',
+        // GPU/Compute (large, not needed on edge)
+        'gpu.js', 'ioredis',
       ];
 
       packagesToAlias.forEach(pkg => {
