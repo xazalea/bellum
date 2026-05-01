@@ -401,7 +401,7 @@ export default function RunPage() {
           className={`relative w-full border bg-card overflow-hidden transition-all duration-200 ${
             dragOver ? 'border-foreground/40' : 'border-border'
           } ${status === 'running' ? 'cursor-crosshair' : ''} ${
-            isFullscreen ? 'rounded-none border-0' : 'rounded-sm'
+            isFullscreen ? 'rounded-none border-0' : 'rounded-md'
           }`}
           style={{ minHeight: status === 'idle' ? '400px' : '70vh' }}
           onMouseMove={status === 'running' ? showControlsTemporarily : undefined}
@@ -427,7 +427,7 @@ export default function RunPage() {
                   {/* Animated dashed ring */}
                   <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/20 group-hover:border-primary/30 transition-colors animate-spin" style={{ animationDuration: '12s' }} />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-xl border border-border bg-card/80 flex items-center justify-center group-hover:border-primary/25 group-hover:bg-primary/5 transition-all duration-300">
+                    <div className="w-10 h-10 rounded-md border border-border bg-card/80 flex items-center justify-center group-hover:border-primary/20 group-hover:bg-primary/5 transition-all duration-300">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/30 group-hover:text-primary/60 transition-colors">
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                       </svg>
@@ -650,7 +650,7 @@ export default function RunPage() {
 
         {/* Stats bar */}
         {status === 'running' && !isFullscreen && (
-          <div className="mt-3 flex items-center gap-6 border-t border-border pt-3">
+          <div className="mt-3 flex items-center gap-6 border-t border-border/30 pt-3">
             <div>
               <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">File</p>
               <p className="text-[11px] text-foreground/70 mt-0.5 font-mono truncate max-w-[200px]">{fileName}</p>

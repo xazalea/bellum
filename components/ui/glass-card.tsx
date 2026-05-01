@@ -19,7 +19,7 @@ export function GlassCard({ children, className, padding = 'md', glow = false, g
   const cardRef = useRef<HTMLDivElement>(null);
 
   const onEnter = useCallback(() => {
-    if (cardRef.current) animate(cardRef.current, { borderColor: 'hsl(var(--primary) / 0.25)', boxShadow: '0 0 20px 0 hsl(var(--primary) / 0.06)', ease: spring({ bounce: 0.1, stiffness: 200, damping: 14 }), duration: dur.base });
+    if (cardRef.current) animate(cardRef.current, { borderColor: 'hsl(var(--primary) / 0.15)', boxShadow: '0 0 12px 0 hsl(var(--primary) / 0.04)', ease: spring({ bounce: 0.1, stiffness: 200, damping: 14 }), duration: dur.base });
   }, []);
   const onLeave = useCallback(() => {
     if (cardRef.current) animate(cardRef.current, { borderColor: 'hsl(var(--primary) / 0.1)', boxShadow: '0 0 0 0 hsl(var(--primary) / 0)', ease: ease.out, duration: dur.base });
@@ -31,7 +31,7 @@ export function GlassCard({ children, className, padding = 'md', glow = false, g
       onClick={onClick}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={cn('glass-card rounded-xl', paddingMap[padding], glow && 'shadow-[0_0_24px_2px_hsl(var(--primary)/0.25)]', onClick && 'cursor-pointer', className)}
+      className={cn('glass-card rounded-lg', paddingMap[padding], glow && 'shadow-[0_0_16px_1px_hsl(var(--primary)/0.15)]', onClick && 'cursor-pointer', className)}
       style={goldBorder ? { background: 'linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box, linear-gradient(135deg, hsl(var(--primary) / 0.7), hsl(var(--primary) / 0.4)) border-box', border: '1px solid transparent' } : undefined}
     >
       {children}

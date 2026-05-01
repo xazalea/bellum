@@ -33,20 +33,19 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
     if (index === activeIndex) return;
     const oldSlide = slideRefs.current[activeIndex];
     const newSlide = slideRefs.current[index];
-    if (oldSlide) animate(oldSlide, { opacity: [1, 0], translateX: [0, -40], ease: ease.out, duration: dur.base });
-    if (newSlide) animate(newSlide, { opacity: [0, 1], translateX: [40, 0], ease: ease.out, duration: dur.base, delay: 50 });
+    if (oldSlide) animate(oldSlide, { opacity: [1, 0], translateX: [0, -20], ease: ease.out, duration: dur.base });
+    if (newSlide) animate(newSlide, { opacity: [0, 1], translateX: [20, 0], ease: ease.out, duration: dur.base, delay: 40 });
 
-    // Animate new content
     run(s => {
       s.add(() => {
         const newContent = newSlide?.querySelector('[data-anime="banner-content"]');
         if (newContent) {
           animate(newContent.querySelectorAll('[data-anime="banner-line"]'), {
-            translateY: [20, 0],
+            translateY: [12, 0],
             opacity: [0, 1],
             ease: ease.out,
             duration: dur.reveal,
-            delay: stagger(80, { start: 150 }),
+            delay: stagger(60, { start: 100 }),
           });
         }
       });
@@ -55,7 +54,6 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
     setActiveIndex(index);
   }, [activeIndex, run]);
 
-  // Auto-rotate
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -71,30 +69,29 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
     return () => { mountedRef.current = false; if (timerRef.current) clearInterval(timerRef.current); };
   }, [resetTimer]);
 
-  // Initial animation
   React.useEffect(() => {
     run(s => {
       s.add(() => {
         animate('[data-anime="banner-line"]', {
-          translateY: [40, 0],
+          translateY: [20, 0],
           opacity: [0, 1],
           ease: ease.out,
           duration: dur.reveal,
-          delay: stagger(120, { start: 200 }),
+          delay: stagger(80, { start: 150 }),
         });
         animate('[data-anime="banner-cta"]', {
-          scale: [0.85, 1],
+          scale: [0.9, 1],
           opacity: [0, 1],
-          ease: spring({ bounce: 0.3, stiffness: 200, damping: 12 }),
+          ease: spring({ bounce: 0.2, stiffness: 200, damping: 14 }),
           duration: dur.base,
-          delay: 800,
+          delay: 600,
         });
         animate('[data-anime="banner-dots"]', {
-          translateY: [10, 0],
+          translateY: [6, 0],
           opacity: [0, 1],
           ease: ease.out,
           duration: dur.base,
-          delay: 1000,
+          delay: 800,
         });
       });
     });
@@ -103,7 +100,7 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
   const onPlayClick = useCallback(() => {
     if (!currentItem) return;
     const btn = document.querySelector('[data-anime="banner-cta"]');
-    if (btn) animate(btn, { scale: [1, 0.92, 1.05, 1], ease: spring({ bounce: 0.5 }), duration: 400 });
+    if (btn) animate(btn, { scale: [1, 0.95, 1.02, 1], ease: spring({ bounce: 0.4 }), duration: 350 });
     onPlay?.(currentItem.id);
   }, [currentItem, onPlay]);
 
@@ -119,10 +116,10 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
         <div
           key={item.id}
           ref={el => { slideRefs.current[i] = el; }}
-          className="absolute inset-0 transition-opacity"
+          className="absolute inset-0"
           style={{ opacity: i === activeIndex ? 1 : 0, pointerEvents: i === activeIndex ? 'auto' : 'none' }}
         >
-          {/* Background image / gradient */}
+          {/* Background */}
           <div className="absolute inset-0">
             {item.image ? (
               <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
@@ -130,52 +127,53 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
               <div
                 className="w-full h-full"
                 style={{
-                  background: `radial-gradient(ellipse at 30% 40%, ${item.accentColor || 'hsl(var(--primary) / 0.15)'} 0%, transparent 60%),
+                  background: `radial-gradient(ellipse at 25% 35%, ${item.accentColor || 'hsl(var(--primary) / 0.08)'} 0%, transparent 55%),
                                linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)`,
                 }}
               />
             )}
-            {/* Gradient overlays */}
-            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" />
+            {/* Dot grid overlay */}
+            <div className="absolute inset-0 dot-grid opacity-40" />
           </div>
 
           {/* Content */}
-          <div data-anime="banner-content" className="relative z-10 cd-container h-full flex items-center py-16">
-            <div className="max-w-xl">
+          <div data-anime="banner-content" className="relative z-10 cd-container h-full flex items-center py-12">
+            <div className="max-w-lg">
               {item.tags && item.tags.length > 0 && (
-                <div data-anime="banner-line" className="flex items-center gap-2 mb-4" style={{ opacity: 0 }}>
+                <div data-anime="banner-line" className="flex items-center gap-2 mb-3" style={{ opacity: 0 }}>
                   {item.tags.map(tag => (
-                    <span key={tag} className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider border border-primary/30 text-primary/80 rounded-sm">
+                    <span key={tag} className="px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest border border-primary/20 text-primary/70 rounded-sm">
                       {tag}
                     </span>
                   ))}
                 </div>
               )}
-              <h2 data-anime="banner-line" className="text-3xl md:text-5xl font-bold tracking-tighter text-foreground leading-[0.95]" style={{ opacity: 0 }}>
+              <h2 data-anime="banner-line" className="text-2xl md:text-4xl font-bold tracking-tighter text-foreground leading-[0.95]" style={{ opacity: 0 }}>
                 {item.title}
               </h2>
-              <p data-anime="banner-line" className="text-sm md:text-base text-muted-foreground mt-1 font-medium" style={{ opacity: 0 }}>
+              <p data-anime="banner-line" className="text-xs md:text-sm text-muted-foreground/60 mt-1 font-medium tracking-tight" style={{ opacity: 0 }}>
                 {item.subtitle}
               </p>
-              <p data-anime="banner-line" className="text-xs text-muted-foreground/60 mt-4 leading-relaxed max-w-md" style={{ opacity: 0 }}>
+              <p data-anime="banner-line" className="text-[11px] text-muted-foreground/40 mt-3 leading-relaxed max-w-md" style={{ opacity: 0 }}>
                 {item.description}
               </p>
-              <div className="mt-6 flex items-center gap-3">
+              <div className="mt-5 flex items-center gap-2.5">
                 <button
                   data-anime="banner-cta"
                   onClick={onPlayClick}
-                  className="btn-primary h-10 px-6 text-sm font-semibold"
+                  className="btn-primary h-9 px-5 text-[11px]"
                   style={{ opacity: 0 }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="mr-2"><path d="M8 5v14l11-7z" /></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="mr-1.5"><path d="M8 5v14l11-7z" /></svg>
                   Play Now
                 </button>
                 <button
-                  className="btn-secondary h-10 px-5 text-sm"
+                  className="btn-secondary h-9 px-4 text-[11px]"
                   onClick={() => {/* TODO: add to wishlist */}}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mr-2">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mr-1.5">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                   Wishlist
@@ -187,23 +185,23 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
       ))}
 
       {/* Navigation dots */}
-      <div data-anime="banner-dots" className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2" style={{ opacity: 0 }}>
+      <div data-anime="banner-dots" className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5" style={{ opacity: 0 }}>
         {items.map((_, i) => (
           <button
             key={i}
             onClick={() => goToSlide(i)}
             className={cn(
-              'w-2 h-2 rounded-full transition-all duration-300',
-              i === activeIndex ? 'bg-primary w-6' : 'bg-muted-foreground/30 hover:bg-muted-foreground/60'
+              'h-1 rounded-full transition-all duration-300',
+              i === activeIndex ? 'bg-primary w-5' : 'bg-muted-foreground/20 hover:bg-muted-foreground/40 w-1.5'
             )}
           />
         ))}
       </div>
 
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-border/30 z-20">
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-border/20 z-20">
         <div
-          className="h-full bg-primary/60 origin-left"
+          className="h-full bg-primary/40 origin-left"
           style={{ transform: 'scaleX(0)', animation: 'progress-slide 6s linear infinite' }}
         />
       </div>

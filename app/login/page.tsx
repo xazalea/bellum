@@ -35,34 +35,34 @@ export default function LoginPage() {
       s.add(self => {
         if (cardRef.current) {
           animate(cardRef.current, {
-            scale: [0.95, 1], opacity: [0, 1],
-            ease: spring({ bounce: 0.2, stiffness: 220, damping: 18 }),
+            scale: [0.96, 1], opacity: [0, 1],
+            ease: spring({ bounce: 0.15, stiffness: 240, damping: 20 }),
             duration: dur.slow,
           });
         }
         if (titleRef.current) {
           animate(titleRef.current, {
-            translateY: [12, 0], opacity: [0, 1],
-            ease: ease.out, duration: dur.base, delay: 150,
+            translateY: [6, 0], opacity: [0, 1],
+            ease: ease.out, duration: dur.base, delay: 120,
           });
         }
         if (subtitleRef.current) {
           animate(subtitleRef.current, {
-            translateY: [8, 0], opacity: [0, 1],
-            ease: ease.out, duration: dur.base, delay: 250,
+            translateY: [4, 0], opacity: [0, 1],
+            ease: ease.out, duration: dur.base, delay: 200,
           });
         }
         if (inputWrapRef.current) {
           animate(inputWrapRef.current, {
-            translateY: [6, 0], opacity: [0, 1],
-            ease: ease.out, duration: dur.base, delay: 350,
+            translateY: [4, 0], opacity: [0, 1],
+            ease: ease.out, duration: dur.base, delay: 280,
           });
         }
         if (btnRef.current) {
           animate(btnRef.current, {
-            scale: [0.9, 1], opacity: [0, 1],
-            ease: spring({ bounce: 0.3, stiffness: 260, damping: 14 }),
-            duration: dur.base, delay: 450,
+            scale: [0.92, 1], opacity: [0, 1],
+            ease: spring({ bounce: 0.2, stiffness: 260, damping: 14 }),
+            duration: dur.base, delay: 360,
           });
         }
       });
@@ -74,7 +74,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (!username.trim()) {
       setLocalError('Enter a username');
-      if (inputWrapRef.current) animate(inputWrapRef.current, { translateX: [0, -6, 6, -3, 3, 0], ease: ease.out, duration: 350 });
+      if (inputWrapRef.current) animate(inputWrapRef.current, { translateX: [0, -4, 4, -2, 2, 0], ease: ease.out, duration: 300 });
       return;
     }
     if (username.trim().length < 3) { setLocalError('At least 3 characters'); return; }
@@ -92,7 +92,7 @@ export default function LoginPage() {
         setTimeout(() => router.push('/dashboard'), 1000);
       } else {
         setLocalError(result.error || 'Something went wrong');
-        if (inputWrapRef.current) animate(inputWrapRef.current, { translateX: [0, -5, 5, -2, 2, 0], ease: ease.out, duration: 300 });
+        if (inputWrapRef.current) animate(inputWrapRef.current, { translateX: [0, -4, 4, -2, 2, 0], ease: ease.out, duration: 250 });
       }
     } catch {
       setLocalError('Connection error');
@@ -103,25 +103,25 @@ export default function LoginPage() {
 
   return (
     <div ref={root} className="min-h-screen flex items-center justify-center p-4">
-      <div ref={cardRef} style={{ opacity: 0 }} className="w-full max-w-sm glass-card rounded-xl p-6">
+      <div ref={cardRef} style={{ opacity: 0 }} className="w-full max-w-sm glass-card rounded-lg p-5">
         {/* Logo */}
-        <div className="flex items-center justify-center mb-5">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Gamepad2 size={20} className="text-primary" />
+        <div className="flex items-center justify-center mb-3">
+          <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Gamepad2 size={16} className="text-primary/70" />
           </div>
         </div>
 
-        <h2 ref={titleRef} style={{ opacity: 0 }} className="text-lg font-bold text-center text-foreground tracking-tight">
+        <h2 ref={titleRef} style={{ opacity: 0 }} className="text-sm font-bold text-center text-foreground tracking-tight">
           {isSignUp ? 'Create Account' : 'Sign In'}
         </h2>
-        <p ref={subtitleRef} style={{ opacity: 0 }} className="text-[11px] text-muted-foreground/50 text-center mt-1.5 mb-5">
+        <p ref={subtitleRef} style={{ opacity: 0 }} className="text-[10px] text-muted-foreground/40 text-center mt-1 mb-4">
           {isSignUp ? 'Pick a username. Your device is your key.' : 'Sign in from a trusted device.'}
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-2.5">
           <div ref={inputWrapRef} style={{ opacity: 0 }}>
             <div className="relative">
-              <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/25" />
+              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/20" />
               <input
                 ref={inputRef}
                 type="text"
@@ -133,22 +133,22 @@ export default function LoginPage() {
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                className="w-full h-10 pl-9 pr-3 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground/25 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/15 transition-colors"
+                className="w-full h-9 pl-8 pr-3 rounded-md border border-border bg-card text-foreground text-xs placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/25 focus:ring-1 focus:ring-primary/10 transition-colors"
               />
             </div>
           </div>
 
           {(localError || authError) && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
-              <AlertCircle size={14} className="text-destructive" />
-              <p className="text-[11px] text-destructive">{localError || authError}</p>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 border border-destructive/20">
+              <AlertCircle size={12} className="text-destructive" />
+              <p className="text-[10px] text-destructive">{localError || authError}</p>
             </div>
           )}
 
           {success && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-              <Check size={14} className="text-primary" />
-              <p className="text-[11px] text-primary">Welcome!</p>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20">
+              <Check size={12} className="text-primary" />
+              <p className="text-[10px] text-primary">Welcome!</p>
             </div>
           )}
 
@@ -157,30 +157,30 @@ export default function LoginPage() {
             type="submit"
             disabled={submitting || !username.trim() || isLoading}
             style={{ opacity: 0 }}
-            className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="w-full h-9 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:brightness-110 disabled:opacity-35 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
           >
             {submitting || isLoading ? (
-              <><span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />{isSignUp ? 'Creating...' : 'Signing in...'}</>
+              <><span className="w-3.5 h-3.5 border-2 border-primary-foreground/25 border-t-primary-foreground rounded-full animate-spin" />{isSignUp ? 'Creating...' : 'Signing in...'}</>
             ) : success ? (
-              <><Check size={16} />Ready</>
+              <><Check size={14} />Ready</>
             ) : (
               <>{isSignUp ? 'Create Account' : 'Sign In'}</>
             )}
           </button>
         </form>
 
-        <div className="mt-3 text-center">
+        <div className="mt-2.5 text-center">
           <button
             onClick={() => { setIsSignUp(!isSignUp); setLocalError(null); }}
-            className="text-[10px] text-muted-foreground/40 hover:text-foreground/60 transition-colors"
+            className="text-[9px] text-muted-foreground/30 hover:text-foreground/50 transition-colors"
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
         </div>
 
-        <div className="mt-4 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-card border border-border/50 mx-auto w-fit">
-          <Fingerprint size={11} className="text-primary/40" />
-          <span className="text-[9px] text-muted-foreground/30 font-medium">Passwordless · Fingerprint Secured</span>
+        <div className="mt-3 flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-card border border-border/40 mx-auto w-fit">
+          <Fingerprint size={10} className="text-primary/30" />
+          <span className="text-[8px] text-muted-foreground/25 font-medium">Passwordless · Fingerprint Secured</span>
         </div>
       </div>
     </div>

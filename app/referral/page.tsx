@@ -21,11 +21,11 @@ export default function ReferralPage() {
     run(s => {
       s.add(self => {
         animate('[data-anime="ref-header"]', {
-          translateY: [-12, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
+          translateY: [-6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
         });
         animate('[data-anime="ref-card"]', {
-          translateY: [20, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
-          delay: stagger(100, { start: 200 }),
+          translateY: [10, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
+          delay: stagger(80, { start: 160 }),
         });
       });
     });
@@ -49,7 +49,7 @@ export default function ReferralPage() {
   }, [referralLink]);
 
   const onCardEnter = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { translateY: -1, ease: spring({ bounce: 0.2 }), duration: dur.fast });
+    animate(e.currentTarget, { translateY: -0.5, ease: spring({ bounce: 0.15 }), duration: dur.fast });
   }, []);
   const onCardLeave = useCallback((e: React.MouseEvent) => {
     animate(e.currentTarget, { translateY: 0, ease: ease.out, duration: dur.fast });
@@ -83,24 +83,24 @@ export default function ReferralPage() {
       <div className="cd-container py-8">
         {/* Header */}
         <div data-anime="ref-header" className="mb-6" style={{ opacity: 0 }}>
-          <div className="flex items-center gap-3 mb-1">
-            <Users size={22} className="text-primary" />
-            <h1 className="text-lg font-semibold text-foreground tracking-tight">Rewards</h1>
+          <div className="flex items-center gap-2.5 mb-1">
+            <Users size={18} className="text-primary/70" />
+            <h1 className="text-sm font-semibold text-foreground tracking-tight">Rewards</h1>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground/50">
             Earn tokens · Complete quests · Refer friends
           </p>
         </div>
 
         {/* Quick Stats */}
-        <div data-anime="ref-card" style={{ opacity: 0 }} className="grid grid-cols-4 gap-3 mb-6">
+        <div data-anime="ref-card" style={{ opacity: 0 }} className="grid grid-cols-4 gap-2 mb-4">
           {[
             { label: 'Tokens', value: Math.round(balance.tokens).toLocaleString(), sub: tier.name, color: tier.color },
             { label: 'Streak', value: `${streak.currentStreak}d`, sub: streak.currentStreak >= 3 ? 'Bonus active' : '3d for bonus', color: 'hsl(var(--primary))' },
             { label: 'Referrals', value: referral.referredUsers.length, sub: `${referral.earnedTokens} earned`, color: 'hsl(var(--accent-orange))' },
             { label: 'Quests', value: `${completedQuests.length}/${quests.length}`, sub: `${inProgressQuests.length} active`, color: 'hsl(var(--accent-warm))' },
           ].map(stat => (
-            <div key={stat.label} className="glass-card rounded-lg p-3 text-center" onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
+            <div key={stat.label} className="glass-card rounded-md p-2.5 text-center" onMouseEnter={onCardEnter} onMouseLeave={onCardLeave}>
               <p className="text-lg font-bold tracking-tighter text-foreground">{stat.value}</p>
               <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">{stat.label}</p>
               <p className="text-[8px]" style={{ color: stat.color }}>{stat.sub}</p>
@@ -109,15 +109,15 @@ export default function ReferralPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 mb-6 border-b border-border/50">
+        <div className="flex items-center gap-1 mb-4 border-b border-border/30">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'text-foreground border-primary'
-                  : 'text-muted-foreground/50 border-transparent hover:text-foreground/70'
+                  : 'text-muted-foreground/40 border-transparent hover:text-foreground/60'
               }`}
             >
               <tab.icon size={14} />
@@ -129,39 +129,39 @@ export default function ReferralPage() {
         {/* Referral Tab */}
         {activeTab === 'referral' && (
           <div className="space-y-4">
-            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5">
+            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Link2 size={16} className="text-primary/60" />
                 <h3 className="text-xs font-medium text-foreground">Referral Link</h3>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex-1 px-3 py-2 rounded-lg bg-card border border-border text-[11px] text-muted-foreground font-mono truncate">
+                <div className="flex-1 px-2.5 py-1.5 rounded-md bg-card border border-border text-[10px] text-muted-foreground font-mono truncate">
                   {referralLink}
                 </div>
                 <button
                   onClick={copyReferralLink}
-                  className={`px-4 h-9 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-3 h-8 rounded-md text-[11px] font-medium transition-all ${
                     copied
                       ? 'bg-primary/10 text-primary border border-primary/20'
-                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'bg-primary text-primary-foreground hover:brightness-110'
                   }`}
                 >
-                  {copied ? <><Check size={12} className="mr-1" />Copied</> : 'Copy'}
+                  {copied ? <><Check size={11} className="mr-1" />Copied</> : 'Copy'}
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground/40 mt-2">
+              <p className="text-[9px] text-muted-foreground/35 mt-1.5">
                 Share this link. You both earn 500 tokens when they sign up.
               </p>
             </div>
 
-            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5">
+            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <UserPlus size={16} className="text-primary/60" />
                 <h3 className="text-xs font-medium text-foreground">Referral Code</h3>
               </div>
-              <div className="flex items-center justify-center py-4">
-                <div className="px-6 py-3 rounded-xl bg-card border border-dashed border-primary/25">
-                  <p className="text-2xl font-bold tracking-[0.2em] text-primary font-mono">{referral.code || 'LOADING'}</p>
+              <div className="flex items-center justify-center py-3">
+                <div className="px-5 py-2.5 rounded-lg bg-card border border-dashed border-primary/20">
+                  <p className="text-xl font-bold tracking-[0.2em] text-primary font-mono">{referral.code || 'LOADING'}</p>
                 </div>
               </div>
               <p className="text-[10px] text-muted-foreground/40 text-center">
@@ -169,7 +169,7 @@ export default function ReferralPage() {
               </p>
             </div>
 
-            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5">
+            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4">
               <h3 className="text-xs font-medium text-foreground mb-3">Referral Tiers</h3>
               <div className="space-y-2">
                 {[
@@ -292,7 +292,7 @@ export default function ReferralPage() {
 
         {/* History Tab */}
         {activeTab === 'history' && (
-          <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5">
+          <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4">
             <h3 className="text-xs font-medium text-foreground mb-3">Recent Transactions</h3>
             {recentTransactions.length === 0 ? (
               <p className="text-[10px] text-muted-foreground/30 text-center py-8">No transactions yet. Start earning!</p>
@@ -318,7 +318,7 @@ export default function ReferralPage() {
         {/* Badges Tab */}
         {activeTab === 'badges' && (
           <div className="space-y-4">
-            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5">
+            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4">
               <h3 className="text-xs font-medium text-foreground mb-3">Streak Badges</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
@@ -336,7 +336,7 @@ export default function ReferralPage() {
               </div>
             </div>
 
-            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5">
+            <div data-anime="ref-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4">
               <h3 className="text-xs font-medium text-foreground mb-3">Achievement Badges</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[

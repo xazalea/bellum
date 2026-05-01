@@ -130,11 +130,11 @@ export default function MeshPage() {
     run(s => {
       s.add(self => {
         animate('[data-anime="mesh-header"]', {
-          translateY: [-12, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
+          translateY: [-6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
         });
         animate('[data-anime="mesh-card"]', {
-          translateY: [20, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
-          delay: stagger(100, { start: 200 }),
+          translateY: [10, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
+          delay: stagger(80, { start: 160 }),
         });
       });
     });
@@ -147,7 +147,7 @@ export default function MeshPage() {
   }, [isContributing, setComputeState]);
 
   const onCardEnter = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { translateY: -1, ease: spring({ bounce: 0.2 }), duration: dur.fast });
+    animate(e.currentTarget, { translateY: -0.5, ease: spring({ bounce: 0.15 }), duration: dur.fast });
   }, []);
   const onCardLeave = useCallback((e: React.MouseEvent) => {
     animate(e.currentTarget, { translateY: 0, ease: ease.out, duration: dur.fast });
@@ -158,17 +158,17 @@ export default function MeshPage() {
       <div className="cd-container py-8">
         {/* Header */}
         <div data-anime="mesh-header" className="mb-8" style={{ opacity: 0 }}>
-          <div className="flex items-center gap-3 mb-1">
-            <Network size={22} className="text-primary" />
-            <h1 className="text-lg font-semibold text-foreground tracking-tight">Mesh Network</h1>
+          <div className="flex items-center gap-2.5 mb-1">
+            <Network size={18} className="text-primary/70" />
+            <h1 className="text-sm font-semibold text-foreground tracking-tight">Mesh Network</h1>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground/50">
             P2P distributed compute · Optional · Not required for gaming
           </p>
         </div>
 
         {/* P2P Network Status */}
-        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5 mb-6">
+        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4 mb-4">
           <div className="flex items-center gap-2 mb-4">
             {p2pStatus?.connectedPeers ? (
               <Wifi size={14} className="text-primary/70" />
@@ -240,7 +240,7 @@ export default function MeshPage() {
         </div>
 
         {/* Compute Status */}
-        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5 mb-6">
+        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className={`w-2.5 h-2.5 rounded-full ${isContributing ? 'bg-primary/80' : 'bg-muted-foreground/20'}`}>
@@ -255,7 +255,7 @@ export default function MeshPage() {
             </div>
             <button
               onClick={toggleContribution}
-              className={`px-4 h-8 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 h-7 rounded-md text-[11px] font-medium transition-colors ${
                 isContributing
                   ? 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'
                   : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20'
@@ -285,7 +285,7 @@ export default function MeshPage() {
         </div>
 
         {/* Your Node */}
-        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5 mb-6">
+        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4 mb-4">
           <div className="flex items-center gap-2 mb-4">
             <User size={14} className="text-muted-foreground/40" />
             <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium">Your Node</h3>
@@ -311,7 +311,7 @@ export default function MeshPage() {
         </div>
 
         {/* Compute Tiers */}
-        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5 mb-6">
+        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4 mb-4">
           <div className="flex items-center gap-2 mb-4">
             <Coins size={14} className="text-muted-foreground/40" />
             <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium">Compute Tiers</h3>
@@ -345,7 +345,7 @@ export default function MeshPage() {
         </div>
 
         {/* How It Works */}
-        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-xl p-5">
+        <div data-anime="mesh-card" style={{ opacity: 0 }} className="glass-card rounded-lg p-4">
           <div className="flex items-center gap-2 mb-4">
             <HelpCircle size={14} className="text-muted-foreground/40" />
             <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium">How It Works</h3>

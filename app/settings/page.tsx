@@ -33,22 +33,22 @@ export default function SettingsPage() {
     run(s => {
       s.add(self => {
         animate('[data-anime="settings-header"]', {
-          translateY: [-12, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
+          translateY: [-6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
         });
         animate('[data-anime="settings-section"]', {
-          translateY: [16, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
-          delay: stagger(80, { from: 0, start: 150 }),
+          translateY: [10, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
+          delay: stagger(60, { from: 0, start: 120 }),
         });
         animate('[data-anime="settings-row"]', {
-          translateX: [8, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
-          delay: stagger(30, { from: 0, start: 400 }),
+          translateX: [4, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
+          delay: stagger(25, { from: 0, start: 320 }),
         });
       });
     });
   }, [run]);
 
   const onCardEnter = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { translateY: -1, ease: spring({ bounce: 0.2 }), duration: dur.fast });
+    animate(e.currentTarget, { translateY: -0.5, ease: spring({ bounce: 0.15 }), duration: dur.fast });
   }, []);
   const onCardLeave = useCallback((e: React.MouseEvent) => {
     animate(e.currentTarget, { translateY: 0, ease: ease.out, duration: dur.fast });
@@ -65,11 +65,11 @@ export default function SettingsPage() {
       <div className="cd-container-narrow py-8">
         {/* Header */}
         <div data-anime="settings-header" className="mb-8" style={{ opacity: 0 }}>
-          <div className="flex items-center gap-3 mb-1">
-            <Settings size={22} className="text-primary" />
-            <h1 className="text-lg font-semibold text-foreground tracking-tight">Settings</h1>
+          <div className="flex items-center gap-2.5 mb-1">
+            <Settings size={18} className="text-primary/70" />
+            <h1 className="text-sm font-semibold text-foreground tracking-tight">Settings</h1>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground/50">
             Customize your experience
           </p>
         </div>
@@ -82,17 +82,17 @@ export default function SettingsPage() {
           </h2>
 
           {/* Mode toggle */}
-          <div className="mb-6">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-2">Mode</p>
-            <div className="flex border border-border rounded-lg overflow-hidden w-fit">
+          <div className="mb-5">
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-2">Mode</p>
+            <div className="flex border border-border rounded-md overflow-hidden w-fit">
               {(['dark', 'light', 'system'] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`px-5 h-8 text-[11px] font-medium transition-colors ${
+                  className={`px-4 h-7 text-[10px] font-medium transition-colors ${
                     mode === m
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/30'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/25'
                   }`}
                 >
                   {m.charAt(0).toUpperCase() + m.slice(1)}
@@ -205,7 +205,7 @@ export default function SettingsPage() {
             <Info size={14} className="text-primary/60" />
             About
           </h2>
-          <div className="glass-card rounded-xl overflow-hidden">
+          <div className="glass-card rounded-lg overflow-hidden">
             {[
               { label: 'Version', value: '0.1.0' },
               { label: 'Engine', value: 'Challenger Runtime' },
@@ -227,7 +227,7 @@ export default function SettingsPage() {
             Account
           </h2>
           {isAuthenticated && user ? (
-            <div className="glass-card rounded-xl overflow-hidden">
+            <div className="glass-card rounded-lg overflow-hidden">
               <div data-anime="settings-row" style={{ opacity: 0 }} className="flex items-center justify-between px-4 py-3 border-b border-border/50">
                 <span className="text-[11px] text-muted-foreground">Username</span>
                 <span className="text-[11px] text-foreground/70 font-mono">{user.username}</span>
@@ -250,7 +250,7 @@ export default function SettingsPage() {
               </div>
             </div>
           ) : (
-            <div className="glass-card rounded-xl p-5">
+            <div className="glass-card rounded-lg p-4">
               <p className="text-[11px] text-muted-foreground/50 mb-2">Not signed in</p>
               <Link href="/login" className="text-[11px] text-primary hover:text-primary/80 transition-colors">
                 Sign In →
@@ -267,7 +267,7 @@ export default function SettingsPage() {
             <span className="ml-auto text-[9px] text-primary/40 border border-primary/20 px-2 py-0.5 rounded-full">OPTIONAL</span>
           </h2>
           {isInitialized ? (
-            <div className="glass-card rounded-xl overflow-hidden">
+            <div className="glass-card rounded-lg overflow-hidden">
               {[
                 { label: 'Balance', value: `${Math.round(balance.tokens).toLocaleString()} tokens` },
                 { label: 'Tier', value: tier.name, color: tier.color },
@@ -289,7 +289,7 @@ export default function SettingsPage() {
               </div>
             </div>
           ) : (
-            <div className="glass-card rounded-xl p-5">
+            <div className="glass-card rounded-lg p-4">
               <p className="text-[11px] text-muted-foreground/40">Loading token data…</p>
             </div>
           )}
@@ -301,7 +301,7 @@ export default function SettingsPage() {
             <Trash2 size={14} className="text-destructive/60" />
             Data
           </h2>
-          <div className="glass-card rounded-xl p-4">
+          <div className="glass-card rounded-lg p-3">
             <div className="space-y-3">
               <button
                 onClick={() => {

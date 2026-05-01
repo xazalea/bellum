@@ -31,21 +31,21 @@ export default function GamesPage() {
     animatedRef.current = true;
     run(s => {
       s.add(self => {
-        animate('[data-anime="header"]', { translateY: [-10, 0], opacity: [0, 1], ease: ease.out, duration: dur.base });
+        animate('[data-anime="header"]', { translateY: [-6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base });
         animate('[data-anime="search-bar"]', {
-          translateY: [8, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: 100,
+          translateY: [4, 0], opacity: [0, 1], ease: ease.out, duration: dur.base, delay: 80,
         });
         animate('[data-anime="filter-pill"]', {
-          scale: [0.9, 1], opacity: [0, 1], ease: spring({ bounce: 0.2 }),
-          duration: dur.base, delay: stagger(60, { start: 200 }),
+          scale: [0.92, 1], opacity: [0, 1], ease: spring({ bounce: 0.15 }),
+          duration: dur.base, delay: stagger(50, { start: 160 }),
         });
         animate('[data-anime="drop-zone"]', {
-          scale: [0.95, 1], opacity: [0, 1], ease: spring({ bounce: 0.2 }),
-          duration: dur.base, delay: 350,
+          scale: [0.97, 1], opacity: [0, 1], ease: spring({ bounce: 0.15 }),
+          duration: dur.base, delay: 280,
         });
         animate('[data-anime="recent-card"]', {
-          translateY: [16, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
-          delay: stagger(80, { from: 0, start: 400 }),
+          translateY: [10, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
+          delay: stagger(60, { from: 0, start: 320 }),
         });
       });
     });
@@ -88,7 +88,7 @@ export default function GamesPage() {
   }, [router]);
 
   const onCardEnter = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { translateY: -2, boxShadow: '0 4px 16px -4px hsl(var(--foreground) / 0.06)', ease: spring({ bounce: 0.2 }), duration: dur.fast });
+    animate(e.currentTarget, { translateY: -1, boxShadow: '0 2px 8px -2px hsl(var(--foreground) / 0.04)', ease: spring({ bounce: 0.15 }), duration: dur.fast });
   }, []);
   const onCardLeave = useCallback((e: React.MouseEvent) => {
     animate(e.currentTarget, { translateY: 0, boxShadow: '0 0 0 0 hsl(var(--foreground) / 0)', ease: ease.out, duration: dur.fast });
@@ -120,16 +120,16 @@ export default function GamesPage() {
 
   return (
     <div ref={root} className="min-h-screen page-enter">
-      <div className="cd-container py-8">
+      <div className="cd-container py-6">
         {/* Header */}
         <div data-anime="header" className="flex items-start justify-between mb-6" style={{ opacity: 0 }}>
           <div>
-            <h1 className="text-lg font-semibold text-foreground tracking-tight">Library</h1>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Run Android APKs and Windows EXEs in your browser</p>
+            <h1 className="text-sm font-semibold text-foreground tracking-tight">Library</h1>
+            <p className="text-[10px] text-muted-foreground/50 mt-0.5">Run Android APKs and Windows EXEs in your browser</p>
           </div>
-          <Link href="/run" className="btn-primary text-[10px] h-8 px-4 btn-press">
-            <Upload size={12} className="mr-1.5" />
-            Upload File
+          <Link href="/run" className="btn-primary text-[10px] h-7 px-3 btn-press">
+            <Upload size={11} className="mr-1" />
+            Upload
           </Link>
         </div>
 
@@ -143,11 +143,11 @@ export default function GamesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search sessions..."
-              className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card/50 text-foreground text-xs placeholder:text-muted-foreground/25 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/15 transition-colors"
+              className="w-full h-8 pl-8 pr-7 rounded-md border border-border bg-card/50 text-foreground text-[11px] placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/25 focus:ring-1 focus:ring-primary/10 transition-colors"
             />
             {searchQuery && (
-              <button onClick={clearSearch} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground transition-colors">
-                <X size={12} />
+              <button onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-foreground transition-colors">
+                <X size={11} />
               </button>
             )}
           </div>
@@ -161,10 +161,10 @@ export default function GamesPage() {
               data-anime="filter-pill"
               style={{ opacity: 0 }}
               onClick={() => onFilterClick(f.key)}
-              className={`inline-flex items-center gap-1.5 px-3 h-7 rounded-full text-[10px] font-medium transition-all duration-200 ${
+              className={`inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full text-[9px] font-medium transition-all duration-200 ${
                 activeFilter === f.key
-                  ? 'bg-primary/15 text-primary border border-primary/25'
-                  : 'bg-card/50 text-muted-foreground/60 border border-border hover:border-foreground/15 hover:text-foreground/70'
+                  ? 'bg-primary/10 text-primary border border-primary/20'
+                  : 'bg-card/50 text-muted-foreground/50 border border-border hover:border-foreground/10 hover:text-foreground/60'
               }`}
             >
               {f.label}
@@ -183,8 +183,8 @@ export default function GamesPage() {
         <div data-anime="drop-zone" style={{ opacity: 0 }} className="mb-10">
           <div
             ref={dropRef}
-            className={`relative glass-card rounded-xl p-6 text-center cursor-pointer group premium-sweep ${
-              dragOver ? 'border-primary/40 bg-primary/5' : 'hover:border-primary/20'
+            className={`relative glass-card rounded-lg p-5 text-center cursor-pointer group premium-sweep ${
+              dragOver ? 'border-primary/30 bg-primary/5' : 'hover:border-primary/20'
             }`}
             onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}
             onClick={() => fileInputRef.current?.click()}
@@ -211,14 +211,14 @@ export default function GamesPage() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl border border-border bg-card/60 mx-auto mb-3 group-hover:border-primary/20 group-hover:bg-primary/5 transition-colors duration-300">
-                  <Upload size={18} className="text-muted-foreground/30 group-hover:text-primary/60 transition-colors" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-md border border-border/50 bg-card/50 mx-auto mb-2.5 group-hover:border-primary/20 group-hover:bg-primary/5 transition-colors duration-300">
+                  <Upload size={15} className="text-muted-foreground/25 group-hover:text-primary/50 transition-colors" />
                 </div>
-                <p className="text-xs font-medium text-foreground mb-1">
+                <p className="text-[11px] font-medium text-foreground mb-0.5">
                   Drop APK or EXE here
                 </p>
-                <p className="text-[10px] text-muted-foreground/40">
-                  or click to browse · Instant runtime · No install
+                <p className="text-[9px] text-muted-foreground/35">
+                  or click to browse · Instant runtime
                 </p>
                 <div className="flex items-center justify-center gap-2 mt-3">
                   <span className="tag">.apk</span>
@@ -242,22 +242,22 @@ export default function GamesPage() {
           </div>
 
           {recentGames.length === 0 ? (
-            <div className="glass-card rounded-xl p-12 text-center">
-              <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-card border border-border mx-auto mb-4">
-                <Gamepad2 size={24} className="text-muted-foreground/15" />
+            <div className="glass-card rounded-lg p-10 text-center">
+              <div className="flex items-center justify-center w-12 h-12 rounded-md bg-card border border-border/50 mx-auto mb-3">
+                <Gamepad2 size={20} className="text-muted-foreground/10" />
               </div>
-              <p className="text-xs text-muted-foreground/70 mb-1">No sessions yet</p>
-              <p className="text-[10px] text-muted-foreground/30 mb-4">Drop an APK or EXE above to run your first app</p>
-              <Link href="/run" className="btn-secondary text-[10px] h-8 px-4 btn-press">
-                <Play size={12} className="mr-1.5" />
+              <p className="text-[11px] text-muted-foreground/60 mb-1">No sessions yet</p>
+              <p className="text-[9px] text-muted-foreground/25 mb-3">Drop an APK or EXE above to run your first app</p>
+              <Link href="/run" className="btn-secondary text-[10px] h-7 px-3 btn-press">
+                <Play size={11} className="mr-1" />
                 Start Playing
               </Link>
             </div>
           ) : filteredGames.length === 0 ? (
-            <div className="glass-card rounded-xl p-8 text-center">
-              <Search size={20} className="text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-xs text-muted-foreground/70 mb-1">No matches for &ldquo;{searchQuery}&rdquo;</p>
-              <button onClick={clearSearch} className="text-[10px] text-primary/50 hover:text-primary/70 transition-colors mt-2">
+            <div className="glass-card rounded-lg p-6 text-center">
+              <Search size={16} className="text-muted-foreground/15 mx-auto mb-2" />
+              <p className="text-[11px] text-muted-foreground/60 mb-1">No matches for &ldquo;{searchQuery}&rdquo;</p>
+              <button onClick={clearSearch} className="text-[9px] text-primary/40 hover:text-primary/60 transition-colors mt-1.5">
                 Clear search
               </button>
             </div>
@@ -268,27 +268,27 @@ export default function GamesPage() {
                   key={game.id}
                   data-anime="recent-card"
                   style={{ opacity: 0 }}
-                  className="glass-card rounded-xl overflow-hidden cursor-pointer group premium-sweep"
+                  className="glass-card rounded-lg overflow-hidden cursor-pointer group premium-sweep"
                   onClick={() => playRecent(game)}
                   onMouseEnter={onCardEnter}
                   onMouseLeave={onCardLeave}
                 >
                   <div className="flex items-center gap-3 p-3">
-                    <div className="w-11 h-11 rounded-lg bg-card border border-border flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="w-9 h-9 rounded-md bg-card border border-border/50 flex items-center justify-center shrink-0 overflow-hidden">
                       {game.thumbnail ? (
                         <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
-                        <Gamepad2 size={16} className="text-muted-foreground/20" />
+                        <Gamepad2 size={14} className="text-muted-foreground/15" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-foreground truncate group-hover:text-primary/70 transition-colors">{game.title}</p>
-                      <p className="text-[9px] text-muted-foreground/30 mt-0.5">{game.id}</p>
+                      <p className="text-[10px] font-medium text-foreground truncate group-hover:text-primary/60 transition-colors">{game.title}</p>
+                      <p className="text-[8px] text-muted-foreground/25 mt-0.5">{game.id}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="tag">{game.id.endsWith('.apk') || game.id.endsWith('.APK') ? 'APK' : 'EXE'}</span>
-                      <div className="w-7 h-7 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-sm">
-                        <Play size={10} className="text-foreground ml-0.5" />
+                      <div className="w-6 h-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-sm">
+                        <Play size={9} className="text-foreground ml-0.5" />
                       </div>
                     </div>
                   </div>
@@ -300,16 +300,16 @@ export default function GamesPage() {
 
         {/* Bottom CTA */}
         <div className="mt-10">
-          <div className="glass-card-elevated rounded-xl p-6 text-center relative overflow-hidden">
+          <div className="glass-card-elevated rounded-lg p-5 text-center relative overflow-hidden dot-grid">
             <div className="relative z-10">
-              <h3 className="text-sm font-semibold text-foreground tracking-tight mb-1">
+              <h3 className="text-xs font-semibold text-foreground tracking-tight mb-1">
                 <span className="gradient-text">Run Anything In Your Browser</span>
               </h3>
-              <p className="text-[10px] text-muted-foreground/40 mb-4 max-w-sm mx-auto">
+              <p className="text-[9px] text-muted-foreground/35 mb-3 max-w-sm mx-auto">
                 No downloads, no installs. Drop an APK or EXE and it runs natively via WebGL2 + Dalvik/x86 interpreter.
               </p>
-              <Link href="/run" className="btn-primary text-[11px] h-9 px-6 btn-press">
-                <Upload size={14} className="mr-1.5" />
+              <Link href="/run" className="btn-primary text-[10px] h-8 px-5 btn-press">
+                <Upload size={12} className="mr-1" />
                 Upload APK or EXE
               </Link>
             </div>

@@ -40,22 +40,22 @@ export default function DashboardPage() {
     run(s => {
       s.add(self => {
         animate('[data-anime="dash-header"]', {
-          translateY: [-12, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
+          translateY: [-6, 0], opacity: [0, 1], ease: ease.out, duration: dur.base,
         });
         animate('[data-anime="dash-card"]', {
-          translateY: [20, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
-          delay: stagger(100, { from: 'center', start: 200 }),
+          translateY: [10, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
+          delay: stagger(80, { from: 'center', start: 160 }),
         });
         animate('[data-anime="dash-stat"]', {
-          scale: [0.85, 1], opacity: [0, 1], ease: spring({ bounce: 0.3, stiffness: 200, damping: 12 }),
-          duration: dur.base, delay: stagger(80, { from: 0, start: 300 }),
+          scale: [0.9, 1], opacity: [0, 1], ease: spring({ bounce: 0.2, stiffness: 200, damping: 14 }),
+          duration: dur.base, delay: stagger(60, { from: 0, start: 240 }),
         });
       });
     });
   }, [run]);
 
   const onCardEnter = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { translateY: -1, ease: spring({ bounce: 0.2, stiffness: 200, damping: 12 }), duration: dur.fast });
+    animate(e.currentTarget, { translateY: -0.5, ease: spring({ bounce: 0.15, stiffness: 200, damping: 14 }), duration: dur.fast });
   }, []);
   const onCardLeave = useCallback((e: React.MouseEvent) => {
     animate(e.currentTarget, { translateY: 0, ease: ease.out, duration: dur.fast });
@@ -333,17 +333,17 @@ export default function DashboardPage() {
     <div ref={root} className="min-h-screen">
       <div className="cd-container py-8">
         <div data-anime="dash-header" className="mb-8" style={{ opacity: 0 }}>
-          <h1 className="text-lg font-semibold text-foreground tracking-tight">
+          <h1 className="text-sm font-semibold text-foreground tracking-tight">
             {isAuthenticated && user ? `Hey, ${user.username}` : 'Dashboard'}
           </h1>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-[10px] text-muted-foreground/50 mt-0.5">
             {isAuthenticated && isInitialized
               ? `${tier.name} tier · ${Math.round(balance.tokens).toLocaleString()} tokens · ${streak.currentStreak > 0 ? streak.currentStreak + 'd streak' : 'No streak'}`
               : 'Runtime monitoring · Quests · Session history'}
           </p>
         </div>
 
-        <BentoGrid items={items} gap={3} />
+        <BentoGrid items={items} gap={2} />
       </div>
     </div>
   );

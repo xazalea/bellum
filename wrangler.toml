@@ -9,5 +9,6 @@ compatibility_flags = ["nodejs_compat"]
 # OpenNext output directory - must include worker and all dependencies
 pages_build_output_dir = '.open-next'
 
-# NOTE: The worker (.open-next/worker.js) must be deployed separately
-# as a Cloudflare Worker. See wrangler.workers.toml for worker config.
+# The _worker.js at the root of .open-next/ is the Cloudflare Pages
+# Worker entry point. Static assets (_next/, wasm/, etc.) are also
+# served from this directory by the Pages CDN.
