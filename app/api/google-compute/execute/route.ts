@@ -1,4 +1,3 @@
-export const runtime = "edge";
 /**
  * Google Compute Execute Endpoint
  * Execute compute tasks via Google Translate iframe

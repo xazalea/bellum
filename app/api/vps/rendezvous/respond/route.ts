@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { postResponse } from '@/lib/server/vps-rendezvous';
 import { rateLimit } from '@/lib/server/security';

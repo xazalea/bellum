@@ -1,4 +1,3 @@
-export const runtime = "edge";
 /**
  * Compiler Process API
  * Handles APK/EXE registration for client-side WASM processing.

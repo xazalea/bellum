@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Cloudflare Pages build script
- * Runs next-on-pages and post-processes the output for Cloudflare compatibility.
+ * Cloudflare Pages/Workers build script
+ * Uses @opennextjs/cloudflare to build Next.js for Cloudflare Workers.
  *
  * Usage: pnpm run build:cloudflare
  */
@@ -15,10 +15,9 @@ function log(step, message, data = {}) {
   console.log(`[${ts}] [${step}] ${message}`, Object.keys(data).length > 0 ? data : '');
 }
 
-log('START', 'Cloudflare Pages build started', { nodeVersion: process.version });
+log('START', 'Cloudflare build started (opennextjs-cloudflare)', { nodeVersion: process.version });
 
 try {
-  // Step 1: Check .env.local permissions
   // Step 1: Verify environment
   const envLocalPath = path.join(process.cwd(), '.env.local');
   try {
@@ -32,59 +31,23 @@ try {
     log('ENV_CHECK', 'Warning: .env.local not readable', { error: err.message });
   }
 
-  // Step 2: Run next-on-pages (builds Next.js + converts for CF Pages)
-  log('NEXT_ON_PAGES', 'Running next-on-pages');
-
-  execSync('pnpm exec next-on-pages', {
+  // Step 2: Run opennextjs-cloudflare build adapter
+  // This runs `next build` internally and converts the output into
+  // Cloudflare Workers format (.open-next/worker.js + .open-next/assets)
+  //
+  // --dangerouslyUseUnsupportedNextVersion is required because Next.js 14.2
+  // is past its official support window. This flag may break on minor OpenNext
+  // updates — upgrade to Next.js 15.x when possible to remove it.
+  log('OPENNEXT', 'Running opennextjs-cloudflare build (includes next build)');
+  execSync('pnpm exec opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion', {
     stdio: 'inherit',
-    env: { ...process.env, CF_PAGES: '1' }
   });
-
-  log('NEXT_ON_PAGES', 'next-on-pages completed successfully');
-
-  // Step 3: Remove not-found function (served as static HTML by CF Pages)
-  const notFoundFuncDir = path.join(process.cwd(), '.vercel/output/functions/_not-found.func');
-  const notFoundRscFuncDir = path.join(process.cwd(), '.vercel/output/functions/_not-found.rsc.func');
-  const notFoundPrerender = path.join(process.cwd(), '.vercel/output/functions/_not-found.prerender-config.json');
-  const notFoundPrerenderFallback = path.join(process.cwd(), '.vercel/output/functions/_not-found.prerender-fallback.html');
-
-  try {
-    if (fs.existsSync(notFoundFuncDir)) {
-      fs.rmSync(notFoundFuncDir, { recursive: true });
-      log('REMOVE_NOTFOUND', 'Removed _not-found.func directory');
-    }
-    if (fs.existsSync(notFoundRscFuncDir)) {
-      fs.rmSync(notFoundRscFuncDir, { recursive: true });
-      log('REMOVE_NOTFOUND_RSC', 'Removed _not-found.rsc.func symlink');
-    }
-    if (fs.existsSync(notFoundPrerender)) {
-      fs.unlinkSync(notFoundPrerender);
-    }
-    if (fs.existsSync(notFoundPrerenderFallback)) {
-      fs.unlinkSync(notFoundPrerenderFallback);
-    }
-  } catch (err) {
-    log('REMOVE_NOTFOUND_ERROR', 'Failed to remove _not-found', { error: err.message });
-  }
-
-  // Step 4: Copy static assets (public/ → .vercel/output/static/)
-  log('COPY_STATIC', 'Copying static assets');
-  execSync('node scripts/copy-static-assets.js', { stdio: 'inherit' });
-  log('COPY_STATIC', 'Static assets copied');
-
-  // Step 5: Update routes for CF Pages
-  log('UPDATE_ROUTES', 'Updating routes');
-  execSync('node scripts/update-routes.js', { stdio: 'inherit' });
-  log('UPDATE_ROUTES', 'Routes updated');
-
-  // Step 6: Patch async_hooks imports (polyfill for edge runtime)
-  log('PATCH_ASYNC_HOOKS', 'Patching async_hooks imports');
-  execSync('node scripts/patch-async-hooks.js', { stdio: 'inherit' });
-  log('PATCH_ASYNC_HOOKS', 'async_hooks patched');
+  log('OPENNEXT', 'opennextjs-cloudflare build completed successfully');
 
   log('BUILD_SUCCESS', 'Build completed successfully');
 
   console.log('✅ Cloudflare build completed successfully');
+  console.log('   Output: .open-next/worker.js + .open-next/assets/');
   process.exit(0);
 
 } catch (error) {

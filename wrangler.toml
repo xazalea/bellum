@@ -1,22 +1,23 @@
-# Cloudflare Pages Configuration
-# This file is used for Pages deployment (not Workers)
-# Pages projects use .pages.dev domains, not .workers.dev
+# Cloudflare Workers Configuration
+# Uses @opennextjs/cloudflare adapter for Next.js on Cloudflare Workers
+# See: https://opennext.js.org/cloudflare
 
 name = "challengerdeep"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat", "nodejs_als"]
 
-# Pages-specific configuration
-pages_build_output_dir = ".vercel/output/static"
+# OpenNext adapter output
+main = ".open-next/worker.js"
 
-# AlmostNode integration for enhanced Node.js compatibility
-# Provides polyfills for Node.js APIs not natively supported in Cloudflare Workers
-# See: https://github.com/macaly/almostnode
+# Static assets served by Workers Sites
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
 
 # NOTE: For Git-based deployments, configure build settings in Cloudflare Dashboard:
 # Settings → Builds & deployments → Build configurations
 # - Build command: pnpm run build:cloudflare
-# - Build output directory: .vercel/output/static
+# - Build output directory: .open-next/assets
 
 [env.production]
 compatibility_flags = ["nodejs_compat", "nodejs_als"]

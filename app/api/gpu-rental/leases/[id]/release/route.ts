@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
 import { rateLimit } from '@/lib/server/security';

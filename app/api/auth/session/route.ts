@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { createSessionCookieFromIdToken, makeSessionCookieOptions, SESSION_COOKIE_NAME } from '@/lib/server/session';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';

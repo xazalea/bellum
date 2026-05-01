@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { listActivePeersForUser, prunePeers } from '@/lib/cluster/presence-store';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';

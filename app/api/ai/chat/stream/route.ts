@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { NextRequest } from 'next/server';
 import { requireAuthedUser } from '@/app/api/user/_util';
 import { rateLimit, requireSameOrigin } from '@/lib/server/security';

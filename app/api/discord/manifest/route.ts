@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { rateLimit, requireSameOrigin } from "@/lib/server/security";
 

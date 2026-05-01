@@ -1,4 +1,3 @@
-export const runtime = "edge";
 /**
  * Google Compute Capacity Endpoint
  * Get Google compute capacity/availability

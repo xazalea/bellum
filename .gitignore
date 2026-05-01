@@ -48,6 +48,7 @@ public/games.json
 .wrangler/
 .dev.vars
 wrangler.log
+.open-next/
 
 # Build output (both platforms use this)
 .vercel/

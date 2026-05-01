@@ -1,4 +1,3 @@
-export const runtime = "edge";
 /**
  * Google Compute Metrics Endpoint
  * Get metrics and performance data for Google compute

@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { isCurrentDeviceTrusted, requireFingerprint } from '@/lib/server/challenger-auth';
 

@@ -1,5 +1,4 @@
-// API route excluded from edge runtime via next.config.js serverComponentsExternalPackages
-// This route is handled by Node.js server, not edge worker
+// Cloudflare Workers compatible - uses fetch() and process.env (via nodejs_compat flag)
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -165,8 +164,6 @@ function classifyPrompt(prompt: string): string {
   return 'platformer';
 }
 
-// Node.js runtime only - excluded from edge bundle via serverComponentsExternalPackages
-export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const { prompt } = await request.json();

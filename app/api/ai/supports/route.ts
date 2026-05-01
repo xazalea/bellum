@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthedUser } from '@/app/api/user/_util';
 import { getSupports } from '@/lib/server/ai-edge';

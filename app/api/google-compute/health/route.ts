@@ -1,4 +1,3 @@
-export const runtime = "edge";
 /**
  * Google Compute Health Endpoint
  * Health check for Google compute service

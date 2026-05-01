@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { rateLimit } from '@/lib/server/security';
 import { postIngressResponse } from '@/lib/server/fabrik-ingress-rendezvous';

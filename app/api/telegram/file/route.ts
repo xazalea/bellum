@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { adminDb, requireAuthedUser } from "@/app/api/user/_util";
 import { requireTelegramBotToken, telegramDownloadFileBytesWithRetry, TelegramError, TelegramErrorType } from "@/lib/server/telegram";
 import { rateLimit } from "@/lib/server/security";

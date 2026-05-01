@@ -1,4 +1,3 @@
-export const runtime = "edge";
 /**
  * Google Compute Configuration Endpoint
  * Manage configuration for Google compute offloading

@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import { NextResponse } from 'next/server';
 import { getClusterBaseCandidates } from '@/lib/cluster/cluster-base';
 import { verifySessionCookieFromRequest } from '@/lib/server/session';
