@@ -2,8 +2,9 @@
 # Uses @opennextjs/cloudflare adapter for Next.js on Cloudflare Pages
 # See: https://opennext.js.org/cloudflare
 
-name = 'challengerdeep'
+name = 'challenger1'
 compatibility_date = '2024-09-23'
+compatibility_flags = ["nodejs_compat"]
 
 # OpenNext output directory - must include worker and all dependencies
 pages_build_output_dir = '.open-next'

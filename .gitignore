@@ -147,3 +147,4 @@ dist
 .yarn/install-state.gz
 .pnp.*
 saphire-repo
+.open-next-deploy

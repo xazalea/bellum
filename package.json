@@ -8,7 +8,7 @@
     "build": "next build",
     "build:cloudflare": "node scripts/build-cloudflare.js",
     "preview:cloudflare": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion && opennextjs-cloudflare preview",
-    "deploy:cloudflare": "opennextjs-cloudflare deploy",
+    "deploy:cloudflare": "wrangler pages deploy .open-next-deploy --project-name=challenger1 --branch=production --commit-message \"Deploy challenger-deep\"",
     "build:deploy:cloudflare": "pnpm run build:cloudflare && pnpm run deploy:cloudflare",
     "build:wasm": "npm run build:wasm:rust && npm run build:wasm:as",
     "build:wasm:rust": "node scripts/build-rust-wasm.js",

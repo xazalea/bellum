@@ -44,16 +44,42 @@ try {
   });
   log('OPENNEXT', 'opennextjs-cloudflare build completed successfully');
 
-  // Step 3: For Cloudflare Pages, copy worker.js to assets directory as _worker.js
-  // This allows Pages Functions to use the OpenNext worker
-  const workerSrc = path.join(process.cwd(), '.open-next', 'worker.js');
-  const workerDest = path.join(process.cwd(), '.open-next', 'assets', '_worker.js');
-  if (fs.existsSync(workerSrc)) {
-    fs.copyFileSync(workerSrc, workerDest);
-    log('COPY', 'Copied worker.js to assets/_worker.js for Pages Functions');
-  } else {
-    log('COPY', 'Warning: worker.js not found, Pages Functions may not work');
+  // Step 3: Create proper Cloudflare Pages deployment structure
+  // Cloudflare Pages expects _worker.js at root with all modules accessible
+  const deployDir = path.join(process.cwd(), '.open-next-deploy');
+  
+  // Clean up existing deploy directory
+  if (fs.existsSync(deployDir)) {
+    fs.rmSync(deployDir, { recursive: true });
   }
+  fs.mkdirSync(deployDir);
+  
+  // Copy worker.js as _worker.js (entry point for Pages Functions)
+  fs.copyFileSync(
+    path.join(process.cwd(), '.open-next', 'worker.js'),
+    path.join(deployDir, '_worker.js')
+  );
+  log('COPY', 'Copied worker.js to _worker.js');
+  
+  // Copy all required modules for worker.js imports
+  const modulesToCopy = [
+    { src: '.open-next/cloudflare', dest: 'cloudflare' },
+    { src: '.open-next/middleware', dest: 'middleware' },
+    { src: '.open-next/.build', dest: '.build' },
+    { src: '.open-next/server-functions/default', dest: 'server-functions/default' },
+    { src: '.open-next/assets', dest: 'assets' },
+  ];
+  
+  for (const mod of modulesToCopy) {
+    const srcPath = path.join(process.cwd(), mod.src);
+    const destPath = path.join(deployDir, mod.dest);
+    if (fs.existsSync(srcPath)) {
+      fs.cpSync(srcPath, destPath, { recursive: true });
+      log('COPY', `Copied ${mod.src} to ${mod.dest}`);
+    }
+  }
+  
+  log('BUILD_SUCCESS', 'Build completed successfully');
 
   log('BUILD_SUCCESS', 'Build completed successfully');
 
