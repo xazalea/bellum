@@ -2,20 +2,11 @@
 # Uses @opennextjs/cloudflare adapter for Next.js on Cloudflare Pages
 # See: https://opennext.js.org/cloudflare
 
-name = "challengerdeep"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat", "nodejs_als"]
+name = 'challengerdeep'
+compatibility_date = '2024-09-23'
 
-# Cloudflare Pages build output directory (required for OpenNext)
-pages_build_output_dir = ".open-next/assets"
+# OpenNext output directory for static assets
+pages_build_output_dir = '.open-next/assets'
 
-# OpenNext adapter output
-main = ".open-next/worker.js"
-
-# Static assets served by Workers Sites
-[assets]
-directory = ".open-next/assets"
-binding = "ASSET_MANIFEST"
-
-[env.production]
-compatibility_flags = ["nodejs_compat", "nodejs_als"]
+# NOTE: The worker (.open-next/worker.js) must be deployed separately
+# as a Cloudflare Worker. See wrangler.workers.toml for worker config.

@@ -44,6 +44,17 @@ try {
   });
   log('OPENNEXT', 'opennextjs-cloudflare build completed successfully');
 
+  // Step 3: For Cloudflare Pages, copy worker.js to assets directory as _worker.js
+  // This allows Pages Functions to use the OpenNext worker
+  const workerSrc = path.join(process.cwd(), '.open-next', 'worker.js');
+  const workerDest = path.join(process.cwd(), '.open-next', 'assets', '_worker.js');
+  if (fs.existsSync(workerSrc)) {
+    fs.copyFileSync(workerSrc, workerDest);
+    log('COPY', 'Copied worker.js to assets/_worker.js for Pages Functions');
+  } else {
+    log('COPY', 'Warning: worker.js not found, Pages Functions may not work');
+  }
+
   log('BUILD_SUCCESS', 'Build completed successfully');
 
   console.log('✅ Cloudflare build completed successfully');
