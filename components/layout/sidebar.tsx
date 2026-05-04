@@ -19,9 +19,17 @@ export function Sidebar() {
   const { root, run } = useAnimeScope();
 
   const showSidebar = pathname === '/dashboard' || pathname === '/settings' || pathname === '/mesh' || pathname === '/referral' || pathname.startsWith('/games') || pathname.startsWith('/run');
-  if (!showSidebar) return null;
+
+  const onIconEnter = useCallback((e: React.MouseEvent) => {
+    animate(e.currentTarget, { scale: 1.08, ease: spring({ bounce: 0.2, stiffness: 250, damping: 14 }), duration: dur.fast });
+  }, []);
+  const onIconLeave = useCallback((e: React.MouseEvent) => {
+    animate(e.currentTarget, { scale: 1, ease: ease.out, duration: dur.fast });
+  }, []);
 
   useEffect(() => {
+    if (!showSidebar) return;
+
     run(s => {
       s.add(self => {
         if (!self) return;
@@ -45,14 +53,9 @@ export function Sidebar() {
         self.methods.pulseStatus();
       });
     });
-  }, [run]);
+  }, [run, showSidebar]);
 
-  const onIconEnter = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { scale: 1.08, ease: spring({ bounce: 0.2, stiffness: 250, damping: 14 }), duration: dur.fast });
-  }, []);
-  const onIconLeave = useCallback((e: React.MouseEvent) => {
-    animate(e.currentTarget, { scale: 1, ease: ease.out, duration: dur.fast });
-  }, []);
+  if (!showSidebar) return null;
 
   return (
     <aside ref={root} className="hidden lg:flex flex-col w-12 border-r border-border/40 bg-card/20 py-3 shrink-0">

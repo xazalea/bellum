@@ -189,7 +189,7 @@ export default function HomePage() {
             <div className="hidden sm:flex items-center gap-2">
               <span className="tag">.apk</span>
               <span className="tag">.exe</span>
-              <Link href="/run" className="btn-primary text-[10px] h-7 px-3 btn-press" onClick={(e) => e.stopPropagation()}>
+              <Link href="/run" className="btn-primary text-[10px] h-7 px-3" onClick={(e) => e.stopPropagation()}>
                 <Play size={10} className="mr-1" />
                 Run
               </Link>
@@ -309,12 +309,12 @@ export default function HomePage() {
                   : 'No email. No password. Pick a username and your device fingerprint is your key. Start playing in seconds.'}
               </p>
               <div className="flex items-center justify-center gap-2">
-                <Link href="/games" className="btn-primary text-[10px] h-8 px-5 btn-press">
+                <Link href="/games" className="btn-primary text-[10px] h-8 px-5">
                   <Upload size={12} className="mr-1.5" />
                   Upload APK or EXE
                 </Link>
                 {!isAuthenticated && (
-                  <Link href="/login" className="btn-secondary text-[10px] h-8 px-5 btn-press">
+                  <Link href="/login" className="btn-secondary text-[10px] h-8 px-5">
                     <UserPlus size={12} className="mr-1.5" />
                     Sign Up
                   </Link>

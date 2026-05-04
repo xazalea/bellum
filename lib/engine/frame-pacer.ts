@@ -1,9 +1,8 @@
 // Frame Pacer — production-grade rAF loop with vsync, multi-window FPS tracking,
 // adaptive quality, frame skipping, and 40+ FPS guarantee logic.
 
-const TARGET_FPS = 60;
-const MIN_ACCEPTABLE_FPS = 40;
-const FRAME_TIME_MS = 1000 / TARGET_FPS; // ~16.67ms
+const DEFAULT_TARGET_FPS = 60;
+const DEFAULT_MIN_ACCEPTABLE_FPS = 40;
 const FPS_SAMPLE_INTERVAL = 400; // ms between FPS recalculations (faster response)
 const FPS_HISTORY_SIZE = 8; // rolling window for smoothing
 
@@ -15,6 +14,10 @@ export class FramePacer {
     private lastFpsUpdate = 0;
     private quality = 1.0;
     private running = false;
+
+    // Configurable target — set by UI quality preset
+    private targetFps = DEFAULT_TARGET_FPS;
+    private minAcceptableFps = DEFAULT_MIN_ACCEPTABLE_FPS;
 
     // Rolling FPS history for smoothed reporting
     private fpsHistory: number[] = [];
@@ -89,6 +92,25 @@ export class FramePacer {
         return this.averageTickDuration;
     }
 
+    /**
+     * Set the target FPS and minimum acceptable FPS at runtime.
+     * Called when the user changes the quality preset in the UI.
+     */
+    setTargetFps(target: number, minAcceptable?: number): void {
+        this.targetFps = Math.max(15, Math.min(240, Math.round(target)));
+        this.minAcceptableFps = minAcceptable !== undefined
+            ? Math.max(10, Math.min(this.targetFps, Math.round(minAcceptable)))
+            : Math.round(this.targetFps * 0.67);
+    }
+
+    getTargetFps(): number {
+        return this.targetFps;
+    }
+
+    getMinAcceptableFps(): number {
+        return this.minAcceptableFps;
+    }
+
     // -------------------------------------------------------------------------
     // Private
     // -------------------------------------------------------------------------
@@ -103,10 +125,11 @@ export class FramePacer {
         const dt = Math.min(Math.max(rawDt, 0), 100);
         this.lastFrameTime = timestamp;
 
+        const frameTimeMs = 1000 / this.targetFps;
         this.frameCount++;
 
         // Detect slow frames (frame time > 1.5x target)
-        const isSlowFrame = dt > FRAME_TIME_MS * 1.5;
+        const isSlowFrame = dt > frameTimeMs * 1.5;
         if (isSlowFrame) {
             this.consecutiveSlowFrames++;
         } else {
@@ -134,15 +157,15 @@ export class FramePacer {
             if (this.fpsHistory.length > FPS_HISTORY_SIZE) this.fpsHistory.shift();
             this.smoothedFPS = this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length;
 
-            // Adaptive quality — faster response to maintain 40+ FPS
-            if (this.smoothedFPS < MIN_ACCEPTABLE_FPS && this.quality > 0.4) {
+            // Adaptive quality — faster response to maintain min acceptable FPS
+            if (this.smoothedFPS < this.minAcceptableFps && this.quality > 0.4) {
                 // Aggressive downscale when below minimum
-                const drop = this.smoothedFPS < 25 ? 0.15 : 0.08;
+                const drop = this.smoothedFPS < this.minAcceptableFps * 0.6 ? 0.15 : 0.08;
                 this.quality = Math.max(0.4, parseFloat((this.quality - drop).toFixed(2)));
-            } else if (this.smoothedFPS < TARGET_FPS * 0.85 && this.quality > 0.5) {
+            } else if (this.smoothedFPS < this.targetFps * 0.85 && this.quality > 0.5) {
                 // Moderate downscale when approaching threshold
                 this.quality = Math.max(0.5, parseFloat((this.quality - 0.04).toFixed(2)));
-            } else if (this.smoothedFPS >= TARGET_FPS * 0.95 && this.quality < 1.0) {
+            } else if (this.smoothedFPS >= this.targetFps * 0.95 && this.quality < 1.0) {
                 // Gentle upscale when headroom exists
                 this.quality = Math.min(1.0, parseFloat((this.quality + 0.03).toFixed(2)));
             }

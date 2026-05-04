@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { animate, spring, ease, dur, stagger } from '@/lib/hooks/use-anime';
 import { useAnimeScope } from '@/lib/hooks/use-anime';
@@ -19,13 +19,35 @@ interface FeaturedBannerProps {
   className?: string;
 }
 
+const WISHLIST_KEY = 'challenger_wishlist';
+
+function getWishlist(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem(WISHLIST_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function setWishlist(ids: string[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(WISHLIST_KEY, JSON.stringify(ids));
+}
+
 export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovering, setHovering] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const [wishlist, setWishlistState] = useState<string[]>([]);
   const { root, run } = useAnimeScope();
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const mountedRef = useRef(true);
+
+  useEffect(() => {
+    setWishlistState(getWishlist());
+  }, []);
 
   const currentItem = items[activeIndex] ?? items[0];
 
@@ -104,12 +126,37 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
     onPlay?.(currentItem.id);
   }, [currentItem, onPlay]);
 
+  const onWishlistClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!currentItem) return;
+    const isWishlisted = wishlist.includes(currentItem.id);
+    const next = isWishlisted
+      ? wishlist.filter(id => id !== currentItem.id)
+      : [...wishlist, currentItem.id];
+    setWishlistState(next);
+    setWishlist(next);
+
+    // Animate the clicked button directly via e.currentTarget
+    animate(e.currentTarget, {
+      scale: [1, 1.15, 1],
+      ease: spring({ bounce: 0.4 }),
+      duration: 350,
+    });
+  }, [currentItem, wishlist]);
+
   if (!items.length) return null;
 
   return (
-    <div ref={root} className={cn('relative w-full overflow-hidden', className)}
+    <div
+      ref={root}
+      className={cn('relative w-full overflow-hidden', className)}
       onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+      onMouseLeave={() => { setHovering(false); setMousePos({ x: 0.5, y: 0.5 }); }}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        setMousePos({ x, y });
+      }}
     >
       {/* Slides */}
       {items.map((item, i) => (
@@ -119,7 +166,13 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
           className="absolute inset-0"
           style={{ opacity: i === activeIndex ? 1 : 0, pointerEvents: i === activeIndex ? 'auto' : 'none' }}
         >
-          {/* Background */}
+          {/* Background with parallax */}
+          <div
+            className="absolute inset-0 transition-transform duration-150 ease-out"
+            style={{
+              transform: `translate(${(mousePos.x - 0.5) * -8}px, ${(mousePos.y - 0.5) * -8}px)`,
+            }}
+          >
           <div className="absolute inset-0">
             {item.image ? (
               <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
@@ -136,6 +189,7 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
             <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" />
             {/* Dot grid overlay */}
             <div className="absolute inset-0 dot-grid opacity-40" />
+          </div>
           </div>
 
           {/* Content */}
@@ -170,13 +224,17 @@ export function FeaturedBanner({ items, onPlay, className }: FeaturedBannerProps
                   Play Now
                 </button>
                 <button
-                  className="btn-secondary h-9 px-4 text-[11px]"
-                  onClick={() => {/* TODO: add to wishlist */}}
+                  onClick={onWishlistClick}
+                  className={`h-9 px-4 text-[11px] inline-flex items-center rounded-md border transition-colors ${
+                    wishlist.includes(currentItem.id)
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'btn-secondary'
+                  }`}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mr-1.5">
-                    <path d="M12 5v14M5 12h14" />
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={wishlist.includes(currentItem.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mr-1.5">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                   </svg>
-                  Wishlist
+                  {wishlist.includes(currentItem.id) ? 'Saved' : 'Wishlist'}
                 </button>
               </div>
             </div>

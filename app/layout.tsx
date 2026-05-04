@@ -6,6 +6,8 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { GameProvider } from '@/components/providers/game-provider';
 import { ComputeProvider } from '@/components/providers/compute-provider';
 import { PerformanceProvider } from '@/components/providers/performance-provider';
+import { AnimationProvider } from '@/components/providers/animation-provider';
+import { PageTransition } from '@/components/animation/page-transition';
 import { SignupModal } from '@/components/ui/signup-modal';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
@@ -51,21 +53,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <ThemeProvider>
             <PerformanceProvider>
-              <ComputeProvider>
-                <GameProvider>
-                  <div className="min-h-screen flex flex-col">
-                  <Header />
-                  <div className="flex flex-1">
-                    <Sidebar />
-                    <main className="flex-1 pb-14 sm:pb-0">{children}</main>
-                  </div>
-                  <Footer />
-                  <MobileNav />
-                  <SignupModal />
-                </div>
-              </GameProvider>
-            </ComputeProvider>
-          </PerformanceProvider>
+              <AnimationProvider>
+                <ComputeProvider>
+                  <GameProvider>
+                    <div className="min-h-screen flex flex-col">
+                      <Header />
+                      <div className="flex flex-1">
+                        <Sidebar />
+                        <main className="flex-1 pb-14 sm:pb-0">
+                          <PageTransition>
+                            {children}
+                          </PageTransition>
+                        </main>
+                      </div>
+                      <Footer />
+                      <MobileNav />
+                      <SignupModal />
+                    </div>
+                  </GameProvider>
+                </ComputeProvider>
+              </AnimationProvider>
+            </PerformanceProvider>
           </ThemeProvider>
         </AuthProvider>
       </body>

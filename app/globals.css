@@ -486,6 +486,19 @@
 }
 
 /* ── FPS color variants ── */
+/* Standalone classes for telemetry dashboard (outside .perf-overlay) */
+.fps-good {
+  color: hsl(142 71% 55%);
+  text-shadow: 0 0 6px hsl(142 71% 55% / 0.2);
+}
+.fps-warn {
+  color: hsl(38 92% 55%);
+  text-shadow: 0 0 4px hsl(38 92% 55% / 0.15);
+}
+.fps-bad {
+  color: hsl(0 72% 55%);
+  text-shadow: 0 0 4px hsl(0 72% 55% / 0.15);
+}
 .fps-legendary {
   color: hsl(var(--primary));
   text-shadow: 0 0 6px hsl(var(--primary) / 0.2);
@@ -584,15 +597,7 @@
 .stagger-children > *:nth-child(10) { animation-delay: 450ms; }
 .stagger-children > *:nth-child(n+11) { animation-delay: 500ms; }
 
-/* ── Micro-interaction: button press ── */
-@keyframes btn-press {
-  0% { transform: scale(1); }
-  40% { transform: scale(0.97); }
-  100% { transform: scale(1); }
-}
-.btn-press:active {
-  animation: btn-press 0.15s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
+
 
 /* ── Micro-interaction: success pop ── */
 @keyframes pop-success {
@@ -688,4 +693,58 @@
   height: 1px;
   width: 100%;
   top: 50%;
+}
+
+/* ── Scroll reveal initial state (hidden until JS reveals) ── */
+.scroll-reveal-hidden {
+  opacity: 0;
+}
+
+/* ── prefers-reduced-motion: disable all motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .page-enter,
+  .scroll-reveal,
+  .animate-fade-in,
+  .animate-breathe,
+  .stagger-children > *,
+  .pop-success,
+  .shake-error,
+  .spinner,
+  .spinner-sm,
+  .shimmer::after,
+  .loading-step.active .step-indicator,
+  .telemetry-dot,
+  .animated-border::before,
+  .animate-gradient,
+  .animate-glow-pulse,
+  .animate-float,
+  .particle-field .dot,
+  .premium-sweep:hover::after,
+  .streaming-bar,
+  .status-badge-live,
+  .noise-bg::before {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .scroll-reveal-hidden {
+    opacity: 1 !important;
+  }
+
+  .hover-lift:hover,
+  .hover-glow:hover,
+  .glass-card:hover,
+  .glass-card-elevated:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
 }

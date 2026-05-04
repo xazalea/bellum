@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getRecentlyPlayed, type RecentGame } from '@/lib/recently-played';
 import { useAnimeScope, animate, stagger, spring, ease, dur } from '@/lib/hooks/use-anime';
+import { ScrollReveal } from '@/components/animation/scroll-reveal';
 import { Gamepad2, Upload, Search, Clock, Play, X } from 'lucide-react';
 
 type FilterType = 'all' | 'apk' | 'exe';
@@ -15,6 +16,7 @@ export default function GamesPage() {
   const [loadingFile, setLoadingFile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const router = useRouter();
   const { root, run } = useAnimeScope();
   const dropRef = useRef<HTMLDivElement>(null);
@@ -43,10 +45,7 @@ export default function GamesPage() {
           scale: [0.97, 1], opacity: [0, 1], ease: spring({ bounce: 0.15 }),
           duration: dur.base, delay: 280,
         });
-        animate('[data-anime="recent-card"]', {
-          translateY: [10, 0], opacity: [0, 1], ease: ease.out, duration: dur.reveal,
-          delay: stagger(60, { from: 0, start: 320 }),
-        });
+
       });
     });
   }, [run]);
@@ -81,6 +80,65 @@ export default function GamesPage() {
   const onDragLeave = useCallback(() => {
     setDragOver(false);
     if (dropRef.current) animate(dropRef.current, { scale: 1, ease: ease.out, duration: dur.fast });
+  }, []);
+
+  const selectionAnimRef = useRef<ReturnType<typeof animate> | null>(null);
+  const prevSelectedRef = useRef<string | null>(null);
+
+  // Handle selection changes in an effect to keep state updaters pure
+  useEffect(() => {
+    // Cancel any previous selection animation
+    if (selectionAnimRef.current) {
+      try { (selectionAnimRef.current as any).pause?.(); } catch { /* ignore */ }
+      selectionAnimRef.current = null;
+    }
+
+    // Reset glow on previously selected card
+    const prev = prevSelectedRef.current;
+    if (prev && prev !== selectedCard) {
+      const prevEl = document.querySelector(`[data-card-id="${prev}"]`);
+      if (prevEl instanceof HTMLElement) {
+        prevEl.style.boxShadow = '';
+      }
+    }
+    prevSelectedRef.current = selectedCard;
+
+    // Trigger border pulse animation on the newly selected card
+    if (selectedCard) {
+      const el = document.querySelector(`[data-card-id="${selectedCard}"]`);
+      if (el instanceof HTMLElement) {
+        selectionAnimRef.current = animate(el, {
+          boxShadow: [
+            '0 0 0 0 hsl(var(--primary) / 0)',
+            '0 0 0 4px hsl(var(--primary) / 0.15)',
+            '0 0 0 0 hsl(var(--primary) / 0)',
+          ],
+          ease: 'inOut(2)',
+          duration: 2000,
+          loop: true,
+        });
+      }
+    }
+
+    // Cleanup on unmount — also clear any lingering inline boxShadow
+    return () => {
+      if (selectionAnimRef.current) {
+        try { (selectionAnimRef.current as any).pause?.(); } catch { /* ignore */ }
+        selectionAnimRef.current = null;
+      }
+      const lastSelected = prevSelectedRef.current;
+      if (lastSelected) {
+        const el = document.querySelector(`[data-card-id="${lastSelected}"]`);
+        if (el instanceof HTMLElement) {
+          el.style.boxShadow = '';
+        }
+      }
+    };
+  }, [selectedCard]);
+
+  const toggleSelect = useCallback((game: RecentGame, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedCard(prev => (prev === game.id ? null : game.id));
   }, []);
 
   const playRecent = useCallback((game: RecentGame) => {
@@ -127,7 +185,7 @@ export default function GamesPage() {
             <h1 className="text-sm font-semibold text-foreground tracking-tight">Library</h1>
             <p className="text-[10px] text-muted-foreground/50 mt-0.5">Run Android APKs and Windows EXEs in your browser</p>
           </div>
-          <Link href="/run" className="btn-primary text-[10px] h-7 px-3 btn-press">
+          <Link href="/run" className="btn-primary text-[10px] h-7 px-3">
             <Upload size={11} className="mr-1" />
             Upload
           </Link>
@@ -248,7 +306,7 @@ export default function GamesPage() {
               </div>
               <p className="text-[11px] text-muted-foreground/60 mb-1">No sessions yet</p>
               <p className="text-[9px] text-muted-foreground/25 mb-3">Drop an APK or EXE above to run your first app</p>
-              <Link href="/run" className="btn-secondary text-[10px] h-7 px-3 btn-press">
+              <Link href="/run" className="btn-secondary text-[10px] h-7 px-3">
                 <Play size={11} className="mr-1" />
                 Start Playing
               </Link>
@@ -262,18 +320,22 @@ export default function GamesPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <ScrollReveal preset="slideUp" staggerChildren childSelector="[data-reveal]" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredGames.map((game) => (
                 <div
                   key={game.id}
-                  data-anime="recent-card"
-                  style={{ opacity: 0 }}
-                  className="glass-card rounded-lg overflow-hidden cursor-pointer group premium-sweep"
-                  onClick={() => playRecent(game)}
+                  data-card-id={game.id}
+                  data-reveal
+                  onClick={() => toggleSelect(game)}
+                  className={`glass-card rounded-lg overflow-hidden cursor-pointer group premium-sweep transition-all ${
+                    selectedCard === game.id
+                      ? 'ring-1 ring-primary/30 bg-primary/[0.02]'
+                      : ''
+                  }`}
                   onMouseEnter={onCardEnter}
                   onMouseLeave={onCardLeave}
                 >
-                  <div className="flex items-center gap-3 p-3">
+                  <div className="flex items-center gap-2 p-2">
                     <div className="w-9 h-9 rounded-md bg-card border border-border/50 flex items-center justify-center shrink-0 overflow-hidden">
                       {game.thumbnail ? (
                         <img src={game.thumbnail} alt={game.title} className="w-full h-full object-cover" loading="lazy" />
@@ -287,14 +349,17 @@ export default function GamesPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="tag">{game.id.endsWith('.apk') || game.id.endsWith('.APK') ? 'APK' : 'EXE'}</span>
-                      <div className="w-6 h-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-sm">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); playRecent(game); }}
+                        className="w-6 h-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 backdrop-blur-sm hover:bg-primary/10 hover:scale-110"
+                      >
                         <Play size={9} className="text-foreground ml-0.5" />
-                      </div>
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
-            </div>
+            </ScrollReveal>
           )}
         </div>
 
@@ -308,7 +373,7 @@ export default function GamesPage() {
               <p className="text-[9px] text-muted-foreground/35 mb-3 max-w-sm mx-auto">
                 No downloads, no installs. Drop an APK or EXE and it runs natively via WebGL2 + Dalvik/x86 interpreter.
               </p>
-              <Link href="/run" className="btn-primary text-[10px] h-8 px-5 btn-press">
+              <Link href="/run" className="btn-primary text-[10px] h-8 px-5">
                 <Upload size={12} className="mr-1" />
                 Upload APK or EXE
               </Link>

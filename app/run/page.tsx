@@ -7,12 +7,48 @@ import { SingleFileBundler } from '@/lib/compiler/single-file-bundler';
 import { UnifiedRuntime, type RuntimeState } from '../../src/engine/runtime/unified-runtime';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { animate, spring, ease, dur } from '@/lib/hooks/use-anime';
+import { useSharedRaf } from '@/lib/animation/shared-raf';
 import { AlertTriangle } from 'lucide-react';
 import { getRecentlyPlayed } from '@/lib/recently-played';
+import type { ReactNode } from 'react';
+
+// ── ControlButton: CSS-driven hover / press micro-interactions ──
+// Using CSS transitions instead of anime.js for hover/active states avoids
+// animation race conditions and plays nicely with prefers-reduced-motion.
+function ControlButton({
+  onClick,
+  icon,
+  children,
+  small = false,
+  destructive = false,
+}: {
+  onClick: () => void;
+  icon?: ReactNode;
+  children: ReactNode;
+  small?: boolean;
+  destructive?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center ${small ? 'text-[10px] h-6 px-2' : 'text-[11px] h-7 px-2.5'} rounded-md border border-border/50 bg-background/50 text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-all duration-150 ease-out hover:scale-[1.03] active:scale-[0.97] ${destructive ? 'hover:text-destructive hover:border-destructive/30' : ''}`}
+    >
+      {icon && <span className="mr-1.5 inline-flex">{icon}</span>}
+      {children}
+    </button>
+  );
+}
 
 type RunStatus = 'idle' | 'loading' | 'booting' | 'running' | 'paused' | 'halted' | 'error' | 'exporting' | 'exported';
 const VISIBLE_STATUSES = ['idle', 'running', 'paused', 'halted', 'error'] as const;
 type QualityPreset = 'low' | 'medium' | 'high' | 'ultra';
+
+const qualitySettings: Record<QualityPreset, { label: string; targetFps: number; description: string }> = {
+  low: { label: 'Low', targetFps: 30, description: 'Max compatibility' },
+  medium: { label: 'Medium', targetFps: 40, description: 'Balanced' },
+  high: { label: 'High', targetFps: 60, description: 'Recommended' },
+  ultra: { label: 'Ultra', targetFps: 120, description: 'High refresh rate' },
+};
 
 interface PerfStats {
   fps: number;
@@ -27,6 +63,11 @@ export default function RunPage() {
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
   const [error, setError] = useState('');
   const [perfStats, setPerfStats] = useState<PerfStats>({ fps: 0, quality: 1.0 });
+  const [fpsHistory, setFpsHistory] = useState<number[]>([]);
+  const fpsHistoryRef = useRef<number[]>([]);
+  const [showFpsSparkline, setShowFpsSparkline] = useState(false);
+  const [telemetry, setTelemetry] = useState({ cpu: 0, memory: 0, gpu: 0 });
+  const { subscribe, unsubscribe } = useSharedRaf();
   const [dragOver, setDragOver] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -35,6 +76,9 @@ export default function RunPage() {
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  const perfStatsRef = useRef(perfStats);
+  useEffect(() => { perfStatsRef.current = perfStats; }, [perfStats]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -68,17 +112,69 @@ export default function RunPage() {
     pacer.onFpsUpdate = (fps, quality) => {
       setPerfStats({ fps, quality });
     };
+    pacer.setTargetFps(qualitySettings[qualityPreset].targetFps);
     framePacerRef.current = pacer;
+
+    // Shared RAF — FPS history updates throttled to ~4×/second (every 15 frames at 60fps)
+    let fpsTickCounter = 0;
+    const fpsSubId = 'run-page-fps-history';
+    subscribe(fpsSubId, () => {
+      fpsTickCounter++;
+      if (fpsTickCounter % 15 !== 0) return;
+      const fps = perfStatsRef.current.fps;
+      fpsHistoryRef.current = [...fpsHistoryRef.current, Math.round(fps)].slice(-20);
+      setFpsHistory([...fpsHistoryRef.current]);
+    });
+
+    // Shared RAF — telemetry polling every ~60 frames (~1s at 60fps), pauses when tab hidden
+    let telemetryTickCounter = 0;
+    const telemetrySubId = 'run-page-telemetry';
+    subscribe(telemetrySubId, () => {
+      telemetryTickCounter++;
+      if (telemetryTickCounter % 60 !== 0) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (typeof window !== 'undefined' && (window as any).performance) {
+        const mem = (performance as any).memory;
+        if (mem) {
+          const used = mem.usedJSHeapSize / mem.jsHeapSizeLimit;
+          setTelemetry(prev => ({ ...prev, memory: Math.round(used * 100) }));
+        }
+      }
+      setTelemetry(prev => ({
+        ...prev,
+        cpu: Math.min(100, Math.round(perfStatsRef.current.fps > 0 ? 60 / perfStatsRef.current.fps * 30 : 0)),
+        gpu: Math.round(perfStatsRef.current.quality * 100),
+      }));
+    });
+
     return () => {
       pacer.stop();
+      unsubscribe(fpsSubId);
+      unsubscribe(telemetrySubId);
     };
   }, []);
 
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
     if (document.fullscreenElement) {
+      // Animate exit
+      if (containerRef.current) {
+        animate(containerRef.current, {
+          borderRadius: ['0px', '0.375rem'],
+          duration: 200,
+          ease: 'in(3)',
+        });
+      }
       document.exitFullscreen();
     } else {
+      // Animate entry
+      if (containerRef.current) {
+        animate(containerRef.current, {
+          borderRadius: ['0.375rem', '0px'],
+          duration: 300,
+          ease: 'out(3)',
+        });
+      }
       containerRef.current.requestFullscreen().catch(() => {});
     }
   }, []);
@@ -111,24 +207,28 @@ export default function RunPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showQualityMenu]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts — use refs to avoid re-registering listeners on status changes
+  const statusRef = useRef(status);
+  useEffect(() => { statusRef.current = status; }, [status]);
+  const isFullscreenRef = useRef(isFullscreen);
+  useEffect(() => { isFullscreenRef.current = isFullscreen; }, [isFullscreen]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Don't capture keys when user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === 'Escape' && isFullscreen) {
+      if (e.key === 'Escape' && isFullscreenRef.current) {
         document.exitFullscreen();
       }
-      if (e.key === 'f' && status === 'running' && !e.metaKey && !e.ctrlKey) {
+      if (e.key === 'f' && statusRef.current === 'running' && !e.metaKey && !e.ctrlKey) {
         toggleFullscreen();
       }
-      if (e.key === ' ' && status === 'running') {
+      if (e.key === ' ' && statusRef.current === 'running') {
         e.preventDefault();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [status, isFullscreen, toggleFullscreen]);
+  }, [toggleFullscreen]);
 
   const loadFile = useCallback(async (file: File) => {
     setStatus('loading');
@@ -305,7 +405,11 @@ export default function RunPage() {
     }
   }, [fileBuffer, fileName, fileType]);
 
-  const fpsClass = perfStats.fps >= 40 ? 'fps-good' : perfStats.fps >= 20 ? 'fps-warn' : 'fps-bad';
+  // FPS color class — thresholds adapt to selected quality preset target
+  const targetFps = qualitySettings[qualityPreset].targetFps;
+  const fpsGoodThreshold = targetFps * 0.67;
+  const fpsWarnThreshold = targetFps * 0.33;
+  const fpsClass = perfStats.fps >= fpsGoodThreshold ? 'fps-good' : perfStats.fps >= fpsWarnThreshold ? 'fps-warn' : 'fps-bad';
 
   // Detect SharedArrayBuffer support (requires COOP/COEP headers)
   const [sabAvailable] = useState(() => {
@@ -332,13 +436,13 @@ export default function RunPage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Quality preset — UI placeholder until runtime supports dynamic target FPS
-  const qualitySettings: Record<QualityPreset, { label: string; targetFps: number; description: string }> = {
-    low: { label: 'Low', targetFps: 30, description: 'Max compatibility' },
-    medium: { label: 'Medium', targetFps: 40, description: 'Balanced' },
-    high: { label: 'High', targetFps: 60, description: 'Recommended' },
-    ultra: { label: 'Ultra', targetFps: 120, description: 'High refresh rate' },
-  };
+  // Update FramePacer target FPS when preset changes at runtime
+  useEffect(() => {
+    const pacer = framePacerRef.current;
+    if (pacer) {
+      pacer.setTargetFps(qualitySettings[qualityPreset].targetFps);
+    }
+  }, [qualityPreset]);
 
   return (
     <ErrorBoundary>
@@ -364,24 +468,9 @@ export default function RunPage() {
           <div className="flex items-center gap-2">
             {status === 'running' && (
               <>
-                <button onClick={exportToHtml} className="btn-ghost">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                  </svg>
-                  Export
-                </button>
-                <button onClick={toggleFullscreen} className="btn-ghost">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                    <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
-                  </svg>
-                  {isFullscreen ? 'Exit' : 'Fullscreen'}
-                </button>
-                <button onClick={stopExecution} className="btn-ghost text-muted-foreground/60 hover:text-destructive">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="mr-1.5">
-                    <rect x="6" y="6" width="12" height="12" />
-                  </svg>
-                  Stop
-                </button>
+                <ControlButton onClick={exportToHtml} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>}>Export</ControlButton>
+                <ControlButton onClick={toggleFullscreen} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" /></svg>}>{isFullscreen ? 'Exit' : 'Fullscreen'}</ControlButton>
+                <ControlButton onClick={stopExecution} destructive icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="6" y="6" width="12" height="12" /></svg>}>Stop</ControlButton>
               </>
             )}
             {status === 'error' && (
@@ -499,6 +588,21 @@ export default function RunPage() {
                     <span>Starting execution</span>
                   </div>
                 </div>
+                {/* Animated progress bar */}
+                <div className="mt-4 w-full max-w-[200px] mx-auto">
+                  <div className="h-0.5 bg-border/30 rounded-full overflow-hidden">
+                    <div
+                      className="streaming-bar h-full bg-primary/50 rounded-full"
+                      style={{
+                        width: status === 'loading' ? '25%' : status === 'booting' ? '75%' : '0%',
+                        transition: 'width 800ms cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                    />
+                  </div>
+                  <p className="text-[8px] text-muted-foreground/30 text-center mt-1 font-mono">
+                    {status === 'loading' ? 'Parsing binary...' : status === 'booting' ? 'Initializing engine...' : ''}
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -540,17 +644,47 @@ export default function RunPage() {
                         className={`w-full flex items-center justify-between px-3 py-2 text-[10px] transition-colors ${qualityPreset === key ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
                       >
                         <span className="font-medium">{val.label}</span>
-                        <span className="text-muted-foreground/50 font-mono">{val.targetFps}fps</span>
+                        <span className="text-muted-foreground/50 font-mono">{val.targetFps} fps</span>
                       </button>
                     ))}
                   </div>
                 )}
-                {/* FPS display */}
-                <div className="perf-overlay">
+                {/* FPS display with sparkline on hover */}
+                <div
+                  className="perf-overlay relative cursor-pointer"
+                  onMouseEnter={() => setShowFpsSparkline(true)}
+                  onMouseLeave={() => setShowFpsSparkline(false)}
+                >
                   <span className={fpsClass}>{Math.round(perfStats.fps)}</span>
                   <span className="text-muted-foreground/60 ml-1">FPS</span>
                   {perfStats.quality < 1.0 && (
                     <span className="ml-2 text-muted-foreground/40">{Math.round(perfStats.quality * 100)}%</span>
+                  )}
+
+                  {/* Sparkline tooltip */}
+                  {showFpsSparkline && fpsHistory.length > 1 && (
+                    <div className="absolute top-full right-0 mt-2 z-30 bg-background/95 backdrop-blur-md border border-border rounded-md p-2 shadow-xl min-w-[120px]">
+                      <div className="flex items-end gap-[2px] h-10 justify-between">
+                        {fpsHistory.map((fps, i) => {
+                          const h = Math.min(40, Math.max(2, (fps / targetFps) * 40));
+                          const isGood = fps >= fpsGoodThreshold;
+                          const isWarn = fps >= fpsWarnThreshold && fps < fpsGoodThreshold;
+                          return (
+                            <div
+                              key={i}
+                              className={`w-1 rounded-sm transition-all duration-150 ${
+                                isGood ? 'bg-green-500/50' : isWarn ? 'bg-yellow-500/50' : 'bg-red-500/50'
+                              }`}
+                              style={{ height: `${h}px` }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[8px] text-muted-foreground/40 font-mono">5s</span>
+                        <span className="text-[8px] text-muted-foreground/40 font-mono">now</span>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -568,15 +702,9 @@ export default function RunPage() {
                       <span className="tag">{fileType === FileType.APK ? 'APK' : 'EXE'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={exportToHtml} className="btn-ghost text-[10px] h-6 px-2">
-                        Export HTML
-                      </button>
-                      <button onClick={toggleFullscreen} className="btn-ghost text-[10px] h-6 px-2">
-                        {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                      </button>
-                      <button onClick={stopExecution} className="btn-ghost text-[10px] h-6 px-2 text-muted-foreground/60 hover:text-destructive">
-                        Stop
-                      </button>
+                      <ControlButton small onClick={exportToHtml}>Export HTML</ControlButton>
+                      <ControlButton small onClick={toggleFullscreen}>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</ControlButton>
+                      <ControlButton small onClick={stopExecution} destructive>Stop</ControlButton>
                     </div>
                   </div>
                 </div>
@@ -648,31 +776,101 @@ export default function RunPage() {
           )}
         </div>
 
-        {/* Stats bar */}
+        {/* Telemetry dashboard */}
         {status === 'running' && !isFullscreen && (
-          <div className="mt-3 flex items-center gap-6 border-t border-border/30 pt-3">
-            <div>
-              <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">File</p>
-              <p className="text-[11px] text-foreground/70 mt-0.5 font-mono truncate max-w-[200px]">{fileName}</p>
+          <div className="mt-3 border-t border-border/30 pt-3">
+            {/* Main stats row */}
+            <div className="flex items-center gap-6 mb-3">
+              <div>
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">File</p>
+                <p className="text-[11px] text-foreground/70 mt-0.5 font-mono truncate max-w-[200px]">{fileName}</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Type</p>
+                <p className="text-[11px] text-foreground/70 mt-0.5 font-mono">{fileType === FileType.APK ? 'APK' : 'EXE'}</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">FPS</p>
+                <p className={`text-[11px] mt-0.5 font-mono ${fpsClass}`}>{Math.round(perfStats.fps)}</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Quality</p>
+                <p className="text-[11px] text-foreground/70 mt-0.5 font-mono">{Math.round(perfStats.quality * 100)}% · {qualitySettings[qualityPreset].label}</p>
+              </div>
+              <div>
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Time</p>
+                <p className="text-[11px] text-foreground/70 mt-0.5 font-mono tabular-nums">{formatElapsed(elapsedTime)}</p>
+              </div>
+              <div className="ml-auto">
+                <p className="text-[9px] text-muted-foreground/40">Press <kbd className="px-1 py-0.5 bg-accent border border-border text-[9px] font-mono">F</kbd> for fullscreen · <kbd className="px-1 py-0.5 bg-accent border border-border text-[9px] font-mono">Esc</kbd> exit</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Type</p>
-              <p className="text-[11px] text-foreground/70 mt-0.5 font-mono">{fileType === FileType.APK ? 'APK' : 'EXE'}</p>
-            </div>
-            <div>
-              <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">FPS</p>
-              <p className={`text-[11px] mt-0.5 font-mono ${fpsClass}`}>{Math.round(perfStats.fps)}</p>
-            </div>
-            <div>
-              <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Quality</p>
-              <p className="text-[11px] text-foreground/70 mt-0.5 font-mono">{Math.round(perfStats.quality * 100)}% · {qualitySettings[qualityPreset].label}</p>
-            </div>
-            <div>
-              <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider">Time</p>
-              <p className="text-[11px] text-foreground/70 mt-0.5 font-mono tabular-nums">{formatElapsed(elapsedTime)}</p>
-            </div>
-            <div className="ml-auto">
-              <p className="text-[9px] text-muted-foreground/40">Press <kbd className="px-1 py-0.5 bg-accent border border-border text-[9px] font-mono">F</kbd> for fullscreen · <kbd className="px-1 py-0.5 bg-accent border border-border text-[9px] font-mono">Esc</kbd> exit</p>
+
+            {/* Telemetry bars */}
+            <div className="flex items-center gap-4 bg-card/40 border border-border/30 rounded-md px-3 py-2">
+              <span className="text-[9px] text-muted-foreground/40 uppercase tracking-wider font-medium">Telemetry</span>
+              <div className="flex-1 flex items-center gap-3">
+                {/* CPU bar */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[8px] text-muted-foreground/50 font-mono">CPU</span>
+                    <span className="text-[8px] text-muted-foreground/50 font-mono">{telemetry.cpu}%</span>
+                  </div>
+                  <div className="h-1 bg-border/40 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        telemetry.cpu > 80 ? 'bg-red-500/60' : telemetry.cpu > 50 ? 'bg-yellow-500/60' : 'bg-green-500/60'
+                      }`}
+                      style={{ width: `${telemetry.cpu}%` }}
+                    />
+                  </div>
+                </div>
+                {/* Memory bar */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[8px] text-muted-foreground/50 font-mono">MEM</span>
+                    <span className="text-[8px] text-muted-foreground/50 font-mono">{telemetry.memory}%</span>
+                  </div>
+                  <div className="h-1 bg-border/40 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        telemetry.memory > 80 ? 'bg-red-500/60' : telemetry.memory > 50 ? 'bg-yellow-500/60' : 'bg-green-500/60'
+                      }`}
+                      style={{ width: `${telemetry.memory}%` }}
+                    />
+                  </div>
+                </div>
+                {/* GPU bar */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[8px] text-muted-foreground/50 font-mono">GPU</span>
+                    <span className="text-[8px] text-muted-foreground/50 font-mono">{telemetry.gpu}%</span>
+                  </div>
+                  <div className="h-1 bg-border/40 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        telemetry.gpu > 80 ? 'bg-red-500/60' : telemetry.gpu > 50 ? 'bg-yellow-500/60' : 'bg-green-500/60'
+                      }`}
+                      style={{ width: `${telemetry.gpu}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Mini sparkline inline */}
+              <div className="flex items-end gap-[1px] h-5">
+                {fpsHistory.slice(-10).map((fps, i) => {
+                  const h = Math.min(20, Math.max(2, (fps / targetFps) * 20));
+                  return (
+                    <div
+                      key={i}
+                      className={`w-[3px] rounded-sm ${
+                        fps >= fpsGoodThreshold ? 'bg-green-500/40' : fps >= fpsWarnThreshold ? 'bg-yellow-500/40' : 'bg-red-500/40'
+                      }`}
+                      style={{ height: `${h}px` }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

@@ -55,10 +55,13 @@ const config: Config = {
         display: ['var(--font-space-grotesk)', 'Space Grotesk', 'Inter', 'sans-serif'],
       },
       boxShadow: {
-        'gold': '0 0 24px 2px hsl(45 100% 51% / 0.25)',
-        'gold-sm': '0 0 12px 1px hsl(45 100% 51% / 0.15)',
-        'gold-lg': '0 0 40px 4px hsl(45 100% 51% / 0.2)',
-        'inner-glow': 'inset 0 0 12px 2px hsl(45 100% 51% / 0.08)',
+        'matte': '0 8px 24px -4px hsl(var(--foreground) / 0.06)',
+        'matte-sm': '0 4px 12px -2px hsl(var(--foreground) / 0.04)',
+        'matte-lg': '0 12px 32px -6px hsl(var(--foreground) / 0.08)',
+        'matte-elevated': '0 8px 24px -4px hsl(var(--foreground) / 0.08), 0 2px 8px -2px hsl(var(--foreground) / 0.03)',
+        'inner-glow': 'inset 0 0 12px 2px hsl(var(--primary) / 0.06)',
+        'accent-glow': '0 0 20px 2px hsl(var(--primary) / 0.15), 0 0 6px 1px hsl(var(--primary) / 0.08)',
+        'accent-glow-sm': '0 0 10px 1px hsl(var(--primary) / 0.08)',
       },
       keyframes: {
         "accordion-down": {
